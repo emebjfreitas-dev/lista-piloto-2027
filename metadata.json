@@ -1,0 +1,6 @@
+{
+  "name": "Minha Turma - Diário Escolar e Chamada",
+  "description": "Prefeitura Municipal de Jundiaí - Secretaria Municipal de Educação - EMEB Professor Joaquim Candelário de Freitas. Diário escolar mensal de estudantes e banco de dados integrado por Planilha Google - Ano Letivo 2027.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

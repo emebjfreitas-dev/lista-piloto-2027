@@ -1,0 +1,56 @@
+name: Deploy Automatico em Tempo Real - GitHub Pages (EMEB Joaquim Candelario de Freitas)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  build_and_deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: 2. Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 3. Instalar Dependências
+        run: npm install
+
+      - name: 4. Compilar Aplicativo (Vite Build)
+        run: npm run build
+
+      - name: 5. Garantir Fallback SPA (404.html) e CNAME (Endereço Personalizado)
+        run: |
+          cp dist/index.html dist/404.html
+          if [ -s public/CNAME ]; then cp public/CNAME dist/CNAME; else rm -f dist/CNAME; fi
+
+      - name: 6. Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: 7. Enviar Artefato da Build
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: 8. Publicar em Tempo Real no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

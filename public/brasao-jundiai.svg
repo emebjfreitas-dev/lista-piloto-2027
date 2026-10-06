@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 280" width="260" height="280" role="img" aria-label="Brasão Oficial de Armas do Município de Jundiaí">
+  <title>Brasão Oficial do Município de Jundiaí - ETIAM PER ME BRASILIA MAGNA</title>
+  <defs>
+    <!-- Gradiente Ouro Heráldico -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffe270" />
+      <stop offset="45%" stop-color="#e5b324" />
+      <stop offset="100%" stop-color="#9c6e05" />
+    </linearGradient>
+    <!-- Gradiente Prata Heráldica (Coroa Mural e Escudo) -->
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="65%" stop-color="#e6eaed" />
+      <stop offset="100%" stop-color="#bfc7cc" />
+    </linearGradient>
+    <!-- Gradiente Azul Celeste / Blau Heráldico -->
+    <linearGradient id="shieldBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00529b" />
+      <stop offset="100%" stop-color="#002e5d" />
+    </linearGradient>
+    <!-- Gradiente Verde / Sinople Heráldico (Matas de Jundiaí) -->
+    <linearGradient id="shieldGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#008040" />
+      <stop offset="100%" stop-color="#004d25" />
+    </linearGradient>
+    <!-- Sombra suave institucional -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#001f29" flood-opacity="0.28" />
+    </filter>
+  </defs>
+
+  <g filter="url(#dropShadow)">
+    <!-- Ramo Esquerdo: Videira com Cachos de Uva Niagara Rosada (Terra da Uva - Jundiaí) -->
+    <path d="M58,205 C28,170 22,118 38,76 C44,58 53,48 60,40" fill="none" stroke="#1b6b3a" stroke-width="6" stroke-linecap="round" />
+    <!-- Folhas de Videira -->
+    <path d="M28,132 Q12,122 20,108 Q33,115 28,132 Z" fill="#228b22" stroke="#145214" stroke-width="1" />
+    <path d="M38,90 Q20,78 30,65 Q44,74 38,90 Z" fill="#1b6b3a" stroke="#145214" stroke-width="1" />
+    <path d="M46,184 Q28,178 32,164 Q45,170 46,184 Z" fill="#228b22" stroke="#145214" stroke-width="1" />
+    <!-- Cachos de Uva de Jundiaí -->
+    <g fill="#7e22ce" stroke="#4c1d95" stroke-width="1">
+      <circle cx="32" cy="148" r="6.5" />
+      <circle cx="42" cy="150" r="6.5" />
+      <circle cx="37" cy="158" r="6.5" />
+      <circle cx="30" cy="157" r="6" />
+      <circle cx="35" cy="166" r="5.5" />
+      <circle cx="30" cy="106" r="6" fill="#9333ea" />
+      <circle cx="39" cy="110" r="6" fill="#6b21a8" />
+      <circle cx="34" cy="117" r="5.5" fill="#7e22ce" />
+    </g>
+
+    <!-- Ramo Direito: Ramo de Café Frutificado (História Agrícola Paulista e de Jundiaí) -->
+    <path d="M202,205 C232,170 238,118 222,76 C216,58 207,48 200,40" fill="none" stroke="#1b6b3a" stroke-width="6" stroke-linecap="round" />
+    <!-- Folhas de Café -->
+    <path d="M232,132 Q248,122 240,108 Q227,115 232,132 Z" fill="#228b22" stroke="#145214" stroke-width="1" />
+    <path d="M222,90 Q240,78 230,65 Q216,74 222,90 Z" fill="#1b6b3a" stroke="#145214" stroke-width="1" />
+    <path d="M214,184 Q232,178 228,164 Q215,170 214,184 Z" fill="#228b22" stroke="#145214" stroke-width="1" />
+    <!-- Grãos / Frutos de Café Maduros -->
+    <g fill="#c8102e" stroke="#7a0619" stroke-width="1">
+      <circle cx="225" cy="148" r="5.5" />
+      <circle cx="216" cy="154" r="5.5" />
+      <circle cx="222" cy="162" r="5" />
+      <circle cx="227" cy="108" r="5.5" />
+      <circle cx="218" cy="115" r="5" />
+    </g>
+
+    <!-- Coroa Mural de Município (5 Torres Fortificadas com Ameias e Portas) -->
+    <g>
+      <path d="M68,60 L192,60 L198,30 L183,30 L183,39 L170,39 L170,25 L148,25 L148,39 L138,39 L138,22 L122,22 L122,39 L112,39 L112,25 L90,25 L90,39 L77,39 L77,30 L62,30 Z" fill="url(#goldGrad)" stroke="#5c4004" stroke-width="2.5" stroke-linejoin="round" />
+      <rect x="70" y="52" width="120" height="8" rx="2" fill="#b8860b" stroke="#5c4004" stroke-width="1.5" />
+      <!-- Portas Abertas das 5 Torres -->
+      <rect x="69" y="38" width="6.5" height="10" rx="3" fill="#2d1e02" />
+      <rect x="97" y="34" width="8.5" height="12" rx="4" fill="#2d1e02" />
+      <rect x="125.5" y="32" width="9" height="14" rx="4.5" fill="#2d1e02" />
+      <rect x="154.5" y="34" width="8.5" height="12" rx="4" fill="#2d1e02" />
+      <rect x="184.5" y="38" width="6.5" height="10" rx="3" fill="#2d1e02" />
+    </g>
+
+    <!-- Escudo Ibérico / Português Clássico de Jundiaí -->
+    <path d="M64,64 L196,64 L196,144 C196,184 166,214 130,222 C94,214 64,184 64,144 Z" fill="url(#silverGrad)" stroke="url(#goldGrad)" stroke-width="6" />
+
+    <!-- Chefe Azul com as 3 Estrelas de Ouro e a Flor-de-Lis de Nossa Senhora do Desterro (Padroeira de Jundiaí) -->
+    <path d="M67,67 L193,67 L193,116 L67,116 Z" fill="url(#shieldBlue)" />
+    <!-- Estrela Central Maior -->
+    <polygon points="130,73 133.5,82 143,82 135.5,87.5 138,96.5 130,91 122,96.5 124.5,87.5 117,82 126.5,82" fill="url(#goldGrad)" />
+    <!-- Estrela Esquerda -->
+    <polygon points="91,77 93.5,84 101,84 95,88.5 97,95.5 91,91 85,95.5 87,88.5 81,84 88.5,84" fill="url(#goldGrad)" />
+    <!-- Estrela Direita -->
+    <polygon points="169,77 171.5,84 179,84 173,88.5 175,95.5 169,91 163,95.5 165,88.5 159,84 166.5,84" fill="url(#goldGrad)" />
+
+    <!-- Campo Inferior Sinople (Verde) com Rio Jundiaí e Peixe Jundiá (Origem do Nome Tupi "Jundiaí" = Rio dos Jundiás) -->
+    <path d="M67,116 L193,116 L193,144 C193,182 164,210 130,218 C96,210 67,182 67,144 Z" fill="url(#shieldGreen)" />
+
+    <!-- Faixa Ondulada de Prata e Azul Representando o Rio Jundiaí -->
+    <path d="M67,144 Q98,131 130,144 T193,144 L192,168 Q161,181 130,168 T68,168 Z" fill="#e6f4fa" stroke="#004b87" stroke-width="2.2" />
+    <path d="M72,156 Q101,145 130,156 T188,156" fill="none" stroke="#7cc4e8" stroke-width="1.8" stroke-linecap="round" />
+
+    <!-- Peixe Jundiá Dourado Nadando no Rio Jundiaí -->
+    <path d="M102,156 C116,146 138,146 154,155 L167,147 L164,156 L167,165 L154,157 C138,166 116,166 102,156 Z" fill="url(#goldGrad)" stroke="#5c4004" stroke-width="1.6" />
+    <!-- Barbilhões característicos do peixe Jundiá -->
+    <path d="M102,156 Q94,152 90,148 M102,157 Q94,160 89,163" fill="none" stroke="#5c4004" stroke-width="1.4" stroke-linecap="round" />
+    <circle cx="111" cy="154.5" r="2" fill="#002b54" />
+
+    <!-- Bordadura Dourada do Escudo -->
+    <path d="M64,64 L196,64 L196,144 C196,184 166,214 130,222 C94,214 64,184 64,144 Z" fill="none" stroke="url(#goldGrad)" stroke-width="5.5" />
+
+    <!-- Listel Oficial Inferior com a Divisa Latina de Jundiaí: ETIAM PER ME BRASILIA MAGNA -->
+    <path d="M22,226 Q130,250 238,226 L244,250 Q130,274 16,250 Z" fill="url(#goldGrad)" stroke="#5c4004" stroke-width="2.4" stroke-linejoin="round" />
+    <text x="130" y="249" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="10.2" fill="#001f29" letter-spacing="0.7">
+      ETIAM PER ME BRASILIA MAGNA
+    </text>
+  </g>
+</svg>

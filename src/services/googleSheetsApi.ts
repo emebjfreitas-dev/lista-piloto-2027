@@ -1,0 +1,2413 @@
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  User,
+} from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
+import { ClassGroup, SchoolDay, Student, UserRole, AuthorizedUser, DriveNominalPdfFile } from '../types';
+import {
+  OFFICIAL_OCTOBER_DAYS,
+  MONTHLY_SCHOOL_DAYS_2027,
+  getDefaultMonthlySchoolDaysMap,
+} from '../data/mockData';
+import { getStoredAuthorizedUsers } from './db';
+import {
+  getStudentAttendanceMetrics,
+  getClassAttendanceMetrics,
+} from '../utils/attendanceRules';
+
+export const OFFICIAL_ADMIN_EMAIL = 'emebjfreitas@educacao.jundiai.sp.gov.br';
+export const OFFICIAL_WORKSPACE_HOSTED_DOMAIN = 'educacao.jundiai.sp.gov.br';
+
+export const SCOPES = [
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/drive.readonly',
+];
+
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
+
+const provider = new GoogleAuthProvider();
+SCOPES.forEach((scope) => provider.addScope(scope));
+provider.setCustomParameters({
+  prompt: 'select_account',
+});
+
+// In-memory access token cache (NEVER stored in localStorage/sessionStorage per security rules)
+let isSigningIn = false;
+let cachedAccessToken: string | null = null;
+
+// Storage keys for non-sensitive resource IDs/URLs
+const SHEET_ID_STORAGE_KEY = 'emeb_candelario_linked_spreadsheet_id_2027';
+const SHEET_TITLE_STORAGE_KEY = 'emeb_candelario_linked_spreadsheet_title_2027';
+const DRIVE_PHOTOS_URL_KEY = 'emeb_candelario_drive_photos_folder_url_2027';
+const DRIVE_PHOTOS_ID_KEY = 'emeb_candelario_drive_photos_folder_id_2027';
+const DRIVE_FICHAS_PDF_URL_KEY = 'emeb_candelario_drive_fichas_pdf_folder_url_2027';
+const DRIVE_FICHAS_PDF_ID_KEY = 'emeb_candelario_drive_fichas_pdf_folder_id_2027';
+
+export const OFFICIAL_FOLDER_NAME =
+  'Fotos_Alunos_EMEB_Joaquim_Candelario_Freitas_2027';
+export const OFFICIAL_FICHAS_PDF_FOLDER_ID =
+  '1GDEdQuNfhc0vps4mZXv4LLv4kDLZnauJ';
+export const OFFICIAL_FICHAS_PDF_FOLDER_URL =
+  `https://drive.google.com/drive/folders/${OFFICIAL_FICHAS_PDF_FOLDER_ID}`;
+export const OFFICIAL_SPREADSHEET_TITLE =
+  'BD_Oficial_SED_EMEB_Joaquim_Candelario_2027';
+
+export const DEFAULT_DRIVE_PHOTOS_FOLDER_URL =
+  'https://drive.google.com/drive/my-drive';
+
+export const getSavedFichasPdfDriveFolderInfo = (): {
+  folderId: string;
+  folderUrl: string;
+} => {
+  const folderId =
+    localStorage.getItem(DRIVE_FICHAS_PDF_ID_KEY) ||
+    OFFICIAL_FICHAS_PDF_FOLDER_ID;
+  const folderUrl =
+    localStorage.getItem(DRIVE_FICHAS_PDF_URL_KEY) ||
+    `https://drive.google.com/drive/folders/${folderId}`;
+  return { folderId, folderUrl };
+};
+
+export const saveFichasPdfDriveFolderUrl = (
+  urlOrId: string,
+  explicitFolderId?: string
+): void => {
+  const trimmed = urlOrId.trim();
+  const match = trimmed.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+  const extractedId =
+    explicitFolderId || (match && match[1]) || trimmed || OFFICIAL_FICHAS_PDF_FOLDER_ID;
+  const fullUrl = trimmed.startsWith('http')
+    ? trimmed
+    : `https://drive.google.com/drive/folders/${extractedId}`;
+  localStorage.setItem(DRIVE_FICHAS_PDF_ID_KEY, extractedId);
+  localStorage.setItem(DRIVE_FICHAS_PDF_URL_KEY, fullUrl);
+};
+
+export const getSavedPhotosDriveFolderInfo = (): {
+  folderId: string;
+  folderUrl: string;
+  isRealCreated: boolean;
+} => {
+  const folderId = localStorage.getItem(DRIVE_PHOTOS_ID_KEY) || '';
+  const folderUrl =
+    localStorage.getItem(DRIVE_PHOTOS_URL_KEY) ||
+    (folderId
+      ? `https://drive.google.com/drive/folders/${folderId}`
+      : DEFAULT_DRIVE_PHOTOS_FOLDER_URL);
+  return {
+    folderId,
+    folderUrl,
+    isRealCreated: Boolean(folderId),
+  };
+};
+
+export const getSavedPhotosDriveFolderUrl = (): string => {
+  return getSavedPhotosDriveFolderInfo().folderUrl;
+};
+
+export const savePhotosDriveFolderUrl = (url: string, folderId?: string): void => {
+  const trimmed = url.trim();
+  localStorage.setItem(
+    DRIVE_PHOTOS_URL_KEY,
+    trimmed || DEFAULT_DRIVE_PHOTOS_FOLDER_URL
+  );
+  if (folderId) {
+    localStorage.setItem(DRIVE_PHOTOS_ID_KEY, folderId);
+  } else {
+    const match = trimmed.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+    if (match && match[1]) {
+      localStorage.setItem(DRIVE_PHOTOS_ID_KEY, match[1]);
+    }
+  }
+};
+
+export const getSavedSpreadsheetInfo = (): {
+  spreadsheetId: string;
+  title: string;
+  fullUrl: string;
+  isRealCreated: boolean;
+} => {
+  const savedId = localStorage.getItem(SHEET_ID_STORAGE_KEY) || '';
+  return {
+    spreadsheetId: savedId,
+    title:
+      localStorage.getItem(SHEET_TITLE_STORAGE_KEY) ||
+      OFFICIAL_SPREADSHEET_TITLE,
+    fullUrl: savedId
+      ? `https://docs.google.com/spreadsheets/d/${savedId}/edit`
+      : 'https://docs.google.com/spreadsheets/create',
+    isRealCreated: Boolean(savedId),
+  };
+};
+
+export const saveSpreadsheetInfo = (spreadsheetId: string, title: string) => {
+  localStorage.setItem(SHEET_ID_STORAGE_KEY, spreadsheetId);
+  localStorage.setItem(SHEET_TITLE_STORAGE_KEY, title);
+};
+
+export const extractSpreadsheetId = (input: string): string => {
+  const trimmed = input.trim();
+  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (match && match[1]) {
+    return match[1];
+  }
+  return trimmed;
+};
+
+export const isAdminEditor = (userRole?: UserRole): boolean => {
+  return userRole === 'admin';
+};
+
+export const initAuth = (
+  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthFailure?: () => void
+) => {
+  return onAuthStateChanged(auth, async (user: User | null) => {
+    if (user) {
+      if (cachedAccessToken) {
+        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+      } else if (!isSigningIn) {
+        cachedAccessToken = null;
+        if (onAuthFailure) onAuthFailure();
+      }
+    } else {
+      cachedAccessToken = null;
+      if (onAuthFailure) onAuthFailure();
+    }
+  });
+};
+
+export const googleSignIn = async (): Promise<{
+  user: User;
+  accessToken: string;
+} | null> => {
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error(
+        'Não foi possível obter o token de acesso do Google Sheets e Google Drive.'
+      );
+    }
+
+    cachedAccessToken = credential.accessToken;
+    return { user: result.user, accessToken: cachedAccessToken };
+  } catch (error: any) {
+    console.error('Erro ao autenticar com Google:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+export const getAccessToken = async (): Promise<string | null> => {
+  return cachedAccessToken;
+};
+
+export const getCurrentGoogleUser = (): User | null => {
+  return auth.currentUser;
+};
+
+export const logoutGoogle = async () => {
+  await auth.signOut();
+  cachedAccessToken = null;
+};
+
+/**
+ * Normalize student name or image filename for automatic photo matching
+ * e.g. "RAUANNY GRAZIELLY DA SILVA LIMA.jpg" -> "RAUANNY GRAZIELLY DA SILVA LIMA"
+ * e.g. "01_ALICE_DE_BARROS_PIRES.jpeg" -> "ALICE DE BARROS PIRES"
+ */
+export const normalizeStudentNameForPhoto = (raw: string): string => {
+  return raw
+    .replace(/\.(jpg|jpeg|png|webp|gif|bmp|pdf)$/i, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/^(FICHA\s+INFORMATIVA\s*[-_]?\s*)/i, '')
+    .replace(/^(G[45][A-Z]|[1-5][A-Z])[\s_-]+/i, '')
+    .replace(/^\d+[\s_.-]+/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/[^A-Z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+export const formatShortTurmaCode = (className: string): string => {
+  if (className.startsWith('GRUPO ')) {
+    return className
+      .replace('GRUPO 0', 'G')
+      .replace('GRUPO ', 'G')
+      .replace(/\s+/g, '');
+  }
+  if (className.includes('º ANO ')) {
+    return className.replace('º ANO ', '').replace(/\s+/g, '');
+  }
+  return className;
+};
+
+/**
+ * Exact 48 SED Columns (A to AV) + Attendance & Photo Columns (AW to BF)
+ * Columns A..AV (indices 0..47): Master Student Data edited manually in Google Sheets
+ * Columns AW..BF (indices 48..57): Attendance & Photo Link fed by App / Drive
+ */
+export const SED_48_HEADERS = [
+  // 0..47: 48 Official SED Columns (Manual in Google Sheets -> Auto-updated in App)
+  'TIPO DE ENSINO',
+  'SÉRIE',
+  'Nº CHAMADA',
+  'ESTUDANTE',
+  'RA',
+  'DIG. RA',
+  'UF RA',
+  'DATA DE NASCIMENTO',
+  'TIPO ALOCAÇÃO',
+  'SITUAÇÃO',
+  'DATA MOVIMENTAÇÃO',
+  'CATEGORIA PROFISSIONAL CENSO',
+  'DEFICIÊNCIA',
+  'PÓS DATA CENSO',
+  'TURMA',
+  'PERÍODO',
+  'DATA DE MATRÍCULA (SED)',
+  'PROCEDÊNCIA ESCOLAR',
+  'IRMÃOS',
+  'IDADE',
+  'ARQUIVO',
+  'FILIAÇÃO 1',
+  'FILIAÇÃO 2',
+  'NOME SOCIAL',
+  'GÊNERO',
+  'TIPO SANGUÍNEO',
+  'RAÇA/COR',
+  'NACIONALIDADE',
+  'PAÍS DE ORIGEM',
+  'MUNICÍPIO DE NASCIMENTO',
+  'CPF',
+  'RG',
+  'DATA EMISSÃO RG',
+  'CARTÃO SUS',
+  'NIS',
+  'CEP',
+  'LOGRADOURO',
+  'N. RESIDENCIA',
+  'COMPLEMENTO',
+  'BAIRRO',
+  'CIDADE',
+  'UF',
+  'TELEFONES',
+  'E-MAIL GOOGLE',
+  'E-MAIL MICROSOFT',
+  'EMAIL MUNICIPAL',
+  'ROTA DE ÔNIBUS',
+  'SUCESSÃO ESCOLAR',
+  // 48..57 (Columns AW..BF): Attendance Columns fed by App when filling out absences + Photo Link
+  'DIAS LETIVOS DO MÊS', // AW (col 49)
+  'DIAS NO RECORTE DA MATRÍCULA', // AX (col 50)
+  'FALTAS NO MÊS', // AY (col 51)
+  'QTD ATESTADOS APRESENTADOS', // AZ (col 52)
+  'PRESENÇAS NO PERÍODO', // BA (col 53)
+  '% FREQUÊNCIA NO RECORTE', // BB (col 54)
+  'LINK FOTO GOOGLE DRIVE', // BC (col 55)
+  'OBSERVAÇÕES / ATESTADOS', // BD (col 56)
+  'ID_TURMA', // BE (col 57)
+  'ID_ESTUDANTE', // BF (col 58)
+];
+
+const isEducacaoInfantilClass = (cls: ClassGroup): boolean => {
+  return (
+    cls.name.toUpperCase().startsWith('GRUPO') ||
+    cls.grade.toUpperCase().includes('INFANTIL')
+  );
+};
+
+const buildNominalStageSheetValues = (
+  classes: ClassGroup[],
+  stage: 'EDUCACAO INFANTIL' | 'ENSINO FUNDAMENTAL',
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): any[][] => {
+  const headers = [
+    'SEGMENTO DE ENSINO',
+    'ETAPA / SÉRIE',
+    'TURMA',
+    'TURNO',
+    'SALA',
+    'Nº CHAMADA',
+    'NOME NOMINAL DO(A) ESTUDANTE',
+    'RA',
+    'DIG. RA',
+    'UF RA',
+    'DATA DE MATRÍCULA (SED)',
+    'DATA DE MOVIMENTAÇÃO',
+    'SITUAÇÃO DO RECORTE',
+    'QTD DIAS LETIVOS DO MÊS',
+    'QTD DIAS NO RECORTE DA MATRÍCULA',
+    'QTD PRESENÇAS NO PERÍODO',
+    '% PRESENÇA (FREQUÊNCIA)',
+    'QTD TOTAL DE FALTAS NO MÊS',
+    '% FALTAS SOBRE DIAS MATRICULADOS',
+    'QTD ATESTADOS APRESENTADOS (FALTAS JUSTIFICADAS)',
+    '% ATESTADOS SOBRE O TOTAL DE FALTAS',
+    '% ATESTADOS SOBRE DIAS MATRICULADOS',
+    'QTD FALTAS NÃO JUSTIFICADAS (SEM ATESTADO)',
+    'STATUS DE FREQUÊNCIA',
+    'OBSERVAÇÕES / DETALHE DO ATESTADO',
+    'FILIAÇÃO / RESPONSÁVEL',
+    'TELEFONE DE CONTATO',
+  ];
+
+  const rows: any[][] = [headers];
+  const stageClasses = classes.filter((cls) =>
+    stage === 'EDUCACAO INFANTIL'
+      ? isEducacaoInfantilClass(cls)
+      : !isEducacaoInfantilClass(cls)
+  );
+
+  let totalDiasRecorte = 0;
+  let totalPresencas = 0;
+  let totalFaltas = 0;
+  let totalAtestados = 0;
+  let totalSemAtestado = 0;
+  let totalEstudantes = 0;
+
+  stageClasses.forEach((cls) => {
+    const diasLetivosMes = cls.classesHeld || 20;
+    const turnoLabel = cls.shift.replace('Turno ', '').toUpperCase();
+
+    cls.students.forEach((s) => {
+      const m = getStudentAttendanceMetrics(s, diasLetivosMes, calendar);
+      const faltasSemAtestado = Math.max(0, m.faltas - m.atestados);
+      const percentFaltas =
+        m.diasLetivosMatriculados > 0
+          ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
+          : 0;
+      const percentAtestadosSobreFaltas =
+        m.faltas > 0 ? Math.round((m.atestados / m.faltas) * 100) : 0;
+      const percentAtestadosSobreDias =
+        m.diasLetivosMatriculados > 0
+          ? Math.round((m.atestados / m.diasLetivosMatriculados) * 100)
+          : 0;
+
+      totalEstudantes += 1;
+      totalDiasRecorte += m.diasLetivosMatriculados;
+      totalPresencas += m.presencas;
+      totalFaltas += m.faltas;
+      totalAtestados += m.atestados;
+      totalSemAtestado += faltasSemAtestado;
+
+      rows.push([
+        stage,
+        cls.grade,
+        cls.name,
+        turnoLabel,
+        cls.room,
+        s.number,
+        s.name,
+        s.ra || '',
+        s.digRa || '',
+        s.ufRa || 'SP',
+        s.dataMatriculaSed || '03/02/2027',
+        s.dataMovimentacao || '',
+        m.recorteLabel,
+        m.diasLetivosMes,
+        m.diasLetivosMatriculados,
+        m.presencas,
+        `${m.frequenciaPercent}%`,
+        m.faltas,
+        `${percentFaltas}%`,
+        m.atestados,
+        `${percentAtestadosSobreFaltas}%`,
+        `${percentAtestadosSobreDias}%`,
+        faltasSemAtestado,
+        m.faltas >= 4
+          ? 'ALERTA DE INFREQUÊNCIA'
+          : m.frequenciaPercent === 100
+          ? '100% PRESENÇA'
+          : 'REGULAR',
+        s.notes || '',
+        s.filiacao1 || s.guardianName || '',
+        s.telefones || s.guardianPhone || '',
+      ]);
+    });
+  });
+
+  if (totalEstudantes > 0) {
+    const mediaPresenca =
+      totalDiasRecorte > 0 ? Math.round((totalPresencas / totalDiasRecorte) * 100) : 100;
+    const mediaFaltas =
+      totalDiasRecorte > 0 ? Math.round((totalFaltas / totalDiasRecorte) * 100) : 0;
+    const mediaAtestadosSobreFaltas =
+      totalFaltas > 0 ? Math.round((totalAtestados / totalFaltas) * 100) : 0;
+    const mediaAtestadosSobreDias =
+      totalDiasRecorte > 0 ? Math.round((totalAtestados / totalDiasRecorte) * 100) : 0;
+
+    rows.push([
+      `TOTAL CONSOLIDADO — ${stage}`,
+      `${stageClasses.length} TURMAS`,
+      'TODAS',
+      'MANHÃ + TARDE',
+      '—',
+      totalEstudantes,
+      `TOTAL: ${totalEstudantes} ESTUDANTES TABULADOS`,
+      '—',
+      '—',
+      '—',
+      '—',
+      '—',
+      'SOMA DO SEGMENTO',
+      20,
+      totalDiasRecorte,
+      totalPresencas,
+      `${mediaPresenca}%`,
+      totalFaltas,
+      `${mediaFaltas}%`,
+      totalAtestados,
+      `${mediaAtestadosSobreFaltas}%`,
+      `${mediaAtestadosSobreDias}%`,
+      totalSemAtestado,
+      `FREQUÊNCIA MÉDIA: ${mediaPresenca}%`,
+      '—',
+      '—',
+      '—',
+    ]);
+  }
+
+  return rows;
+};
+
+const buildSedSheetValues = (
+  classes: ClassGroup[],
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): any[][] => {
+  const rows: any[][] = [SED_48_HEADERS];
+
+  classes.forEach((cls) => {
+    const diasLetivosMes = cls.classesHeld || 20;
+    const shortTurma = formatShortTurmaCode(cls.name);
+    const periodo = cls.shift === 'Turno Manhã' ? 'MANHÃ' : 'TARDE';
+
+    cls.students.forEach((s) => {
+      const m = getStudentAttendanceMetrics(s, diasLetivosMes, calendar);
+      rows.push([
+        s.tipoEnsino ||
+          (cls.name.startsWith('GRUPO') ? 'EDUCACAO INFANTIL' : 'ENSINO FUNDAMENTAL'),
+        s.serie || '1',
+        s.number,
+        s.name,
+        s.ra || '',
+        s.digRa || '',
+        s.ufRa || 'SP',
+        s.dataNascimento || '',
+        s.tipoAlocacao || '',
+        s.situacao === 'ATIVO' ? '' : s.situacao || '',
+        s.dataMovimentacao || '',
+        s.categoriaProfissionalCenso || '',
+        s.deficiencia || '',
+        s.posDataCenso || '',
+        s.turma || shortTurma,
+        s.periodo || periodo,
+        s.dataMatriculaSed || '03/02/2026',
+        s.procedenciaEscolar || '',
+        s.irmaos || '',
+        s.idade || '',
+        s.arquivo || '',
+        s.filiacao1 || s.guardianName || '',
+        s.filiacao2 || '',
+        s.nomeSocial || '',
+        s.genero || '',
+        s.tipoSanguineo || '',
+        s.racaCor || '',
+        s.nacionalidade || 'BRASILEIRA',
+        s.paisOrigem || '',
+        s.municipioNascimento || 'JUNDIAI - SP',
+        s.cpf || '',
+        s.rg || '',
+        s.dataEmissaoRg || '',
+        s.cartaoSus || '',
+        s.nis || '',
+        s.cep || '13.214-000',
+        s.logradouro || '',
+        s.numeroResidencia || '',
+        s.complemento || '',
+        s.bairro || '',
+        s.cidade || 'JUNDIAI',
+        s.uf || 'SP',
+        s.telefones || s.guardianPhone || '',
+        s.emailGoogle || '',
+        s.emailMicrosoft || '',
+        s.emailMunicipal || '',
+        s.rotaOnibus || '',
+        s.sucessaoEscolar || '',
+        // Columns AW..BF (Attendance & Photo Link)
+        m.diasLetivosMes,
+        m.diasLetivosMatriculados,
+        m.faltas,
+        m.atestados,
+        m.presencas,
+        `${m.frequenciaPercent}%`,
+        s.photoDriveUrl || '',
+        s.notes || '',
+        cls.id,
+        s.id,
+      ]);
+    });
+  });
+
+  return rows;
+};
+
+const buildTurmasSheetValues = (
+  classes: ClassGroup[],
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): any[][] => {
+  const headers = [
+    'ID_TURMA',
+    'TURMA',
+    'CODIGO_SED',
+    'TURNO',
+    'ETAPA / SÉRIE',
+    'SALA',
+    'TOTAL ESTUDANTES',
+    'DIAS LETIVOS MÊS ATUAL',
+    'SOMA DIAS RECORTE MATRÍCULA',
+    'FALTAS ACUMULADAS',
+    'ATESTADOS APRESENTADOS',
+    'PRESENÇAS ACUMULADAS',
+    '% FREQUÊNCIA DA TURMA',
+    'STATUS FECHAMENTO',
+    'DIAS LETIVOS FEV',
+    'DIAS LETIVOS MAR',
+    'DIAS LETIVOS ABR',
+    'DIAS LETIVOS MAI',
+    'DIAS LETIVOS JUN',
+    'DIAS LETIVOS JUL',
+    'DIAS LETIVOS AGO',
+    'DIAS LETIVOS SET',
+    'DIAS LETIVOS OUT',
+    'DIAS LETIVOS NOV',
+    'DIAS LETIVOS DEZ',
+    'TOTAL ANUAL DIAS LETIVOS (META 200)',
+  ];
+
+  const rows: any[][] = [headers];
+  classes.forEach((c) => {
+    const cm = getClassAttendanceMetrics(c, calendar);
+    const monthlyCounts = MONTHLY_SCHOOL_DAYS_2027.map((m) =>
+      c.monthlySchoolDays && typeof c.monthlySchoolDays[m.month] === 'number'
+        ? c.monthlySchoolDays[m.month]
+        : m.schoolDays
+    );
+    const totalAnual = monthlyCounts.reduce((acc, v) => acc + v, 0);
+
+    rows.push([
+      c.id,
+      c.name,
+      formatShortTurmaCode(c.name),
+      c.shift,
+      c.grade,
+      c.room,
+      c.totalStudents,
+      cm.diasLetivosMes,
+      cm.totalDiasMatriculadosTurma,
+      cm.totalFaltasTurma,
+      cm.totalAtestadosTurma,
+      cm.totalPresencasTurma,
+      `${cm.presenceRate}%`,
+      c.isPending ? 'Pendente' : 'Concluído',
+      ...monthlyCounts,
+      totalAnual,
+    ]);
+  });
+  return rows;
+};
+
+const buildCalendario200DiasValues = (
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): any[][] => {
+  const rows: any[][] = [
+    [
+      'MÊS LETIVO',
+      'NÚMERO DO MÊS',
+      'DIAS LETIVOS OFICIAIS (META 200 DIAS)',
+      'OBSERVAÇÃO / CALENDÁRIO SME JUNDIAÍ',
+      '',
+      'DATA (OUTUBRO)',
+      'DIA DA SEMANA',
+      'TIPO DO DIA',
+      'DESCRIÇÃO OFICIAL',
+    ],
+  ];
+
+  const maxLen = Math.max(MONTHLY_SCHOOL_DAYS_2027.length + 1, calendar.length);
+  for (let i = 0; i < maxLen; i++) {
+    const m = MONTHLY_SCHOOL_DAYS_2027[i];
+    const isTotalRow = i === MONTHLY_SCHOOL_DAYS_2027.length;
+    const d = calendar[i];
+
+    const leftCols = m
+      ? [
+          m.month,
+          m.monthNumber,
+          m.schoolDays,
+          'Aba Oficial de Alimentação dos 200 Dias Letivos',
+        ]
+      : isTotalRow
+      ? ['TOTAL ANUAL OFICIAL', '', 200, 'SOMA EXATA = 200 DIAS LETIVOS (LDB / SME)']
+      : ['', '', '', ''];
+
+    const rightCols = d
+      ? [
+          d.date,
+          d.dayOfWeek,
+          d.type === 'dia_letivo'
+            ? 'Dia Letivo'
+            : d.type === 'sabado_letivo'
+            ? 'Sábado Letivo'
+            : d.type === 'feriado'
+            ? 'Feriado'
+            : 'Recesso',
+          d.description,
+        ]
+      : ['', '', '', ''];
+
+    rows.push([...leftCols, '', ...rightCols]);
+  }
+
+  return rows;
+};
+
+const buildEmailsPermitidosValues = (
+  users?: AuthorizedUser[]
+): any[][] => {
+  const list = users || getStoredAuthorizedUsers();
+  const headers = [
+    'Nº',
+    'E-MAIL INSTITUCIONAL PERMITIDO (GOOGLE WORKSPACE)',
+    'NOME DO SERVIDOR / EDUCADOR',
+    'NÍVEL DE ACESSO CONCEDIDO',
+    'TURMA VINCULADA (LIMITE)',
+    'STATUS DA CONTA',
+    'DATA DE CADASTRO',
+  ];
+  const rows: any[][] = [headers];
+  list.forEach((u, idx) => {
+    rows.push([
+      idx + 1,
+      u.email,
+      u.name,
+      u.role === 'admin'
+        ? 'ADMIN (Acesso Pleno)'
+        : u.role === 'usuario'
+        ? 'PEB I (Limitado à Turma)'
+        : 'PEB II (Somente Visualização)',
+      u.assignedClassName,
+      u.active ? 'AUTORIZADO' : 'BLOQUEADO',
+      u.createdAt,
+    ]);
+  });
+  return rows;
+};
+
+export const syncAuthorizedUsersToGoogleSheet = async (
+  users?: AuthorizedUser[]
+): Promise<void> => {
+  const token = await getAccessToken();
+  const { spreadsheetId } = getSavedSpreadsheetInfo();
+  if (!token || !spreadsheetId) return;
+
+  try {
+    const meta = await fetchSpreadsheetMetadata(spreadsheetId);
+    if (!meta.sheetTitles.includes('Emails_Permitidos_2027')) {
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+          spreadsheetId
+        )}:batchUpdate`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requests: [
+              {
+                addSheet: {
+                  properties: {
+                    title: 'Emails_Permitidos_2027',
+                    gridProperties: { frozenRowCount: 1 },
+                  },
+                },
+              },
+            ],
+          }),
+        }
+      );
+    }
+
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}/values:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          valueInputOption: 'USER_ENTERED',
+          data: [
+            {
+              range: 'Emails_Permitidos_2027!A1',
+              values: buildEmailsPermitidosValues(users),
+            },
+          ],
+        }),
+      }
+    );
+  } catch (e) {
+    console.warn('Aviso ao sincronizar aba Emails_Permitidos_2027:', e);
+  }
+};
+
+/**
+ * Ensures a SINGLE UNIQUE Folder in Google Drive (`application/vnd.google-apps.folder`).
+ */
+export const createRealPhotosFolderInDrive = async (): Promise<{
+  folderId: string;
+  folderUrl: string;
+  folderName: string;
+  alreadyExisted: boolean;
+}> => {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error(
+      'Autenticação necessária. Conecte a conta Google do Administrador primeiro.'
+    );
+  }
+
+  const query = encodeURIComponent(
+    `name = '${OFFICIAL_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+  );
+  const searchRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,webViewLink)&pageSize=1`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (searchRes.ok) {
+    const searchData = await searchRes.json();
+    if (searchData.files && searchData.files.length > 0) {
+      const existing = searchData.files[0];
+      const existingId: string = existing.id;
+      const existingUrl: string =
+        existing.webViewLink ||
+        `https://drive.google.com/drive/folders/${existingId}`;
+      savePhotosDriveFolderUrl(existingUrl, existingId);
+      return {
+        folderId: existingId,
+        folderUrl: existingUrl,
+        folderName: OFFICIAL_FOLDER_NAME,
+        alreadyExisted: true,
+      };
+    }
+  }
+
+  const res = await fetch(
+    'https://www.googleapis.com/drive/v3/files?fields=id,name,webViewLink',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: OFFICIAL_FOLDER_NAME,
+        mimeType: 'application/vnd.google-apps.folder',
+        description:
+          'Pasta Oficial Única de Fotos dos Estudantes — EMEB Prof. Joaquim Candelário de Freitas (2027)',
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(
+      errData?.error?.message ||
+        `Erro ao criar pasta única no Google Drive (${res.status}).`
+    );
+  }
+
+  const data = await res.json();
+  const folderId: string = data.id;
+  const folderUrl: string =
+    data.webViewLink || `https://drive.google.com/drive/folders/${folderId}`;
+
+  savePhotosDriveFolderUrl(folderUrl, folderId);
+
+  return {
+    folderId,
+    folderUrl,
+    folderName: OFFICIAL_FOLDER_NAME,
+    alreadyExisted: false,
+  };
+};
+
+/**
+ * Sync student photos dropped into the Google Drive Folder!
+ * Matches files like "RAUANNY GRAZIELLY DA SILVA LIMA.jpg" -> student "RAUANNY GRAZIELLY DA SILVA LIMA"
+ */
+export const syncPhotosFromDriveFolder = async (
+  currentClasses: ClassGroup[]
+): Promise<{
+  updatedClasses: ClassGroup[];
+  matchedPhotosCount: number;
+  totalDriveImagesFound: number;
+}> => {
+  const token = await getAccessToken();
+  if (!token) {
+    return {
+      updatedClasses: currentClasses,
+      matchedPhotosCount: 0,
+      totalDriveImagesFound: 0,
+    };
+  }
+
+  const { folderId } = getSavedPhotosDriveFolderInfo();
+  let targetFolderId = folderId;
+
+  // If folderId is not cached yet, try locating the official folder in Drive
+  if (!targetFolderId) {
+    const qFolder = encodeURIComponent(
+      `name = '${OFFICIAL_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+    );
+    const fRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${qFolder}&fields=files(id,webViewLink)&pageSize=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (fRes.ok) {
+      const fData = await fRes.json();
+      if (fData.files && fData.files.length > 0) {
+        targetFolderId = fData.files[0].id;
+        savePhotosDriveFolderUrl(
+          fData.files[0].webViewLink ||
+            `https://drive.google.com/drive/folders/${targetFolderId}`,
+          targetFolderId
+        );
+      }
+    }
+  }
+
+  // Query images inside the target folder (or any image in Drive if folder has subfolders)
+  const qImages = targetFolderId
+    ? encodeURIComponent(
+        `('${targetFolderId}' in parents or mimeType contains 'image/') and mimeType contains 'image/' and trashed = false`
+      )
+    : encodeURIComponent(`mimeType contains 'image/' and trashed = false`);
+
+  const listRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${qImages}&fields=files(id,name,mimeType,webViewLink,thumbnailLink)&pageSize=600`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!listRes.ok) {
+    return {
+      updatedClasses: currentClasses,
+      matchedPhotosCount: 0,
+      totalDriveImagesFound: 0,
+    };
+  }
+
+  const listData = await listRes.json();
+  const driveFiles: Array<{
+    id: string;
+    name: string;
+    webViewLink?: string;
+    thumbnailLink?: string;
+  }> = listData.files || [];
+
+  // Build normalized lookup map: normalizedStudentName -> Drive file
+  const photoMap = new Map<
+    string,
+    { id: string; name: string; photoUrl: string; driveLink: string }
+  >();
+
+  driveFiles.forEach((f) => {
+    const norm = normalizeStudentNameForPhoto(f.name);
+    if (!norm) return;
+    const photoUrl =
+      f.thumbnailLink?.replace(/=s\d+/, '=s400') ||
+      `https://drive.google.com/thumbnail?id=${f.id}&sz=w400`;
+    const driveLink =
+      f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`;
+    photoMap.set(norm, { id: f.id, name: f.name, photoUrl, driveLink });
+  });
+
+  let matchedPhotosCount = 0;
+
+  const updatedClasses = currentClasses.map((cls) => {
+    const updatedStudents = cls.students.map((s) => {
+      const normName = normalizeStudentNameForPhoto(s.name);
+      const matched =
+        photoMap.get(normName) ||
+        (s.ra ? photoMap.get(normalizeStudentNameForPhoto(s.ra)) : undefined);
+
+      if (matched) {
+        matchedPhotosCount++;
+        return {
+          ...s,
+          photo: matched.photoUrl,
+          photoDriveUrl: matched.driveLink,
+        };
+      }
+      return s;
+    });
+
+    return {
+      ...cls,
+      students: updatedStudents,
+    };
+  });
+
+  return {
+    updatedClasses,
+    matchedPhotosCount,
+    totalDriveImagesFound: driveFiles.length,
+  };
+};
+
+// Cache for all discovered PDF files in the Fichas Informativas Drive folder + subfolders
+const DISCOVERED_PDFS_STORAGE_KEY = 'emeb_candelario_discovered_nominal_pdfs_2027_v1';
+
+export const getStoredDiscoveredNominalPdfs = (): DriveNominalPdfFile[] => {
+  try {
+    const raw = localStorage.getItem(DISCOVERED_PDFS_STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as DriveNominalPdfFile[];
+  } catch {
+    return [];
+  }
+};
+
+export const saveStoredDiscoveredNominalPdfs = (files: DriveNominalPdfFile[]): void => {
+  try {
+    localStorage.setItem(DISCOVERED_PDFS_STORAGE_KEY, JSON.stringify(files));
+  } catch {
+    // ignore storage quota
+  }
+};
+
+/**
+ * Recursively scans the official "Fichas Informativas" Google Drive folder
+ * (default ID: 1GDEdQuNfhc0vps4mZXv4LLv4kDLZnauJ) and all its subfolders
+ * (GRUPO 04 A, GRUPO 04 B, ..., 1º ANO A, ..., 5º ANO C, INATIVOS, etc.)
+ * to locate nominal PDF documents and automatically attach them to each Student!
+ */
+export const syncNominalPdfsFromDriveSubfolders = async (
+  currentClasses: ClassGroup[],
+  customRootFolderId?: string
+): Promise<{
+  updatedClasses: ClassGroup[];
+  matchedPdfsCount: number;
+  totalPdfFilesFound: number;
+  subfoldersScannedCount: number;
+  discoveredPdfs: DriveNominalPdfFile[];
+}> => {
+  const token = await getAccessToken();
+  if (!token) {
+    return {
+      updatedClasses: currentClasses,
+      matchedPdfsCount: 0,
+      totalPdfFilesFound: 0,
+      subfoldersScannedCount: 0,
+      discoveredPdfs: getStoredDiscoveredNominalPdfs(),
+    };
+  }
+
+  const rootFolderId =
+    customRootFolderId?.trim() || getSavedFichasPdfDriveFolderInfo().folderId;
+
+  // 1. List all immediate subfolders inside the Fichas Informativas root folder (e.g., GRUPO 04 A, 1º ANO A, INATIVOS...)
+  const qSubfolders = encodeURIComponent(
+    `'${rootFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+  );
+  const subRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${qSubfolders}&fields=files(id,name)&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  const subfolderMap = new Map<string, string>(); // folderId -> folderName
+  subfolderMap.set(rootFolderId, 'Pasta Raiz (Fichas Informativas)');
+
+  if (subRes.ok) {
+    const subData = await subRes.json();
+    const folders: Array<{ id: string; name: string }> = subData.files || [];
+    folders.forEach((f) => {
+      subfolderMap.set(f.id, f.name);
+    });
+
+    // Also check if any subfolder has nested subfolders (e.g. INATIVOS -> DUPLICATAS_ARQUIVADAS)
+    const parentIds = folders.map((f) => f.id);
+    if (parentIds.length > 0) {
+      const chunked = parentIds.slice(0, 25);
+      const qNested = encodeURIComponent(
+        `(${chunked.map((id) => `'${id}' in parents`).join(' or ')}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+      );
+      const nestedRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${qNested}&fields=files(id,name,parents)&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (nestedRes.ok) {
+        const nestedData = await nestedRes.json();
+        (nestedData.files || []).forEach((nf: { id: string; name: string; parents?: string[] }) => {
+          const parentName = (nf.parents && subfolderMap.get(nf.parents[0])) || '';
+          subfolderMap.set(nf.id, parentName ? `${parentName} / ${nf.name}` : nf.name);
+        });
+      }
+    }
+  }
+
+  // 2. Query all PDF files inside rootFolderId or any of its discovered subfolders
+  const allFolderIds = Array.from(subfolderMap.keys());
+  const discoveredPdfs: DriveNominalPdfFile[] = [];
+
+  // Query in chunks of 20 parent folders so the Drive query length stays well within limits
+  const chunkSize = 20;
+  for (let i = 0; i < allFolderIds.length; i += chunkSize) {
+    const chunk = allFolderIds.slice(i, i + chunkSize);
+    const parentsClause = chunk.map((id) => `'${id}' in parents`).join(' or ');
+    const qPdfs = encodeURIComponent(
+      `(${parentsClause}) and mimeType = 'application/pdf' and trashed = false`
+    );
+
+    const pdfRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${qPdfs}&fields=files(id,name,parents,webViewLink,thumbnailLink,modifiedTime)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (pdfRes.ok) {
+      const pdfData = await pdfRes.json();
+      const files: Array<{
+        id: string;
+        name: string;
+        parents?: string[];
+        webViewLink?: string;
+        thumbnailLink?: string;
+        modifiedTime?: string;
+      }> = pdfData.files || [];
+
+      files.forEach((f) => {
+        const parentId = f.parents?.[0] || rootFolderId;
+        const subfolderName = subfolderMap.get(parentId) || 'Fichas Informativas';
+        const normName = normalizeStudentNameForPhoto(f.name);
+        discoveredPdfs.push({
+          id: f.id,
+          name: f.name,
+          normalizedStudentName: normName,
+          subfolderName,
+          subfolderId: parentId,
+          webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
+          embedPreviewUrl: `https://drive.google.com/file/d/${f.id}/preview`,
+          thumbnailLink: f.thumbnailLink,
+          modifiedTime: f.modifiedTime,
+        });
+      });
+    }
+  }
+
+  // Fallback: if no PDFs were found via parent filter (e.g., shared items), query accessible PDFs in Drive
+  if (discoveredPdfs.length === 0) {
+    const qFallbackPdfs = encodeURIComponent(
+      `mimeType = 'application/pdf' and trashed = false`
+    );
+    const fallbackRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${qFallbackPdfs}&fields=files(id,name,parents,webViewLink,thumbnailLink,modifiedTime)&pageSize=500&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (fallbackRes.ok) {
+      const fbData = await fallbackRes.json();
+      (fbData.files || []).forEach((f: any) => {
+        const parentId = f.parents?.[0] || rootFolderId;
+        const subfolderName = subfolderMap.get(parentId) || 'Fichas Informativas (Drive)';
+        discoveredPdfs.push({
+          id: f.id,
+          name: f.name,
+          normalizedStudentName: normalizeStudentNameForPhoto(f.name),
+          subfolderName,
+          subfolderId: parentId,
+          webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
+          embedPreviewUrl: `https://drive.google.com/file/d/${f.id}/preview`,
+          thumbnailLink: f.thumbnailLink,
+          modifiedTime: f.modifiedTime,
+        });
+      });
+    }
+  }
+
+  saveStoredDiscoveredNominalPdfs(discoveredPdfs);
+
+  // Build lookup map by normalized student name
+  const pdfByNormName = new Map<string, DriveNominalPdfFile>();
+  discoveredPdfs.forEach((pdf) => {
+    if (pdf.normalizedStudentName) {
+      pdfByNormName.set(pdf.normalizedStudentName, pdf);
+    }
+  });
+
+  let matchedPdfsCount = 0;
+
+  const updatedClasses = currentClasses.map((cls) => {
+    const updatedStudents = cls.students.map((s) => {
+      const normStudent = normalizeStudentNameForPhoto(s.name);
+      // Match exact normalized name or prefix/substring match for long names
+      let matched = pdfByNormName.get(normStudent);
+      if (!matched && normStudent.length >= 6) {
+        matched = discoveredPdfs.find(
+          (p) =>
+            p.normalizedStudentName.startsWith(normStudent) ||
+            normStudent.startsWith(p.normalizedStudentName)
+        );
+      }
+
+      if (matched) {
+        matchedPdfsCount++;
+        return {
+          ...s,
+          fichaPdfDriveId: matched.id,
+          fichaPdfDriveUrl: matched.webViewLink,
+          fichaPdfSubfolder: matched.subfolderName,
+        };
+      }
+      return s;
+    });
+
+    return {
+      ...cls,
+      students: updatedStudents,
+    };
+  });
+
+  return {
+    updatedClasses,
+    matchedPdfsCount,
+    totalPdfFilesFound: discoveredPdfs.length,
+    subfoldersScannedCount: Math.max(0, subfolderMap.size - 1),
+    discoveredPdfs,
+  };
+};
+
+/**
+ * Sync local computer photo files (e.g. selected with Ctrl+A from the Windows folder)
+ * Matches by student name ("RAUANNY GRAZIELLY DA SILVA LIMA.jpg") and optionally uploads to Google Drive folder
+ */
+export const syncLocalPhotoFilesToStudents = async (
+  fileList: FileList | File[],
+  currentClasses: ClassGroup[],
+  uploadToDrive = true
+): Promise<{
+  updatedClasses: ClassGroup[];
+  matchedCount: number;
+  uploadedToDriveCount: number;
+}> => {
+  const files = Array.from(fileList).filter((f) =>
+    f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(f.name)
+  );
+
+  // Read all files into base64 data URLs
+  const fileMap = new Map<string, { file: File; dataUrl: string }>();
+
+  await Promise.all(
+    files.map(
+      (file) =>
+        new Promise<void>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const norm = normalizeStudentNameForPhoto(file.name);
+            if (norm && typeof reader.result === 'string') {
+              fileMap.set(norm, { file, dataUrl: reader.result });
+            }
+            resolve();
+          };
+          reader.onerror = () => resolve();
+          reader.readAsDataURL(file);
+        })
+    )
+  );
+
+  let matchedCount = 0;
+  let uploadedToDriveCount = 0;
+  const token = uploadToDrive ? await getAccessToken() : null;
+
+  const updatedClasses: ClassGroup[] = [];
+
+  for (const cls of currentClasses) {
+    const updatedStudents: Student[] = [];
+    for (const s of cls.students) {
+      const norm = normalizeStudentNameForPhoto(s.name);
+      const found = fileMap.get(norm);
+      if (found) {
+        matchedCount++;
+        let driveLink = s.photoDriveUrl || '';
+        let finalPhotoUrl = found.dataUrl;
+        if (token && uploadToDrive) {
+          try {
+            const uploaded = await uploadStudentPhotoToDrive(
+              s,
+              cls.name,
+              found.dataUrl
+            );
+            driveLink = uploaded.webViewLink;
+            if (uploaded.thumbnailUrl) {
+              finalPhotoUrl = found.dataUrl;
+            }
+            uploadedToDriveCount++;
+          } catch (e) {
+            console.warn('Aviso ao enviar foto ao Drive:', e);
+          }
+        }
+        updatedStudents.push({
+          ...s,
+          photo: finalPhotoUrl,
+          photoDriveUrl: driveLink || s.photoDriveUrl,
+        });
+      } else {
+        updatedStudents.push(s);
+      }
+    }
+    updatedClasses.push({
+      ...cls,
+      students: updatedStudents,
+    });
+  }
+
+  return {
+    updatedClasses,
+    matchedCount,
+    uploadedToDriveCount,
+  };
+};
+
+/**
+ * Upload a Student Photo directly into the REAL Google Drive Folder
+ * Named with the exact Student Name ("RAUANNY GRAZIELLY DA SILVA LIMA.jpg") so folder & app stay 100% in sync!
+ * If a photo with that name already exists in the folder, it updates it cleanly without creating duplicates.
+ */
+export const uploadStudentPhotoToDrive = async (
+  student: Student,
+  className: string,
+  dataUrl: string
+): Promise<{ fileId: string; webViewLink: string; thumbnailUrl: string; folderUrl: string }> => {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error(
+      'Conecte sua conta Google Workspace para enviar a foto diretamente para a pasta do Google Drive.'
+    );
+  }
+
+  let { folderId, folderUrl } = getSavedPhotosDriveFolderInfo();
+  if (!folderId) {
+    const createdFolder = await createRealPhotosFolderInDrive();
+    folderId = createdFolder.folderId;
+    folderUrl = createdFolder.folderUrl;
+  }
+
+  const cleanStudentName = student.name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+  const fileName = `${cleanStudentName}.jpg`;
+
+  const arr = dataUrl.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const bstr = atob(arr[1] || '');
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  const fileBlob = new Blob([u8arr], { type: mimeType });
+
+  // Check if file with same name already exists inside the Drive folder to avoid duplicates
+  let existingFileId: string | null = null;
+  try {
+    const qExisting = encodeURIComponent(
+      `'${folderId}' in parents and name = '${fileName.replace(/'/g, "\\'")}' and trashed = false`
+    );
+    const searchRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${qExisting}&fields=files(id)&pageSize=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      if (searchData.files && searchData.files.length > 0) {
+        existingFileId = searchData.files[0].id;
+      }
+    }
+  } catch {
+    // ignore search error and proceed to create
+  }
+
+  const metadata: Record<string, unknown> = {
+    name: fileName,
+    description: `Foto Oficial - ${student.name} (RA: ${student.ra || ''}) - Turma ${className}`,
+  };
+  if (!existingFileId) {
+    metadata.parents = [folderId];
+  }
+
+  const form = new FormData();
+  form.append(
+    'metadata',
+    new Blob([JSON.stringify(metadata)], { type: 'application/json' })
+  );
+  form.append('file', fileBlob);
+
+  const uploadEndpoint = existingFileId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart&fields=id,name,webViewLink,thumbnailLink`
+    : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,thumbnailLink';
+
+  const uploadRes = await fetch(uploadEndpoint, {
+    method: existingFileId ? 'PATCH' : 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: form,
+  });
+
+  if (!uploadRes.ok) {
+    const errData = await uploadRes.json().catch(() => ({}));
+    throw new Error(
+      errData?.error?.message ||
+        `Erro ao enviar foto para a pasta do Google Drive (${uploadRes.status}).`
+    );
+  }
+
+  const uploaded = await uploadRes.json();
+  const fileId: string = uploaded.id;
+  const webViewLink: string =
+    uploaded.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
+  const thumbnailUrl =
+    uploaded.thumbnailLink?.replace(/=s\d+/, '=s400') ||
+    `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+
+  return {
+    fileId,
+    webViewLink,
+    thumbnailUrl,
+    folderUrl: folderUrl || `https://drive.google.com/drive/folders/${folderId}`,
+  };
+};
+
+/**
+ * Fetch spreadsheet metadata to inspect actual sheet/tab names without hardcoding
+ */
+export const fetchSpreadsheetMetadata = async (
+  spreadsheetId: string
+): Promise<{
+  spreadsheetId: string;
+  title: string;
+  spreadsheetUrl: string;
+  sheetTitles: string[];
+}> => {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Autenticação necessária. Conecte sua conta Google primeiro.');
+  }
+
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(
+      errData?.error?.message ||
+        `Erro ao acessar planilha (${res.status}). Verifique o ID da planilha e suas permissões.`
+    );
+  }
+
+  const data = await res.json();
+  const sheetTitles: string[] = (data.sheets || []).map(
+    (s: any) => s.properties?.title || ''
+  );
+
+  return {
+    spreadsheetId: data.spreadsheetId,
+    title: data.properties?.title || 'Planilha Google Sheets',
+    spreadsheetUrl:
+      data.spreadsheetUrl ||
+      `https://docs.google.com/spreadsheets/d/${data.spreadsheetId}/edit`,
+    sheetTitles,
+  };
+};
+
+/**
+ * Ensures a SINGLE UNIQUE Official Google Sheet + SINGLE UNIQUE Google Drive Photos Folder.
+ * If the spreadsheet already exists, it READS from it (preserving manual edits made in Sheets!)
+ * If it does not exist yet, it creates and seeds it once.
+ */
+export const createSchoolDatabaseSpreadsheet = async (
+  classes: ClassGroup[],
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): Promise<{
+  spreadsheetId: string;
+  spreadsheetUrl: string;
+  title: string;
+  driveFolderUrl?: string;
+  sheetAlreadyExisted?: boolean;
+  folderAlreadyExisted?: boolean;
+}> => {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Autenticação necessária. Faça login com o Google primeiro.');
+  }
+
+  // 1. Ensure the SINGLE UNIQUE Google Drive folder for student photos exists
+  let driveFolderUrl = getSavedPhotosDriveFolderUrl();
+  let folderAlreadyExisted = false;
+  try {
+    const folderResult = await createRealPhotosFolderInDrive();
+    driveFolderUrl = folderResult.folderUrl;
+    folderAlreadyExisted = folderResult.alreadyExisted;
+  } catch (e) {
+    console.warn('Aviso ao verificar/criar pasta única no Drive:', e);
+  }
+
+  // 2. Search if the SINGLE UNIQUE Official Spreadsheet already exists in Drive (not trashed)
+  let spreadsheetId = '';
+  let spreadsheetUrl = '';
+  let sheetAlreadyExisted = false;
+
+  const sheetQuery = encodeURIComponent(
+    `name = '${OFFICIAL_SPREADSHEET_TITLE}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`
+  );
+  const searchSheetRes = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${sheetQuery}&fields=files(id,name,webViewLink)&pageSize=1`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (searchSheetRes.ok) {
+    const searchData = await searchSheetRes.json();
+    if (searchData.files && searchData.files.length > 0) {
+      spreadsheetId = searchData.files[0].id;
+      spreadsheetUrl =
+        searchData.files[0].webViewLink ||
+        `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+      sheetAlreadyExisted = true;
+    }
+  }
+
+  // 3. If the single spreadsheet doesn't exist yet, create and seed it once
+  if (!spreadsheetId) {
+    const createRes = await fetch(
+      'https://sheets.googleapis.com/v4/spreadsheets',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          properties: {
+            title: OFFICIAL_SPREADSHEET_TITLE,
+            locale: 'pt_BR',
+          },
+          sheets: [
+            {
+              properties: {
+                title: 'Faltas_Atestados_Infantil',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+            {
+              properties: {
+                title: 'Faltas_Atestados_Fundamental',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+            {
+              properties: {
+                title: 'SED_Matriculas_e_Frequencia',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+            {
+              properties: {
+                title: 'Dias_Letivos_SME_2027',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+            {
+              properties: {
+                title: 'Turmas_Salas_2027',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+            {
+              properties: {
+                title: 'Emails_Permitidos_2027',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!createRes.ok) {
+      const errData = await createRes.json().catch(() => ({}));
+      throw new Error(
+        errData?.error?.message ||
+          `Falha ao criar planilha única no Google Sheets (${createRes.status}).`
+      );
+    }
+
+    const created = await createRes.json();
+    spreadsheetId = created.spreadsheetId;
+    spreadsheetUrl =
+      created.spreadsheetUrl ||
+      `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+
+    // Seed initial data ONLY when creating the brand-new spreadsheet
+    await syncClassesToGoogleSheet(spreadsheetId, classes, calendar);
+  }
+
+  saveSpreadsheetInfo(spreadsheetId, OFFICIAL_SPREADSHEET_TITLE);
+
+  return {
+    spreadsheetId,
+    spreadsheetUrl,
+    title: OFFICIAL_SPREADSHEET_TITLE,
+    driveFolderUrl,
+    sheetAlreadyExisted,
+    folderAlreadyExisted,
+  };
+};
+
+/**
+ * Write ONLY Attendance Columns (AW:BF) to the Google Sheet when filling out absences in the App!
+ * NEVER overwrites Columns A:AV (the 48 SED student data columns managed manually in Google Sheets).
+ */
+export const writeAttendanceOnlyToGoogleSheet = async (
+  updatedClass: ClassGroup,
+  allClasses: ClassGroup[],
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): Promise<{ updatedStudentsCount: number }> => {
+  const token = await getAccessToken();
+  const { spreadsheetId } = getSavedSpreadsheetInfo();
+  if (!token || !spreadsheetId) {
+    return { updatedStudentsCount: 0 };
+  }
+
+  const meta = await fetchSpreadsheetMetadata(spreadsheetId);
+  const targetTab = meta.sheetTitles.includes('SED_Matriculas_e_Frequencia')
+    ? 'SED_Matriculas_e_Frequencia'
+    : meta.sheetTitles[0];
+
+  if (!targetTab) return { updatedStudentsCount: 0 };
+
+  // Read existing Columns A..BF to find the exact row number of each student in the Sheet
+  const readRes = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}/values/${encodeURIComponent(`${targetTab}!A1:BF2000`)}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!readRes.ok) return { updatedStudentsCount: 0 };
+
+  const readData = await readRes.json();
+  const rows: any[][] = readData.values || [];
+  if (rows.length <= 1) return { updatedStudentsCount: 0 };
+
+  const headers = rows[0].map((h: any) => String(h || '').trim().toUpperCase());
+  const idxChamada = headers.indexOf('Nº CHAMADA');
+  const idxEstudante = headers.indexOf('ESTUDANTE');
+  const idxRa = headers.indexOf('RA');
+  const idxTurma = headers.indexOf('TURMA');
+  const idxIdAluno =
+    headers.indexOf('ID_ESTUDANTE') >= 0
+      ? headers.indexOf('ID_ESTUDANTE')
+      : headers.indexOf('ID_ALUNO');
+
+  const shortTurma = formatShortTurmaCode(updatedClass.name).toUpperCase();
+  const diasLetivosMes = updatedClass.classesHeld || 20;
+
+  // Map student -> 1-based row number in Google Sheet
+  const dataUpdates: Array<{ range: string; values: any[][] }> = [];
+
+  for (let rIdx = 1; rIdx < rows.length; rIdx++) {
+    const row = rows[rIdx];
+    const rowNumber = rIdx + 1; // 1-indexed in Sheets
+    const rowTurma =
+      idxTurma >= 0 ? String(row[idxTurma] || '').trim().toUpperCase() : '';
+    const rowRa = idxRa >= 0 ? String(row[idxRa] || '').trim() : '';
+    const rowName =
+      idxEstudante >= 0
+        ? normalizeStudentNameForPhoto(String(row[idxEstudante] || ''))
+        : '';
+    const rowChamada =
+      idxChamada >= 0 ? parseInt(String(row[idxChamada] || ''), 10) : -1;
+    const rowAlunoId =
+      idxIdAluno >= 0 ? String(row[idxIdAluno] || '').trim() : '';
+
+    // Check if this row belongs to updatedClass
+    const matchesTurma =
+      rowTurma === shortTurma ||
+      rowTurma === updatedClass.name.toUpperCase();
+
+    const matchedStudent = updatedClass.students.find((s) => {
+      if (rowAlunoId && s.id === rowAlunoId) return true;
+      if (rowRa && s.ra && s.ra.trim() === rowRa) return true;
+      if (
+        matchesTurma &&
+        (normalizeStudentNameForPhoto(s.name) === rowName ||
+          s.number === rowChamada)
+      ) {
+        return true;
+      }
+      return false;
+    });
+
+    if (matchedStudent) {
+      const m = getStudentAttendanceMetrics(
+        matchedStudent,
+        diasLetivosMes,
+        calendar
+      );
+      // Columns AW to BF (10 columns: index 48 to 57)
+      dataUpdates.push({
+        range: `${targetTab}!AW${rowNumber}:BF${rowNumber}`,
+        values: [
+          [
+            m.diasLetivosMes,
+            m.diasLetivosMatriculados,
+            m.faltas,
+            m.atestados,
+            m.presencas,
+            `${m.frequenciaPercent}%`,
+            matchedStudent.photoDriveUrl || '',
+            matchedStudent.notes || '',
+            updatedClass.id,
+            matchedStudent.id,
+          ],
+        ],
+      });
+    }
+  }
+
+  // Ensure nominal stage tabs exist and update them as well
+  const missingNominalTabs: any[] = [];
+  ['Faltas_Atestados_Infantil', 'Faltas_Atestados_Fundamental'].forEach((tName) => {
+    if (!meta.sheetTitles.includes(tName)) {
+      missingNominalTabs.push({
+        addSheet: {
+          properties: {
+            title: tName,
+            gridProperties: { frozenRowCount: 1 },
+          },
+        },
+      });
+    }
+  });
+
+  if (missingNominalTabs.length > 0) {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requests: missingNominalTabs }),
+      }
+    ).catch(() => {});
+  }
+
+  // Update Nominal Tabs separated by Educação Infantil and Ensino Fundamental
+  dataUpdates.push({
+    range: 'Faltas_Atestados_Infantil!A1',
+    values: buildNominalStageSheetValues(allClasses, 'EDUCACAO INFANTIL', calendar),
+  });
+  dataUpdates.push({
+    range: 'Faltas_Atestados_Fundamental!A1',
+    values: buildNominalStageSheetValues(allClasses, 'ENSINO FUNDAMENTAL', calendar),
+  });
+
+  // Also update Turmas_Salas_2027 summary tab
+  if (meta.sheetTitles.includes('Turmas_Salas_2027')) {
+    dataUpdates.push({
+      range: 'Turmas_Salas_2027!A1',
+      values: buildTurmasSheetValues(allClasses, calendar),
+    });
+  }
+
+  if (dataUpdates.length > 0) {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}/values:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          valueInputOption: 'USER_ENTERED',
+          data: dataUpdates,
+        }),
+      }
+    );
+  }
+
+  return { updatedStudentsCount: dataUpdates.length };
+};
+
+/**
+ * Full Sync/Write (used only on initial seed or explicit Admin full export)
+ */
+export const syncClassesToGoogleSheet = async (
+  spreadsheetId: string,
+  classes: ClassGroup[],
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): Promise<{ updatedCells: number; title: string }> => {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Autenticação necessária. Faça login com o Google primeiro.');
+  }
+
+  const meta = await fetchSpreadsheetMetadata(spreadsheetId);
+  const existingTabs = meta.sheetTitles;
+
+  const requestsToCreateTabs: any[] = [];
+  const requiredTabs = [
+    'Faltas_Atestados_Infantil',
+    'Faltas_Atestados_Fundamental',
+    'SED_Matriculas_e_Frequencia',
+    'Dias_Letivos_SME_2027',
+    'Turmas_Salas_2027',
+    'Emails_Permitidos_2027',
+  ];
+
+  requiredTabs.forEach((tabName) => {
+    if (!existingTabs.includes(tabName)) {
+      requestsToCreateTabs.push({
+        addSheet: {
+          properties: { title: tabName, gridProperties: { frozenRowCount: 1 } },
+        },
+      });
+    }
+  });
+
+  if (requestsToCreateTabs.length > 0) {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requests: requestsToCreateTabs }),
+      }
+    );
+  }
+
+  const nominalInfantilValues = buildNominalStageSheetValues(
+    classes,
+    'EDUCACAO INFANTIL',
+    calendar
+  );
+  const nominalFundamentalValues = buildNominalStageSheetValues(
+    classes,
+    'ENSINO FUNDAMENTAL',
+    calendar
+  );
+  const sedValues = buildSedSheetValues(classes, calendar);
+  const calendarioValues = buildCalendario200DiasValues(calendar);
+  const turmasValues = buildTurmasSheetValues(classes, calendar);
+  const emailsPermitidosValues = buildEmailsPermitidosValues();
+
+  const batchRes = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}/values:batchUpdate`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        valueInputOption: 'USER_ENTERED',
+        data: [
+          {
+            range: 'Faltas_Atestados_Infantil!A1',
+            values: nominalInfantilValues,
+          },
+          {
+            range: 'Faltas_Atestados_Fundamental!A1',
+            values: nominalFundamentalValues,
+          },
+          {
+            range: 'SED_Matriculas_e_Frequencia!A1',
+            values: sedValues,
+          },
+          {
+            range: 'Dias_Letivos_SME_2027!A1',
+            values: calendarioValues,
+          },
+          {
+            range: 'Turmas_Salas_2027!A1',
+            values: turmasValues,
+          },
+          {
+            range: 'Emails_Permitidos_2027!A1',
+            values: emailsPermitidosValues,
+          },
+        ],
+      }),
+    }
+  );
+
+  if (!batchRes.ok) {
+    const errData = await batchRes.json().catch(() => ({}));
+    throw new Error(
+      errData?.error?.message ||
+        `Erro ao gravar dados no Google Sheets (${batchRes.status}).`
+    );
+  }
+
+  const batchData = await batchRes.json();
+  saveSpreadsheetInfo(spreadsheetId, meta.title);
+
+  return {
+    updatedCells: batchData.totalUpdatedCells || sedValues.length * 58,
+    title: meta.title,
+  };
+};
+
+/**
+ * Parse raw SED TSV text (48 columns copied from SED or Excel) and merge into classes
+ */
+export const parseSedTsvIntoClasses = (
+  tsvText: string,
+  currentClasses: ClassGroup[]
+): { updatedClasses: ClassGroup[]; importedCount: number } => {
+  const lines = tsvText
+    .split(/\r?\n/)
+    .map((l) => l.trimEnd())
+    .filter((l) => l.trim().length > 0);
+
+  if (lines.length === 0) {
+    return { updatedClasses: currentClasses, importedCount: 0 };
+  }
+
+  const firstCols = lines[0].split('\t').map((c) => c.trim().toUpperCase());
+  const hasHeader =
+    firstCols.includes('ESTUDANTE') ||
+    firstCols.includes('TIPO DE ENSINO') ||
+    firstCols.includes('RA');
+
+  const dataLines = hasHeader ? lines.slice(1) : lines;
+  if (dataLines.length === 0) {
+    return { updatedClasses: currentClasses, importedCount: 0 };
+  }
+
+  const groupedByTurma = new Map<string, Student[]>();
+  let importedCount = 0;
+
+  dataLines.forEach((line, idx) => {
+    const cols = line.split('\t');
+    if (cols.length < 4) return;
+
+    const tipoEnsino = (cols[0] || '').trim();
+    const serie = (cols[1] || '').trim();
+    const numChamada = parseInt((cols[2] || '').trim(), 10) || idx + 1;
+    const estudante = (cols[3] || '').trim();
+    if (!estudante) return;
+
+    const ra = (cols[4] || '').trim();
+    const digRa = (cols[5] || '').trim();
+    const ufRa = (cols[6] || 'SP').trim();
+    const dataNascimento = (cols[7] || '').trim();
+    const tipoAlocacao = (cols[8] || '').trim();
+    const situacaoRaw = (cols[9] || '').trim();
+    const situacao = situacaoRaw || 'ATIVO';
+    const dataMovimentacao = (cols[10] || '').trim();
+    const categoriaProfissionalCenso = (cols[11] || '').trim();
+    const deficiencia = (cols[12] || '').trim();
+    const posDataCenso = (cols[13] || '').trim();
+    const turmaCode = (cols[14] || 'G4A').trim().toUpperCase();
+    const periodoSed = (cols[15] || 'MANHÃ').trim();
+    const dataMatriculaSed = (cols[16] || '03/02/2026').trim();
+    const procedenciaEscolar = (cols[17] || '').trim();
+    const irmaos = (cols[18] || '').trim();
+    const idade = (cols[19] || '').trim();
+    const arquivo = (cols[20] || '').trim();
+    const filiacao1 = (cols[21] || '').trim();
+    const filiacao2 = (cols[22] || '').trim();
+    const nomeSocial = (cols[23] || '').trim();
+    const genero = (cols[24] || '').trim();
+    const tipoSanguineo = (cols[25] || '').trim();
+    const racaCor = (cols[26] || '').trim();
+    const nacionalidade = (cols[27] || 'BRASILEIRA').trim();
+    const paisOrigem = (cols[28] || '').trim();
+    const municipioNascimento = (cols[29] || 'JUNDIAI - SP').trim();
+    const cpf = (cols[30] || '').trim();
+    const rg = (cols[31] || '').trim();
+    const dataEmissaoRg = (cols[32] || '').trim();
+    const cartaoSus = (cols[33] || '').trim();
+    const nis = (cols[34] || '').trim();
+    const cep = (cols[35] || '').trim();
+    const logradouro = (cols[36] || '').trim();
+    const numeroResidencia = (cols[37] || '').trim();
+    const complemento = (cols[38] || '').trim();
+    const bairro = (cols[39] || '').trim();
+    const cidade = (cols[40] || 'JUNDIAI').trim();
+    const uf = (cols[41] || 'SP').trim();
+    const telefones = (cols[42] || '').trim();
+    const emailGoogle = (cols[43] || '').trim();
+    const emailMicrosoft = (cols[44] || '').trim();
+    const emailMunicipal = (cols[45] || '').trim();
+    const rotaOnibus = (cols[46] || '').trim();
+    const sucessaoEscolar = (cols[47] || '').trim();
+
+    const parts = estudante.split(' ').filter(Boolean);
+    const initials =
+      parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : estudante.substring(0, 2).toUpperCase();
+
+    const studentObj: Student = {
+      id: `${turmaCode.toLowerCase()}-s${numChamada}`,
+      number: numChamada,
+      name: estudante,
+      initials,
+      status: 'present',
+      totalAbsencesMonth: 0,
+      justifiedAbsences: 0,
+      diasLetivosRecorte: situacao === 'BXTR' ? 10 : 20,
+      notes: [
+        deficiencia ? `AEE/Deficiência: ${deficiencia}` : '',
+        situacao === 'BXTR' ? `Transferido (BXTR) em ${dataMovimentacao}` : '',
+      ]
+        .filter(Boolean)
+        .join(' | '),
+      guardianName: filiacao1 || filiacao2,
+      guardianPhone: telefones,
+      tipoEnsino,
+      serie,
+      numeroChamada: numChamada,
+      estudante,
+      ra,
+      digRa,
+      ufRa,
+      dataNascimento,
+      tipoAlocacao,
+      situacao,
+      dataMovimentacao,
+      categoriaProfissionalCenso,
+      deficiencia,
+      posDataCenso,
+      turma: turmaCode,
+      periodo: periodoSed,
+      dataMatriculaSed,
+      procedenciaEscolar,
+      irmaos,
+      idade,
+      arquivo,
+      filiacao1,
+      filiacao2,
+      nomeSocial,
+      genero,
+      tipoSanguineo,
+      racaCor,
+      nacionalidade,
+      paisOrigem,
+      municipioNascimento,
+      cpf,
+      rg,
+      dataEmissaoRg,
+      cartaoSus,
+      nis,
+      cep,
+      logradouro,
+      numeroResidencia,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      telefones,
+      emailGoogle,
+      emailMicrosoft,
+      emailMunicipal,
+      rotaOnibus,
+      sucessaoEscolar,
+    };
+
+    const existingList = groupedByTurma.get(turmaCode) || [];
+    existingList.push(studentObj);
+    groupedByTurma.set(turmaCode, existingList);
+    importedCount++;
+  });
+
+  const updatedClasses = currentClasses.map((cls) => {
+    const code = formatShortTurmaCode(cls.name).toUpperCase();
+    const matchedStudents =
+      groupedByTurma.get(code) || groupedByTurma.get(cls.name.toUpperCase());
+    if (!matchedStudents || matchedStudents.length === 0) return cls;
+
+    const sorted = [...matchedStudents].sort((a, b) => a.number - b.number);
+    const tempCls: ClassGroup = {
+      ...cls,
+      totalStudents: sorted.length,
+      students: sorted,
+    };
+    const cm = getClassAttendanceMetrics(tempCls, OFFICIAL_OCTOBER_DAYS);
+    return {
+      ...tempCls,
+      presenceRate: cm.presenceRate,
+      monthlyAbsences: cm.totalFaltasTurma,
+    };
+  });
+
+  return { updatedClasses, importedCount };
+};
+
+/**
+ * MASTER PULL: Reads all student data (48 SED columns), 200 school days, AND Drive Folder Photos
+ * Any manual edit made by Admin in Google Sheets or Drive Folder automatically updates the App!
+ */
+export const readClassesFromGoogleSheet = async (
+  spreadsheetId: string,
+  currentClasses: ClassGroup[]
+): Promise<{
+  updatedClasses: ClassGroup[];
+  rowsRead: number;
+  sheetTitle: string;
+  matchedPhotosCount?: number;
+}> => {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Autenticação necessária. Faça login com o Google primeiro.');
+  }
+
+  const meta = await fetchSpreadsheetMetadata(spreadsheetId);
+  const targetTab = meta.sheetTitles.includes('SED_Matriculas_e_Frequencia')
+    ? 'SED_Matriculas_e_Frequencia'
+    : meta.sheetTitles[0];
+
+  if (!targetTab) {
+    throw new Error('Nenhuma aba encontrada na planilha informada.');
+  }
+
+  // 1. Read SED_Matriculas_e_Frequencia (all 58 columns)
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}/values/${encodeURIComponent(`${targetTab}!A1:BF2000`)}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(
+      errData?.error?.message ||
+        `Erro ao ler dados da aba ${targetTab} (${res.status}).`
+    );
+  }
+
+  const data = await res.json();
+  const values: any[][] = data.values || [];
+
+  // 2. Also read Dias_Letivos_SME_2027 if present so manual school-day changes in Sheet update the App
+  const sheetMonthlyDaysMap: Record<string, number> =
+    getDefaultMonthlySchoolDaysMap();
+  if (meta.sheetTitles.includes('Dias_Letivos_SME_2027')) {
+    try {
+      const daysRes = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+          spreadsheetId
+        )}/values/${encodeURIComponent('Dias_Letivos_SME_2027!A2:C15')}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (daysRes.ok) {
+        const daysData = await daysRes.json();
+        const dayRows: any[][] = daysData.values || [];
+        dayRows.forEach((r) => {
+          const mName = String(r[0] || '').trim();
+          const mDays = parseInt(String(r[2] || ''), 10);
+          if (mName && !isNaN(mDays) && mName !== 'TOTAL ANUAL OFICIAL') {
+            sheetMonthlyDaysMap[mName] = mDays;
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Aviso ao ler Dias_Letivos_SME_2027:', e);
+    }
+  }
+
+  if (values.length <= 1) {
+    return {
+      updatedClasses: currentClasses,
+      rowsRead: 0,
+      sheetTitle: meta.title,
+    };
+  }
+
+  // Group all rows from Google Sheet by Turma so even brand-new students added manually in Sheets appear in the App!
+  const existingPhotoByStudentName = new Map<
+    string,
+    { photo?: string; photoDriveUrl?: string }
+  >();
+  currentClasses.forEach((c) =>
+    c.students.forEach((s) => {
+      existingPhotoByStudentName.set(normalizeStudentNameForPhoto(s.name), {
+        photo: s.photo,
+        photoDriveUrl: s.photoDriveUrl,
+      });
+    })
+  );
+
+  const groupedFromSheet = new Map<string, Student[]>();
+
+  for (let i = 1; i < values.length; i++) {
+    const cols = values[i];
+    if (!cols || cols.length < 4) continue;
+
+    const tipoEnsino = String(cols[0] || '').trim();
+    const serie = String(cols[1] || '').trim();
+    const numChamada = parseInt(String(cols[2] || '').trim(), 10) || i;
+    const estudante = String(cols[3] || '').trim();
+    if (!estudante) continue;
+
+    const ra = String(cols[4] || '').trim();
+    const digRa = String(cols[5] || '').trim();
+    const ufRa = String(cols[6] || 'SP').trim();
+    const dataNascimento = String(cols[7] || '').trim();
+    const tipoAlocacao = String(cols[8] || '').trim();
+    const situacaoRaw = String(cols[9] || '').trim();
+    const situacao = situacaoRaw || 'ATIVO';
+    const dataMovimentacao = String(cols[10] || '').trim();
+    const categoriaProfissionalCenso = String(cols[11] || '').trim();
+    const deficiencia = String(cols[12] || '').trim();
+    const posDataCenso = String(cols[13] || '').trim();
+    const turmaCode = String(cols[14] || 'G4A').trim().toUpperCase();
+    const periodo = String(cols[15] || 'MANHÃ').trim();
+    const dataMatriculaSed = String(cols[16] || '03/02/2026').trim();
+    const procedenciaEscolar = String(cols[17] || '').trim();
+    const irmaos = String(cols[18] || '').trim();
+    const idade = String(cols[19] || '').trim();
+    const arquivo = String(cols[20] || '').trim();
+    const filiacao1 = String(cols[21] || '').trim();
+    const filiacao2 = String(cols[22] || '').trim();
+    const nomeSocial = String(cols[23] || '').trim();
+    const genero = String(cols[24] || '').trim();
+    const tipoSanguineo = String(cols[25] || '').trim();
+    const racaCor = String(cols[26] || '').trim();
+    const nacionalidade = String(cols[27] || 'BRASILEIRA').trim();
+    const paisOrigem = String(cols[28] || '').trim();
+    const municipioNascimento = String(cols[29] || 'JUNDIAI - SP').trim();
+    const cpf = String(cols[30] || '').trim();
+    const rg = String(cols[31] || '').trim();
+    const dataEmissaoRg = String(cols[32] || '').trim();
+    const cartaoSus = String(cols[33] || '').trim();
+    const nis = String(cols[34] || '').trim();
+    const cep = String(cols[35] || '').trim();
+    const logradouro = String(cols[36] || '').trim();
+    const numeroResidencia = String(cols[37] || '').trim();
+    const complemento = String(cols[38] || '').trim();
+    const bairro = String(cols[39] || '').trim();
+    const cidade = String(cols[40] || 'JUNDIAI').trim();
+    const uf = String(cols[41] || 'SP').trim();
+    const telefones = String(cols[42] || '').trim();
+    const emailGoogle = String(cols[43] || '').trim();
+    const emailMicrosoft = String(cols[44] || '').trim();
+    const emailMunicipal = String(cols[45] || '').trim();
+    const rotaOnibus = String(cols[46] || '').trim();
+    const sucessaoEscolar = String(cols[47] || '').trim();
+
+    // Attendance & Photo columns (48..57)
+    const diasMesCol = parseInt(String(cols[48] || '20'), 10) || 20;
+    const diasRecorteCol = parseInt(String(cols[49] || ''), 10);
+    const faltasCol = parseInt(String(cols[50] || '0'), 10) || 0;
+    const atestadosCol = parseInt(String(cols[51] || '0'), 10) || 0;
+    const linkFotoCol = String(cols[54] || '').trim();
+    const obsCol = String(cols[55] || '').trim();
+    const idAlunoCol = String(cols[57] || '').trim();
+
+    const validRecorte = !isNaN(diasRecorteCol)
+      ? Math.max(1, Math.min(diasMesCol, diasRecorteCol))
+      : situacao === 'BXTR'
+      ? 10
+      : diasMesCol;
+    const validFaltas = Math.max(0, Math.min(validRecorte, faltasCol));
+    const validAtestados = Math.max(0, Math.min(validFaltas, atestadosCol));
+
+    const parts = estudante.split(' ').filter(Boolean);
+    const initials =
+      parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : estudante.substring(0, 2).toUpperCase();
+
+    const prevPhoto = existingPhotoByStudentName.get(
+      normalizeStudentNameForPhoto(estudante)
+    );
+
+    const studentObj: Student = {
+      id: idAlunoCol || `${turmaCode.toLowerCase()}-s${numChamada}`,
+      number: numChamada,
+      name: estudante,
+      initials,
+      photo: prevPhoto?.photo,
+      photoDriveUrl: linkFotoCol || prevPhoto?.photoDriveUrl,
+      status: validFaltas > 0 ? 'absent' : 'present',
+      totalAbsencesMonth: validFaltas,
+      justifiedAbsences: validAtestados,
+      diasLetivosRecorte: validRecorte,
+      notes: obsCol,
+      guardianName: filiacao1 || filiacao2,
+      guardianPhone: telefones,
+      tipoEnsino,
+      serie,
+      numeroChamada: numChamada,
+      estudante,
+      ra,
+      digRa,
+      ufRa,
+      dataNascimento,
+      tipoAlocacao,
+      situacao,
+      dataMovimentacao,
+      categoriaProfissionalCenso,
+      deficiencia,
+      posDataCenso,
+      turma: turmaCode,
+      periodo,
+      dataMatriculaSed,
+      procedenciaEscolar,
+      irmaos,
+      idade,
+      arquivo,
+      filiacao1,
+      filiacao2,
+      nomeSocial,
+      genero,
+      tipoSanguineo,
+      racaCor,
+      nacionalidade,
+      paisOrigem,
+      municipioNascimento,
+      cpf,
+      rg,
+      dataEmissaoRg,
+      cartaoSus,
+      nis,
+      cep,
+      logradouro,
+      numeroResidencia,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      telefones,
+      emailGoogle,
+      emailMicrosoft,
+      emailMunicipal,
+      rotaOnibus,
+      sucessaoEscolar,
+    };
+
+    const list = groupedFromSheet.get(turmaCode) || [];
+    list.push(studentObj);
+    groupedFromSheet.set(turmaCode, list);
+  }
+
+  let updatedClasses = currentClasses.map((cls) => {
+    const shortCode = formatShortTurmaCode(cls.name).toUpperCase();
+    const sheetStudents =
+      groupedFromSheet.get(shortCode) ||
+      groupedFromSheet.get(cls.name.toUpperCase());
+
+    const nextMonthlyMap = {
+      ...(cls.monthlySchoolDays || getDefaultMonthlySchoolDaysMap()),
+      ...sheetMonthlyDaysMap,
+    };
+    const nextClassesHeld = nextMonthlyMap['Outubro'] || cls.classesHeld || 20;
+
+    if (!sheetStudents || sheetStudents.length === 0) {
+      return {
+        ...cls,
+        classesHeld: nextClassesHeld,
+        classesPlanned: nextClassesHeld,
+        monthlySchoolDays: nextMonthlyMap,
+      };
+    }
+
+    const sorted = [...sheetStudents].sort((a, b) => a.number - b.number);
+    const tempCls: ClassGroup = {
+      ...cls,
+      classesHeld: nextClassesHeld,
+      classesPlanned: nextClassesHeld,
+      monthlySchoolDays: nextMonthlyMap,
+      totalStudents: sorted.length,
+      students: sorted,
+    };
+    const cm = getClassAttendanceMetrics(tempCls, OFFICIAL_OCTOBER_DAYS);
+
+    return {
+      ...tempCls,
+      presenceRate: cm.presenceRate,
+      monthlyAbsences: cm.totalFaltasTurma,
+    };
+  });
+
+  // 3. Also automatically sync photos dropped into the Google Drive Folder!
+  let matchedPhotosCount = 0;
+  try {
+    const driveSync = await syncPhotosFromDriveFolder(updatedClasses);
+    updatedClasses = driveSync.updatedClasses;
+    matchedPhotosCount = driveSync.matchedPhotosCount;
+  } catch (e) {
+    console.warn('Aviso ao sincronizar fotos da pasta do Google Drive:', e);
+  }
+
+  saveSpreadsheetInfo(spreadsheetId, meta.title);
+
+  return {
+    updatedClasses,
+    rowsRead: values.length - 1,
+    sheetTitle: meta.title,
+    matchedPhotosCount,
+  };
+};
