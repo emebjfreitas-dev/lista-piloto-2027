@@ -18,6 +18,10 @@ import {
   evaluateAttendanceLaunchWindow,
   getStoredAccessSessionLogs,
   saveStoredAccessSessionLogs,
+  pushAuthorizedUsersToServer,
+  pushSessionLogsToServer,
+  pushAttendanceWindowToServer,
+  pullSharedSchoolStateFromServer,
 } from './services/db';
 import { OFFICIAL_OCTOBER_DAYS } from './data/mockData';
 import { getClassAttendanceMetrics } from './utils/attendanceRules';
@@ -60,9 +64,11 @@ interface PersistedAuthSession {
   name: string;
   role: UserRole;
   assignedClassId: string;
+  assignedClassIds?: string[];
   selectedClassId: string;
   screen: ScreenType;
   sessionId: string | null;
+  simulatedTeacherEmail?: string | null;
 }
 
 const getSavedActiveAuthSession = (): PersistedAuthSession | null => {
@@ -95,12 +101,22 @@ export default function App() {
 
   const effectiveInitialRole: UserRole =
     matchedInitialUser?.role || initialSavedSession?.role || 'admin';
-  const effectiveInitialAssignedClassId: string =
+  const effectiveInitialAssignedClassIds: string[] =
     matchedInitialUser &&
     matchedInitialUser.role === 'usuario' &&
-    matchedInitialUser.assignedClassId !== 'all'
-      ? matchedInitialUser.assignedClassId
-      : initialSavedSession?.assignedClassId || initialClasses[0]?.id || 'g04a';
+    matchedInitialUser.assignedClassIds &&
+    matchedInitialUser.assignedClassIds.length > 0
+      ? matchedInitialUser.assignedClassIds
+      : matchedInitialUser &&
+        matchedInitialUser.role === 'usuario' &&
+        matchedInitialUser.assignedClassId !== 'all'
+      ? [matchedInitialUser.assignedClassId]
+      : initialSavedSession?.assignedClassIds && initialSavedSession.assignedClassIds.length > 0
+      ? initialSavedSession.assignedClassIds
+      : [initialSavedSession?.assignedClassId || initialClasses[0]?.id || 'g04a'];
+
+  const effectiveInitialAssignedClassId: string =
+    effectiveInitialAssignedClassIds[0] || initialClasses[0]?.id || 'g04a';
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
     if (!initialSavedSession || (matchedInitialUser && !matchedInitialUser.active)) {
@@ -163,6 +179,12 @@ export default function App() {
   const [assignedClassId, setAssignedClassId] = useState<string>(
     effectiveInitialAssignedClassId
   );
+  const [assignedClassIds, setAssignedClassIds] = useState<string[]>(
+    effectiveInitialAssignedClassIds
+  );
+  const [simulatedTeacherEmail, setSimulatedTeacherEmail] = useState<string | null>(
+    initialSavedSession?.simulatedTeacherEmail || null
+  );
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
 
@@ -175,9 +197,11 @@ export default function App() {
         name: currentUserName,
         role: userRole,
         assignedClassId,
+        assignedClassIds,
         selectedClassId: selectedClass?.id || initialClasses[0]?.id || 'g04a',
         screen: currentScreen,
         sessionId: activeSessionIdRef.current,
+        simulatedTeacherEmail,
       };
       localStorage.setItem(ACTIVE_AUTH_SESSION_STORAGE_KEY, JSON.stringify(payload));
     } catch {
@@ -189,28 +213,46 @@ export default function App() {
     currentUserName,
     userRole,
     assignedClassId,
+    assignedClassIds,
     selectedClass,
+    simulatedTeacherEmail,
   ]);
 
   const handleUpdateAttendanceWindowConfig = (nextConfig: AttendanceWindowConfig) => {
     setAttendanceWindowConfig(nextConfig);
     saveStoredAttendanceWindowConfig(nextConfig);
+    pushAttendanceWindowToServer(nextConfig);
   };
 
   const handleSaveAuthorizedUsers = (updatedUsers: AuthorizedUser[]) => {
     setAuthorizedUsers(updatedUsers);
     saveStoredAuthorizedUsers(updatedUsers);
+    pushAuthorizedUsersToServer(updatedUsers).then((merged) => {
+      if (merged) setAuthorizedUsers(merged);
+    });
     syncAuthorizedUsersToGoogleSheet(updatedUsers);
-    // Keep current logged user role & class in sync if their own entry was modified, or if Admin is previewing a class
+
+    // Keep current logged user OR simulated teacher profile in sync whenever their entry is modified in '5. Acessos'
+    const targetLookupEmail = (simulatedTeacherEmail || currentUserEmail).trim().toLowerCase();
     const currentMatched = updatedUsers.find(
-      (u) => u.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()
+      (u) => u.email.trim().toLowerCase() === targetLookupEmail
     );
     if (currentMatched) {
-      setUserRole(currentMatched.role);
-      setCurrentUserName(currentMatched.name);
-      if (currentMatched.role === 'usuario' && currentMatched.assignedClassId !== 'all') {
-        setAssignedClassId(currentMatched.assignedClassId);
-        const targetCls = classes.find((c) => c.id === currentMatched.assignedClassId);
+      if (!simulatedTeacherEmail) {
+        setUserRole(currentMatched.role);
+        setCurrentUserName(currentMatched.name);
+      }
+      if (currentMatched.role === 'usuario') {
+        const nextIds =
+          currentMatched.assignedClassIds && currentMatched.assignedClassIds.length > 0
+            ? currentMatched.assignedClassIds.filter((id) => id !== 'all')
+            : currentMatched.assignedClassId !== 'all'
+            ? [currentMatched.assignedClassId]
+            : [classes[0]?.id || 'g04a'];
+        const primaryId = nextIds[0] || classes[0]?.id || 'g04a';
+        setAssignedClassIds(nextIds);
+        setAssignedClassId(primaryId);
+        const targetCls = classes.find((c) => c.id === primaryId);
         if (targetCls) setSelectedClass(targetCls);
       }
     }
@@ -219,18 +261,19 @@ export default function App() {
   // Real-time synchronization of the logged-in teacher's profile whenever authorizedUsers changes (including cross-tab storage events)
   useEffect(() => {
     if (currentScreen === 'login') return;
+    const lookupEmail = (simulatedTeacherEmail || currentUserEmail).trim().toLowerCase();
     const matched = authorizedUsers.find(
-      (u) => u.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()
+      (u) => u.email.trim().toLowerCase() === lookupEmail
     );
     if (!matched) return;
-    if (!matched.active) {
+    if (!matched.active && !simulatedTeacherEmail) {
       setCurrentScreen('login');
       return;
     }
 
-    // Only auto-override role if the logged-in user is NOT the main admin simulating PEB I/PEB II, OR if their assignedClassId changed
     const isMainAdminAccount =
-      currentUserEmail.trim().toLowerCase().startsWith('emebjfreitas@');
+      currentUserEmail.trim().toLowerCase().startsWith('emebjfreitas@') &&
+      !simulatedTeacherEmail;
 
     if (!isMainAdminAccount && matched.role !== userRole) {
       setUserRole(matched.role);
@@ -239,23 +282,70 @@ export default function App() {
       }
     }
 
-    if (matched.name && matched.name !== currentUserName) {
+    if (!simulatedTeacherEmail && matched.name && matched.name !== currentUserName) {
       setCurrentUserName(matched.name);
     }
 
-    if (
-      matched.role === 'usuario' &&
-      matched.assignedClassId &&
-      matched.assignedClassId !== 'all' &&
-      matched.assignedClassId !== assignedClassId
-    ) {
-      setAssignedClassId(matched.assignedClassId);
-      const targetCls = classes.find((c) => c.id === matched.assignedClassId);
-      if (targetCls) {
-        setSelectedClass(targetCls);
+    if (matched.role === 'usuario') {
+      const nextIds =
+        matched.assignedClassIds && matched.assignedClassIds.length > 0
+          ? matched.assignedClassIds.filter((id) => id !== 'all')
+          : matched.assignedClassId && matched.assignedClassId !== 'all'
+          ? [matched.assignedClassId]
+          : [];
+      if (nextIds.length > 0) {
+        const joinedCurrent = assignedClassIds.join(',');
+        const joinedNext = nextIds.join(',');
+        if (joinedCurrent !== joinedNext || assignedClassId !== nextIds[0]) {
+          setAssignedClassIds(nextIds);
+          setAssignedClassId(nextIds[0]);
+          if (!nextIds.includes(selectedClass.id)) {
+            const targetCls = classes.find((c) => c.id === nextIds[0]);
+            if (targetCls) {
+              setSelectedClass(targetCls);
+            }
+          }
+        }
       }
     }
-  }, [authorizedUsers, currentUserEmail, classes]);
+  }, [authorizedUsers, currentUserEmail, simulatedTeacherEmail, classes]);
+
+  // Real-time Cross-Browser & Cross-Device Synchronization via Backend API (/api/school-state) every 2.5 seconds!
+  // This guarantees that when Admin edits a teacher's class (e.g. giulia.patez) or opens the launch window in Browser A,
+  // the teacher logged into Browser B / Incognito / Mobile updates automatically in 2.5s!
+  useEffect(() => {
+    let active = true;
+
+    const syncFromBackendServer = async () => {
+      const shared = await pullSharedSchoolStateFromServer();
+      if (!active || !shared) return;
+
+      if (shared.authorizedUsers && shared.authorizedUsers.length > 0) {
+        setAuthorizedUsers(shared.authorizedUsers);
+      } else {
+        // Seed backend server if it has no users yet
+        const currentLocal = getStoredAuthorizedUsers();
+        if (currentLocal.length > 0) {
+          pushAuthorizedUsersToServer(currentLocal);
+        }
+      }
+
+      if (shared.accessSessionLogs && shared.accessSessionLogs.length > 0) {
+        setAccessSessionLogs(shared.accessSessionLogs);
+      }
+
+      if (shared.attendanceWindowConfig) {
+        setAttendanceWindowConfig(shared.attendanceWindowConfig);
+      }
+    };
+
+    syncFromBackendServer();
+    const pollId = window.setInterval(syncFromBackendServer, 2500);
+    return () => {
+      active = false;
+      window.clearInterval(pollId);
+    };
+  }, []);
 
   // Listen to localStorage changes from other browser tabs so when Admin edits a teacher's class in Tab 1, Tab 2 updates in 0ms!
   useEffect(() => {
@@ -366,12 +456,18 @@ export default function App() {
   // Keep selectedClass restricted when userRole is 'usuario'
   useEffect(() => {
     if (userRole === 'usuario') {
-      const target = classes.find((c) => c.id === assignedClassId);
-      if (target) {
-        setSelectedClass(target);
+      const allowedIds =
+        assignedClassIds.length > 0 ? assignedClassIds : [assignedClassId];
+      if (!allowedIds.includes(selectedClass.id)) {
+        const target =
+          classes.find((c) => c.id === allowedIds[0]) ||
+          classes.find((c) => c.id === assignedClassId);
+        if (target) {
+          setSelectedClass(target);
+        }
       }
     }
-  }, [userRole, assignedClassId, classes]);
+  }, [userRole, assignedClassId, assignedClassIds, classes]);
 
   // Modal states
   const [isNewClassModalOpen, setIsNewClassModalOpen] = useState(false);
@@ -393,28 +489,31 @@ export default function App() {
 
   // Permission helper (respects role AND the attendance launch window: last school day + 2 first school days of next month, or exceptional override)
   const windowStatus = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
+  const allowedUsuarioClassIds =
+    assignedClassIds.length > 0 ? assignedClassIds : [assignedClassId];
+
   const canEditClass = (classId: string): boolean => {
     if (!windowStatus.isAllowedToLaunch) return false;
     if (userRole === 'admin') return true;
-    if (userRole === 'usuario') return classId === assignedClassId;
+    if (userRole === 'usuario') return allowedUsuarioClassIds.includes(classId);
     return false; // 'peb2' is strictly view-only
   };
 
   const visibleClasses =
     userRole === 'usuario'
-      ? classes.filter((c) => c.id === assignedClassId)
+      ? classes.filter((c) => allowedUsuarioClassIds.includes(c.id))
       : classes;
 
   // Screen navigation handlers
   const handleSelectClassForDetails = (cls: ClassGroup) => {
-    if (userRole === 'usuario' && cls.id !== assignedClassId) return;
+    if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
     setSelectedClass(cls);
     setCurrentScreen('detalhes');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectClassForMonthlyAttendance = (cls: ClassGroup) => {
-    if (userRole === 'usuario' && cls.id !== assignedClassId) return;
+    if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
     setSelectedClass(cls);
     setCurrentScreen('frequencia_mensal');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -583,16 +682,22 @@ export default function App() {
     });
     setAuthorizedUsers(nextUsers);
     saveStoredAuthorizedUsers(nextUsers);
+    pushSessionLogsToServer(nextLogs, nextUsers);
     syncAuthorizedUsersToGoogleSheet(nextUsers, nextLogs);
 
+    setSimulatedTeacherEmail(null);
     setCurrentUserEmail(authUser.email);
     setCurrentUserName(authUser.name);
     setUserRole(authUser.role);
     if (authUser.role === 'usuario') {
-      const targetId =
-        authUser.assignedClassId && authUser.assignedClassId !== 'all'
-          ? authUser.assignedClassId
-          : classes[0]?.id || 'g04a';
+      const nextIds =
+        authUser.assignedClassIds && authUser.assignedClassIds.length > 0
+          ? authUser.assignedClassIds.filter((id) => id !== 'all')
+          : authUser.assignedClassId && authUser.assignedClassId !== 'all'
+          ? [authUser.assignedClassId]
+          : [classes[0]?.id || 'g04a'];
+      const targetId = nextIds[0] || classes[0]?.id || 'g04a';
+      setAssignedClassIds(nextIds);
       setAssignedClassId(targetId);
       const targetClass = classes.find((c) => c.id === targetId) || classes[0];
       if (targetClass) setSelectedClass(targetClass);
@@ -673,6 +778,7 @@ export default function App() {
           };
         });
         saveStoredAuthorizedUsers(nextUsers);
+        pushSessionLogsToServer(nextLogs, nextUsers);
         return nextUsers;
       });
     }
@@ -728,6 +834,7 @@ export default function App() {
               };
             });
             saveStoredAuthorizedUsers(updatedUsers);
+            pushSessionLogsToServer(updatedLogs, updatedUsers);
             // Sync to Google Sheets every 3 ticks (15 seconds) so Admin sees live duration from all devices
             if (tickCounter % 3 === 0) {
               syncAuthorizedUsersToGoogleSheet(updatedUsers, updatedLogs);
@@ -779,6 +886,7 @@ export default function App() {
       );
       setAuthorizedUsers(nextUsers);
       saveStoredAuthorizedUsers(nextUsers);
+      pushSessionLogsToServer(nextLogs, nextUsers);
       syncAuthorizedUsersToGoogleSheet(nextUsers, nextLogs);
       activeSessionIdRef.current = null;
     }
@@ -831,6 +939,7 @@ export default function App() {
         userName={currentUserName}
         userRole={userRole}
         onRestoreAdminRole={() => {
+          setSimulatedTeacherEmail(null);
           setUserRole('admin');
           setCurrentScreen('usuarios_acesso');
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -884,19 +993,29 @@ export default function App() {
             onSaveAuthorizedUsers={handleSaveAuthorizedUsers}
             onSelectPreviewClassId={(classId) => {
               setAssignedClassId(classId);
+              setAssignedClassIds((prev) =>
+                prev.includes(classId) ? prev : [classId]
+              );
               const found = classes.find((c) => c.id === classId);
               if (found) setSelectedClass(found);
             }}
             onSimulateTeacherProfile={(teacher) => {
-              const targetId =
-                teacher.role === 'usuario' && teacher.assignedClassId !== 'all'
-                  ? teacher.assignedClassId
-                  : classes[0]?.id || 'g04a';
+              const nextIds =
+                teacher.role === 'usuario' &&
+                teacher.assignedClassIds &&
+                teacher.assignedClassIds.length > 0
+                  ? teacher.assignedClassIds.filter((id) => id !== 'all')
+                  : teacher.role === 'usuario' && teacher.assignedClassId !== 'all'
+                  ? [teacher.assignedClassId]
+                  : [classes[0]?.id || 'g04a'];
+              const targetId = nextIds[0] || classes[0]?.id || 'g04a';
               const foundCls = classes.find((c) => c.id === targetId) || classes[0];
               if (foundCls) {
+                setAssignedClassIds(nextIds);
                 setAssignedClassId(foundCls.id);
                 setSelectedClass(foundCls);
               }
+              setSimulatedTeacherEmail(teacher.email);
               setUserRole(teacher.role);
               setCurrentScreen(teacher.role === 'usuario' ? 'detalhes' : 'turmas');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -911,8 +1030,12 @@ export default function App() {
             classes={classes}
             userRole={userRole}
             assignedClassId={assignedClassId}
+            assignedClassIds={assignedClassIds}
             attendanceWindowConfig={attendanceWindowConfig}
             onChangeRole={(role) => {
+              if (role === 'admin') {
+                setSimulatedTeacherEmail(null);
+              }
               setUserRole(role);
               if (role === 'usuario') {
                 const target = classes.find((c) => c.id === assignedClassId) || classes[0];
@@ -920,11 +1043,16 @@ export default function App() {
                 setCurrentScreen('detalhes');
               }
             }}
-            onChangeAssignedClassId={(id) => setAssignedClassId(id)}
+            onChangeAssignedClassId={(id) => {
+              setAssignedClassId(id);
+              setAssignedClassIds([id]);
+              const found = classes.find((c) => c.id === id);
+              if (found) setSelectedClass(found);
+            }}
             onSelectClassForDetails={handleSelectClassForDetails}
             onSelectClassForMonthlyAttendance={handleSelectClassForMonthlyAttendance}
             onOpenClassStudentList={(cls) => {
-              if (userRole === 'usuario' && cls.id !== assignedClassId) return;
+              if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
               setSelectedClass(cls);
               setIsStudentListModalOpen(true);
             }}
@@ -938,6 +1066,12 @@ export default function App() {
         {currentScreen === 'detalhes' && (
           <DetalhesTurmaScreen
             classGroup={selectedClass}
+            assignedClasses={visibleClasses}
+            onSwitchAssignedClass={(cls) => {
+              setAssignedClassId(cls.id);
+              setSelectedClass(cls);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             userRole={userRole}
             canLaunchAttendance={canEditClass(selectedClass.id)}
             onGoToMonthlyAttendance={() => {

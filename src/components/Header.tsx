@@ -56,26 +56,26 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="fixed top-0 w-full z-50 pt-safe bg-[#f9faf8]/95 backdrop-blur-xl shadow-[0_2px_12px_rgba(0,52,64,0.06)] border-b border-[#edeeec]">
-      <div className="h-20 px-3.5 sm:px-5 lg:px-8 xl:px-10 max-w-2xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto flex items-center justify-between gap-2.5">
+    <header className="fixed top-0 w-full z-50 pt-safe bg-white/92 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,31,39,0.05),0_8px_24px_-6px_rgba(0,52,64,0.06)] border-b border-[#003440]/10">
+      <div className="h-[76px] px-3.5 sm:px-5 lg:px-8 xl:px-10 max-w-2xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto flex items-center justify-between gap-3">
         {/* Left slot: Official Brasão de Jundiaí always visible */}
         <div className="flex items-center gap-2.5 min-w-0">
           {showBackButton && (
             <button
               onClick={onBack}
               aria-label="Voltar para tela anterior"
-              className="min-h-[48px] px-3.5 flex items-center justify-center gap-1 rounded-xl bg-[#edeeec] hover:bg-[#e7e8e6] text-[#003440] font-black transition-colors active:scale-95 cursor-pointer shrink-0"
+              className="min-h-[44px] px-3.5 flex items-center justify-center gap-1.5 rounded-xl bg-[#f1f4f3] hover:bg-[#e3e8e6] text-[#003440] font-bold border border-[#003440]/10 transition-all active:scale-95 cursor-pointer shrink-0"
             >
-              <span className="material-symbols-outlined text-[24px]">arrow_back</span>
-              <span className="text-[0.92rem] font-bold">Voltar</span>
+              <span className="material-symbols-outlined text-[21px]">arrow_back</span>
+              <span className="text-[0.86rem] font-extrabold">Voltar</span>
             </button>
           )}
 
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-white border border-[#c0c8cb]/70 p-1 flex items-center justify-center shadow-2xs shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-xl bg-white border border-[#003440]/12 p-1 flex items-center justify-center shadow-2xs shrink-0">
               <img
                 src={APP_LOGO_URL}
-                alt="Prefeitura Municipal de Jundiaí - Secretaria Municipal de Educação"
+                alt="Prefeitura do Município de Jundiaí - Secretaria Municipal de Educação"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
@@ -85,15 +85,15 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </div>
             <div className="flex flex-col justify-center min-w-0">
-              <span className="text-[1.025rem] font-extrabold text-[#003440] leading-tight truncate">
+              <span className="text-[1rem] font-extrabold text-[#003440] leading-tight truncate">
                 {showBackButton
                   ? getScreenTitle()
-                  : 'Lista Piloto 2027 • EMEB Professor Joaquim Candelário de Freitas'}
+                  : 'LISTA PILOTO 2027 • EMEB Professor Joaquim Candelário de Freitas'}
               </span>
-              <span className="text-[0.725rem] font-bold text-[#436370] truncate">
+              <span className="text-[0.72rem] font-semibold text-[#436370] truncate mt-0.5">
                 {showBackButton
-                  ? 'Prefeitura do Município de Jundiaí • Secretaria Municipal de Educação'
-                  : `Prefeitura do Município de Jundiaí • Secretaria Municipal de Educação • ${subtitle || 'Uso Exclusivo de Professores'}`}
+                  ? 'Prefeitura do Município de Jundiaí · Secretaria Municipal de Educação'
+                  : `Prefeitura do Município de Jundiaí · Secretaria Municipal de Educação · ${subtitle || 'Uso Exclusivo de Professores'}`}
               </span>
             </div>
           </div>
@@ -103,31 +103,31 @@ export const Header: React.FC<HeaderProps> = ({
         {onChangeScreen && (
           <nav
             aria-label="Navegação Principal Desktop"
-            className="hidden lg:flex items-center gap-2 bg-[#edeeec] p-1.5 rounded-2xl border border-[#c0c8cb]/60"
+            className="hidden lg:flex items-center gap-1.5 bg-[#f1f4f3] p-1.5 rounded-2xl border border-[#003440]/10"
           >
             <button
               type="button"
               onClick={() => onChangeScreen('turmas')}
-              className={`min-h-[46px] px-4 rounded-xl font-black text-[0.9rem] flex items-center gap-2 transition-all cursor-pointer ${
+              className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-2 transition-all cursor-pointer ${
                 currentScreen === 'turmas' || currentScreen === 'detalhes'
                   ? 'bg-[#003440] text-white shadow-xs'
-                  : 'text-[#003440] hover:bg-white'
+                  : 'text-[#003440] hover:bg-white/80'
               }`}
             >
-              <span className="material-symbols-outlined text-[22px]">groups</span>
+              <span className="material-symbols-outlined text-[20px]">groups</span>
               <span>{userRole === 'usuario' ? '1. Minha Turma' : '1. Turmas'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => onChangeScreen('frequencia_mensal')}
-              className={`min-h-[46px] px-4 rounded-xl font-black text-[0.9rem] flex items-center gap-2 transition-all cursor-pointer ${
+              className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-2 transition-all cursor-pointer ${
                 currentScreen === 'frequencia_mensal'
                   ? 'bg-[#005035] text-white shadow-xs'
-                  : 'text-[#003440] hover:bg-white'
+                  : 'text-[#003440] hover:bg-white/80'
               }`}
             >
-              <span className="material-symbols-outlined text-[22px]">edit_calendar</span>
+              <span className="material-symbols-outlined text-[20px]">edit_calendar</span>
               <span>{userRole === 'peb2' ? '2. Frequência' : '2. Lançar Faltas'}</span>
             </button>
 
@@ -136,39 +136,39 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => onChangeScreen('planilha')}
-                  className={`min-h-[46px] px-4 rounded-xl font-black text-[0.9rem] flex items-center gap-2 transition-all cursor-pointer ${
+                  className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-2 transition-all cursor-pointer ${
                     currentScreen === 'planilha'
                       ? 'bg-[#003440] text-white shadow-xs'
-                      : 'text-[#003440] hover:bg-white'
+                      : 'text-[#003440] hover:bg-white/80'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[22px]">table_chart</span>
+                  <span className="material-symbols-outlined text-[20px]">table_chart</span>
                   <span>3. Planilha & Fotos</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => onChangeScreen('dias_letivos')}
-                  className={`min-h-[46px] px-3.5 rounded-xl font-black text-[0.88rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-1.5 transition-all cursor-pointer ${
                     currentScreen === 'dias_letivos'
                       ? 'bg-[#003440] text-white shadow-xs'
-                      : 'text-[#003440] hover:bg-white'
+                      : 'text-[#003440] hover:bg-white/80'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[21px]">calendar_month</span>
+                  <span className="material-symbols-outlined text-[19px]">calendar_month</span>
                   <span>4. 200 Dias</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => onChangeScreen('usuarios_acesso')}
-                  className={`min-h-[46px] px-3.5 rounded-xl font-black text-[0.88rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-1.5 transition-all cursor-pointer ${
                     currentScreen === 'usuarios_acesso'
                       ? 'bg-[#005035] text-white shadow-xs'
-                      : 'text-[#003440] hover:bg-white'
+                      : 'text-[#003440] hover:bg-white/80'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[21px]">manage_accounts</span>
+                  <span className="material-symbols-outlined text-[19px]">manage_accounts</span>
                   <span>5. Acessos</span>
                 </button>
               </>

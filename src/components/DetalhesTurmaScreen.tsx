@@ -8,6 +8,8 @@ import { getSavedPhotosDriveFolderInfo, OFFICIAL_FOLDER_NAME } from '../services
 
 interface DetalhesTurmaScreenProps {
   classGroup: ClassGroup;
+  assignedClasses?: ClassGroup[];
+  onSwitchAssignedClass?: (cls: ClassGroup) => void;
   userRole?: UserRole;
   isMainAdminAccount?: boolean;
   onReturnToAdminMode?: () => void;
@@ -25,6 +27,8 @@ interface DetalhesTurmaScreenProps {
 
 export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   classGroup,
+  assignedClasses = [],
+  onSwitchAssignedClass,
   userRole = 'admin',
   canLaunchAttendance = true,
   onGoToMonthlyAttendance,
@@ -51,51 +55,88 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-5 pb-36 animate-gentle-fade">
+      {/* Se a professora PEB I tiver 2 ou mais turmas vinculadas (ex: Manhã + Tarde), mostra barra rápida para alternar entre suas turmas */}
+      {userRole === 'usuario' && assignedClasses.length > 1 && onSwitchAssignedClass && (
+        <section className="bg-white rounded-2xl p-3.5 shadow-xs border-2 border-[#005035]/30 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[20px] text-[#005035]">
+              swap_horiz
+            </span>
+            <span className="text-[0.82rem] font-extrabold text-[#003440]">
+              Suas Turmas Vinculadas ({assignedClasses.length}):
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {assignedClasses.map((cls) => {
+              const isSelected = cls.id === classGroup.id;
+              return (
+                <button
+                  key={cls.id}
+                  type="button"
+                  onClick={() => onSwitchAssignedClass(cls)}
+                  className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-black text-[0.8rem] flex items-center gap-1.5 transition-all cursor-pointer border-2 ${
+                    isSelected
+                      ? 'bg-[#005035] text-white border-[#005035] shadow-xs'
+                      : 'bg-[#f4f7f5] text-[#003440] border-[#c0c8cb] hover:bg-[#e8f8ef]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[17px]">
+                    {isSelected ? 'check_circle' : 'groups'}
+                  </span>
+                  <span>
+                    {cls.name} ({cls.shift.replace('Turno ', '')})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
       {/* Top Overview & Actions Row: Stacked on Mobile, 12-Col Widescreen on Desktop */}
       <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-12 xl:gap-5 xl:items-stretch">
         {/* Class Identity Card */}
-        <section className="xl:col-span-6 bg-white rounded-2xl p-5 sm:p-6 shadow-xs border-2 border-[#b4c0c4]/85 flex flex-col justify-between gap-4">
+        <section className="xl:col-span-6 card-welcoming bg-white rounded-2xl p-5 sm:p-6 border border-[#003440]/12 flex flex-col justify-between gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <span className="inline-block px-3.5 py-1 bg-[#c3e5f4] text-[#001f29] font-black text-[0.85rem] rounded-full">
-                {classGroup.shift} • Ano Letivo 2027
+              <span className="text-[0.76rem] font-extrabold uppercase tracking-wider text-[#005035] block">
+                {classGroup.shift} · Ano Letivo 2027
               </span>
-              <h1 className="text-[1.9rem] sm:text-[2.2rem] font-extrabold text-[#003440] leading-tight mt-1.5">
+              <h1 className="text-[1.85rem] sm:text-[2.1rem] font-extrabold text-[#003440] leading-tight mt-1">
                 Turma {classGroup.name}
               </h1>
-              <p className="text-[1.02rem] text-[#2c373a] font-bold">
-                {classGroup.grade} • {classGroup.room}
+              <p className="text-[0.96rem] text-[#436370] font-semibold mt-0.5">
+                {classGroup.grade} · {classGroup.room}
               </p>
             </div>
 
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#fff8f7] text-[#ba1a1a] border border-[#ba1a1a]/30 font-extrabold text-[0.8rem]">
-              <span className="material-symbols-outlined text-[18px]">link</span>
-              <span>Docs PDF Nominais por Hyperlink</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#f1f4f3] text-[#003440] border border-[#003440]/12 font-bold text-[0.76rem]">
+              <span className="material-symbols-outlined text-[16px] text-[#005035]">link</span>
+              <span>Fichas PDF por Hyperlink</span>
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5 pt-3 border-t-2 border-[#edeeec] text-center">
-            <div className="bg-[#f4f7f5] p-2.5 rounded-xl border border-[#d5dddf]">
-              <span className="text-[0.72rem] font-extrabold text-[#647073] block uppercase">
+          <div className="grid grid-cols-3 gap-3 pt-3.5 border-t border-[#003440]/10 text-center">
+            <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/8">
+              <span className="text-[0.7rem] font-bold text-[#5a676b] block uppercase tracking-wider">
                 Estudantes
               </span>
-              <span className="text-[1.45rem] font-black text-[#003440]">
+              <span className="text-[1.45rem] font-black text-[#003440] tabular-nums">
                 {classGroup.totalStudents}
               </span>
             </div>
-            <div className="bg-[#fff8f7] p-2.5 rounded-xl border border-[#ffdad6]">
-              <span className="text-[0.72rem] font-extrabold text-[#ba1a1a] block uppercase">
+            <div className="bg-[#fff8f7] p-3 rounded-xl border border-[#ba1a1a]/15">
+              <span className="text-[0.7rem] font-bold text-[#ba1a1a] block uppercase tracking-wider">
                 Faltas no Mês
               </span>
-              <span className="text-[1.45rem] font-black text-[#ba1a1a]">
+              <span className="text-[1.45rem] font-black text-[#ba1a1a] tabular-nums">
                 {classGroup.monthlyAbsences}
               </span>
             </div>
-            <div className="bg-[#eaf6ef] p-2.5 rounded-xl border border-[#a4f3ca]">
-              <span className="text-[0.72rem] font-extrabold text-[#005035] block uppercase">
+            <div className="bg-[#eaf6ef]/70 p-3 rounded-xl border border-[#005035]/20">
+              <span className="text-[0.7rem] font-bold text-[#005035] block uppercase tracking-wider">
                 Presença
               </span>
-              <span className="text-[1.45rem] font-black text-[#005035]">
+              <span className="text-[1.45rem] font-black text-[#005035] tabular-nums">
                 {classGroup.presenceRate}%
               </span>
             </div>
@@ -238,24 +279,24 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       </div>
 
       {/* Direct Responsive Student Grid (1 col Mobile, 2 cols Tablet, 3 cols Laptop, 4 cols Widescreen 1920x1080) */}
-      <section className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border-2 border-[#b4c0c4]/85 space-y-4">
+      <section className="card-welcoming bg-white rounded-2xl p-4 sm:p-6 border border-[#003440]/12 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-[1.2rem] font-black text-[#003440] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[24px] text-[#005035]">
+            <h2 className="text-[1.18rem] font-extrabold text-[#003440] flex items-center gap-2">
+              <span className="material-symbols-outlined text-[22px] text-[#005035]">
                 groups
               </span>
               <span>
                 Estudantes da Turma {classGroup.name} ({filteredStudents.length})
               </span>
             </h2>
-            <p className="text-[0.86rem] text-[#2c373a] font-semibold">
-              Clique no <strong>hyperlink do nome do(a) estudante</strong> para abrir diretamente o <strong>Documento PDF Nominal ({`NOME.pdf`})</strong> ou em <strong>Dados</strong> para os 48 Campos SED.
+            <p className="text-[0.84rem] text-[#436370] font-medium">
+              Clique no <strong>nome do(a) estudante</strong> para abrir o <strong>Documento PDF Nominal</strong> ou em <strong>Dados</strong> para a Ficha SED.
             </p>
           </div>
 
           <div className="relative w-full sm:w-80">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#71787b] text-[20px]">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5a676b] text-[20px]">
               search
             </span>
             <input
@@ -263,7 +304,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               value={searchStudent}
               onChange={(e) => setSearchStudent(e.target.value)}
               placeholder="Buscar estudante por nome ou RA..."
-              className="w-full min-h-[44px] pl-10 pr-3 rounded-xl bg-[#f3f4f2] border-2 border-[#b4c0c4] text-[0.88rem] font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
+              className="w-full min-h-[44px] pl-10 pr-3 rounded-xl bg-[#f5f7f6] border border-[#003440]/15 text-[0.86rem] font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
             />
           </div>
         </div>
@@ -278,7 +319,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             return (
               <div
                 key={student.id}
-                className="card-welcoming bg-[#f9faf8] hover:bg-white rounded-2xl p-3.5 border-2 border-[#b4c0c4]/80 flex flex-col justify-between gap-3"
+                className="card-welcoming bg-[#fafbfa] hover:bg-white rounded-2xl p-4 border border-[#003440]/12 flex flex-col justify-between gap-3"
               >
                 <div className="flex items-start gap-3">
                   <div
@@ -288,14 +329,15 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     <StudentAvatar student={student} size="md" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[0.76rem] font-black text-[#2c373a]">
-                        Nº {student.number.toString().padStart(2, '0')}
-                      </span>
+                    <div className="flex flex-wrap items-center gap-1.5 text-[0.72rem] font-bold text-[#436370] tabular-nums">
+                      <span>Nº {student.number.toString().padStart(2, '0')}</span>
                       {student.ra && (
-                        <span className="text-[0.7rem] bg-[#edeeec] px-1.5 py-0.2 rounded font-mono font-bold text-[#003440]">
-                          RA: {student.ra}-{student.digRa}
-                        </span>
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-mono text-[#003440]">
+                            RA {student.ra}-{student.digRa}
+                          </span>
+                        </>
                       )}
                     </div>
                     <a
@@ -314,30 +356,23 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         }
                       }}
                       title={`Abrir Documento PDF Nominal de ${student.name} por Hyperlink`}
-                      className="doc-hyperlink text-[0.98rem] font-extrabold leading-snug truncate mt-0.5 block cursor-pointer"
+                      className="doc-hyperlink text-[0.95rem] font-extrabold leading-snug truncate mt-0.5 block cursor-pointer"
                     >
                       {student.name}
                     </a>
-                    <p className="text-[0.77rem] font-semibold text-[#2c373a] truncate mt-0.5">
+                    <p className="text-[0.75rem] font-medium text-[#5a676b] truncate mt-0.5">
                       {student.filiacao1 || student.guardianName || 'Responsável cadastrado'}
                     </p>
                   </div>
                 </div>
 
-                <div className="pt-2.5 border-t border-[#e1e3e1] flex items-center justify-between gap-2 text-[0.76rem]">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`px-2 py-0.5 rounded-lg font-black ${
-                        m.faltas > 0
-                          ? 'bg-[#ffdad6] text-[#ba1a1a]'
-                          : 'bg-[#eaf6ef] text-[#005035]'
-                      }`}
-                    >
-                      {m.faltas} faltas
+                <div className="pt-2.5 border-t border-[#003440]/8 flex items-center justify-between gap-2 text-[0.75rem]">
+                  <div className="flex items-center gap-1.5 font-mono font-bold tabular-nums">
+                    <span className={m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}>
+                      {m.faltas} {m.faltas === 1 ? 'falta' : 'faltas'}
                     </span>
-                    <span className="px-2 py-0.5 rounded-lg bg-[#c3e5f4]/60 text-[#003440] font-black">
-                      {m.frequenciaPercent}%
-                    </span>
+                    <span aria-hidden="true" className="text-[#a8b5b9]">·</span>
+                    <span className="text-[#003440]">{m.frequenciaPercent}%</span>
                   </div>
 
                   <div className="flex items-center gap-1">

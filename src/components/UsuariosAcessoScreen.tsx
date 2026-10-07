@@ -68,6 +68,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     }
   });
   const [copiedDeployKey, setCopiedDeployKey] = useState<string | null>(null);
+  const [addingSecondClassForUserId, setAddingSecondClassForUserId] = useState<string | null>(null);
   const [draftEdits, setDraftEdits] = useState<
     Record<
       string,
@@ -75,12 +76,70 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         role: UserRole;
         assignedClassId: string;
         assignedClassName: string;
+        assignedClassIds: string[];
+        assignedClassNames: string[];
       }
     >
   >({});
   const [recentlySavedUserIds, setRecentlySavedUserIds] = useState<Record<string, boolean>>({});
 
   const canManage = userRole === 'admin';
+
+  const getUserEffectiveClassIds = (u: AuthorizedUser): string[] => {
+    const d = draftEdits[u.id];
+    if (d && d.assignedClassIds && d.assignedClassIds.length > 0) {
+      return d.assignedClassIds;
+    }
+    if (u.assignedClassIds && u.assignedClassIds.length > 0) {
+      return u.assignedClassIds.filter((id) => id !== 'all');
+    }
+    if (u.assignedClassId && u.assignedClassId !== 'all') {
+      return [u.assignedClassId];
+    }
+    return [classes[0]?.id || 'g04a'];
+  };
+
+  const buildClassSummaryFromIds = (
+    roleVal: UserRole,
+    classIds: string[]
+  ): {
+    assignedClassId: string;
+    assignedClassName: string;
+    assignedClassIds: string[];
+    assignedClassNames: string[];
+  } => {
+    if (roleVal === 'admin') {
+      return {
+        assignedClassId: 'all',
+        assignedClassName: 'Todas as 40 Turmas (Acesso Pleno)',
+        assignedClassIds: ['all'],
+        assignedClassNames: ['Todas as 40 Turmas (Acesso Pleno)'],
+      };
+    }
+    if (roleVal === 'peb2') {
+      return {
+        assignedClassId: 'all',
+        assignedClassName: 'Todas as Turmas (Somente Visualização)',
+        assignedClassIds: ['all'],
+        assignedClassNames: ['Todas as Turmas (Somente Visualização)'],
+      };
+    }
+    const cleanIds = Array.from(new Set(classIds.filter((id) => id && id !== 'all')));
+    const matched = cleanIds
+      .map((id) => classes.find((c) => c.id === id))
+      .filter((c): c is ClassGroup => Boolean(c));
+    const finalClasses = matched.length > 0 ? matched : [classes[0]].filter(Boolean);
+    const ids = finalClasses.map((c) => c.id);
+    const names = finalClasses.map(
+      (c) => `${c.name} (${c.shift.replace('Turno ', '')})`
+    );
+    return {
+      assignedClassId: ids[0] || 'g04a',
+      assignedClassName: names.join(' + ') || 'GRUPO 04 A (Manhã)',
+      assignedClassIds: ids.length > 0 ? ids : ['g04a'],
+      assignedClassNames: names.length > 0 ? names : ['GRUPO 04 A (Manhã)'],
+    };
+  };
 
   const triggerFeedback = (type: 'success' | 'error', text: string) => {
     setFeedbackMsg({ type, text });
@@ -178,29 +237,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     if (!canManage) return;
     const origUser = authorizedUsers.find((u) => u.id === userId);
     if (!origUser) return;
-    const currentDraft = draftEdits[userId];
-    const currentClassId = currentDraft ? currentDraft.assignedClassId : origUser.assignedClassId;
+    const currentClassIds = getUserEffectiveClassIds(origUser);
+    const summary = buildClassSummaryFromIds(newRole, currentClassIds);
 
-    const defaultClass =
-      classes.find((c) => c.id === (currentClassId !== 'all' ? currentClassId : classes[0]?.id)) ||
-      classes[0];
-    const nextAssignedClassId = newRole === 'usuario' ? defaultClass?.id || 'g04a' : 'all';
-    const nextAssignedClassName =
-      newRole === 'admin'
-        ? 'Todas as 40 Turmas (Acesso Pleno)'
-        : newRole === 'peb2'
-        ? 'Todas as Turmas (Somente Visualização)'
-        : defaultClass
-        ? `${defaultClass.name} (${defaultClass.shift.replace('Turno ', '')})`
-        : 'GRUPO 04 A (Manhã)';
-
-    // Update draft so Admin sees the pending change and can click "Salvar Alteração" (and also auto-persist immediately so nothing is lost)
     setDraftEdits((prev) => ({
       ...prev,
       [userId]: {
         role: newRole,
-        assignedClassId: nextAssignedClassId,
-        assignedClassName: nextAssignedClassName,
+        ...summary,
       },
     }));
 
@@ -210,8 +254,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         ? {
             ...u,
             role: newRole,
-            assignedClassId: nextAssignedClassId,
-            assignedClassName: nextAssignedClassName,
+            ...summary,
             updatedAtMs: nowMs,
           }
         : u
@@ -227,14 +270,19 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
     const currentDraft = draftEdits[userId];
     const effectiveRole = currentDraft ? currentDraft.role : origUser.role;
-    const nextClassName = `${targetClass.name} (${targetClass.shift.replace('Turno ', '')})`;
+    const existingIds = getUserEffectiveClassIds(origUser);
+    // Replace primary class (index 0) while keeping any additional classes assigned to this teacher
+    const nextIds = [
+      targetClass.id,
+      ...existingIds.slice(1).filter((id) => id !== targetClass.id),
+    ];
+    const summary = buildClassSummaryFromIds(effectiveRole, nextIds);
 
     setDraftEdits((prev) => ({
       ...prev,
       [userId]: {
         role: effectiveRole,
-        assignedClassId: targetClass.id,
-        assignedClassName: nextClassName,
+        ...summary,
       },
     }));
 
@@ -244,8 +292,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         ? {
             ...u,
             role: effectiveRole,
-            assignedClassId: targetClass.id,
-            assignedClassName: nextClassName,
+            ...summary,
             updatedAtMs: nowMs,
           }
         : u
@@ -256,6 +303,75 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     }
   };
 
+  const handleAddExtraClassToUser = (userId: string, extraClassId: string) => {
+    if (!canManage || !extraClassId) return;
+    const origUser = authorizedUsers.find((u) => u.id === userId);
+    if (!origUser) return;
+    const currentDraft = draftEdits[userId];
+    const effectiveRole = currentDraft ? currentDraft.role : origUser.role;
+    const existingIds = getUserEffectiveClassIds(origUser);
+    const nextIds = Array.from(new Set([...existingIds, extraClassId]));
+    const summary = buildClassSummaryFromIds(effectiveRole, nextIds);
+
+    setDraftEdits((prev) => ({
+      ...prev,
+      [userId]: {
+        role: effectiveRole,
+        ...summary,
+      },
+    }));
+
+    const nowMs = Date.now();
+    const next = authorizedUsers.map((u) =>
+      u.id === userId
+        ? {
+            ...u,
+            role: effectiveRole,
+            ...summary,
+            updatedAtMs: nowMs,
+          }
+        : u
+    );
+    onSaveAuthorizedUsers(next);
+    setAddingSecondClassForUserId(null);
+    if (onSelectPreviewClassId) {
+      onSelectPreviewClassId(extraClassId);
+    }
+  };
+
+  const handleRemoveClassFromUser = (userId: string, classIdToRemove: string) => {
+    if (!canManage) return;
+    const origUser = authorizedUsers.find((u) => u.id === userId);
+    if (!origUser) return;
+    const currentDraft = draftEdits[userId];
+    const effectiveRole = currentDraft ? currentDraft.role : origUser.role;
+    const existingIds = getUserEffectiveClassIds(origUser);
+    if (existingIds.length <= 1) return;
+    const nextIds = existingIds.filter((id) => id !== classIdToRemove);
+    const summary = buildClassSummaryFromIds(effectiveRole, nextIds);
+
+    setDraftEdits((prev) => ({
+      ...prev,
+      [userId]: {
+        role: effectiveRole,
+        ...summary,
+      },
+    }));
+
+    const nowMs = Date.now();
+    const next = authorizedUsers.map((u) =>
+      u.id === userId
+        ? {
+            ...u,
+            role: effectiveRole,
+            ...summary,
+            updatedAtMs: nowMs,
+          }
+        : u
+    );
+    onSaveAuthorizedUsers(next);
+  };
+
   const handleConfirmSaveRow = (userId: string) => {
     if (!canManage) return;
     const origUser = authorizedUsers.find((u) => u.id === userId);
@@ -264,23 +380,23 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     const nowMs = Date.now();
 
     const finalRole = draft ? draft.role : origUser.role;
-    const finalClassId = draft ? draft.assignedClassId : origUser.assignedClassId;
-    const finalClassName = draft ? draft.assignedClassName : origUser.assignedClassName;
+    const finalSummary = draft
+      ? buildClassSummaryFromIds(finalRole, draft.assignedClassIds)
+      : buildClassSummaryFromIds(finalRole, getUserEffectiveClassIds(origUser));
 
     const next = authorizedUsers.map((u) =>
       u.id === userId
         ? {
             ...u,
             role: finalRole,
-            assignedClassId: finalClassId,
-            assignedClassName: finalClassName,
+            ...finalSummary,
             updatedAtMs: nowMs,
           }
         : u
     );
     onSaveAuthorizedUsers(next);
-    if (finalRole === 'usuario' && finalClassId !== 'all' && onSelectPreviewClassId) {
-      onSelectPreviewClassId(finalClassId);
+    if (finalRole === 'usuario' && finalSummary.assignedClassId !== 'all' && onSelectPreviewClassId) {
+      onSelectPreviewClassId(finalSummary.assignedClassId);
     }
 
     setDraftEdits((prev) => {
@@ -291,7 +407,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     markUserSavedFlash([userId]);
     triggerFeedback(
       'success',
-      `Alteração salva com sucesso para ${origUser.name}: ${finalClassName}!`
+      `Alteração salva com sucesso para ${origUser.name}: ${finalSummary.assignedClassName}!`
     );
   };
 
@@ -313,6 +429,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         role: d.role,
         assignedClassId: d.assignedClassId,
         assignedClassName: d.assignedClassName,
+        assignedClassIds: d.assignedClassIds,
+        assignedClassNames: d.assignedClassNames,
         updatedAtMs: nowMs,
       };
     });
@@ -1033,41 +1151,119 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
                   <td className="py-3 px-3">
                     {canManage && effectiveRole === 'usuario' ? (
-                      <div className="flex items-center gap-1.5">
-                        <select
-                          value={effectiveClassId}
-                          onChange={(e) => handleChangeUserClass(u.id, e.target.value)}
-                          className={`px-2.5 py-1.5 rounded-lg border font-extrabold text-[0.78rem] cursor-pointer ${
-                            hasPendingSave
-                              ? 'bg-[#fff3cd] border-[#7a4100] text-[#7a4100]'
-                              : 'bg-[#f3f4f2] border-[#c0c8cb] text-[#003440]'
-                          }`}
-                        >
-                          {classes.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name} ({c.shift.replace('Turno ', '')})
-                            </option>
-                          ))}
-                        </select>
-                        {hasPendingSave && (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <select
+                            value={effectiveClassId}
+                            onChange={(e) => handleChangeUserClass(u.id, e.target.value)}
+                            className={`px-2.5 py-1.5 rounded-lg border font-extrabold text-[0.78rem] cursor-pointer ${
+                              hasPendingSave
+                                ? 'bg-[#fff3cd] border-[#7a4100] text-[#7a4100]'
+                                : 'bg-[#f3f4f2] border-[#c0c8cb] text-[#003440]'
+                            }`}
+                          >
+                            {classes.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} ({c.shift.replace('Turno ', '')})
+                              </option>
+                            ))}
+                          </select>
+
                           <button
                             type="button"
-                            onClick={() => handleConfirmSaveRow(u.id)}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.72rem] inline-flex items-center gap-1 shadow-2xs cursor-pointer shrink-0"
+                            onClick={() =>
+                              setAddingSecondClassForUserId((prev) =>
+                                prev === u.id ? null : u.id
+                              )
+                            }
+                            title="Adicionar mais uma turma para esta professora (ex: Manhã + Tarde ou 2 turmas)"
+                            className="px-2 py-1 rounded-lg bg-[#e3f3fb] hover:bg-[#c3e5f4] text-[#003440] font-extrabold text-[0.7rem] inline-flex items-center gap-0.5 cursor-pointer border border-[#003440]/20 shrink-0"
                           >
-                            <span className="material-symbols-outlined text-[15px]">
-                              check_circle
-                            </span>
-                            <span>Salvar</span>
+                            <span className="material-symbols-outlined text-[14px]">add</span>
+                            <span>+ Turma</span>
                           </button>
-                        )}
-                        {!hasPendingSave && wasRecentlySaved && (
-                          <span className="px-2 py-1 rounded-lg bg-[#a4f3ca] text-[#003723] font-black text-[0.7rem] inline-flex items-center gap-1 shrink-0">
-                            <span className="material-symbols-outlined text-[14px]">
-                              verified
+
+                          {hasPendingSave && (
+                            <button
+                              type="button"
+                              onClick={() => handleConfirmSaveRow(u.id)}
+                              className="px-2.5 py-1.5 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.72rem] inline-flex items-center gap-1 shadow-2xs cursor-pointer shrink-0"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">
+                                check_circle
+                              </span>
+                              <span>Salvar</span>
+                            </button>
+                          )}
+                          {!hasPendingSave && wasRecentlySaved && (
+                            <span className="px-2 py-1 rounded-lg bg-[#a4f3ca] text-[#003723] font-black text-[0.7rem] inline-flex items-center gap-1 shrink-0">
+                              <span className="material-symbols-outlined text-[14px]">
+                                verified
+                              </span>
+                              <span>Salvo!</span>
                             </span>
-                            <span>Salvo!</span>
-                          </span>
+                          )}
+                        </div>
+
+                        {/* Se tiver mais de 1 turma vinculada, mostra todas as turmas com opção de remover */}
+                        {getUserEffectiveClassIds(u).length > 1 && (
+                          <div className="flex flex-wrap items-center gap-1">
+                            {getUserEffectiveClassIds(u).map((cid) => {
+                              const clsObj = classes.find((c) => c.id === cid);
+                              if (!clsObj) return null;
+                              return (
+                                <span
+                                  key={cid}
+                                  className="px-2 py-0.5 rounded-md bg-[#e8f8ef] border border-[#005035]/30 text-[#005035] font-extrabold text-[0.68rem] inline-flex items-center gap-1"
+                                >
+                                  <span>
+                                    {clsObj.name} ({clsObj.shift.replace('Turno ', '')})
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveClassFromUser(u.id, cid)}
+                                    title="Remover esta turma da professora"
+                                    className="hover:text-[#ba1a1a] cursor-pointer leading-none font-black"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Seletor rápido para adicionar 2ª / 3ª turma */}
+                        {addingSecondClassForUserId === u.id && (
+                          <div className="flex items-center gap-1.5 pt-0.5">
+                            <select
+                              defaultValue=""
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  handleAddExtraClassToUser(u.id, e.target.value);
+                                }
+                              }}
+                              className="px-2 py-1 rounded-lg bg-white border-2 border-[#005035] text-[#003440] font-extrabold text-[0.74rem] cursor-pointer"
+                            >
+                              <option value="" disabled>
+                                + Escolher outra turma para adicionar...
+                              </option>
+                              {classes
+                                .filter((c) => !getUserEffectiveClassIds(u).includes(c.id))
+                                .map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    + {c.name} ({c.shift.replace('Turno ', '')})
+                                  </option>
+                                ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => setAddingSecondClassForUserId(null)}
+                              className="text-[0.7rem] font-bold text-[#566366] hover:text-[#191c1b] px-1.5 cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -1153,14 +1349,15 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                           <button
                             type="button"
                             onClick={() => {
+                              const effIds = getUserEffectiveClassIds(u);
+                              const summary = buildClassSummaryFromIds(effectiveRole, effIds);
                               if (hasPendingSave) {
                                 handleConfirmSaveRow(u.id);
                               }
                               onSimulateTeacherProfile({
                                 ...u,
                                 role: effectiveRole,
-                                assignedClassId: effectiveClassId,
-                                assignedClassName: effectiveClassName,
+                                ...summary,
                               });
                             }}
                             title={`Abrir visão exata de ${u.name} (${effectiveClassName})`}

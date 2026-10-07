@@ -84,7 +84,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
     <div
       aria-label={`Iniciais de ${resolvedName}: ${initials}`}
       title={`${resolvedName} (Sem foto no Drive/Upload — exibindo 2 iniciais)`}
-      className={`${sizeClasses} rounded-full bg-gradient-to-br from-[#c3e5f4] to-[#a4f3ca]/70 text-[#003440] font-black tracking-tight flex items-center justify-center ring-[#003440]/20 border border-white shadow-2xs shrink-0 select-none ${className}`}
+      className={`${sizeClasses} rounded-full bg-gradient-to-br from-[#e6f4fa] to-[#e8f8ef] text-[#003440] font-extrabold tracking-tight flex items-center justify-center ring-[#003440]/15 border border-white shadow-2xs shrink-0 select-none ${className}`}
     >
       {initials}
     </div>

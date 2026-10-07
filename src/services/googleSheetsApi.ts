@@ -736,9 +736,17 @@ const buildEmailsPermitidosValues = (
     'ÚLTIMO ACESSO (LOGIN)',
     'ÚLTIMA ATIVIDADE / PULSO',
     'ÚLTIMA TELA VISITADA',
+    'IDS_TURMAS_VINCULADAS_SISTEMA',
+    'TIMESTAMP_EDICAO_MS',
   ];
   const rows: any[][] = [headers];
   list.forEach((u, idx) => {
+    const classIdsStr =
+      u.role === 'usuario'
+        ? u.assignedClassIds && u.assignedClassIds.length > 0
+          ? u.assignedClassIds.join(',')
+          : u.assignedClassId || 'g04a'
+        : 'all';
     rows.push([
       idx + 1,
       u.email,
@@ -757,6 +765,8 @@ const buildEmailsPermitidosValues = (
       u.lastLoginAt || 'Nunca acessou',
       u.lastActiveAt || '—',
       u.lastScreenVisited || '—',
+      classIdsStr,
+      u.updatedAtMs || 0,
     ]);
   });
   return rows;
@@ -914,7 +924,7 @@ export const readAuthorizedUsersFromGoogleSheet = async (
     const res = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
         spreadsheetId
-      )}/values/${encodeURIComponent('Emails_Permitidos_2027!A2:M500')}`,
+      )}/values/${encodeURIComponent('Emails_Permitidos_2027!A2:O500')}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     if (!res.ok) return null;
@@ -958,8 +968,11 @@ export const readAuthorizedUsersFromGoogleSheet = async (
       const createdAt = String(r[6] || '03/02/2027').trim();
 
       const prev = existingMap.get(email);
-      const isLocallyEditedRecently =
-        Boolean(prev?.updatedAtMs) && Date.now() - (prev?.updatedAtMs || 0) < 600000;
+      const sheetUpdatedAtMs = parseInt(String(r[14] || '0'), 10) || 0;
+      const localUpdatedAtMs = prev?.updatedAtMs || 0;
+      // Preserve local Admin changes whenever localUpdatedAtMs >= sheetUpdatedAtMs and localUpdatedAtMs > 0
+      const preferLocalConfig =
+        localUpdatedAtMs > 0 && localUpdatedAtMs >= sheetUpdatedAtMs;
 
       const sheetRole: UserRole = roleStr.includes('ADMIN')
         ? 'admin'
@@ -967,46 +980,86 @@ export const readAuthorizedUsersFromGoogleSheet = async (
         ? 'peb2'
         : 'usuario';
 
-      const role: UserRole = isLocallyEditedRecently && prev ? prev.role : sheetRole;
+      const role: UserRole = preferLocalConfig && prev ? prev.role : sheetRole;
 
+      let assignedClassIds: string[] = [];
+      let assignedClassNames: string[] = [];
       let assignedClassId = prev?.assignedClassId || 'g04a';
       let assignedClassName =
-        (isLocallyEditedRecently && prev?.assignedClassName) ||
+        (preferLocalConfig && prev?.assignedClassName) ||
         turmaStr ||
         prev?.assignedClassName ||
         'GRUPO 04 A (Manhã)';
 
       if (role === 'usuario') {
-        if (isLocallyEditedRecently && prev?.assignedClassId && prev.assignedClassId !== 'all') {
-          const localCls = classes.find((c) => c.id === prev.assignedClassId);
-          if (localCls) {
-            assignedClassId = localCls.id;
-            assignedClassName = `${localCls.name} (${localCls.shift.replace('Turno ', '')})`;
+        if (preferLocalConfig && prev) {
+          const rawIds =
+            prev.assignedClassIds && prev.assignedClassIds.length > 0
+              ? prev.assignedClassIds
+              : prev.assignedClassId && prev.assignedClassId !== 'all'
+              ? [prev.assignedClassId]
+              : ['g04a'];
+          const matchedClasses = rawIds
+            .map((id) => classes.find((c) => c.id === id))
+            .filter((c): c is ClassGroup => Boolean(c));
+          if (matchedClasses.length > 0) {
+            assignedClassIds = matchedClasses.map((c) => c.id);
+            assignedClassNames = matchedClasses.map(
+              (c) => `${c.name} (${c.shift.replace('Turno ', '')})`
+            );
+            assignedClassId = assignedClassIds[0];
+            assignedClassName = assignedClassNames.join(' + ');
           }
         } else {
-          const matchedClass = classes.find((c) => {
-            const cleanTurma = turmaStr.toUpperCase();
-            const cleanName = c.name.toUpperCase();
-            return (
-              cleanTurma.startsWith(cleanName) ||
-              cleanTurma === cleanName ||
-              c.id.toLowerCase() === turmaStr.toLowerCase()
-            );
+          const rawClassIdsCol = String(r[13] || '').trim();
+          const candidateTokens = rawClassIdsCol
+            ? rawClassIdsCol
+                .split(/[,;+|]/)
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : turmaStr
+                .split(/[+;,]/)
+                .map((s) => s.trim())
+                .filter(Boolean);
+
+          const matchedClasses: ClassGroup[] = [];
+          candidateTokens.forEach((tok) => {
+            const cleanTok = tok.toUpperCase();
+            const found = classes.find((c) => {
+              const cleanName = c.name.toUpperCase();
+              return (
+                c.id.toLowerCase() === tok.toLowerCase() ||
+                cleanTok.startsWith(cleanName) ||
+                cleanTok === cleanName
+              );
+            });
+            if (found && !matchedClasses.some((m) => m.id === found.id)) {
+              matchedClasses.push(found);
+            }
           });
-          if (matchedClass) {
-            assignedClassId = matchedClass.id;
-            assignedClassName = `${matchedClass.name} (${matchedClass.shift.replace(
-              'Turno ',
-              ''
-            )})`;
+
+          if (matchedClasses.length > 0) {
+            assignedClassIds = matchedClasses.map((c) => c.id);
+            assignedClassNames = matchedClasses.map(
+              (c) => `${c.name} (${c.shift.replace('Turno ', '')})`
+            );
+            assignedClassId = assignedClassIds[0];
+            assignedClassName = assignedClassNames.join(' + ');
+          } else if (prev?.assignedClassIds && prev.assignedClassIds.length > 0) {
+            assignedClassIds = prev.assignedClassIds;
+            assignedClassNames = prev.assignedClassNames || [prev.assignedClassName];
+            assignedClassId = prev.assignedClassId;
+            assignedClassName = prev.assignedClassName;
           }
         }
       } else {
         assignedClassId = 'all';
+        assignedClassIds = ['all'];
         assignedClassName =
           role === 'admin'
             ? 'Todas as 40 Turmas (Acesso Pleno)'
             : 'Todas as Turmas (Somente Visualização)';
+        assignedClassNames = [assignedClassName];
       }
 
       const sheetAccessCount = parseInt(String(r[7] || ''), 10) || 0;
@@ -1016,13 +1069,15 @@ export const readAuthorizedUsersFromGoogleSheet = async (
       parsedUsers.push({
         id: prev?.id || `usr-sheet-${idx + 1}`,
         email,
-        name: (isLocallyEditedRecently && prev?.name) || name,
+        name: (preferLocalConfig && prev?.name) || name,
         role,
         assignedClassId,
         assignedClassName,
-        active: isLocallyEditedRecently && prev ? prev.active : !statusStr.includes('BLOQUEADO'),
+        assignedClassIds,
+        assignedClassNames,
+        active: preferLocalConfig && prev ? prev.active : !statusStr.includes('BLOQUEADO'),
         createdAt,
-        updatedAtMs: prev?.updatedAtMs,
+        updatedAtMs: Math.max(localUpdatedAtMs, sheetUpdatedAtMs),
         totalAccessCount: Math.max(sheetAccessCount, prev?.totalAccessCount || 0),
         totalDurationSeconds: Math.max(
           sheetTotalSecs,

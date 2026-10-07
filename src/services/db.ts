@@ -201,27 +201,200 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
   return users.map((u) => {
     const cleanEmail = u.email.trim().toLowerCase();
     if (u.role === 'usuario') {
-      let matched = validClassMap.get((u.assignedClassId || '').toLowerCase());
-      if (!matched && u.assignedClassName) {
-        matched = INITIAL_CLASSES.find((c) =>
-          u.assignedClassName.toUpperCase().startsWith(c.name.toUpperCase())
-        );
+      // Preserve multi-class assignments (assignedClassIds) if present!
+      const rawIds: string[] =
+        Array.isArray(u.assignedClassIds) && u.assignedClassIds.length > 0
+          ? u.assignedClassIds.filter((id) => id && id !== 'all')
+          : u.assignedClassId && u.assignedClassId !== 'all'
+          ? [u.assignedClassId]
+          : [];
+
+      const matchedClasses: ClassGroup[] = [];
+      rawIds.forEach((id) => {
+        const found = validClassMap.get(String(id).toLowerCase());
+        if (found && !matchedClasses.some((m) => m.id === found.id)) {
+          matchedClasses.push(found);
+        }
+      });
+
+      if (matchedClasses.length === 0 && u.assignedClassName) {
+        const parts = u.assignedClassName
+          .split(/[+;,]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        parts.forEach((part) => {
+          const found = INITIAL_CLASSES.find((c) =>
+            part.toUpperCase().startsWith(c.name.toUpperCase())
+          );
+          if (found && !matchedClasses.some((m) => m.id === found.id)) {
+            matchedClasses.push(found);
+          }
+        });
       }
-      if (!matched) {
-        matched = INITIAL_CLASSES[0];
+
+      if (matchedClasses.length === 0) {
+        matchedClasses.push(INITIAL_CLASSES[0]);
       }
+
+      const finalIds = matchedClasses.map((c) => c.id);
+      const finalNames = matchedClasses.map(
+        (c) => `${c.name} (${c.shift.replace('Turno ', '')})`
+      );
+
       return {
         ...u,
         email: cleanEmail,
-        assignedClassId: matched.id,
-        assignedClassName: `${matched.name} (${matched.shift.replace('Turno ', '')})`,
+        assignedClassId: finalIds[0],
+        assignedClassName: finalNames.join(' + '),
+        assignedClassIds: finalIds,
+        assignedClassNames: finalNames,
       };
     }
     return {
       ...u,
       email: cleanEmail,
+      assignedClassId: 'all',
+      assignedClassIds: ['all'],
+      assignedClassName:
+        u.role === 'admin'
+          ? 'Todas as 40 Turmas (Acesso Pleno)'
+          : 'Todas as Turmas (Somente Visualização)',
+      assignedClassNames: [
+        u.role === 'admin'
+          ? 'Todas as 40 Turmas (Acesso Pleno)'
+          : 'Todas as Turmas (Somente Visualização)',
+      ],
     };
   });
+};
+
+export const pushAuthorizedUsersToServer = async (
+  users: AuthorizedUser[]
+): Promise<AuthorizedUser[] | null> => {
+  try {
+    const sanitized = classesOrUsersSanitize(users);
+    const res = await fetch('/api/school-state/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ authorizedUsers: sanitized }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.authorizedUsers)) {
+        const clean = classesOrUsersSanitize(data.authorizedUsers);
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(clean));
+        return clean;
+      }
+    }
+  } catch {
+    // ignore offline
+  }
+  return null;
+};
+
+export const pushSessionLogsToServer = async (
+  logs: UserAccessSessionLog[],
+  users?: AuthorizedUser[]
+): Promise<void> => {
+  try {
+    await fetch('/api/school-state/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accessSessionLogs: logs,
+        ...(users ? { authorizedUsers: classesOrUsersSanitize(users) } : {}),
+      }),
+    });
+  } catch {
+    // ignore offline
+  }
+};
+
+export const pushAttendanceWindowToServer = async (
+  config: AttendanceWindowConfig
+): Promise<void> => {
+  try {
+    await fetch('/api/school-state/window', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attendanceWindowConfig: config }),
+    });
+  } catch {
+    // ignore offline
+  }
+};
+
+export const pullSharedSchoolStateFromServer = async (): Promise<{
+  authorizedUsers?: AuthorizedUser[];
+  accessSessionLogs?: UserAccessSessionLog[];
+  attendanceWindowConfig?: AttendanceWindowConfig;
+} | null> => {
+  try {
+    const res = await fetch('/api/school-state', { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const result: {
+      authorizedUsers?: AuthorizedUser[];
+      accessSessionLogs?: UserAccessSessionLog[];
+      attendanceWindowConfig?: AttendanceWindowConfig;
+    } = {};
+
+    if (Array.isArray(data?.authorizedUsers) && data.authorizedUsers.length > 0) {
+      const localUsers = getStoredAuthorizedUsers();
+      const localMap = new Map(
+        localUsers.map((u) => [u.email.trim().toLowerCase(), u])
+      );
+      const merged = data.authorizedUsers.map((srv: AuthorizedUser) => {
+        const loc = localMap.get(srv.email.trim().toLowerCase());
+        if (!loc) return srv;
+        const srvTime = srv.updatedAtMs || 0;
+        const locTime = loc.updatedAtMs || 0;
+        const winner = srvTime >= locTime ? srv : loc;
+        return {
+          ...winner,
+          updatedAtMs: Math.max(srvTime, locTime),
+          totalAccessCount: Math.max(srv.totalAccessCount || 0, loc.totalAccessCount || 0),
+          totalDurationSeconds: Math.max(
+            srv.totalDurationSeconds || 0,
+            loc.totalDurationSeconds || 0
+          ),
+          lastSessionDurationSeconds: Math.max(
+            srv.lastSessionDurationSeconds || 0,
+            loc.lastSessionDurationSeconds || 0
+          ),
+          lastLoginAt: srv.lastLoginAt || loc.lastLoginAt,
+          lastActiveAt: srv.lastActiveAt || loc.lastActiveAt,
+          lastScreenVisited: srv.lastScreenVisited || loc.lastScreenVisited,
+        };
+      });
+      const sanitized = classesOrUsersSanitize(merged);
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(sanitized));
+      result.authorizedUsers = sanitized;
+    }
+
+    if (Array.isArray(data?.accessSessionLogs) && data.accessSessionLogs.length > 0) {
+      localStorage.setItem(
+        ACCESS_LOGS_STORAGE_KEY,
+        JSON.stringify(data.accessSessionLogs.slice(0, 500))
+      );
+      result.accessSessionLogs = data.accessSessionLogs;
+    }
+
+    if (
+      data?.attendanceWindowConfig &&
+      typeof data.attendanceWindowConfig.exceptionalOverrideOpen === 'boolean'
+    ) {
+      localStorage.setItem(
+        ATTENDANCE_WINDOW_STORAGE_KEY,
+        JSON.stringify(data.attendanceWindowConfig)
+      );
+      result.attendanceWindowConfig = data.attendanceWindowConfig;
+    }
+
+    return result;
+  } catch {
+    return null;
+  }
 };
 
 export const findAuthorizedUserByEmail = (

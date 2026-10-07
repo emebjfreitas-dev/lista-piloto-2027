@@ -206,6 +206,8 @@ export interface AuthorizedUser {
   role: UserRole;
   assignedClassId: string;
   assignedClassName: string;
+  assignedClassIds?: string[];
+  assignedClassNames?: string[];
   active: boolean;
   createdAt: string;
   updatedAtMs?: number;

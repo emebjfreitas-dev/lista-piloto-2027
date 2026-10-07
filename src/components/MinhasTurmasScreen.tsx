@@ -6,6 +6,7 @@ interface MinhasTurmasScreenProps {
   classes: ClassGroup[];
   userRole: UserRole;
   assignedClassId: string;
+  assignedClassIds?: string[];
   attendanceWindowConfig: AttendanceWindowConfig;
   onChangeRole: (role: UserRole) => void;
   onChangeAssignedClassId: (classId: string) => void;
@@ -22,6 +23,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   classes,
   userRole,
   assignedClassId,
+  assignedClassIds = [],
   attendanceWindowConfig,
   onChangeRole,
   onChangeAssignedClassId,
@@ -45,13 +47,18 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
 
   // Role-based class visibility:
   // - ADMIN: all 40 classes (full access)
-  // - USUÁRIO (PEB I): ONLY their assigned class
+  // - USUÁRIO (PEB I): ONLY their assigned class(es)
   // - PEB II: all 40 classes (view-only)
-  // Memoized filtering for instant 0ms search across all 40 classes
+  const allowedClassIdsForUsuario = useMemo(() => {
+    const valid = assignedClassIds.filter((id) => id && id !== 'all');
+    if (valid.length > 0) return valid;
+    return [assignedClassId];
+  }, [assignedClassIds, assignedClassId]);
+
   const filteredClasses = useMemo(() => {
     return classes.filter((c) => {
       if (userRole === 'usuario') {
-        return c.id === assignedClassId;
+        return allowedClassIdsForUsuario.includes(c.id);
       }
 
       const matchesShift = c.shift === selectedShift;
@@ -98,14 +105,14 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
       {/* Top Control Row: Perfil de Acesso Ativo visible ONLY for ADMIN */}
       <div className="space-y-5 xl:space-y-0 xl:grid xl:grid-cols-12 xl:gap-5 xl:items-stretch">
         {userRole === 'admin' && (
-          <section className="xl:col-span-5 bg-white rounded-2xl p-4 shadow-sm border-2 border-[#003440]/15 space-y-3 flex flex-col justify-between">
+          <section className="xl:col-span-5 card-welcoming bg-white rounded-2xl p-5 border border-[#003440]/12 space-y-3 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[0.8rem] font-black text-[#003440] uppercase tracking-wide flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-                <span>Perfil de Acesso Ativo (Exclusivo Admin):</span>
+              <span className="text-[0.78rem] font-extrabold text-[#003440] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px] text-[#005035]">admin_panel_settings</span>
+                <span>Simulador de Perfil (Admin)</span>
               </span>
-              <span className="text-[0.75rem] font-bold px-2.5 py-0.5 rounded-full bg-[#c3e5f4] text-[#001f29]">
-                Acesso Pleno (Todos Recursos)
+              <span className="text-[0.72rem] font-bold text-[#005035]">
+                Acesso Pleno · 40 Turmas
               </span>
             </div>
 
@@ -167,19 +174,19 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         <section
           className={`${
             userRole === 'admin' ? 'xl:col-span-7' : 'xl:col-span-12'
-          } bg-white rounded-2xl p-5 shadow-sm border border-[#e1e3e1] space-y-4 flex flex-col justify-between`}
+          } card-welcoming bg-white rounded-2xl p-5 border border-[#003440]/12 space-y-4 flex flex-col justify-between`}
         >
         <div className="flex items-start justify-between gap-2">
           <div>
-            <span className="inline-block px-3 py-1 bg-[#c3e5f4] text-[#001f29] font-black text-[0.85rem] rounded-full mb-1">
+            <span className="text-[0.75rem] font-extrabold uppercase tracking-wider text-[#005035] block mb-0.5">
               {userRole === 'usuario'
-                ? 'Acesso Exclusivo à Sua Turma • 2027'
-                : 'Ano Letivo 2027 • 40 Turmas'}
+                ? 'Acesso Exclusivo à Sua Turma · Ano Letivo 2027'
+                : 'Ano Letivo 2027 · 40 Turmas Oficiais'}
             </span>
-            <h1 className="text-[1.5rem] font-extrabold text-[#003440] leading-tight">
+            <h1 className="text-[1.45rem] font-extrabold text-[#003440] leading-tight">
               {userRole === 'usuario' ? 'Minha Turma Regente' : 'Quadro Oficial de Turmas'}
             </h1>
-            <p className="text-[1rem] text-[#41484b] mt-1 font-medium leading-relaxed">
+            <p className="text-[0.92rem] text-[#374346] mt-1 font-medium leading-relaxed">
               {userRole === 'admin' &&
                 'Acesso pleno: gerencie faltas, atestados, grade de dados de cada estudante e planilha geral.'}
               {userRole === 'usuario' &&
@@ -229,10 +236,10 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
 
       {/* Clear Banner Explaining Attendance Launch Window vs Always-Available View Students */}
       <div
-        className={`rounded-2xl p-4 border-2 flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
+        className={`rounded-2xl p-4 border flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
           isLaunchButtonOpen
-            ? 'bg-[#e8f8ef] border-[#005035] text-[#003723]'
-            : 'bg-[#fff8f0] border-[#7a4100]/40 text-[#41484b]'
+            ? 'bg-[#eaf6ef]/90 border-[#005035]/25 text-[#003723]'
+            : 'bg-[#fff9f2] border-[#7a4100]/25 text-[#374346]'
         }`}
       >
         <div className="flex items-start gap-3">
@@ -350,52 +357,49 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             return (
               <div
                 key={cls.id}
-                className="card-welcoming bg-white rounded-2xl p-4 sm:p-5 shadow-xs border-2 border-[#b4c0c4]/85 hover:border-[#003440]/55 flex flex-col justify-between gap-4"
+                className="card-welcoming bg-white rounded-2xl p-5 border border-[#003440]/12 flex flex-col justify-between gap-4"
               >
                 {/* Class Details Header */}
                 <div
                   onClick={() => {
                     onSelectClassForDetails(cls);
                   }}
-                  className="cursor-pointer flex items-start gap-3.5 min-w-0"
+                  className="cursor-pointer flex items-start gap-3.5 min-w-0 group"
                 >
                   <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-[1.15rem] tracking-tight shrink-0 shadow-xs ${
+                    className={`w-13 h-13 rounded-2xl flex items-center justify-center font-black text-[1.08rem] tracking-tight shrink-0 transition-transform group-hover:scale-[1.03] ${
                       isInfantil
-                        ? 'bg-[#a4f3ca] text-[#003723]'
-                        : 'bg-[#c3e5f4] text-[#003440]'
+                        ? 'bg-[#e8f8ef] text-[#005035] border border-[#005035]/20'
+                        : 'bg-[#e6f4fa] text-[#003440] border border-[#003440]/15'
                     }`}
                   >
                     {shortBadge}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <h2 className="text-[1.28rem] font-extrabold text-[#003440] leading-tight">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h2 className="text-[1.2rem] font-extrabold text-[#003440] group-hover:text-[#005035] transition-colors leading-tight">
                         {cls.name}
                       </h2>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] font-black text-[0.76rem] border border-[#a4f3ca]">
+                      <span className="font-mono font-extrabold text-[0.82rem] text-[#005035] tabular-nums shrink-0">
                         {cls.presenceRate}% presença
                       </span>
                     </div>
-                    <p className="text-[0.9rem] text-[#41484b] font-semibold mt-0.5">
-                      {cls.grade} • {cls.room}
+                    <p className="text-[0.84rem] text-[#436370] font-semibold mt-0.5">
+                      {cls.grade} · {cls.room}
                     </p>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#f3f4f2] text-[#003440] font-extrabold text-[0.78rem]">
-                        <span className="material-symbols-outlined text-[16px]">groups</span>
-                        {cls.totalStudents} Estudantes
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#ffdad6]/50 text-[#ba1a1a] font-extrabold text-[0.78rem]">
-                        <span className="material-symbols-outlined text-[16px]">event_busy</span>
-                        {cls.monthlyAbsences} Faltas no mês
+                    <div className="flex items-center gap-2 mt-1.5 text-[0.78rem] font-bold text-[#374346] tabular-nums">
+                      <span>{cls.totalStudents} estudantes</span>
+                      <span aria-hidden="true" className="text-[#a8b5b9]">·</span>
+                      <span className={cls.monthlyAbsences > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}>
+                        {cls.monthlyAbsences} faltas no mês
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Clear, Cohesive & Intelligent Action Buttons (No truncated '...' text!) */}
-                <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-[#edeeec]">
+                {/* Clear, Cohesive & Intelligent Action Buttons */}
+                <div className="grid grid-cols-2 gap-2.5 pt-3.5 border-t border-[#003440]/8">
                   {/* Botão 1: Ver Estudantes (SEMPRE DISPONÍVEL O TEMPO TODO) */}
                   <button
                     type="button"

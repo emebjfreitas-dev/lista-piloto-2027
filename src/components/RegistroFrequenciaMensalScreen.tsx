@@ -410,41 +410,42 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       )}
 
       {/* Senior-Friendly Header Box */}
-      <section className="bg-white rounded-2xl p-5 shadow-xs border-2 border-[#b4c0c4]/70 space-y-4 animate-gentle-fade">
+      <section className="card-welcoming bg-white rounded-2xl p-5 border border-[#003440]/12 space-y-4 animate-gentle-fade">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="inline-block px-3 py-1 bg-[#c3e5f4] text-[#001f29] font-extrabold text-[0.85rem] rounded-full">
-                {classGroup.shift} • Ano 2027
-              </span>
+            <div className="flex flex-wrap items-center gap-2 mb-1 text-[0.76rem] font-extrabold uppercase tracking-wider text-[#005035]">
+              <span>{classGroup.shift} · Ano Letivo 2027</span>
               {effectiveCanEdit && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#eaf6ef] border border-[#005035]/30 text-[#003723] font-black text-[0.78rem]">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      instantSyncStatus === 'syncing'
-                        ? 'bg-[#e5b324] animate-ping'
-                        : 'bg-[#005035]'
-                    }`}
-                  ></span>
-                  <span>
-                    {instantSyncStatus === 'syncing'
-                      ? 'Salvando sozinho na Planilha...'
-                      : 'Já está salvo sozinho na Planilha da Escola'}
+                <>
+                  <span aria-hidden="true" className="text-[#a8b5b9]">·</span>
+                  <span className="inline-flex items-center gap-1.5 text-[#005035] normal-case tracking-normal font-bold">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        instantSyncStatus === 'syncing'
+                          ? 'bg-[#e5b324] animate-ping'
+                          : 'bg-[#005035]'
+                      }`}
+                    ></span>
+                    <span>
+                      {instantSyncStatus === 'syncing'
+                        ? 'Salvando automaticamente na Planilha...'
+                        : 'Salvo automaticamente na Planilha da Escola'}
+                    </span>
                   </span>
-                </span>
+                </>
               )}
               {isPastMonth && userRole === 'admin' && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#003440] text-white font-black text-[0.76rem]">
-                  <span className="material-symbols-outlined text-[15px]">admin_panel_settings</span>
-                  <span>ADMIN: Edição de Mês Passado ({selectedMonthName}) Liberada</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#003440] text-white font-bold text-[0.72rem] normal-case tracking-normal">
+                  <span className="material-symbols-outlined text-[14px]">admin_panel_settings</span>
+                  <span>Admin · Mês Passado ({selectedMonthName}) Liberado</span>
                 </span>
               )}
             </div>
-            <h1 className="text-[1.6rem] font-black text-[#003440] leading-tight">
+            <h1 className="text-[1.55rem] font-extrabold text-[#003440] leading-tight">
               {classGroup.name}
             </h1>
-            <p className="text-[0.92rem] text-[#374144] font-semibold">
-              Basta tocar em <strong>+</strong> ou <strong>—</strong>: o sistema salva sozinho na Planilha da Escola na mesma hora.
+            <p className="text-[0.88rem] text-[#374346] font-medium">
+              Toque em <strong>+</strong> ou <strong>—</strong> para registrar faltas e atestados: o sistema grava automaticamente na Planilha Google.
             </p>
           </div>
 

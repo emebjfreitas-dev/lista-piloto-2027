@@ -11,6 +11,7 @@ import {
   findAuthorizedUserByEmail,
   getStoredClasses,
   saveStoredAuthorizedUsers,
+  pullSharedSchoolStateFromServer,
 } from '../services/db';
 import {
   googleSignIn,
@@ -49,11 +50,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       return;
     }
 
-    // Pull latest authorizedUsers from Google Sheet first so if Admin changed this teacher's class (e.g., Giulia Patez -> GRUPO 04 C), she opens GRUPO 04 C immediately!
+    // 1. Pull latest authorizedUsers from Backend Server (/api/school-state) first so even in another browser/incognito window or without Sheets token, the teacher gets her exact Admin-assigned class(es)!
     let latestUsers = authorizedUsers;
     try {
+      const serverState = await pullSharedSchoolStateFromServer();
+      if (serverState?.authorizedUsers && serverState.authorizedUsers.length > 0) {
+        latestUsers = serverState.authorizedUsers;
+      }
+    } catch {
+      // ignore if offline
+    }
+
+    // 2. Also pull from Google Sheet if available
+    try {
       const sheetUsers = await readAuthorizedUsersFromGoogleSheet(
-        authorizedUsers,
+        latestUsers,
         getStoredClasses()
       );
       if (sheetUsers && sheetUsers.length > 0) {
@@ -61,7 +72,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         saveStoredAuthorizedUsers(sheetUsers);
       }
     } catch {
-      // fallback to local list if offline
+      // fallback to server/local list
     }
 
     const registeredUser = findAuthorizedUserByEmail(
@@ -154,21 +165,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         />
       </div>
 
-      <main className="relative z-10 w-full max-w-[420px] bg-white/94 backdrop-blur-md rounded-3xl shadow-sm border border-[#d5dddf] px-7 py-9 flex flex-col items-center text-center space-y-6 overflow-hidden">
+      <main className="relative z-10 w-full max-w-[430px] bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_-12px_rgba(0,52,64,0.16)] border border-[#003440]/12 px-8 py-9 flex flex-col items-center text-center space-y-6 overflow-hidden">
         {/* Marca d'água sutil interna no cartão com a Foto Oficial */}
         <img
           src={SCHOOL_PATRON_WATERMARK_URL}
           alt=""
           aria-hidden="true"
           referrerPolicy="no-referrer"
-          className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-[0.055] mix-blend-multiply"
+          className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-[0.045] mix-blend-multiply"
         />
 
         {/* Brasão Oficial de Jundiaí */}
-        <div className="relative z-10 w-24 h-24 rounded-2xl overflow-hidden border border-[#d5dddf] shadow-xs flex items-center justify-center bg-white p-2">
+        <div className="relative z-10 w-24 h-24 rounded-2xl overflow-hidden border border-[#003440]/12 shadow-xs flex items-center justify-center bg-white p-2.5">
           <img
             src={APP_LOGO_URL}
-            alt="Prefeitura Municipal de Jundiaí - Secretaria Municipal de Educação"
+            alt="Prefeitura do Município de Jundiaí - Secretaria Municipal de Educação"
             referrerPolicy="no-referrer"
             onError={(e) => {
               e.currentTarget.onerror = null;
@@ -178,25 +189,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           />
         </div>
 
-        {/* Tipografia Minimalista */}
-        <div className="relative z-10 space-y-1">
-          <h1 className="text-[1.35rem] font-extrabold text-[#003440] leading-tight">
-            Lista Piloto 2027
+        {/* Tipografia Institucional Coesa */}
+        <div className="relative z-10 space-y-1.5">
+          <h1 className="text-[1.45rem] font-extrabold uppercase tracking-wide text-[#003440] leading-tight">
+            LISTA PILOTO 2027
           </h1>
-          <p className="text-[0.96rem] font-bold text-[#005035] leading-snug">
+          <p className="text-[0.95rem] font-bold text-[#005035] leading-snug">
             EMEB Professor Joaquim Candelário de Freitas
           </p>
-          <div className="pt-1 space-y-0.5">
-            <p className="text-[0.76rem] font-extrabold uppercase tracking-wide text-[#003440]">
+          <div className="pt-2 border-t border-[#003440]/10 space-y-0.5">
+            <p className="text-[0.76rem] font-extrabold uppercase tracking-wider text-[#003440]">
               Prefeitura do Município de Jundiaí
             </p>
-            <p className="text-[0.73rem] font-bold uppercase tracking-wide text-[#2c373a]">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-wider text-[#436370]">
               Secretaria Municipal de Educação
             </p>
           </div>
-          <p className="text-[0.72rem] font-semibold text-[#566366] uppercase tracking-wider pt-1">
-            Uso Exclusivo de Professores
-          </p>
         </div>
 
         {/* Mensagem de erro + Ajuda Direta caso falte autorizar o domínio do GitHub no Firebase */}

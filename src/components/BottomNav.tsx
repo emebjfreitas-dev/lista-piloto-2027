@@ -86,10 +86,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       aria-label="Menu Inferior Interativo"
-      className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-xl border-t-2 border-[#b4c0c4]/80 shadow-[0_-6px_24px_rgba(0,52,64,0.10)]"
+      className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/92 backdrop-blur-xl border-t border-[#003440]/12 shadow-[0_-4px_20px_rgba(0,52,64,0.07)]"
     >
       <div
-        className={`flex justify-around items-center h-[82px] px-2 sm:px-4 mx-auto gap-2 ${
+        className={`flex justify-around items-center h-[78px] px-2.5 sm:px-4 mx-auto gap-2 ${
           isAdmin ? 'max-w-xl md:max-w-3xl lg:max-w-5xl' : 'max-w-md sm:max-w-lg'
         }`}
       >
@@ -101,10 +101,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               type="button"
               onClick={() => onChangeScreen(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className={`group relative flex flex-col items-center justify-center min-h-[62px] flex-1 rounded-2xl px-2 py-1.5 transition-all duration-200 cursor-pointer border ${
+              className={`group relative flex flex-col items-center justify-center min-h-[58px] flex-1 rounded-2xl px-2 py-1.5 transition-all duration-200 cursor-pointer border ${
                 isActive
-                  ? `${item.activeBg} ${item.activeText} border-transparent shadow-md -translate-y-0.5`
-                  : 'bg-[#f4f7f5]/70 hover:bg-[#e7ece9] text-[#2c373a] border-[#d5dddf] active:scale-95'
+                  ? `${item.activeBg} ${item.activeText} border-transparent shadow-sm -translate-y-0.5`
+                  : 'bg-[#f4f7f5]/80 hover:bg-[#eaeeed] text-[#2c373a] border-[#003440]/10 active:scale-95'
               }`}
             >
               {/* Active top indicator bar */}
