@@ -32,7 +32,7 @@ jobs:
           node-version: 20
 
       - name: 3. Instalar Dependências
-        run: npm install --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: 4. Compilar Aplicativo (Vite Build)
         run: npm run build
