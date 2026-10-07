@@ -50,6 +50,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   const [ruleAlertMessage, setRuleAlertMessage] = useState<string | null>(null);
   const [searchName, setSearchName] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'faltas' | 'atestados'>('all');
+  const [attendanceViewMode, setAttendanceViewMode] = useState<'cards' | 'compact' | 'table'>('compact');
 
   // Check if selectedMonthName is a past month (Meses passados: usuários comuns não podem alterar, apenas ADMIN)
   const selectedMonthMeta = useMemo(
@@ -387,19 +388,22 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     [students]
   );
 
-  // Memoized filter for students
+  // Memoized filter for students in strict numerical order (Nº 01, 02, 03...)
   const displayedStudents = useMemo(() => {
     const q = searchName.toLowerCase().trim();
-    return students.filter((s) => {
-      const matchesText =
-        q === '' ||
-        s.name.toLowerCase().includes(q) ||
-        s.number.toString() === q;
-      if (!matchesText) return false;
-      if (quickFilter === 'faltas') return (s.totalAbsencesMonth || 0) > 0;
-      if (quickFilter === 'atestados') return (s.justifiedAbsences || 0) > 0;
-      return true;
-    });
+    return [...students]
+      .sort((a, b) => a.number - b.number)
+      .filter((s) => {
+        const matchesText =
+          q === '' ||
+          s.name.toLowerCase().includes(q) ||
+          s.number.toString() === q ||
+          s.number.toString().padStart(2, '0') === q;
+        if (!matchesText) return false;
+        if (quickFilter === 'faltas') return (s.totalAbsencesMonth || 0) > 0;
+        if (quickFilter === 'atestados') return (s.justifiedAbsences || 0) > 0;
+        return true;
+      });
   }, [students, searchName, quickFilter]);
 
   return (
@@ -609,69 +613,369 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </div>
       </section>
 
-      {/* Search & Quick Filter Bar: Stacked on Mobile, Side-by-Side on PC 1920x1080 */}
-      <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center">
-        <div className="relative lg:col-span-7">
-          <span className="material-symbols-outlined absolute left-4 text-[#71787b] text-[24px] top-3.5">
+      {/* Search, Quick Filter & Multiple View Options Bar (iOS Style) */}
+      <div className="bg-white/90 backdrop-blur-md rounded-2xl p-3.5 border border-black/[0.06] flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-2xs">
+        <div className="relative flex-1">
+          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8e8e93] text-[20px]">
             search
           </span>
           <input
             type="text"
             value={searchName}
             onChange={(e) => setSearchName(e.target.value)}
-            placeholder="Buscar estudante por nome ou número da chamada..."
-            className="w-full min-h-[52px] pl-12 pr-10 bg-white text-[#191c1b] text-[1rem] rounded-2xl border-2 border-[#c0c8cb] focus:border-[#003440] focus:outline-none shadow-xs font-semibold placeholder:text-[#71787b]"
+            placeholder="Buscar por Nº da chamada ou nome do estudante..."
+            className="w-full min-h-[42px] pl-10 pr-9 bg-[#767680]/[0.09] text-[#1c1c1e] text-[0.9rem] rounded-xl border border-transparent focus:border-[#005035]/40 focus:bg-white focus:outline-none font-medium placeholder:text-[#8e8e93]"
           />
           {searchName && (
             <button
               onClick={() => setSearchName('')}
-              className="absolute right-3.5 top-3.5 text-[#71787b] hover:text-[#191c1b] cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8e8e93] hover:text-[#191c1b] cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[22px]">cancel</span>
+              <span className="material-symbols-outlined text-[18px]">cancel</span>
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-2 lg:col-span-5">
-          <button
-            type="button"
-            onClick={() => setQuickFilter('all')}
-            className={`min-h-[50px] rounded-2xl font-extrabold text-[0.84rem] border-2 cursor-pointer transition-all ${
-              quickFilter === 'all'
-                ? 'bg-[#003440] text-white border-[#003440]'
-                : 'bg-white text-[#41484b] border-[#c0c8cb] hover:bg-[#f3f4f2]'
-            }`}
-          >
-            Todos ({students.length})
-          </button>
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2">
+          <div className="ios-segmented">
+            <button
+              type="button"
+              onClick={() => setQuickFilter('all')}
+              className={`ios-segmented-item ${
+                quickFilter === 'all' ? 'ios-segmented-item-active' : ''
+              }`}
+            >
+              Todos ({students.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setQuickFilter('faltas')}
+              className={`ios-segmented-item ${
+                quickFilter === 'faltas' ? 'ios-segmented-item-active text-[#ba1a1a]' : ''
+              }`}
+            >
+              Com Faltas ({countWithFaltas})
+            </button>
+            <button
+              type="button"
+              onClick={() => setQuickFilter('atestados')}
+              className={`ios-segmented-item ${
+                quickFilter === 'atestados' ? 'ios-segmented-item-active text-[#005035]' : ''
+              }`}
+            >
+              Atestados ({countWithAtestados})
+            </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => setQuickFilter('faltas')}
-            className={`min-h-[50px] rounded-2xl font-extrabold text-[0.84rem] border-2 cursor-pointer transition-all ${
-              quickFilter === 'faltas'
-                ? 'bg-[#ba1a1a] text-white border-[#ba1a1a]'
-                : 'bg-white text-[#ba1a1a] border-[#ffdad6] hover:bg-[#fff8f7]'
-            }`}
-          >
-            Com Faltas ({countWithFaltas})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setQuickFilter('atestados')}
-            className={`min-h-[50px] rounded-2xl font-extrabold text-[0.84rem] border-2 cursor-pointer transition-all ${
-              quickFilter === 'atestados'
-                ? 'bg-[#005035] text-white border-[#005035]'
-                : 'bg-white text-[#005035] border-[#a4f3ca] hover:bg-[#eaf6ef]'
-            }`}
-          >
-            Com Atestado ({countWithAtestados})
-          </button>
+          {/* Múltiplas Escolhas de Visualização no Lançamento de Faltas */}
+          <div className="ios-segmented" role="group" aria-label="Visualização de lançamento">
+            <button
+              type="button"
+              onClick={() => setAttendanceViewMode('compact')}
+              className={`ios-segmented-item flex items-center gap-1 ${
+                attendanceViewMode === 'compact' ? 'ios-segmented-item-active' : ''
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">view_list</span>
+              <span>Lista Rápida</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAttendanceViewMode('cards')}
+              className={`ios-segmented-item flex items-center gap-1 ${
+                attendanceViewMode === 'cards' ? 'ios-segmented-item-active' : ''
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">grid_view</span>
+              <span>Cards</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAttendanceViewMode('table')}
+              className={`ios-segmented-item flex items-center gap-1 ${
+                attendanceViewMode === 'table' ? 'ios-segmented-item-active' : ''
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">table_rows</span>
+              <span>Planilha</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Student Rows List: 1 col Mobile, 2 cols Tablet/Laptop, 3 cols Full HD 1920x1080 21" */}
+      {/* VISUALIZAÇÃO 1: LISTA RÁPIDA MINIMALISTA iOS (1 linha por estudante com + / - instantâneo) */}
+      {attendanceViewMode === 'compact' && (
+        <div className="bg-white rounded-3xl border border-black/[0.06] divide-y divide-black/[0.05] overflow-hidden shadow-2xs">
+          {displayedStudents.map((student) => {
+            const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+            const pctFalta =
+              m.diasLetivosMatriculados > 0
+                ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
+                : 0;
+            const isMaxFaltasReached = m.faltas >= m.maxFaltasPermitidas;
+            const isMaxAtestadosReached = m.atestados >= m.maxAtestadosPermitidos;
+
+            return (
+              <div
+                key={student.id}
+                className={`p-3 sm:px-5 flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
+                  m.isBelowLegalThreshold ? 'bg-[#fff8f7]' : 'hover:bg-[#f8faf9]'
+                }`}
+              >
+                {/* Identificação do Estudante */}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="w-8 h-8 rounded-xl bg-[#003440] text-white font-mono font-extrabold text-[0.76rem] flex items-center justify-center shrink-0 tabular-nums">
+                    {student.number.toString().padStart(2, '0')}
+                  </span>
+
+                  <StudentAvatar
+                    student={student}
+                    size="md"
+                    expandableOnClick={true}
+                    onUploadPhotoClick={() => onOpenPhotoModal(student)}
+                  />
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <a
+                        href={
+                          student.fichaPdfDriveUrl ||
+                          (student.fichaPdfDriveId
+                            ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
+                            : `#doc-${student.id}`)
+                        }
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (onOpenStudentPdf) onOpenStudentPdf(student);
+                          else onOpenStudentGrid(student);
+                        }}
+                        className="doc-hyperlink font-extrabold text-[0.94rem] truncate"
+                      >
+                        {student.name}
+                      </a>
+                      {student.ra && (
+                        <span className="font-mono text-[0.7rem] text-[#436370] bg-[#f2f4f3] px-1.5 py-0.5 rounded">
+                          RA {student.ra}-{student.digRa}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[0.72rem] text-[#5a676b] flex flex-wrap items-center gap-2 mt-0.5">
+                      <span>
+                        Presença: <strong className="text-[#005035]">{m.presencas}/{m.diasLetivosMatriculados}d ({m.frequenciaPercent}%)</strong>
+                      </span>
+                      <span>·</span>
+                      <span>
+                        Falta Total: <strong className={m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#5a676b]'}>{m.faltas} ({pctFalta}%)</strong>
+                      </span>
+                      {!m.isMesCheio && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRecorteModal(student)}
+                          className="text-[#003440] underline font-bold cursor-pointer"
+                        >
+                          Recorte: {m.diasLetivosMatriculados}d
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Controles Rápidos Estilo Stepper iOS: Faltas + Atestados */}
+                <div className="flex flex-wrap items-center justify-between md:justify-end gap-2.5 shrink-0">
+                  {/* Stepper Faltas */}
+                  <div className="flex items-center gap-1.5 bg-[#f4f6f5] px-2.5 py-1.5 rounded-2xl border border-black/[0.06]">
+                    <span className="text-[0.72rem] font-extrabold text-[#ba1a1a] mr-1">
+                      Faltas
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeltaAbsence(student.id, -1)}
+                      disabled={!effectiveCanEdit || m.faltas === 0}
+                      className="w-8 h-8 rounded-xl bg-white text-[#003440] font-black text-[1.1rem] flex items-center justify-center shadow-2xs border border-black/[0.08] disabled:opacity-30 cursor-pointer active:scale-90"
+                    >
+                      —
+                    </button>
+                    <span
+                      className={`w-8 text-center font-mono font-black text-[1.05rem] tabular-nums ${
+                        m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'
+                      }`}
+                    >
+                      {m.faltas}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeltaAbsence(student.id, 1)}
+                      disabled={!effectiveCanEdit || isMaxFaltasReached}
+                      className="w-8 h-8 rounded-xl bg-[#003440] text-white font-black text-[1.1rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Stepper Atestados */}
+                  <div className="flex items-center gap-1.5 bg-[#eaf6ef]/80 px-2.5 py-1.5 rounded-2xl border border-[#005035]/15">
+                    <span className="text-[0.72rem] font-extrabold text-[#005035] mr-1">
+                      Atest.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeltaAtestado(student.id, -1)}
+                      disabled={!effectiveCanEdit || m.atestados === 0}
+                      className="w-8 h-8 rounded-xl bg-white text-[#005035] font-black text-[1.1rem] flex items-center justify-center shadow-2xs border border-[#005035]/20 disabled:opacity-30 cursor-pointer active:scale-90"
+                    >
+                      —
+                    </button>
+                    <span className="w-7 text-center font-mono font-black text-[1.05rem] text-[#005035] tabular-nums">
+                      {m.atestados}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeltaAtestado(student.id, 1)}
+                      disabled={!effectiveCanEdit || isMaxAtestadosReached}
+                      className="w-8 h-8 rounded-xl bg-[#005035] text-white font-black text-[1.1rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onOpenStudentGrid(student)}
+                    title="Abrir todos os dados da criança"
+                    className="w-9 h-9 rounded-xl bg-[#f2f4f3] hover:bg-[#003440] text-[#003440] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">grid_on</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* VISUALIZAÇÃO 3: TABELA ESTILO PLANILHA COM EDIÇÃO EM TEMPO REAL */}
+      {attendanceViewMode === 'table' && (
+        <div className="bg-white rounded-3xl border border-black/[0.06] overflow-x-auto shadow-2xs">
+          <table className="w-full text-left text-[0.8rem] border-collapse min-w-[920px]">
+            <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-extrabold uppercase text-[0.68rem]">
+              <tr>
+                <th className="py-3 px-3 text-center">Nº</th>
+                <th className="py-3 px-3">Estudante</th>
+                <th className="py-3 px-2.5 text-center">Recorte</th>
+                <th className="py-3 px-3 text-center">Lançar Faltas</th>
+                <th className="py-3 px-3 text-center">Lançar Atestados</th>
+                <th className="py-3 px-2.5 text-center">Presença Total</th>
+                <th className="py-3 px-2.5 text-center">Falta Total</th>
+                <th className="py-3 px-2.5 text-center">Dados</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-black/[0.05]">
+              {displayedStudents.map((student) => {
+                const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+                const pctFalta =
+                  m.diasLetivosMatriculados > 0
+                    ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
+                    : 0;
+                return (
+                  <tr
+                    key={student.id}
+                    className={m.isBelowLegalThreshold ? 'bg-[#fff8f7]' : 'hover:bg-[#f8faf9]'}
+                  >
+                    <td className="py-2.5 px-3 text-center font-mono font-extrabold text-[#003440]">
+                      {student.number.toString().padStart(2, '0')}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center gap-2.5">
+                        <StudentAvatar student={student} size="sm" expandableOnClick={true} />
+                        <div>
+                          <span className="font-bold text-[#003440] block">{student.name}</span>
+                          <span className="font-mono text-[0.68rem] text-[#5a676b]">
+                            RA {student.ra}-{student.digRa}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-2.5 text-center font-mono">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenRecorteModal(student)}
+                        className="px-2 py-0.5 rounded-lg bg-[#f2f4f3] text-[#003440] font-bold text-[0.74rem] cursor-pointer"
+                      >
+                        {m.diasLetivosMatriculados}/{m.diasLetivosMes}d
+                      </button>
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleDeltaAbsence(student.id, -1)}
+                          disabled={!effectiveCanEdit || m.faltas === 0}
+                          className="w-7 h-7 rounded-lg bg-[#f2f4f3] font-black disabled:opacity-30 cursor-pointer"
+                        >
+                          —
+                        </button>
+                        <span className="w-7 text-center font-mono font-black text-[0.95rem] text-[#ba1a1a]">
+                          {m.faltas}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeltaAbsence(student.id, 1)}
+                          disabled={!effectiveCanEdit || m.faltas >= m.maxFaltasPermitidas}
+                          className="w-7 h-7 rounded-lg bg-[#003440] text-white font-black disabled:opacity-30 cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleDeltaAtestado(student.id, -1)}
+                          disabled={!effectiveCanEdit || m.atestados === 0}
+                          className="w-7 h-7 rounded-lg bg-[#eaf6ef] text-[#005035] font-black disabled:opacity-30 cursor-pointer"
+                        >
+                          —
+                        </button>
+                        <span className="w-7 text-center font-mono font-black text-[0.95rem] text-[#005035]">
+                          {m.atestados}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeltaAtestado(student.id, 1)}
+                          disabled={!effectiveCanEdit || m.atestados >= m.maxAtestadosPermitidos}
+                          className="w-7 h-7 rounded-lg bg-[#005035] text-white font-black disabled:opacity-30 cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#005035]">
+                      {m.presencas}d ({m.frequenciaPercent}%)
+                    </td>
+                    <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#ba1a1a]">
+                      {m.faltas} ({pctFalta}%)
+                    </td>
+                    <td className="py-2.5 px-2.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => onOpenStudentGrid(student)}
+                        className="px-2.5 py-1 rounded-lg bg-[#f2f4f3] hover:bg-[#003440] text-[#003440] hover:text-white font-bold text-[0.72rem] cursor-pointer"
+                      >
+                        48 Campos
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* VISUALIZAÇÃO 2: CARDS DETALHADOS: 1 col Mobile, 2 cols Tablet/Laptop, 3 cols Full HD 1920x1080 21" */}
+      {attendanceViewMode === 'cards' && (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {displayedStudents.map((student) => {
           const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
@@ -977,6 +1281,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           );
         })}
       </div>
+      )}
 
       {/* Quick Summary / Conclude Bar (Above Interactive Bottom Nav) */}
       <div className="bg-white rounded-2xl p-4 border-2 border-[#b4c0c4]/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">

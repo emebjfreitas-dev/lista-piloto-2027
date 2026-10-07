@@ -685,6 +685,7 @@ export const REAL_G4A_STUDENTS: Student[] = [
     idade: '5 ANOS E 20 DIAS',
     arquivo: '10203',
     filiacao1: 'TRACY TAKAHACHY ALVES DE OLIVEIRA',
+    filiacao2: 'MARCOS ALVES DA SILVEIRA',
     genero: 'FEMININO',
     racaCor: 'BRANCA',
     nacionalidade: 'BRASILEIRA',
@@ -987,13 +988,81 @@ export const generateSedStudentsForClass = (
     'LUIGI MAZALA SANTANA',
   ];
 
+  const realisticMothersNames = [
+    'PATRICIA GRAZIELLY DA SILVA LIMA',
+    'CAMILA DA SILVA SANTOS',
+    'VANESSA LOPES OCTAVIANO',
+    'JULIANA ZAFALON MACHADO',
+    'FERNANDA FERNANDES MARIANO',
+    'CRISTIANE FERRAZ ALVES',
+    'LUCIANA KANESI MARION',
+    'ADRIANA DA SILVA JESUS',
+    'TATIANE VIZOTO MILITAO',
+    'DANIELA VELO NASCIMENTO',
+    'RENATA ORLANDO DE ANDRADE',
+    'SIMONE ROSA DAMAZIO DE ASSIS',
+    'PRISCILA OLIVEIRA MARQUES',
+    'MARCIA DA SILVA DE OLIVEIRA',
+    'CLAUDIA ALVES DE ARAUJO',
+    'ELIANE ALVES RODRIGUES',
+    'SOLANGE SIQUEIRA DA SILVA',
+    'ROSANGELA DA SILVA COUTINHO',
+    'ALINE MELO MACHADO',
+    'DEBORA FERREIRA BARRETO',
+    'CAROLINA TAVARES LEAO',
+    'MONICA ALVES DE SOUZA',
+    'VIVIANE APARECIDA ALVES DA SILVA',
+    'ROBERTA SANTOS BARBOSA',
+    'LETICIA GOMES DOS SANTOS',
+    'SANDRA BORCAL MAZOLLI',
+    'BEATRIZ SILVA LOPES',
+    'GABRIELA FLORES DINIZ',
+    'RAQUEL SANTOS SIVI',
+    'MICHELE DE OLIVEIRA SOUSA',
+  ];
+
+  const realisticFathersNames = [
+    'MARCOS ROBERTO LIMA',
+    'RODRIGO APARECIDO DOS SANTOS',
+    'ANDERSON OCTAVIANO',
+    'CARLOS EDUARDO MACHADO',
+    'PAULO HENRIQUE MARIANO',
+    'LEANDRO FERRAZ ALVES',
+    'RICARDO MARION',
+    'JOSE CARLOS DE JESUS',
+    'MARCELO MILITAO',
+    'FABIO VELO NASCIMENTO',
+    'ALEXANDRE DE ANDRADE',
+    'SERGIO DAMAZIO DE ASSIS',
+    'GUSTAVO OLIVEIRA MARQUES',
+    'ANTONIO CARLOS DE OLIVEIRA',
+    'ROBERTO ALVES DE ARAUJO',
+    'DOUGLAS RODRIGUES',
+    'FERNANDO SIQUEIRA DA SILVA',
+    'EDSON COUTINHO',
+    'THIAGO MELO MACHADO',
+    'RAFAEL FERREIRA BARRETO',
+    'HENRIQUE TAVARES LEAO',
+    'CLAUDIO ALVES DE SOUZA',
+    'WILSON ALVES DA SILVA',
+    'WAGNER SANTOS BARBOSA',
+    'DIEGO GOMES DOS SANTOS',
+    'LUIS FERNANDO MAZOLLI',
+    'CRISTIANO SILVA LOPES',
+    'JORGE FLORES DINIZ',
+    'VITOR SANTOS SIVI',
+    'DANIEL DE OLIVEIRA SOUSA',
+  ];
+
   const offset = classId === 'g4c' || classId === 'g04c' ? 25 : 0;
 
   const students: Student[] = [];
   for (let i = 1; i <= count; i++) {
     const name = realPhotoFolderNames[(offset + i - 1) % realPhotoFolderNames.length];
+    const motherName = realisticMothersNames[(offset + i - 1) % realisticMothersNames.length];
+    const fatherName = realisticFathersNames[(offset + i - 1) % realisticFathersNames.length];
     const initials = name.split(' ').map((p) => p[0]).slice(0, 2).join('');
-    const raNumber = 124000000 + i * 173 + Math.floor(Math.random() * 50);
+    const raNumber = 124000000 + i * 173 + (classId.charCodeAt(0) * 11);
     const digRa = ((i * 7) % 10).toString();
     const cleanEmailName = name.toLowerCase().split(' ').slice(0, 2).join('.');
 
@@ -1002,9 +1071,10 @@ export const generateSedStudentsForClass = (
     else if (i === 8) absences = 2;
     else if (i === 11) absences = 1;
 
-    // Simular recorte real de matrícula dentro do mês para alguns alunos (entrou depois ou saiu antes)
+    // Simular recorte real de matrícula dentro do mês (ativos, transferidos BXTR e remanejados REMAN)
     const enteredLate = i === 5;
-    const leftEarly = i === 10;
+    const isTransferred = i === 10;
+    const isRemanejado = i === 15 && count >= 18;
     const nisNumber = `204.${(10000 + i * 317).toString().slice(0, 5)}.${(80 + (i % 19)).toString()}-${i % 9}`;
 
     students.push({
@@ -1022,13 +1092,17 @@ export const generateSedStudentsForClass = (
       turma: className,
       periodo,
       dataMatriculaSed: enteredLate ? '14/10/2027' : '03/02/2027',
-      situacao: leftEarly ? 'BXTR' : 'ATIVO',
-      dataMovimentacao: leftEarly ? '19/10/2027' : undefined,
-      diasLetivosRecorte: enteredLate ? 12 : leftEarly ? 11 : 20,
+      situacao: isTransferred ? 'BXTR' : isRemanejado ? 'REMAN' : 'ATIVO',
+      dataMovimentacao: isTransferred
+        ? '19/10/2027'
+        : isRemanejado
+        ? '16/10/2027'
+        : undefined,
+      diasLetivosRecorte: enteredLate ? 12 : isTransferred ? 11 : isRemanejado ? 14 : 20,
       idade: isInfantil ? '5 ANOS' : '8 ANOS',
       arquivo: (10150 + i).toString(),
-      filiacao1: `MÃE DE ${name.split(' ')[0]}`,
-      filiacao2: `PAI DE ${name.split(' ')[0]}`,
+      filiacao1: motherName,
+      filiacao2: fatherName,
       genero: i % 2 === 0 ? 'FEMININO' : 'MASCULINO',
       tipoSanguineo: i % 3 === 0 ? 'A+' : i % 2 === 0 ? 'O+' : 'B+',
       racaCor: i % 4 === 0 ? 'PARDA' : i % 5 === 0 ? 'PRETA' : 'BRANCA',
@@ -1045,7 +1119,7 @@ export const generateSedStudentsForClass = (
       uf: 'SP',
       telefones: `(11) 9${Math.floor(7000 + i * 83)}-${Math.floor(1000 + i * 27)}`,
       emailMunicipal: `${cleanEmailName}@aluno.educacao.jundiai.sp.gov.br`,
-      guardianName: `MÃE DE ${name.split(' ')[0]}`,
+      guardianName: motherName,
       guardianPhone: `(11) 9${Math.floor(7000 + i * 83)}-${Math.floor(1000 + i * 27)}`,
       status: absences > 0 ? 'absent' : 'present',
       totalAbsencesMonth: absences,
@@ -1253,6 +1327,10 @@ export const generateSheetRowsFromClasses = (classes: ClassGroup[]): SheetRowDat
           ? '100% Presença'
           : `Regular (≥${m.minLegalPresencePercent}%)`,
         observacoesAtestado: s.notes || '',
+        filiacao1: s.filiacao1 || s.guardianName || 'Não informado',
+        filiacao2: s.filiacao2 || 'Não informado',
+        genero: s.genero || '',
+        emailMunicipal: s.emailMunicipal || '',
         responsavel: s.filiacao1 || s.guardianName || 'Não informado',
         telefone: s.telefones || s.guardianPhone || '(11) 98765-4321',
       });

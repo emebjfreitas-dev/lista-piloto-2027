@@ -15,10 +15,60 @@ import {
 } from '../data/mockData';
 import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils/attendanceRules';
 
-const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v4';
+const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v5';
 const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v2';
 const ATTENDANCE_WINDOW_STORAGE_KEY = 'emeb_candelario_attendance_window_2027_v1';
 const ACCESS_LOGS_STORAGE_KEY = 'emeb_candelario_access_session_logs_2027_v1';
+
+// In-memory cache so even if browser localStorage quota is full, the app never loses runtime state or throws errors
+let memoryCachedClasses: ClassGroup[] | null = null;
+let memoryCachedUsers: AuthorizedUser[] | null = null;
+let memoryCachedLogs: UserAccessSessionLog[] | null = null;
+
+// Clean up obsolete legacy storage keys from earlier versions to free localStorage space
+const purgeLegacyStorageKeys = (preserveKeys: string[]): void => {
+  try {
+    const keepSet = new Set([
+      ...preserveKeys,
+      STORAGE_KEY,
+      USERS_STORAGE_KEY,
+      ATTENDANCE_WINDOW_STORAGE_KEY,
+      ACCESS_LOGS_STORAGE_KEY,
+      'emeb_candelario_active_session_2027_v1',
+      'emeb_candelario_linked_spreadsheet_id_2027',
+      'emeb_candelario_linked_spreadsheet_title_2027',
+      'emeb_candelario_drive_photos_folder_url_2027',
+      'emeb_candelario_drive_photos_folder_id_2027',
+      'emeb_candelario_drive_fichas_pdf_folder_url_2027',
+      'emeb_candelario_drive_fichas_pdf_folder_id_2027',
+    ]);
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && !keepSet.has(k) && (k.startsWith('emeb_') || k.includes('candelario'))) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // ignore storage access issues
+  }
+};
+
+const safeSetLocalStorage = (key: string, value: string): boolean => {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    purgeLegacyStorageKeys([key]);
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+};
 
 export const formatDurationHuman = (seconds?: number): string => {
   const s = Math.max(0, Math.round(seconds || 0));
@@ -36,26 +86,26 @@ export const formatDurationHuman = (seconds?: number): string => {
 };
 
 export const getStoredAccessSessionLogs = (): UserAccessSessionLog[] => {
+  if (memoryCachedLogs) return memoryCachedLogs;
   try {
     const raw = localStorage.getItem(ACCESS_LOGS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
+        memoryCachedLogs = parsed;
         return parsed;
       }
     }
-  } catch (err) {
-    console.error('Erro ao ler histórico de sessões de acesso:', err);
+  } catch {
+    // ignore storage read error
   }
   return [];
 };
 
 export const saveStoredAccessSessionLogs = (logs: UserAccessSessionLog[]): void => {
-  try {
-    localStorage.setItem(ACCESS_LOGS_STORAGE_KEY, JSON.stringify(logs.slice(0, 500)));
-  } catch (err) {
-    console.error('Erro ao salvar histórico de sessões de acesso:', err);
-  }
+  const sliced = logs.slice(0, 200);
+  memoryCachedLogs = sliced;
+  safeSetLocalStorage(ACCESS_LOGS_STORAGE_KEY, JSON.stringify(sliced));
 };
 
 export const getStoredAttendanceWindowConfig = (): AttendanceWindowConfig => {
@@ -67,8 +117,8 @@ export const getStoredAttendanceWindowConfig = (): AttendanceWindowConfig => {
         return parsed;
       }
     }
-  } catch (err) {
-    console.error('Erro ao ler configuração de janela de lançamento:', err);
+  } catch {
+    // ignore storage read error
   }
   return {
     exceptionalOverrideOpen: false,
@@ -78,11 +128,7 @@ export const getStoredAttendanceWindowConfig = (): AttendanceWindowConfig => {
 export const saveStoredAttendanceWindowConfig = (
   config: AttendanceWindowConfig
 ): void => {
-  try {
-    localStorage.setItem(ATTENDANCE_WINDOW_STORAGE_KEY, JSON.stringify(config));
-  } catch (err) {
-    console.error('Erro ao salvar configuração de janela de lançamento:', err);
-  }
+  safeSetLocalStorage(ATTENDANCE_WINDOW_STORAGE_KEY, JSON.stringify(config));
 };
 
 /**
@@ -172,26 +218,31 @@ export const isValidInstitutionalEmail = (email: string): boolean => {
 };
 
 export const getStoredAuthorizedUsers = (): AuthorizedUser[] => {
+  if (memoryCachedUsers && memoryCachedUsers.length > 0) {
+    return memoryCachedUsers;
+  }
   try {
     const raw = localStorage.getItem(USERS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return classesOrUsersSanitize(parsed);
+        const clean = classesOrUsersSanitize(parsed);
+        memoryCachedUsers = clean;
+        return clean;
       }
     }
-  } catch (err) {
-    console.error('Erro ao ler usuários autorizados:', err);
+  } catch {
+    // ignore read error
   }
-  return classesOrUsersSanitize(INITIAL_AUTHORIZED_USERS);
+  const initialClean = classesOrUsersSanitize(INITIAL_AUTHORIZED_USERS);
+  memoryCachedUsers = initialClean;
+  return initialClean;
 };
 
 export const saveStoredAuthorizedUsers = (users: AuthorizedUser[]): void => {
-  try {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(classesOrUsersSanitize(users)));
-  } catch (err) {
-    console.error('Erro ao salvar usuários autorizados:', err);
-  }
+  const clean = classesOrUsersSanitize(users);
+  memoryCachedUsers = clean;
+  safeSetLocalStorage(USERS_STORAGE_KEY, JSON.stringify(clean));
 };
 
 const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
@@ -300,7 +351,8 @@ export const pushAuthorizedUsersToServer = async (
       const data = await res.json();
       if (Array.isArray(data?.authorizedUsers)) {
         const clean = classesOrUsersSanitize(data.authorizedUsers);
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(clean));
+        memoryCachedUsers = clean;
+        safeSetLocalStorage(USERS_STORAGE_KEY, JSON.stringify(clean));
         return clean;
       }
     }
@@ -386,15 +438,15 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
         };
       });
       const sanitized = classesOrUsersSanitize(merged);
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(sanitized));
+      memoryCachedUsers = sanitized;
+      safeSetLocalStorage(USERS_STORAGE_KEY, JSON.stringify(sanitized));
       result.authorizedUsers = sanitized;
     }
 
     if (Array.isArray(data?.accessSessionLogs) && data.accessSessionLogs.length > 0) {
-      localStorage.setItem(
-        ACCESS_LOGS_STORAGE_KEY,
-        JSON.stringify(data.accessSessionLogs.slice(0, 500))
-      );
+      const sliced = data.accessSessionLogs.slice(0, 200);
+      memoryCachedLogs = sliced;
+      safeSetLocalStorage(ACCESS_LOGS_STORAGE_KEY, JSON.stringify(sliced));
       result.accessSessionLogs = data.accessSessionLogs;
     }
 
@@ -402,7 +454,7 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
       data?.attendanceWindowConfig &&
       typeof data.attendanceWindowConfig.exceptionalOverrideOpen === 'boolean'
     ) {
-      localStorage.setItem(
+      safeSetLocalStorage(
         ATTENDANCE_WINDOW_STORAGE_KEY,
         JSON.stringify(data.attendanceWindowConfig)
       );
@@ -426,26 +478,58 @@ export const findAuthorizedUserByEmail = (
 
 // Load classes from localStorage or fallback to defaults
 export const getStoredClasses = (): ClassGroup[] => {
+  if (memoryCachedClasses && memoryCachedClasses.length > 0) {
+    return memoryCachedClasses;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.name?.startsWith('GRUPO')) {
+        memoryCachedClasses = parsed;
         return parsed;
       }
     }
-  } catch (err) {
-    console.error('Erro ao ler dados locais:', err);
+  } catch {
+    // ignore storage read error
   }
+  memoryCachedClasses = INITIAL_CLASSES;
   return INITIAL_CLASSES;
 };
 
-// Save classes to localStorage
+// Save classes to localStorage safely without throwing QuotaExceededError
 export const saveStoredClasses = (classes: ClassGroup[]): void => {
+  memoryCachedClasses = classes;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(classes));
-  } catch (err) {
-    console.error('Erro ao salvar no banco local:', err);
+    const serialized = JSON.stringify(classes);
+    if (safeSetLocalStorage(STORAGE_KEY, serialized)) {
+      return;
+    }
+
+    // If still exceeding quota (e.g., large base64 photos or strict 2.5MB iframe quota), strip heavy inline data URLs before persisting to localStorage
+    const compactClasses: ClassGroup[] = classes.map((cls) => ({
+      ...cls,
+      students: cls.students.map((st) => ({
+        ...st,
+        photo:
+          st.photo && st.photo.startsWith('data:image') && st.photo.length > 15000
+            ? st.photoDriveUrl || ''
+            : st.photo,
+      })),
+    }));
+    if (safeSetLocalStorage(STORAGE_KEY, JSON.stringify(compactClasses))) {
+      return;
+    }
+
+    // Final ultra-compact fallback: trim older session logs in localStorage to make room for class attendance data
+    try {
+      localStorage.removeItem(ACCESS_LOGS_STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(compactClasses));
+    } catch {
+      // Kept in memoryCachedClasses so app continues working seamlessly
+    }
+  } catch {
+    // Kept in memoryCachedClasses so app continues working seamlessly
   }
 };
 
@@ -540,8 +624,10 @@ const buildNominalAttendanceRowsForStage = (
             ? '100% PRESENÇA'
             : 'REGULAR',
         'OBSERVAÇÕES / DETALHE DO ATESTADO': s.notes || '',
-        'FILIAÇÃO / RESPONSÁVEL': s.filiacao1 || s.guardianName || '',
+        'FILIAÇÃO 1 (NOME DA MÃE)': s.filiacao1 || s.guardianName || '',
+        'FILIAÇÃO 2 (NOME DO PAI)': s.filiacao2 || '',
         'TELEFONE DE CONTATO': s.telefones || s.guardianPhone || '',
+        'E-MAIL INSTITUCIONAL': s.emailMunicipal || '',
       });
     });
   });
@@ -581,8 +667,10 @@ const buildNominalAttendanceRowsForStage = (
       'QTD FALTAS NÃO JUSTIFICADAS (SEM ATESTADO)': totalSemAtestado,
       'STATUS DE FREQUÊNCIA': `FREQUÊNCIA MÉDIA: ${mediaPresenca}%`,
       'OBSERVAÇÕES / DETALHE DO ATESTADO': '—',
-      'FILIAÇÃO / RESPONSÁVEL': '—',
+      'FILIAÇÃO 1 (NOME DA MÃE)': '—',
+      'FILIAÇÃO 2 (NOME DO PAI)': '—',
       'TELEFONE DE CONTATO': '—',
+      'E-MAIL INSTITUCIONAL': '—',
     });
   }
 
@@ -828,67 +916,849 @@ export const downloadSpreadsheetXLSX = (
   XLSX.writeFile(wb, 'Planilha_Oficial_SED_EMEB_Candelario_Freitas_2027.xlsx');
 };
 
-// Generate and trigger download of CSV for a specific class with exact SED columns & enrollment window metrics
-export const downloadClassCSV = (cls: ClassGroup): void => {
-  const diasLetivosMes = cls.classesHeld || 20;
-  const headers = [
-    'TIPO DE ENSINO', 'SÉRIE', 'Nº CHAMADA', 'ESTUDANTE', 'RA', 'DIG. RA', 'UF RA',
-    'DATA DE NASCIMENTO', 'SITUAÇÃO', 'DATA DE MATRÍCULA (SED)', 'DATA MOVIMENTAÇÃO',
-    'DEFICIÊNCIA', 'TURMA', 'PERÍODO', 'IDADE',
-    'FILIAÇÃO 1', 'FILIAÇÃO 2', 'CPF', 'TELEFONES', 'EMAIL MUNICIPAL',
-    'DIAS_LETIVOS_MES', 'DIAS_NO_RECORTE_MATRICULA',
-    'QTD_FALTAS_NO_MES', 'PERCENTUAL_FALTAS', 'QTD_ATESTADOS_APRESENTADOS', 'PERCENTUAL_ATESTADOS', 'QTD_PRESENCAS_NO_PERIODO', 'FREQUENCIA_PERCENTUAL'
-  ].join(',') + '\n';
+export type ClassExportCategory =
+  | 'Identificação & Matrícula'
+  | 'Filiação (Mãe e Pai) & Contatos'
+  | 'Frequência, Presença & Faltas'
+  | 'Documentos, Saúde & AEE'
+  | 'Endereço & Transporte'
+  | 'Outros Campos SED';
 
-  const rows = cls.students
-    .map((s) => {
-      const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
-      const pctFaltas =
+export interface ClassExportColumnDef {
+  id: string;
+  label: string;
+  shortLabel: string;
+  category: ClassExportCategory;
+  width?: number;
+  getValue: (s: Student, cls: ClassGroup, calendar: SchoolDay[]) => string | number;
+}
+
+export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
+  // 1. Identificação & Matrícula
+  {
+    id: 'numeroChamada',
+    label: 'Nº CHAMADA',
+    shortLabel: 'Nº Chamada',
+    category: 'Identificação & Matrícula',
+    width: 12,
+    getValue: (s) => s.numeroChamada || s.number,
+  },
+  {
+    id: 'estudante',
+    label: 'ESTUDANTE',
+    shortLabel: 'Nome do Estudante',
+    category: 'Identificação & Matrícula',
+    width: 34,
+    getValue: (s) => s.estudante || s.name,
+  },
+  {
+    id: 'raCompleto',
+    label: 'RA COMPLETO',
+    shortLabel: 'RA Completo (RA-Dig/UF)',
+    category: 'Identificação & Matrícula',
+    width: 18,
+    getValue: (s) => (s.ra ? `${s.ra}-${s.digRa || ''}/${s.ufRa || 'SP'}` : ''),
+  },
+  {
+    id: 'ra',
+    label: 'RA',
+    shortLabel: 'RA (Número)',
+    category: 'Identificação & Matrícula',
+    width: 15,
+    getValue: (s) => s.ra || '',
+  },
+  {
+    id: 'digRa',
+    label: 'DIG. RA',
+    shortLabel: 'Dígito RA',
+    category: 'Identificação & Matrícula',
+    width: 10,
+    getValue: (s) => s.digRa || '',
+  },
+  {
+    id: 'ufRa',
+    label: 'UF RA',
+    shortLabel: 'UF do RA',
+    category: 'Identificação & Matrícula',
+    width: 10,
+    getValue: (s) => s.ufRa || 'SP',
+  },
+  {
+    id: 'dataNascimento',
+    label: 'DATA DE NASCIMENTO',
+    shortLabel: 'Data de Nascimento',
+    category: 'Identificação & Matrícula',
+    width: 18,
+    getValue: (s) => s.dataNascimento || '',
+  },
+  {
+    id: 'idade',
+    label: 'IDADE',
+    shortLabel: 'Idade',
+    category: 'Identificação & Matrícula',
+    width: 10,
+    getValue: (s) => s.idade || '',
+  },
+  {
+    id: 'genero',
+    label: 'GÊNERO',
+    shortLabel: 'Gênero (Fem./Masc.)',
+    category: 'Identificação & Matrícula',
+    width: 14,
+    getValue: (s) => s.genero || '',
+  },
+  {
+    id: 'situacao',
+    label: 'SITUAÇÃO',
+    shortLabel: 'Situação (Ativo/Transf./Reman.)',
+    category: 'Identificação & Matrícula',
+    width: 18,
+    getValue: (s) => s.situacao || 'ATIVO',
+  },
+  {
+    id: 'dataMatriculaSed',
+    label: 'DATA DE MATRÍCULA (SED)',
+    shortLabel: 'Data Matrícula SED',
+    category: 'Identificação & Matrícula',
+    width: 20,
+    getValue: (s) => s.dataMatriculaSed || '03/02/2027',
+  },
+  {
+    id: 'dataMovimentacao',
+    label: 'DATA MOVIMENTAÇÃO',
+    shortLabel: 'Data Movimentação',
+    category: 'Identificação & Matrícula',
+    width: 18,
+    getValue: (s) => s.dataMovimentacao || '',
+  },
+  {
+    id: 'turma',
+    label: 'TURMA',
+    shortLabel: 'Turma',
+    category: 'Identificação & Matrícula',
+    width: 16,
+    getValue: (s, cls) => s.turma || cls.name,
+  },
+  {
+    id: 'periodo',
+    label: 'PERÍODO',
+    shortLabel: 'Período / Turno',
+    category: 'Identificação & Matrícula',
+    width: 14,
+    getValue: (s, cls) => s.periodo || (cls.shift === 'Turno Manhã' ? 'MANHÃ' : 'TARDE'),
+  },
+  {
+    id: 'serie',
+    label: 'SÉRIE',
+    shortLabel: 'Série / Etapa',
+    category: 'Identificação & Matrícula',
+    width: 14,
+    getValue: (s, cls) =>
+      s.serie || (cls.name.includes('04') ? '1' : cls.name.includes('05') ? '2' : cls.name[0]),
+  },
+  {
+    id: 'tipoEnsino',
+    label: 'TIPO DE ENSINO',
+    shortLabel: 'Tipo de Ensino',
+    category: 'Identificação & Matrícula',
+    width: 22,
+    getValue: (s, cls) =>
+      s.tipoEnsino ||
+      (cls.name.startsWith('GRUPO') ? 'EDUCACAO INFANTIL' : 'ENSINO FUNDAMENTAL'),
+  },
+
+  // 2. Filiação (Mãe e Pai) & Contatos
+  {
+    id: 'filiacao1',
+    label: 'FILIAÇÃO 1',
+    shortLabel: 'Filiação 1 (Nome da Mãe)',
+    category: 'Filiação (Mãe e Pai) & Contatos',
+    width: 32,
+    getValue: (s) => s.filiacao1 || s.guardianName || '',
+  },
+  {
+    id: 'filiacao2',
+    label: 'FILIAÇÃO 2',
+    shortLabel: 'Filiação 2 (Nome do Pai)',
+    category: 'Filiação (Mãe e Pai) & Contatos',
+    width: 32,
+    getValue: (s) => s.filiacao2 || '',
+  },
+  {
+    id: 'telefones',
+    label: 'TELEFONES',
+    shortLabel: 'Telefones de Contato',
+    category: 'Filiação (Mãe e Pai) & Contatos',
+    width: 26,
+    getValue: (s) => s.telefones || s.guardianPhone || '',
+  },
+  {
+    id: 'emailMunicipal',
+    label: 'EMAIL MUNICIPAL',
+    shortLabel: 'E-mail Institucional (@educacao)',
+    category: 'Filiação (Mãe e Pai) & Contatos',
+    width: 34,
+    getValue: (s) => s.emailMunicipal || '',
+  },
+  {
+    id: 'emailGoogle',
+    label: 'E-MAIL GOOGLE',
+    shortLabel: 'E-mail Google',
+    category: 'Filiação (Mãe e Pai) & Contatos',
+    width: 30,
+    getValue: (s) => s.emailGoogle || '',
+  },
+  {
+    id: 'emailMicrosoft',
+    label: 'E-MAIL MICROSOFT',
+    shortLabel: 'E-mail Microsoft',
+    category: 'Filiação (Mãe e Pai) & Contatos',
+    width: 30,
+    getValue: (s) => s.emailMicrosoft || '',
+  },
+  {
+    id: 'irmaos',
+    label: 'IRMÃOS',
+    shortLabel: 'Irmãos na Escola',
+    category: 'Filiação (Mãe e Pai) & Contatos',
+    width: 16,
+    getValue: (s) => s.irmaos || '',
+  },
+
+  // 3. Frequência, Presença & Faltas
+  {
+    id: 'presencasQtd',
+    label: 'PRESENÇA TOTAL (DIAS)',
+    shortLabel: 'Presença Total (Dias)',
+    category: 'Frequência, Presença & Faltas',
+    width: 18,
+    getValue: (s, cls, cal) =>
+      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).presencas,
+  },
+  {
+    id: 'presencaPercent',
+    label: '% PRESENÇA TOTAL',
+    shortLabel: '% Presença Total',
+    category: 'Frequência, Presença & Faltas',
+    width: 16,
+    getValue: (s, cls, cal) =>
+      `${getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).frequenciaPercent}%`,
+  },
+  {
+    id: 'faltasQtd',
+    label: 'FALTA TOTAL (QTD)',
+    shortLabel: 'Falta Total (Qtd)',
+    category: 'Frequência, Presença & Faltas',
+    width: 16,
+    getValue: (s, cls, cal) =>
+      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).faltas,
+  },
+  {
+    id: 'faltasPercent',
+    label: '% FALTA TOTAL',
+    shortLabel: '% Falta Total',
+    category: 'Frequência, Presença & Faltas',
+    width: 16,
+    getValue: (s, cls, cal) => {
+      const m = getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal);
+      const pct =
         m.diasLetivosMatriculados > 0
           ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
           : 0;
-      const pctAtestados =
-        m.faltas > 0 ? Math.round((m.atestados / m.faltas) * 100) : 0;
+      return `${pct}%`;
+    },
+  },
+  {
+    id: 'atestadosQtd',
+    label: 'QTD ATESTADOS APRESENTADOS',
+    shortLabel: 'Atestados (Qtd)',
+    category: 'Frequência, Presença & Faltas',
+    width: 18,
+    getValue: (s, cls, cal) =>
+      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).atestados,
+  },
+  {
+    id: 'atestadosPercent',
+    label: '% ATESTADOS SOBRE FALTAS',
+    shortLabel: '% Atestados s/ Faltas',
+    category: 'Frequência, Presença & Faltas',
+    width: 18,
+    getValue: (s, cls, cal) => {
+      const m = getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal);
+      const pct = m.faltas > 0 ? Math.round((m.atestados / m.faltas) * 100) : 0;
+      return `${pct}%`;
+    },
+  },
+  {
+    id: 'faltasSemAtestado',
+    label: 'QTD FALTAS SEM ATESTADO',
+    shortLabel: 'Faltas s/ Atestado',
+    category: 'Frequência, Presença & Faltas',
+    width: 18,
+    getValue: (s, cls, cal) => {
+      const m = getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal);
+      return Math.max(0, m.faltas - m.atestados);
+    },
+  },
+  {
+    id: 'diasLetivosMes',
+    label: 'DIAS LETIVOS DO MÊS',
+    shortLabel: 'Dias Letivos Mês',
+    category: 'Frequência, Presença & Faltas',
+    width: 16,
+    getValue: (s, cls, cal) =>
+      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).diasLetivosMes,
+  },
+  {
+    id: 'diasLetivosRecorte',
+    label: 'DIAS LETIVOS NO RECORTE DA MATRÍCULA',
+    shortLabel: 'Dias no Recorte Matrícula',
+    category: 'Frequência, Presença & Faltas',
+    width: 20,
+    getValue: (s, cls, cal) =>
+      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).diasLetivosMatriculados,
+  },
+  {
+    id: 'detalheRecorte',
+    label: 'DETALHE DO RECORTE',
+    shortLabel: 'Detalhe do Recorte',
+    category: 'Frequência, Presença & Faltas',
+    width: 24,
+    getValue: (s, cls, cal) =>
+      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).recorteLabel,
+  },
+  {
+    id: 'statusLegal',
+    label: 'STATUS FREQUÊNCIA / BOLSA FAMÍLIA',
+    shortLabel: 'Status Legal (<60% / <75%)',
+    category: 'Frequência, Presença & Faltas',
+    width: 24,
+    getValue: (s, cls, cal) => {
+      const m = getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal);
+      return m.isBelowLegalThreshold
+        ? `ALERTA (<${m.minLegalPresencePercent}%)`
+        : `REGULAR (>=${m.minLegalPresencePercent}%)`;
+    },
+  },
+  {
+    id: 'observacoes',
+    label: 'ATESTADO / ANOTAÇÕES',
+    shortLabel: 'Anotações & Atestados',
+    category: 'Frequência, Presença & Faltas',
+    width: 28,
+    getValue: (s) => s.notes || '',
+  },
 
-      return [
-        `"${s.tipoEnsino || 'EDUCACAO'}"`,
-        `"${s.serie || '1'}"`,
-        s.number,
-        `"${s.name}"`,
-        `"${s.ra || ''}"`,
-        `"${s.digRa || ''}"`,
-        `"${s.ufRa || 'SP'}"`,
-        `"${s.dataNascimento || ''}"`,
-        `"${s.situacao || 'ATIVO'}"`,
-        `"${s.dataMatriculaSed || '03/02/2027'}"`,
-        `"${s.dataMovimentacao || ''}"`,
-        `"${s.deficiencia || ''}"`,
-        `"${cls.name}"`,
-        `"${cls.shift === 'Turno Manhã' ? 'MANHÃ' : 'TARDE'}"`,
-        `"${s.idade || ''}"`,
-        `"${s.filiacao1 || s.guardianName || ''}"`,
-        `"${s.filiacao2 || ''}"`,
-        `"${s.cpf || ''}"`,
-        `"${s.telefones || s.guardianPhone || ''}"`,
-        `"${s.emailMunicipal || ''}"`,
-        m.diasLetivosMes,
-        m.diasLetivosMatriculados,
-        m.faltas,
-        `"${pctFaltas}%"`,
-        m.atestados,
-        `"${pctAtestados}%"`,
-        m.presencas,
-        `"${m.frequenciaPercent}%"`
-      ].join(',');
-    })
-    .join('\n');
+  // 4. Documentos, Saúde & AEE
+  {
+    id: 'cpf',
+    label: 'CPF',
+    shortLabel: 'CPF',
+    category: 'Documentos, Saúde & AEE',
+    width: 16,
+    getValue: (s) => s.cpf || '',
+  },
+  {
+    id: 'rg',
+    label: 'RG',
+    shortLabel: 'RG',
+    category: 'Documentos, Saúde & AEE',
+    width: 15,
+    getValue: (s) => s.rg || '',
+  },
+  {
+    id: 'dataEmissaoRg',
+    label: 'DATA EMISSÃO RG',
+    shortLabel: 'Data Emissão RG',
+    category: 'Documentos, Saúde & AEE',
+    width: 16,
+    getValue: (s) => s.dataEmissaoRg || '',
+  },
+  {
+    id: 'nis',
+    label: 'NIS',
+    shortLabel: 'NIS (Bolsa Família)',
+    category: 'Documentos, Saúde & AEE',
+    width: 16,
+    getValue: (s) => s.nis || '',
+  },
+  {
+    id: 'cartaoSus',
+    label: 'CARTÃO SUS',
+    shortLabel: 'Cartão SUS',
+    category: 'Documentos, Saúde & AEE',
+    width: 20,
+    getValue: (s) => s.cartaoSus || '',
+  },
+  {
+    id: 'deficiencia',
+    label: 'DEFICIÊNCIA',
+    shortLabel: 'Deficiência / AEE',
+    category: 'Documentos, Saúde & AEE',
+    width: 24,
+    getValue: (s) => s.deficiencia || '',
+  },
+  {
+    id: 'tipoSanguineo',
+    label: 'TIPO SANGUÍNEO',
+    shortLabel: 'Tipo Sanguíneo',
+    category: 'Documentos, Saúde & AEE',
+    width: 14,
+    getValue: (s) => s.tipoSanguineo || '',
+  },
+  {
+    id: 'racaCor',
+    label: 'RAÇA/COR',
+    shortLabel: 'Raça / Cor',
+    category: 'Documentos, Saúde & AEE',
+    width: 14,
+    getValue: (s) => s.racaCor || '',
+  },
+  {
+    id: 'nomeSocial',
+    label: 'NOME SOCIAL',
+    shortLabel: 'Nome Social',
+    category: 'Documentos, Saúde & AEE',
+    width: 20,
+    getValue: (s) => s.nomeSocial || '',
+  },
+  {
+    id: 'nacionalidade',
+    label: 'NACIONALIDADE',
+    shortLabel: 'Nacionalidade',
+    category: 'Documentos, Saúde & AEE',
+    width: 16,
+    getValue: (s) => s.nacionalidade || 'BRASILEIRA',
+  },
+  {
+    id: 'paisOrigem',
+    label: 'PAÍS DE ORIGEM',
+    shortLabel: 'País de Origem',
+    category: 'Documentos, Saúde & AEE',
+    width: 16,
+    getValue: (s) => s.paisOrigem || 'BRASIL',
+  },
+  {
+    id: 'municipioNascimento',
+    label: 'MUNICÍPIO DE NASCIMENTO',
+    shortLabel: 'Município de Nascimento',
+    category: 'Documentos, Saúde & AEE',
+    width: 22,
+    getValue: (s) => s.municipioNascimento || 'JUNDIAI - SP',
+  },
+  {
+    id: 'arquivo',
+    label: 'ARQUIVO',
+    shortLabel: 'Nº Arquivo / Pasta',
+    category: 'Documentos, Saúde & AEE',
+    width: 12,
+    getValue: (s) => s.arquivo || '',
+  },
 
-  const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', `SED_Frequencia_${cls.name}_2027.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  // 5. Endereço & Transporte
+  {
+    id: 'cep',
+    label: 'CEP',
+    shortLabel: 'CEP',
+    category: 'Endereço & Transporte',
+    width: 14,
+    getValue: (s) => s.cep || '13.214-000',
+  },
+  {
+    id: 'logradouro',
+    label: 'LOGRADOURO',
+    shortLabel: 'Logradouro (Rua/Av.)',
+    category: 'Endereço & Transporte',
+    width: 28,
+    getValue: (s) => s.logradouro || '',
+  },
+  {
+    id: 'numeroResidencia',
+    label: 'N. RESIDENCIA',
+    shortLabel: 'Nº Residência',
+    category: 'Endereço & Transporte',
+    width: 12,
+    getValue: (s) => s.numeroResidencia || '',
+  },
+  {
+    id: 'complemento',
+    label: 'COMPLEMENTO',
+    shortLabel: 'Complemento',
+    category: 'Endereço & Transporte',
+    width: 18,
+    getValue: (s) => s.complemento || '',
+  },
+  {
+    id: 'bairro',
+    label: 'BAIRRO',
+    shortLabel: 'Bairro',
+    category: 'Endereço & Transporte',
+    width: 20,
+    getValue: (s) => s.bairro || '',
+  },
+  {
+    id: 'cidade',
+    label: 'CIDADE',
+    shortLabel: 'Cidade',
+    category: 'Endereço & Transporte',
+    width: 16,
+    getValue: (s) => s.cidade || 'JUNDIAI',
+  },
+  {
+    id: 'uf',
+    label: 'UF',
+    shortLabel: 'UF',
+    category: 'Endereço & Transporte',
+    width: 8,
+    getValue: (s) => s.uf || 'SP',
+  },
+  {
+    id: 'rotaOnibus',
+    label: 'ROTA DE ÔNIBUS',
+    shortLabel: 'Rota de Ônibus / TEG',
+    category: 'Endereço & Transporte',
+    width: 18,
+    getValue: (s) => s.rotaOnibus || '',
+  },
+
+  // 6. Outros Campos SED
+  {
+    id: 'tipoAlocacao',
+    label: 'TIPO ALOCAÇÃO',
+    shortLabel: 'Tipo Alocação',
+    category: 'Outros Campos SED',
+    width: 16,
+    getValue: (s) => s.tipoAlocacao || '',
+  },
+  {
+    id: 'categoriaProfissionalCenso',
+    label: 'CATEGORIA PROFISSIONAL CENSO',
+    shortLabel: 'Cat. Profissional Censo',
+    category: 'Outros Campos SED',
+    width: 22,
+    getValue: (s) => s.categoriaProfissionalCenso || '',
+  },
+  {
+    id: 'posDataCenso',
+    label: 'PÓS DATA CENSO',
+    shortLabel: 'Pós Data Censo',
+    category: 'Outros Campos SED',
+    width: 16,
+    getValue: (s) => s.posDataCenso || '',
+  },
+  {
+    id: 'procedenciaEscolar',
+    label: 'PROCEDÊNCIA ESCOLAR',
+    shortLabel: 'Procedência Escolar',
+    category: 'Outros Campos SED',
+    width: 24,
+    getValue: (s) => s.procedenciaEscolar || '',
+  },
+  {
+    id: 'sucessaoEscolar',
+    label: 'SUCESSÃO ESCOLAR',
+    shortLabel: 'Sucessão Escolar',
+    category: 'Outros Campos SED',
+    width: 20,
+    getValue: (s) => s.sucessaoEscolar || '',
+  },
+];
+
+export const DEFAULT_CLASS_EXPORT_COLUMN_IDS: string[] = [
+  'numeroChamada',
+  'estudante',
+  'raCompleto',
+  'situacao',
+  'genero',
+  'filiacao1',
+  'filiacao2',
+  'telefones',
+  'emailMunicipal',
+  'presencasQtd',
+  'presencaPercent',
+  'faltasQtd',
+  'faltasPercent',
+  'atestadosQtd',
+  'observacoes',
+];
+
+export const CLASS_EXPORT_PRESETS: {
+  id: string;
+  label: string;
+  description: string;
+  columnIds: string[];
+}[] = [
+  {
+    id: 'padrao_turma',
+    label: 'Padrão da Turma (Completo & Limpo)',
+    description: 'Nº, Estudante, RA, Situação, Gênero, Filiação 1 (Mãe), Filiação 2 (Pai), Telefones, E-mail, Presença Total e Falta Total',
+    columnIds: DEFAULT_CLASS_EXPORT_COLUMN_IDS,
+  },
+  {
+    id: 'frequencia_bolsa',
+    label: 'Frequência, Faltas & Bolsa Família',
+    description: 'Focado em presença, faltas, atestados, NIS e status legal (<60% / <75%)',
+    columnIds: [
+      'numeroChamada',
+      'estudante',
+      'raCompleto',
+      'nis',
+      'dataNascimento',
+      'situacao',
+      'diasLetivosRecorte',
+      'presencasQtd',
+      'presencaPercent',
+      'faltasQtd',
+      'faltasPercent',
+      'atestadosQtd',
+      'faltasSemAtestado',
+      'statusLegal',
+      'observacoes',
+    ],
+  },
+  {
+    id: 'filiacao_contatos',
+    label: 'Filiação (Mãe e Pai) & Contatos',
+    description: 'Lista nominal com Nome da Mãe (Filiação 1), Nome do Pai (Filiação 2), Telefones, E-mail e Endereço',
+    columnIds: [
+      'numeroChamada',
+      'estudante',
+      'raCompleto',
+      'dataNascimento',
+      'filiacao1',
+      'filiacao2',
+      'telefones',
+      'emailMunicipal',
+      'logradouro',
+      'numeroResidencia',
+      'bairro',
+      'cep',
+    ],
+  },
+  {
+    id: 'completo_sed',
+    label: 'Base Oficial SED Completa (Todos os Campos)',
+    description: 'Todas as 61 colunas oficiais da SED + indicadores de frequência e recorte',
+    columnIds: CLASS_EXPORT_COLUMNS.map((c) => c.id),
+  },
+];
+
+export type ClassExportSortOrder =
+  | 'number_asc'
+  | 'name_asc'
+  | 'name_desc'
+  | 'absences_desc'
+  | 'presence_asc';
+
+export type ClassExportStatusFilter = 'all' | 'ativos' | 'movimentados' | 'alerta';
+
+export interface ClassCustomExportOptions {
+  columnIds: string[];
+  sortBy: ClassExportSortOrder;
+  statusFilter: ClassExportStatusFilter;
+  includeSummarySheet: boolean;
+  fileFormat?: 'xls' | 'xlsx';
+}
+
+export const buildCustomClassExportPreview = (
+  cls: ClassGroup,
+  options: ClassCustomExportOptions,
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): {
+  headers: string[];
+  rows: Record<string, string | number>[];
+  orderedStudents: Student[];
+} => {
+  const diasLetivosMes = cls.classesHeld || 20;
+  const colDefs = options.columnIds
+    .map((id) => CLASS_EXPORT_COLUMNS.find((c) => c.id === id))
+    .filter((c): c is ClassExportColumnDef => Boolean(c));
+
+  const finalCols =
+    colDefs.length > 0
+      ? colDefs
+      : DEFAULT_CLASS_EXPORT_COLUMN_IDS.map((id) =>
+          CLASS_EXPORT_COLUMNS.find((c) => c.id === id)!
+        ).filter(Boolean);
+
+  // Filter students
+  const filtered = cls.students.filter((s) => {
+    const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+    const isMov =
+      sit.includes('BXTR') ||
+      sit.includes('TRANSF') ||
+      sit.includes('REMAN') ||
+      sit.includes('RM');
+    if (options.statusFilter === 'ativos') return !isMov;
+    if (options.statusFilter === 'movimentados') return isMov;
+    if (options.statusFilter === 'alerta') {
+      const m = getStudentAttendanceMetrics(s, diasLetivosMes, calendar);
+      return m.isBelowLegalThreshold;
+    }
+    return true;
+  });
+
+  // Sort students according to user preference
+  const sorted = [...filtered].sort((a, b) => {
+    if (options.sortBy === 'name_asc') {
+      return a.name.localeCompare(b.name, 'pt-BR');
+    }
+    if (options.sortBy === 'name_desc') {
+      return b.name.localeCompare(a.name, 'pt-BR');
+    }
+    if (options.sortBy === 'absences_desc') {
+      const ma = getStudentAttendanceMetrics(a, diasLetivosMes, calendar);
+      const mb = getStudentAttendanceMetrics(b, diasLetivosMes, calendar);
+      if (mb.faltas !== ma.faltas) return mb.faltas - ma.faltas;
+      return a.number - b.number;
+    }
+    if (options.sortBy === 'presence_asc') {
+      const ma = getStudentAttendanceMetrics(a, diasLetivosMes, calendar);
+      const mb = getStudentAttendanceMetrics(b, diasLetivosMes, calendar);
+      if (ma.frequenciaPercent !== mb.frequenciaPercent) {
+        return ma.frequenciaPercent - mb.frequenciaPercent;
+      }
+      return a.number - b.number;
+    }
+    // Default: strict numerical call order (Nº 01, 02, 03...)
+    return a.number - b.number;
+  });
+
+  const rows = sorted.map((s) => {
+    const rowObj: Record<string, string | number> = {};
+    finalCols.forEach((col) => {
+      rowObj[col.label] = col.getValue(s, cls, calendar);
+    });
+    return rowObj;
+  });
+
+  return {
+    headers: finalCols.map((c) => c.label),
+    rows,
+    orderedStudents: sorted,
+  };
 };
+
+// Generate and trigger download of custom .xls (or .xlsx) file exclusively for the selected ClassGroup
+export const downloadClassCustomXLS = (
+  cls: ClassGroup,
+  options: ClassCustomExportOptions,
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): void => {
+  const { headers, rows } = buildCustomClassExportPreview(cls, options, calendar);
+  const colDefs = options.columnIds
+    .map((id) => CLASS_EXPORT_COLUMNS.find((c) => c.id === id))
+    .filter((c): c is ClassExportColumnDef => Boolean(c));
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Dados Nominais da Turma com as Colunas e Ordem escolhidas pelo usuário
+  const wsTurma = XLSX.utils.json_to_sheet(rows, { header: headers });
+  wsTurma['!cols'] = colDefs.map((c) => ({ wch: c.width || 20 }));
+
+  const safeSheetName = `Turma_${cls.name.replace(/[^A-Za-z0-9_]/g, '_')}`.slice(0, 31);
+  XLSX.utils.book_append_sheet(wb, wsTurma, safeSheetName);
+
+  // Sheet 2 (Optional): Alta da Turma (Resumo de Ativos, Feminino, Masculino, Transferidos, Remanejados, Presença e Faltas)
+  if (options.includeSummarySheet) {
+    const diasLetivosMes = cls.classesHeld || 20;
+    let ativos = 0;
+    let feminino = 0;
+    let masculino = 0;
+    let transferidos = 0;
+    let remanejados = 0;
+    let pcd = 0;
+    let somaDias = 0;
+    let somaPresencas = 0;
+    let somaFaltas = 0;
+    let somaAtestados = 0;
+
+    cls.students.forEach((s) => {
+      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+      const gen = (s.genero || '').toUpperCase().trim();
+      if (sit.includes('BXTR') || sit.includes('TRANSF')) transferidos++;
+      else if (sit.includes('REMAN') || sit.includes('RM')) remanejados++;
+      else ativos++;
+
+      if (gen.startsWith('F')) feminino++;
+      else if (gen.startsWith('M')) masculino++;
+
+      if (s.deficiencia && s.deficiencia.trim().length > 0) pcd++;
+
+      const m = getStudentAttendanceMetrics(s, diasLetivosMes, calendar);
+      somaDias += m.diasLetivosMatriculados;
+      somaPresencas += m.presencas;
+      somaFaltas += m.faltas;
+      somaAtestados += m.atestados;
+    });
+
+    const pctPresenca = somaDias > 0 ? Math.round((somaPresencas / somaDias) * 100) : 100;
+    const pctFalta = somaDias > 0 ? Math.round((somaFaltas / somaDias) * 100) : 0;
+
+    const resumoRows = [
+      { INDICADOR: 'TURMA', VALOR: cls.name, DETALHE: `${cls.grade} • ${cls.shift}` },
+      { INDICADOR: 'SALA', VALOR: cls.room, DETALHE: `${diasLetivosMes} dias letivos no mês` },
+      { INDICADOR: 'TOTAL MATRICULADOS', VALOR: cls.students.length, DETALHE: '100% da lista nominal' },
+      { INDICADOR: 'ESTUDANTES ATIVOS', VALOR: ativos, DETALHE: 'Frequentes na turma' },
+      {
+        INDICADOR: 'FEMININO (MENINAS)',
+        VALOR: feminino,
+        DETALHE:
+          cls.students.length > 0
+            ? `${Math.round((feminino / cls.students.length) * 100)}% da turma`
+            : '0%',
+      },
+      {
+        INDICADOR: 'MASCULINO (MENINOS)',
+        VALOR: masculino,
+        DETALHE:
+          cls.students.length > 0
+            ? `${Math.round((masculino / cls.students.length) * 100)}% da turma`
+            : '0%',
+      },
+      { INDICADOR: 'TRANSFERIDOS (BXTR)', VALOR: transferidos, DETALHE: 'Baixa por transferência' },
+      { INDICADOR: 'REMANEJADOS', VALOR: remanejados, DETALHE: 'Movimentação entre turmas' },
+      { INDICADOR: 'EDUCAÇÃO ESPECIAL / AEE', VALOR: pcd, DETALHE: 'Estudantes com laudo/AEE' },
+      {
+        INDICADOR: 'PRESENÇA TOTAL DA TURMA',
+        VALOR: `${pctPresenca}%`,
+        DETALHE: `${somaPresencas} presenças em ${somaDias} dias matriculados`,
+      },
+      {
+        INDICADOR: 'FALTA TOTAL DA TURMA',
+        VALOR: somaFaltas,
+        DETALHE: `${pctFalta}% de ausências no período`,
+      },
+      {
+        INDICADOR: 'ATESTADOS APRESENTADOS',
+        VALOR: somaAtestados,
+        DETALHE: 'Faltas justificadas por documento médico',
+      },
+    ];
+
+    const wsResumo = XLSX.utils.json_to_sheet(resumoRows);
+    wsResumo['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 38 }];
+    XLSX.utils.book_append_sheet(wb, wsResumo, 'Alta_Resumo_Turma');
+  }
+
+  const format = options.fileFormat || 'xls';
+  const cleanFileName = `Planilha_${cls.name.replace(/\s+/g, '_')}_2027.${format}`;
+
+  if (format === 'xls') {
+    XLSX.writeFile(wb, cleanFileName, { bookType: 'biff8' });
+  } else {
+    XLSX.writeFile(wb, cleanFileName, { bookType: 'xlsx' });
+  }
+};
+
+// Legacy alias kept for compatibility, now defaults to .xls format
+export const downloadClassCSV = (cls: ClassGroup): void => {
+  downloadClassCustomXLS(cls, {
+    columnIds: DEFAULT_CLASS_EXPORT_COLUMN_IDS,
+    sortBy: 'number_asc',
+    statusFilter: 'all',
+    includeSummarySheet: true,
+    fileFormat: 'xls',
+  });
+};
+

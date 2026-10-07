@@ -228,13 +228,16 @@ export const googleSignIn = async (): Promise<{
     }
     return { user: result.user, accessToken: cachedAccessToken || '' };
   } catch (error: any) {
-    console.error('Erro ao autenticar com Google:', error);
     if (
       error?.code === 'auth/popup-blocked' ||
       error?.code === 'auth/operation-not-supported-in-this-environment'
     ) {
-      await signInWithRedirect(auth, provider);
-      return null;
+      try {
+        await signInWithRedirect(auth, provider);
+        return null;
+      } catch {
+        throw error;
+      }
     }
     throw error;
   } finally {
@@ -394,8 +397,10 @@ const buildNominalStageSheetValues = (
     'QTD FALTAS NÃO JUSTIFICADAS (SEM ATESTADO)',
     'STATUS DE FREQUÊNCIA',
     'OBSERVAÇÕES / DETALHE DO ATESTADO',
-    'FILIAÇÃO / RESPONSÁVEL',
+    'FILIAÇÃO 1 (NOME DA MÃE)',
+    'FILIAÇÃO 2 (NOME DO PAI)',
     'TELEFONE DE CONTATO',
+    'E-MAIL INSTITUCIONAL',
   ];
 
   const rows: any[][] = [headers];
@@ -468,7 +473,9 @@ const buildNominalStageSheetValues = (
           : 'REGULAR',
         s.notes || '',
         s.filiacao1 || s.guardianName || '',
+        s.filiacao2 || '',
         s.telefones || s.guardianPhone || '',
+        s.emailMunicipal || '',
       ]);
     });
   });
@@ -508,6 +515,8 @@ const buildNominalStageSheetValues = (
       `${mediaAtestadosSobreDias}%`,
       totalSemAtestado,
       `FREQUÊNCIA MÉDIA: ${mediaPresenca}%`,
+      '—',
+      '—',
       '—',
       '—',
       '—',

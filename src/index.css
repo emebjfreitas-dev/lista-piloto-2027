@@ -152,19 +152,55 @@
   animation: gentleFadeUp 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Superfície institucional coesa e refinada para cartões */
+/* Superfície institucional coesa e refinada padrão Apple iOS 18 */
 .card-welcoming {
-  border-color: rgba(0, 52, 64, 0.11);
-  box-shadow: 0 1px 3px rgba(0, 31, 39, 0.04), 0 4px 14px -4px rgba(0, 52, 64, 0.05);
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  border-color: rgba(0, 52, 64, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 8px 24px -6px rgba(0, 31, 39, 0.045);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .card-welcoming:hover {
-  transform: translateY(-1.5px);
-  border-color: rgba(0, 52, 64, 0.26);
-  box-shadow: 0 12px 28px -8px rgba(0, 52, 64, 0.11), 0 2px 6px -1px rgba(0, 52, 64, 0.05);
+  transform: translateY(-1px);
+  border-color: rgba(0, 52, 64, 0.18);
+  box-shadow: 0 14px 32px -10px rgba(0, 52, 64, 0.09), 0 2px 6px -1px rgba(0, 52, 64, 0.04);
+}
+
+/* Segmented Control Nativo Apple iOS */
+.ios-segmented {
+  background-color: rgba(118, 118, 128, 0.11);
+  padding: 3px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ios-segmented-item {
+  border-radius: 9px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #3c3c43;
+  transition: all 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ios-segmented-item-active {
+  background-color: #ffffff;
+  color: #003440;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+/* Superfície Translúcida Vibrante iOS */
+.ios-glass {
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 .pb-safe {

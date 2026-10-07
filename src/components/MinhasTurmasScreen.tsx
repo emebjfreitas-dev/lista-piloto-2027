@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ClassGroup, UserRole, AttendanceWindowConfig } from '../types';
-import { downloadSpreadsheetXLSX, evaluateAttendanceLaunchWindow } from '../services/db';
+import { evaluateAttendanceLaunchWindow } from '../services/db';
 
 interface MinhasTurmasScreenProps {
   classes: ClassGroup[];
@@ -29,15 +29,12 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   onChangeAssignedClassId,
   onSelectClassForDetails,
   onSelectClassForMonthlyAttendance,
-  onOpenClassStudentList,
   onOpenNewClassModal,
   onOpenConfigDaysModal,
-  onNavigateToSheet,
   onNavigateToAcessos,
 }) => {
   const [selectedShift, setSelectedShift] = useState<'Turno Manhã' | 'Turno Tarde'>('Turno Manhã');
   const [searchTerm, setSearchTerm] = useState('');
-  const [downloadFeedback, setDownloadFeedback] = useState(false);
 
   const windowEval = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
   const isLaunchButtonOpen = windowEval.isAllowedToLaunch;
@@ -79,29 +76,8 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
     });
   }, [classes, userRole, assignedClassId, selectedShift, cleanSearch]);
 
-  const handleDownloadSheet = () => {
-    downloadSpreadsheetXLSX(classes);
-    setDownloadFeedback(true);
-    setTimeout(() => setDownloadFeedback(false), 3500);
-  };
-
   return (
     <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-5 pb-36 animate-gentle-fade">
-      {/* Download Alert Toast */}
-      {downloadFeedback && (
-        <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in slide-in-from-top-4 duration-200">
-          <div className="bg-[#003723] text-white p-4 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-[#a4f3ca]">
-            <span className="material-symbols-outlined text-[32px] text-[#a4f3ca]">download_done</span>
-            <div>
-              <p className="font-extrabold text-[1rem]">Planilha Oficial 2027 Gerada!</p>
-              <p className="text-[0.85rem] text-[#a4f3ca]">
-                Arquivo com todas as 40 turmas da EMEB baixado com sucesso.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Top Control Row: Perfil de Acesso Ativo visible ONLY for ADMIN */}
       <div className="space-y-5 xl:space-y-0 xl:grid xl:grid-cols-12 xl:gap-5 xl:items-stretch">
         {userRole === 'admin' && (
@@ -208,27 +184,16 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           )}
         </div>
 
-          {userRole === 'admin' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+          {userRole === 'admin' && onOpenConfigDaysModal && (
+            <div className="pt-1">
               <button
-                onClick={handleDownloadSheet}
+                onClick={onOpenConfigDaysModal}
                 type="button"
-                className="w-full min-h-[56px] bg-[#005035] hover:bg-[#003723] text-white font-extrabold text-[0.95rem] px-3 rounded-2xl flex items-center justify-center gap-2.5 shadow-md active:scale-98 transition-all cursor-pointer"
+                className="w-full min-h-[52px] bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#003723] border border-[#005035]/25 font-extrabold text-[0.9rem] px-3 rounded-2xl flex items-center justify-center gap-2 shadow-2xs active:scale-98 transition-all cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[24px]">table_chart</span>
-                <span>Baixar Planilha (.xlsx - 200 Dias)</span>
+                <span className="material-symbols-outlined text-[22px]">edit_calendar</span>
+                <span>Configurar 200 Dias Letivos & Links</span>
               </button>
-
-              {onOpenConfigDaysModal && (
-                <button
-                  onClick={onOpenConfigDaysModal}
-                  type="button"
-                  className="w-full min-h-[56px] bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#003723] border-2 border-[#005035]/30 font-extrabold text-[0.92rem] px-3 rounded-2xl flex items-center justify-center gap-2 shadow-2xs active:scale-98 transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[24px]">edit_calendar</span>
-                  <span>Configurar 200 Dias & Links</span>
-                </button>
-              )}
             </div>
           )}
         </section>

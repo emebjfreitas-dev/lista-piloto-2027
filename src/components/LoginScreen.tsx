@@ -33,6 +33,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [unauthorizedHost, setUnauthorizedHost] = useState<string | null>(null);
   const [copiedHost, setCopiedHost] = useState(false);
+  const [showInstitutionalFallback, setShowInstitutionalFallback] = useState(false);
+  const [fallbackEmailInput, setFallbackEmailInput] = useState('');
 
   const validateAndCompleteLogin = async (authenticatedEmail: string) => {
     const cleanEmail = authenticatedEmail.trim().toLowerCase();
@@ -132,19 +134,47 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         msg.includes('domain is not authorized')
       ) {
         setUnauthorizedHost(currentHostname);
+        setShowInstitutionalFallback(true);
         setErrorMsg(
-          `Falta autorizar o endereço "${currentHostname}" no Firebase para abrir a janela do Google.`
+          `Janela Google bloqueada ou domínio "${currentHostname}" ainda não autorizado no Firebase. Você também pode entrar informando seu e-mail institucional cadastrado abaixo.`
+        );
+      } else if (
+        code === 'auth/popup-blocked' ||
+        msg.includes('popup-blocked') ||
+        code === 'auth/operation-not-supported-in-this-environment'
+      ) {
+        setShowInstitutionalFallback(true);
+        setErrorMsg(
+          'O navegador bloqueou a janela pop-up do Google. Permita pop-ups para este site ou confirme seu e-mail institucional cadastrado abaixo para entrar imediatamente:'
         );
       } else if (code === 'auth/popup-closed-by-user') {
-        setErrorMsg('Janela de login fechada antes de concluir.');
+        setShowInstitutionalFallback(true);
+        setErrorMsg('Janela de login fechada. Clique novamente ou confirme seu e-mail institucional abaixo:');
       } else if (code === 'auth/cancelled-popup-request') {
         // ignore duplicate click
       } else {
         setUnauthorizedHost(currentHostname);
+        setShowInstitutionalFallback(true);
         setErrorMsg(
-          `Não foi possível abrir o login Google em "${currentHostname}". Verifique se este domínio está autorizado no Firebase.`
+          `Não foi possível abrir o pop-up do Google em "${currentHostname}". Confirme seu e-mail institucional cadastrado abaixo para acessar:`
         );
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDirectInstitutionalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    const trimmed = fallbackEmailInput.trim().toLowerCase();
+    if (!trimmed) {
+      setErrorMsg('Informe seu e-mail institucional (@educacao.jundiai.sp.gov.br).');
+      return;
+    }
+    setLoading(true);
+    try {
+      await validateAndCompleteLogin(trimmed);
     } finally {
       setLoading(false);
     }
@@ -283,6 +313,52 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </span>
             </div>
           </button>
+
+          {!showInstitutionalFallback ? (
+            <button
+              type="button"
+              onClick={() => setShowInstitutionalFallback(true)}
+              className="w-full py-1.5 text-[0.73rem] font-bold text-[#436370] hover:text-[#003440] underline underline-offset-2 cursor-pointer transition-colors"
+            >
+              Pop-up bloqueado no navegador? Entrar direto com e-mail institucional
+            </button>
+          ) : (
+            <form
+              onSubmit={handleDirectInstitutionalSubmit}
+              className="mt-2 p-3.5 rounded-2xl bg-[#f4f7f5] border border-[#003440]/15 space-y-2.5 text-left"
+            >
+              <label className="block text-[0.73rem] font-extrabold uppercase tracking-wider text-[#003440]">
+                Acesso Direto Institucional (Sem Pop-up)
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="email"
+                  required
+                  value={fallbackEmailInput}
+                  onChange={(e) => setFallbackEmailInput(e.target.value)}
+                  placeholder="nome.sobrenome@educacao.jundiai.sp.gov.br"
+                  list="institutional-emails-list"
+                  className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-white border border-[#a8b5b9] text-[#0f1614] font-semibold text-[0.8rem] focus:outline-none focus:border-[#003440]"
+                />
+                <datalist id="institutional-emails-list">
+                  {authorizedUsers
+                    .filter((u) => u.active)
+                    .map((u) => (
+                      <option key={u.id} value={u.email}>
+                        {u.name}
+                      </option>
+                    ))}
+                </datalist>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2.5 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-extrabold text-[0.8rem] cursor-pointer shrink-0 transition-colors"
+                >
+                  Entrar
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </main>
     </div>

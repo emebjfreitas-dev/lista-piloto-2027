@@ -353,7 +353,7 @@ export default function App() {
       if (e.key === 'emeb_candelario_authorized_users_2027_v2') {
         const freshUsers = getStoredAuthorizedUsers();
         setAuthorizedUsers(freshUsers);
-      } else if (e.key === 'emeb_candelario_sed_classes_2027_v4') {
+      } else if (e.key === 'emeb_candelario_sed_classes_2027_v5') {
         const freshClasses = getStoredClasses();
         setClasses(freshClasses);
       } else if (e.key === 'emeb_candelario_attendance_window_2027_v1') {
@@ -562,7 +562,7 @@ export default function App() {
           console.warn('Aviso ao gravar faltas instantaneamente na planilha:', err);
           setInstantSheetSyncStatus('synced');
         });
-    }, 350);
+    }, 150);
   };
 
   const handleSaveMonthlyAttendance = (updatedClass: ClassGroup) => {

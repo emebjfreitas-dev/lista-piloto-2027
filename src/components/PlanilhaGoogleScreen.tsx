@@ -857,15 +857,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
             <button
               type="button"
-              onClick={handleDownloadExcel}
-              className="min-h-[40px] px-3.5 rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.8rem] flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">download</span>
-              <span>Exportar Planilha (.xlsx)</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setShowCloudSettingsDrawer(!showCloudSettingsDrawer)}
               className={`min-h-[40px] px-3.5 rounded-xl font-bold text-[0.8rem] flex items-center gap-1.5 border cursor-pointer transition-colors ${
                 showCloudSettingsDrawer
@@ -1203,14 +1194,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={handleDownloadBolsaFamiliaCSV}
-                className="min-h-[42px] px-4 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.82rem] flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">download</span>
-                <span>Exportar Planilha Bolsa Família (.csv)</span>
-              </button>
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -1596,15 +1579,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 Relação nominal completa de cada estudante com <strong>Quantidade (Qtd.)</strong> e <strong>Porcentagem (%)</strong> de Presenças, Faltas Totais, Atestados Apresentados (Faltas Justificadas) e Faltas sem Atestado, respeitando o recorte individual da matrícula.
               </p>
             </div>
-
-            <button
-              type="button"
-              onClick={handleDownloadExcel}
-              className="px-4 min-h-[48px] rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-black text-[0.85rem] flex items-center justify-center gap-2 shrink-0 cursor-pointer shadow-xs"
-            >
-              <span className="material-symbols-outlined text-[20px]">table_view</span>
-              <span>Exportar Abas (.xlsx)</span>
-            </button>
           </div>
 
           {/* 5 Summary KPI Cards: Quantidade (Qtd) + Porcentagem (%) for the Selected Stage */}
@@ -1779,9 +1753,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <tr>
                   <th className="py-3 px-2.5">Segmento / Etapa</th>
                   <th className="py-3 px-2.5">Turma / Turno</th>
-                  <th className="py-3 px-2 text-center">Nº</th>
+                  <th className="py-3 px-2.5 text-center">Nº</th>
                   <th className="py-3 px-3">Nome Nominal do(a) Estudante</th>
                   <th className="py-3 px-2.5 text-center">RA Oficial</th>
+                  <th className="py-3 px-3">Filiação 1 (Nome da Mãe)</th>
+                  <th className="py-3 px-3">Filiação 2 (Nome do Pai)</th>
                   <th className="py-3 px-2.5 text-center" title="Dias Letivos no Recorte da Matrícula / Dias Letivos do Mês">
                     Dias Recorte
                   </th>
@@ -1909,6 +1885,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       {row.ra ? `${row.ra}-${row.digRa}/${row.ufRa}` : '—'}
                     </td>
 
+                    <td className="py-2.5 px-3 text-[0.76rem] font-semibold text-[#003440]">
+                      {row.filiacao1 || row.responsavel || '—'}
+                    </td>
+
+                    <td className="py-2.5 px-3 text-[0.76rem] font-medium text-[#41484b]">
+                      {row.filiacao2 || '—'}
+                    </td>
+
                     {/* Dias no Recorte */}
                     <td className="py-2.5 px-2.5 text-center">
                       <span
@@ -2027,7 +2011,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               {/* Sticky Summary Footer Row with Totals & Percentages */}
               <tfoot className="bg-[#003440] text-white font-black text-[0.8rem] sticky bottom-0">
                 <tr>
-                  <td colSpan={4} className="py-3 px-3">
+                  <td colSpan={6} className="py-3 px-3">
                     TOTAL CONSOLIDADO ({stageStats.totalEstudantes} ESTUDANTES EXIBIDOS)
                   </td>
                   <td className="py-3 px-2 text-center">—</td>
@@ -2225,14 +2209,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   <span>Gerenciar Acessos / Turmas</span>
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => downloadSpreadsheetXLSX(classesToSync)}
-                className="min-h-[44px] px-4 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.82rem] flex items-center gap-1.5 shadow-xs cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">download</span>
-                <span>Baixar Excel (.xlsx)</span>
-              </button>
             </div>
           </div>
 

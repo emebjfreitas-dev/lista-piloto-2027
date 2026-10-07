@@ -189,6 +189,10 @@ export interface SheetRowData {
   frequenciaPercent: number;
   situacao: string;
   observacoesAtestado: string;
+  filiacao1: string;
+  filiacao2: string;
+  genero: string;
+  emailMunicipal: string;
   responsavel: string;
   telefone: string;
 }

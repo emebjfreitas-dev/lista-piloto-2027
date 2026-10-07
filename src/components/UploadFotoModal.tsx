@@ -49,56 +49,96 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   const expectedFileName = `${cleanStudentName}.jpg`;
   const driveFolderPath = `Google Drive / ${OFFICIAL_FOLDER_NAME} / ${expectedFileName}`;
 
+  const compressImageFileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const rawDataUrl = reader.result as string;
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const maxDim = 240;
+            let width = img.width;
+            let height = img.height;
+            if (width > height && width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else if (height >= width && height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL('image/jpeg', 0.78));
+              return;
+            }
+          } catch {
+            // fallback to original dataUrl
+          }
+          resolve(rawDataUrl);
+        };
+        img.onerror = () => resolve(rawDataUrl);
+        img.src = rawDataUrl;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsProcessing(true);
-    setDriveStatusMsg('Lendo imagem e enviando diretamente para a pasta do Google Drive...');
+    setDriveStatusMsg('Otimizando imagem e enviando diretamente para a pasta do Google Drive...');
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const dataUrl = reader.result as string;
-      setPreviewUrl(dataUrl);
+    const dataUrl = await compressImageFileToDataUrl(file);
+    if (!dataUrl) {
+      setIsProcessing(false);
+      return;
+    }
+    setPreviewUrl(dataUrl);
 
-      try {
-        let token = await getAccessToken();
-        if (!token) {
-          const signInRes = await googleSignIn();
-          token = signInRes?.accessToken || (await getAccessToken());
-        }
-
-        if (token) {
-          const uploaded = await uploadStudentPhotoToDrive(
-            student,
-            className,
-            dataUrl
-          );
-          setUploadedDriveFileLink(uploaded.webViewLink);
-          setDriveInputUrl(uploaded.webViewLink);
-          if (uploaded.folderUrl) {
-            setDriveFolderUrl(uploaded.folderUrl);
-          }
-          onSavePhoto(student.id, dataUrl, uploaded.webViewLink);
-          setDriveStatusMsg(
-            `✓ Foto enviada automaticamente para a pasta "${OFFICIAL_FOLDER_NAME}" no Google Drive como "${expectedFileName}"!`
-          );
-          setUploadSuccess(true);
-        } else {
-          setDriveStatusMsg(
-            'Foto carregada. Clique em "Salvar e Enviar para Pasta do Drive" para autenticar e gravar no Google Drive.'
-          );
-        }
-      } catch (err: any) {
-        console.warn('Aviso ao enviar imediatamente para o Drive:', err);
-        setDriveStatusMsg(
-          `Foto pronta. Ao clicar em Salvar, será enviada para a pasta ${OFFICIAL_FOLDER_NAME} no Drive.`
-        );
-      } finally {
-        setIsProcessing(false);
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        const signInRes = await googleSignIn();
+        token = signInRes?.accessToken || (await getAccessToken());
       }
-    };
-    reader.readAsDataURL(file);
+
+      if (token) {
+        const uploaded = await uploadStudentPhotoToDrive(
+          student,
+          className,
+          dataUrl
+        );
+        setUploadedDriveFileLink(uploaded.webViewLink);
+        setDriveInputUrl(uploaded.webViewLink);
+        if (uploaded.folderUrl) {
+          setDriveFolderUrl(uploaded.folderUrl);
+        }
+        onSavePhoto(student.id, dataUrl, uploaded.webViewLink);
+        setDriveStatusMsg(
+          `✓ Foto enviada automaticamente para a pasta "${OFFICIAL_FOLDER_NAME}" no Google Drive como "${expectedFileName}"!`
+        );
+        setUploadSuccess(true);
+      } else {
+        setDriveStatusMsg(
+          'Foto carregada. Clique em "Salvar e Enviar para Pasta do Drive" para autenticar e gravar no Google Drive.'
+        );
+      }
+    } catch (err: any) {
+      console.warn('Aviso ao enviar imediatamente para o Drive:', err);
+      setDriveStatusMsg(
+        `Foto pronta. Ao clicar em Salvar, será enviada para a pasta ${OFFICIAL_FOLDER_NAME} no Drive.`
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleDriveUrlChange = (url: string) => {
