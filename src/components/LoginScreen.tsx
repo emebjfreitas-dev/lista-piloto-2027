@@ -165,43 +165,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         />
       </div>
 
-      <main className="relative z-10 w-full max-w-[430px] bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_-12px_rgba(0,52,64,0.16)] border border-[#003440]/12 px-8 py-9 flex flex-col items-center text-center space-y-6 overflow-hidden">
-        {/* Marca d'água sutil interna no cartão com a Foto Oficial */}
+      <main className="relative z-10 w-full max-w-[440px] bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_24px_60px_-14px_rgba(0,52,64,0.18)] border border-[#003440]/12 px-8 py-11 flex flex-col items-center text-center space-y-7 overflow-hidden">
+        {/* Marca d'água interna exclusiva deste quadro: Brasão Oficial de Jundiaí centralizado ao fundo */}
         <img
-          src={SCHOOL_PATRON_WATERMARK_URL}
+          src={APP_LOGO_URL}
           alt=""
           aria-hidden="true"
           referrerPolicy="no-referrer"
-          className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-[0.045] mix-blend-multiply"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = APP_LOGO_FALLBACK_URL;
+          }}
+          className="pointer-events-none select-none absolute inset-0 m-auto w-64 h-64 object-contain opacity-[0.085] mix-blend-multiply"
         />
 
-        {/* Brasão Oficial de Jundiaí */}
-        <div className="relative z-10 w-24 h-24 rounded-2xl overflow-hidden border border-[#003440]/12 shadow-xs flex items-center justify-center bg-white p-2.5">
-          <img
-            src={APP_LOGO_URL}
-            alt="Prefeitura do Município de Jundiaí - Secretaria Municipal de Educação"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-            }}
-            className="w-full h-full object-contain"
-          />
-        </div>
-
-        {/* Tipografia Institucional Coesa */}
-        <div className="relative z-10 space-y-1.5">
-          <h1 className="text-[1.45rem] font-extrabold uppercase tracking-wide text-[#003440] leading-tight">
+        {/* Tipografia Institucional Coesa e Elegante */}
+        <div className="relative z-10 space-y-2.5 w-full">
+          <h1 className="text-[1.75rem] font-black uppercase tracking-[0.06em] text-[#003440] leading-tight">
             LISTA PILOTO 2027
           </h1>
-          <p className="text-[0.95rem] font-bold text-[#005035] leading-snug">
+          <p className="text-[1.02rem] font-extrabold text-[#005035] leading-snug">
             EMEB Professor Joaquim Candelário de Freitas
           </p>
-          <div className="pt-2 border-t border-[#003440]/10 space-y-0.5">
-            <p className="text-[0.76rem] font-extrabold uppercase tracking-wider text-[#003440]">
+          <div className="pt-3.5 mt-1 border-t border-[#003440]/12 space-y-1">
+            <p className="text-[0.8rem] font-extrabold uppercase tracking-[0.1em] text-[#003440]">
               Prefeitura do Município de Jundiaí
             </p>
-            <p className="text-[0.72rem] font-semibold uppercase tracking-wider text-[#436370]">
+            <p className="text-[0.74rem] font-bold uppercase tracking-[0.09em] text-[#436370]">
               Secretaria Municipal de Educação
             </p>
           </div>
