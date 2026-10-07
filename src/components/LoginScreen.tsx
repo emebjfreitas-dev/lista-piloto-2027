@@ -6,11 +6,17 @@ import {
   SCHOOL_PATRON_WATERMARK_URL,
   INSTITUTIONAL_EMAIL_DOMAIN,
 } from '../data/mockData';
-import { isValidInstitutionalEmail, findAuthorizedUserByEmail } from '../services/db';
+import {
+  isValidInstitutionalEmail,
+  findAuthorizedUserByEmail,
+  getStoredClasses,
+  saveStoredAuthorizedUsers,
+} from '../services/db';
 import {
   googleSignIn,
   logoutGoogle,
   checkGoogleRedirectResult,
+  readAuthorizedUsersFromGoogleSheet,
 } from '../services/googleSheetsApi';
 
 interface LoginScreenProps {
@@ -43,9 +49,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       return;
     }
 
+    // Pull latest authorizedUsers from Google Sheet first so if Admin changed this teacher's class (e.g., Giulia Patez -> GRUPO 04 C), she opens GRUPO 04 C immediately!
+    let latestUsers = authorizedUsers;
+    try {
+      const sheetUsers = await readAuthorizedUsersFromGoogleSheet(
+        authorizedUsers,
+        getStoredClasses()
+      );
+      if (sheetUsers && sheetUsers.length > 0) {
+        latestUsers = sheetUsers;
+        saveStoredAuthorizedUsers(sheetUsers);
+      }
+    } catch {
+      // fallback to local list if offline
+    }
+
     const registeredUser = findAuthorizedUserByEmail(
       cleanEmail,
-      authorizedUsers
+      latestUsers
     );
     if (!registeredUser) {
       await logoutGoogle();

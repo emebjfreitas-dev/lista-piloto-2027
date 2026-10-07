@@ -208,6 +208,7 @@ export interface AuthorizedUser {
   assignedClassName: string;
   active: boolean;
   createdAt: string;
+  updatedAtMs?: number;
   totalAccessCount?: number;
   totalDurationSeconds?: number;
   lastLoginAt?: string;

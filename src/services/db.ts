@@ -195,10 +195,33 @@ export const saveStoredAuthorizedUsers = (users: AuthorizedUser[]): void => {
 };
 
 const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
-  return users.map((u) => ({
-    ...u,
-    email: u.email.trim().toLowerCase(),
-  }));
+  const validClassMap = new Map(
+    INITIAL_CLASSES.map((c) => [c.id.toLowerCase(), c])
+  );
+  return users.map((u) => {
+    const cleanEmail = u.email.trim().toLowerCase();
+    if (u.role === 'usuario') {
+      let matched = validClassMap.get((u.assignedClassId || '').toLowerCase());
+      if (!matched && u.assignedClassName) {
+        matched = INITIAL_CLASSES.find((c) =>
+          u.assignedClassName.toUpperCase().startsWith(c.name.toUpperCase())
+        );
+      }
+      if (!matched) {
+        matched = INITIAL_CLASSES[0];
+      }
+      return {
+        ...u,
+        email: cleanEmail,
+        assignedClassId: matched.id,
+        assignedClassName: `${matched.name} (${matched.shift.replace('Turno ', '')})`,
+      };
+    }
+    return {
+      ...u,
+      email: cleanEmail,
+    };
+  });
 };
 
 export const findAuthorizedUserByEmail = (

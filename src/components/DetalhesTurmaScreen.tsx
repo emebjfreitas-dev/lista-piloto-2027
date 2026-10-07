@@ -9,6 +9,8 @@ import { getSavedPhotosDriveFolderInfo, OFFICIAL_FOLDER_NAME } from '../services
 interface DetalhesTurmaScreenProps {
   classGroup: ClassGroup;
   userRole?: UserRole;
+  isMainAdminAccount?: boolean;
+  onReturnToAdminMode?: () => void;
   canLaunchAttendance?: boolean;
   onGoToMonthlyAttendance: () => void;
   onGoToMonthlySummary: () => void;

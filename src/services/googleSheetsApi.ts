@@ -798,13 +798,43 @@ const buildMonitoramentoAcessosValues = (
   return rows;
 };
 
+export const ensureOfficialSpreadsheetId = async (): Promise<string> => {
+  const saved = getSavedSpreadsheetInfo();
+  if (saved.spreadsheetId) return saved.spreadsheetId;
+
+  const token = await getAccessToken();
+  if (!token) return '';
+
+  try {
+    const sheetQuery = encodeURIComponent(
+      `name = '${OFFICIAL_SPREADSHEET_TITLE}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`
+    );
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${sheetQuery}&fields=files(id,name)&pageSize=1&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.files && data.files.length > 0) {
+        const foundId = data.files[0].id;
+        saveSpreadsheetInfo(foundId, data.files[0].name || OFFICIAL_SPREADSHEET_TITLE);
+        return foundId;
+      }
+    }
+  } catch (e) {
+    console.warn('Auto-descoberta da planilha oficial:', e);
+  }
+  return '';
+};
+
 export const syncAuthorizedUsersToGoogleSheet = async (
   users?: AuthorizedUser[],
   sessionLogs?: UserAccessSessionLog[]
 ): Promise<void> => {
   const token = await getAccessToken();
-  const { spreadsheetId } = getSavedSpreadsheetInfo();
-  if (!token || !spreadsheetId) return;
+  if (!token) return;
+  const spreadsheetId = await ensureOfficialSpreadsheetId();
+  if (!spreadsheetId) return;
 
   try {
     const meta = await fetchSpreadsheetMetadata(spreadsheetId);
@@ -873,8 +903,9 @@ export const readAuthorizedUsersFromGoogleSheet = async (
   classes: ClassGroup[]
 ): Promise<AuthorizedUser[] | null> => {
   const token = await getAccessToken();
-  const { spreadsheetId } = getSavedSpreadsheetInfo();
-  if (!token || !spreadsheetId) return null;
+  if (!token) return null;
+  const spreadsheetId = await ensureOfficialSpreadsheetId();
+  if (!spreadsheetId) return null;
 
   try {
     const meta = await fetchSpreadsheetMetadata(spreadsheetId);
@@ -890,6 +921,19 @@ export const readAuthorizedUsersFromGoogleSheet = async (
     const data = await res.json();
     const rows: any[][] = data.values || [];
     if (rows.length === 0) return null;
+
+    const parseDurationToSeconds = (str: string): number => {
+      const clean = String(str || '').trim();
+      if (!clean || clean === '0s' || clean === '—') return 0;
+      let total = 0;
+      const hMatch = clean.match(/(\d+)\s*h/i);
+      const mMatch = clean.match(/(\d+)\s*m/i);
+      const sMatch = clean.match(/(\d+)\s*s/i);
+      if (hMatch) total += parseInt(hMatch[1], 10) * 3600;
+      if (mMatch) total += parseInt(mMatch[1], 10) * 60;
+      if (sMatch) total += parseInt(sMatch[1], 10);
+      return total;
+    };
 
     const existingMap = new Map<string, AuthorizedUser>();
     currentUsers.forEach((u) => {
@@ -913,34 +957,49 @@ export const readAuthorizedUsersFromGoogleSheet = async (
         .toUpperCase();
       const createdAt = String(r[6] || '03/02/2027').trim();
 
-      const role: UserRole = roleStr.includes('ADMIN')
+      const prev = existingMap.get(email);
+      const isLocallyEditedRecently =
+        Boolean(prev?.updatedAtMs) && Date.now() - (prev?.updatedAtMs || 0) < 600000;
+
+      const sheetRole: UserRole = roleStr.includes('ADMIN')
         ? 'admin'
         : roleStr.includes('PEB II') || roleStr.includes('VISUALIZA')
         ? 'peb2'
         : 'usuario';
 
-      const prev = existingMap.get(email);
+      const role: UserRole = isLocallyEditedRecently && prev ? prev.role : sheetRole;
+
       let assignedClassId = prev?.assignedClassId || 'g04a';
       let assignedClassName =
-        turmaStr || prev?.assignedClassName || 'GRUPO 04 A (Manhã)';
+        (isLocallyEditedRecently && prev?.assignedClassName) ||
+        turmaStr ||
+        prev?.assignedClassName ||
+        'GRUPO 04 A (Manhã)';
 
       if (role === 'usuario') {
-        // Match class by exact name or prefix inside turmaStr (e.g., "4º ANO D (Manhã)" -> class "4º ANO D")
-        const matchedClass = classes.find((c) => {
-          const cleanTurma = turmaStr.toUpperCase();
-          const cleanName = c.name.toUpperCase();
-          return (
-            cleanTurma.startsWith(cleanName) ||
-            cleanTurma === cleanName ||
-            c.id.toLowerCase() === turmaStr.toLowerCase()
-          );
-        });
-        if (matchedClass) {
-          assignedClassId = matchedClass.id;
-          assignedClassName = `${matchedClass.name} (${matchedClass.shift.replace(
-            'Turno ',
-            ''
-          )})`;
+        if (isLocallyEditedRecently && prev?.assignedClassId && prev.assignedClassId !== 'all') {
+          const localCls = classes.find((c) => c.id === prev.assignedClassId);
+          if (localCls) {
+            assignedClassId = localCls.id;
+            assignedClassName = `${localCls.name} (${localCls.shift.replace('Turno ', '')})`;
+          }
+        } else {
+          const matchedClass = classes.find((c) => {
+            const cleanTurma = turmaStr.toUpperCase();
+            const cleanName = c.name.toUpperCase();
+            return (
+              cleanTurma.startsWith(cleanName) ||
+              cleanTurma === cleanName ||
+              c.id.toLowerCase() === turmaStr.toLowerCase()
+            );
+          });
+          if (matchedClass) {
+            assignedClassId = matchedClass.id;
+            assignedClassName = `${matchedClass.name} (${matchedClass.shift.replace(
+              'Turno ',
+              ''
+            )})`;
+          }
         }
       } else {
         assignedClassId = 'all';
@@ -950,27 +1009,107 @@ export const readAuthorizedUsersFromGoogleSheet = async (
             : 'Todas as Turmas (Somente Visualização)';
       }
 
+      const sheetAccessCount = parseInt(String(r[7] || ''), 10) || 0;
+      const sheetTotalSecs = parseDurationToSeconds(String(r[8] || ''));
+      const sheetLastSecs = parseDurationToSeconds(String(r[9] || ''));
+
       parsedUsers.push({
         id: prev?.id || `usr-sheet-${idx + 1}`,
         email,
-        name,
+        name: (isLocallyEditedRecently && prev?.name) || name,
         role,
         assignedClassId,
         assignedClassName,
-        active: !statusStr.includes('BLOQUEADO'),
+        active: isLocallyEditedRecently && prev ? prev.active : !statusStr.includes('BLOQUEADO'),
         createdAt,
-        totalAccessCount: parseInt(String(r[7] || ''), 10) || prev?.totalAccessCount || 0,
-        totalDurationSeconds: prev?.totalDurationSeconds || 0,
-        lastSessionDurationSeconds: prev?.lastSessionDurationSeconds || 0,
-        lastLoginAt: String(r[10] || '').trim() || prev?.lastLoginAt,
-        lastActiveAt: String(r[11] || '').trim() || prev?.lastActiveAt,
-        lastScreenVisited: String(r[12] || '').trim() || prev?.lastScreenVisited,
+        updatedAtMs: prev?.updatedAtMs,
+        totalAccessCount: Math.max(sheetAccessCount, prev?.totalAccessCount || 0),
+        totalDurationSeconds: Math.max(
+          sheetTotalSecs,
+          prev?.totalDurationSeconds || 0
+        ),
+        lastSessionDurationSeconds: Math.max(
+          sheetLastSecs,
+          prev?.lastSessionDurationSeconds || 0
+        ),
+        lastLoginAt:
+          prev?.lastLoginAt ||
+          (String(r[10] || '').trim() !== 'Nunca acessou'
+            ? String(r[10] || '').trim()
+            : undefined),
+        lastActiveAt:
+          prev?.lastActiveAt ||
+          (String(r[11] || '').trim() !== '—' ? String(r[11] || '').trim() : undefined),
+        lastScreenVisited:
+          prev?.lastScreenVisited ||
+          (String(r[12] || '').trim() !== '—' ? String(r[12] || '').trim() : undefined),
       });
     });
 
     return parsedUsers.length > 0 ? parsedUsers : null;
   } catch (e) {
     console.warn('Aviso ao ler Emails_Permitidos_2027:', e);
+    return null;
+  }
+};
+
+export const readSessionLogsFromGoogleSheet = async (): Promise<
+  UserAccessSessionLog[] | null
+> => {
+  const token = await getAccessToken();
+  if (!token) return null;
+  const spreadsheetId = await ensureOfficialSpreadsheetId();
+  if (!spreadsheetId) return null;
+
+  try {
+    const meta = await fetchSpreadsheetMetadata(spreadsheetId);
+    if (!meta.sheetTitles.includes('Monitoramento_Acessos_2027')) return null;
+
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}/values/${encodeURIComponent('Monitoramento_Acessos_2027!A2:K300')}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rows: any[][] = data.values || [];
+    if (rows.length === 0) return null;
+
+    const logs: UserAccessSessionLog[] = [];
+    rows.forEach((r, idx) => {
+      const email = String(r[1] || '').trim().toLowerCase();
+      if (!email) return;
+      const name = String(r[2] || '').trim() || email;
+      const roleStr = String(r[3] || '').toUpperCase();
+      const role: UserRole = roleStr.includes('ADMIN')
+        ? 'admin'
+        : roleStr.includes('PEB II')
+        ? 'peb2'
+        : 'usuario';
+      const assignedClassName = String(r[4] || '').trim();
+      const durationSeconds = parseInt(String(r[7] || '0'), 10) || 0;
+      const lastScreen = String(r[8] || '1. Turmas').trim();
+      const statusStr = String(r[9] || '').toUpperCase();
+      const isOnlineNow = statusStr.includes('ATIVA') || statusStr.includes('ONLINE');
+
+      logs.push({
+        id: `sheet-log-${idx + 1}-${email}`,
+        email,
+        name,
+        role,
+        assignedClassName,
+        loginTimeISO: new Date().toISOString(),
+        lastHeartbeatISO: new Date().toISOString(),
+        logoutTimeISO: isOnlineNow ? undefined : new Date().toISOString(),
+        durationSeconds,
+        lastScreen,
+        isOnlineNow,
+      });
+    });
+
+    return logs.length > 0 ? logs : null;
+  } catch {
     return null;
   }
 };

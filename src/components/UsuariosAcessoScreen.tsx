@@ -25,6 +25,7 @@ interface UsuariosAcessoScreenProps {
   onUpdateAttendanceWindowConfig: (nextConfig: AttendanceWindowConfig) => void;
   onSaveAuthorizedUsers: (updatedUsers: AuthorizedUser[]) => void;
   onSelectPreviewClassId?: (classId: string) => void;
+  onSimulateTeacherProfile?: (teacher: AuthorizedUser) => void;
   onNavigateToDatabaseEmailsTab?: () => void;
   onBack: () => void;
 }
@@ -40,6 +41,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   onUpdateAttendanceWindowConfig,
   onSaveAuthorizedUsers,
   onSelectPreviewClassId,
+  onSimulateTeacherProfile,
   onNavigateToDatabaseEmailsTab,
   onBack,
 }) => {
@@ -144,6 +146,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
   const handleChangeUserRole = (userId: string, newRole: UserRole) => {
     if (!canManage) return;
+    const nowMs = Date.now();
     const next = authorizedUsers.map((u) => {
       if (u.id !== userId) return u;
       const defaultClass = classes.find((c) => c.id === (u.assignedClassId !== 'all' ? u.assignedClassId : classes[0]?.id)) || classes[0];
@@ -161,6 +164,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         role: newRole,
         assignedClassId: nextAssignedClassId,
         assignedClassName: nextAssignedClassName,
+        updatedAtMs: nowMs,
       };
     });
     onSaveAuthorizedUsers(next);
@@ -171,12 +175,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     if (!canManage) return;
     const targetClass = classes.find((c) => c.id === newClassId);
     if (!targetClass) return;
+    const nowMs = Date.now();
     const next = authorizedUsers.map((u) =>
       u.id === userId
         ? {
             ...u,
             assignedClassId: targetClass.id,
             assignedClassName: `${targetClass.name} (${targetClass.shift.replace('Turno ', '')})`,
+            updatedAtMs: nowMs,
           }
         : u
     );
@@ -926,17 +932,32 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
                   <td className="py-3 px-3 text-center">
                     {canManage && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveUser(u)}
-                        title="Revogar acesso deste e-mail"
-                        className="px-2.5 py-1 rounded-lg bg-[#ffdad6]/60 hover:bg-[#ba1a1a] text-[#ba1a1a] hover:text-white font-bold text-[0.75rem] inline-flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">
-                          delete
-                        </span>
-                        <span>Remover</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        {onSimulateTeacherProfile && (
+                          <button
+                            type="button"
+                            onClick={() => onSimulateTeacherProfile(u)}
+                            title={`Abrir visão exata de ${u.name} (${u.assignedClassName})`}
+                            className="px-2.5 py-1 rounded-lg bg-[#e8f8ef] hover:bg-[#005035] text-[#005035] hover:text-white font-extrabold text-[0.74rem] inline-flex items-center gap-1 transition-colors cursor-pointer border border-[#005035]/30"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">
+                              visibility
+                            </span>
+                            <span>Abrir Visão</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveUser(u)}
+                          title="Revogar acesso deste e-mail"
+                          className="px-2.5 py-1 rounded-lg bg-[#ffdad6]/60 hover:bg-[#ba1a1a] text-[#ba1a1a] hover:text-white font-bold text-[0.75rem] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            delete
+                          </span>
+                          <span>Remover</span>
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

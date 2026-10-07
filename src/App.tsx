@@ -24,8 +24,10 @@ import { getClassAttendanceMetrics } from './utils/attendanceRules';
 import {
   getAccessToken,
   getSavedSpreadsheetInfo,
+  ensureOfficialSpreadsheetId,
   readClassesFromGoogleSheet,
   readAuthorizedUsersFromGoogleSheet,
+  readSessionLogsFromGoogleSheet,
   syncPhotosFromDriveFolder,
   syncNominalPdfsFromDriveSubfolders,
   writeAttendanceOnlyToGoogleSheet,
@@ -266,6 +268,8 @@ export default function App() {
         setClasses(freshClasses);
       } else if (e.key === 'emeb_candelario_attendance_window_2027_v1') {
         setAttendanceWindowConfig(getStoredAttendanceWindowConfig());
+      } else if (e.key === 'emeb_candelario_access_session_logs_2027_v1') {
+        setAccessSessionLogs(getStoredAccessSessionLogs());
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -288,7 +292,7 @@ export default function App() {
       const token = await getAccessToken();
       if (!token) return;
 
-      const { spreadsheetId } = getSavedSpreadsheetInfo();
+      const spreadsheetId = await ensureOfficialSpreadsheetId();
       try {
         if (spreadsheetId) {
           const result = await readClassesFromGoogleSheet(
@@ -303,7 +307,7 @@ export default function App() {
               return found || prev;
             });
           }
-          // Also pull latest authorizedUsers (roles & assigned classes) from Google Sheet so teachers on other devices get updated class assignments automatically!
+          // Pull latest authorizedUsers (roles, assigned classes, access counts, durations) from Google Sheet
           const sheetUsers = await readAuthorizedUsersFromGoogleSheet(
             getStoredAuthorizedUsers(),
             result.updatedClasses || getStoredClasses()
@@ -311,6 +315,14 @@ export default function App() {
           if (isMounted && sheetUsers && sheetUsers.length > 0) {
             setAuthorizedUsers(sheetUsers);
             saveStoredAuthorizedUsers(sheetUsers);
+          }
+          const sheetLogs = await readSessionLogsFromGoogleSheet();
+          if (isMounted && sheetLogs && sheetLogs.length > 0) {
+            const localLogs = getStoredAccessSessionLogs();
+            if (localLogs.length === 0) {
+              setAccessSessionLogs(sheetLogs);
+              saveStoredAccessSessionLogs(sheetLogs);
+            }
           }
         } else {
           // Sync photos from Drive folder + nominal PDFs from Fichas Informativas subfolders if available
@@ -593,9 +605,9 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Real-time session duration tracker (ticks every 5 seconds while logged in)
+  // Real-time session duration tracker (ticks every 5 seconds while logged in, even after F5 refresh!)
   useEffect(() => {
-    if (currentScreen === 'login' || !activeSessionIdRef.current) return;
+    if (currentScreen === 'login') return;
 
     const screenLabelMap: Record<ScreenType, string> = {
       login: 'Login',
@@ -608,14 +620,73 @@ export default function App() {
       resumo: 'Fechamento Mensal',
     };
 
+    // If session was restored from F5 and activeSessionIdRef is missing or not in logs, bootstrap an active session log immediately
+    if (
+      !activeSessionIdRef.current ||
+      !accessSessionLogs.some((l) => l.id === activeSessionIdRef.current)
+    ) {
+      const now = new Date();
+      const nowISO = now.toISOString();
+      const nowFormatted = now.toLocaleString('pt-BR');
+      const newSessId = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      activeSessionIdRef.current = newSessId;
+
+      const currentScreenLabel = screenLabelMap[currentScreen] || '1. Turmas';
+      const matchedUser = authorizedUsers.find(
+        (u) => u.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()
+      );
+
+      const newLog: UserAccessSessionLog = {
+        id: newSessId,
+        email: currentUserEmail,
+        name: matchedUser?.name || currentUserName,
+        role: userRole,
+        assignedClassName:
+          matchedUser?.assignedClassName ||
+          (userRole === 'admin'
+            ? 'Todas as 40 Turmas (Acesso Pleno)'
+            : selectedClass?.name || 'Turma'),
+        loginTimeISO: nowISO,
+        lastHeartbeatISO: nowISO,
+        durationSeconds: 1,
+        lastScreen: currentScreenLabel,
+        isOnlineNow: true,
+      };
+
+      const nextLogs = [newLog, ...getStoredAccessSessionLogs()].slice(0, 500);
+      setAccessSessionLogs(nextLogs);
+      saveStoredAccessSessionLogs(nextLogs);
+
+      setAuthorizedUsers((prevUsers) => {
+        const nextUsers = prevUsers.map((u) => {
+          if (u.email.trim().toLowerCase() !== currentUserEmail.trim().toLowerCase()) {
+            return u;
+          }
+          return {
+            ...u,
+            totalAccessCount: Math.max(1, (u.totalAccessCount || 0) + 1),
+            totalDurationSeconds: (u.totalDurationSeconds || 0) + 1,
+            lastSessionDurationSeconds: 1,
+            lastLoginAt: u.lastLoginAt || nowFormatted,
+            lastActiveAt: nowFormatted,
+            lastScreenVisited: currentScreenLabel,
+          };
+        });
+        saveStoredAuthorizedUsers(nextUsers);
+        return nextUsers;
+      });
+    }
+
+    let tickCounter = 0;
     const intervalId = window.setInterval(() => {
       const sessId = activeSessionIdRef.current;
       if (!sessId) return;
+      tickCounter++;
 
       const now = new Date();
       const nowISO = now.toISOString();
       const nowFormatted = now.toLocaleString('pt-BR');
-      const currentScreenLabel = screenLabelMap[currentScreen] || 'Turmas';
+      const currentScreenLabel = screenLabelMap[currentScreen] || '1. Turmas';
 
       setAccessSessionLogs((prevLogs) => {
         const targetLog = prevLogs.find((l) => l.id === sessId);
@@ -648,13 +719,19 @@ export default function App() {
               }
               return {
                 ...u,
+                totalAccessCount: Math.max(1, u.totalAccessCount || 1),
                 totalDurationSeconds: (u.totalDurationSeconds || 0) + deltaSecs,
                 lastSessionDurationSeconds: elapsedSecs,
+                lastLoginAt: u.lastLoginAt || nowFormatted,
                 lastActiveAt: nowFormatted,
                 lastScreenVisited: currentScreenLabel,
               };
             });
             saveStoredAuthorizedUsers(updatedUsers);
+            // Sync to Google Sheets every 3 ticks (15 seconds) so Admin sees live duration from all devices
+            if (tickCounter % 3 === 0) {
+              syncAuthorizedUsersToGoogleSheet(updatedUsers, updatedLogs);
+            }
             return updatedUsers;
           });
         }
@@ -664,7 +741,7 @@ export default function App() {
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [currentScreen]);
+  }, [currentScreen, currentUserEmail]);
 
   const handleLogout = async () => {
     try {
@@ -804,6 +881,20 @@ export default function App() {
               setAssignedClassId(classId);
               const found = classes.find((c) => c.id === classId);
               if (found) setSelectedClass(found);
+            }}
+            onSimulateTeacherProfile={(teacher) => {
+              const targetId =
+                teacher.role === 'usuario' && teacher.assignedClassId !== 'all'
+                  ? teacher.assignedClassId
+                  : classes[0]?.id || 'g04a';
+              const foundCls = classes.find((c) => c.id === targetId) || classes[0];
+              if (foundCls) {
+                setAssignedClassId(foundCls.id);
+                setSelectedClass(foundCls);
+              }
+              setUserRole(teacher.role);
+              setCurrentScreen(teacher.role === 'usuario' ? 'detalhes' : 'turmas');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateToDatabaseEmailsTab={() => setCurrentScreen('planilha')}
             onBack={() => setCurrentScreen('turmas')}
