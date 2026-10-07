@@ -69,7 +69,7 @@ export default function App() {
     'emebjfreitas@jundiai.sp.gov.br'
   );
   const [currentUserName, setCurrentUserName] = useState<string>(
-    'EMEB Joaquim Candelário de Freitas (Direção / Admin)'
+    'EMEB Professor Joaquim Candelário de Freitas (Direção / Admin)'
   );
   const [userRole, setUserRole] = useState<UserRole>('admin');
   const [assignedClassId, setAssignedClassId] = useState<string>(() => classes[0]?.id || 'g04a');
@@ -334,6 +334,10 @@ export default function App() {
   };
 
   const handleBack = () => {
+    if (userRole === 'usuario') {
+      setCurrentScreen('detalhes');
+      return;
+    }
     if (
       currentScreen === 'frequencia_mensal' ||
       currentScreen === 'detalhes' ||
@@ -389,12 +393,20 @@ export default function App() {
     setCurrentUserEmail(authUser.email);
     setCurrentUserName(authUser.name);
     setUserRole(authUser.role);
-    if (authUser.role === 'usuario' && authUser.assignedClassId !== 'all') {
-      setAssignedClassId(authUser.assignedClassId);
-      const targetClass = classes.find((c) => c.id === authUser.assignedClassId);
+    if (authUser.role === 'usuario') {
+      const targetId =
+        authUser.assignedClassId && authUser.assignedClassId !== 'all'
+          ? authUser.assignedClassId
+          : classes[0]?.id || 'g04a';
+      setAssignedClassId(targetId);
+      const targetClass = classes.find((c) => c.id === targetId) || classes[0];
       if (targetClass) setSelectedClass(targetClass);
+      // PEB I abre direto na sua turma sem precisar entrar no menu de seleção
+      setCurrentScreen('detalhes');
+    } else {
+      // PEB II e ADMIN mantêm a tela de seleção de turmas
+      setCurrentScreen('turmas');
     }
-    setCurrentScreen('turmas');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -561,6 +573,10 @@ export default function App() {
           ) {
             return;
           }
+          if (userRole === 'usuario' && screen === 'turmas') {
+            setCurrentScreen('detalhes');
+            return;
+          }
           setCurrentScreen(screen);
         }}
         onNavigatePlanilha={() => {
@@ -607,7 +623,14 @@ export default function App() {
             userRole={userRole}
             assignedClassId={assignedClassId}
             attendanceWindowConfig={attendanceWindowConfig}
-            onChangeRole={(role) => setUserRole(role)}
+            onChangeRole={(role) => {
+              setUserRole(role);
+              if (role === 'usuario') {
+                const target = classes.find((c) => c.id === assignedClassId) || classes[0];
+                if (target) setSelectedClass(target);
+                setCurrentScreen('detalhes');
+              }
+            }}
             onChangeAssignedClassId={(id) => setAssignedClassId(id)}
             onSelectClassForDetails={handleSelectClassForDetails}
             onSelectClassForMonthlyAttendance={handleSelectClassForMonthlyAttendance}
@@ -626,6 +649,8 @@ export default function App() {
         {currentScreen === 'detalhes' && (
           <DetalhesTurmaScreen
             classGroup={selectedClass}
+            userRole={userRole}
+            canLaunchAttendance={canEditClass(selectedClass.id)}
             onGoToMonthlyAttendance={() => {
               setCurrentScreen('frequencia_mensal');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -649,7 +674,10 @@ export default function App() {
               })
             }
             onNavigateToSheet={() => setCurrentScreen('planilha')}
-            onBackToClasses={() => setCurrentScreen('turmas')}
+            onBackToClasses={() => {
+              if (userRole === 'usuario') return;
+              setCurrentScreen('turmas');
+            }}
           />
         )}
 
@@ -673,7 +701,9 @@ export default function App() {
               })
             }
             onNavigateToSheet={() => setCurrentScreen('planilha')}
-            onBack={() => setCurrentScreen('turmas')}
+            onBack={() =>
+              setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas')
+            }
           />
         )}
 
@@ -748,6 +778,11 @@ export default function App() {
             userRole !== 'admin' &&
             (screen === 'planilha' || screen === 'dias_letivos' || screen === 'usuarios_acesso')
           ) {
+            return;
+          }
+          if (userRole === 'usuario' && screen === 'turmas') {
+            setCurrentScreen('detalhes');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
           }
           setCurrentScreen(screen);

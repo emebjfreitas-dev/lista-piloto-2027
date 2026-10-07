@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ClassGroup, Student } from '../types';
+import { ClassGroup, Student, UserRole } from '../types';
 import { downloadClassCSV } from '../services/db';
 import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
 import { getStudentAttendanceMetrics } from '../utils/attendanceRules';
@@ -8,6 +8,8 @@ import { getSavedPhotosDriveFolderInfo, OFFICIAL_FOLDER_NAME } from '../services
 
 interface DetalhesTurmaScreenProps {
   classGroup: ClassGroup;
+  userRole?: UserRole;
+  canLaunchAttendance?: boolean;
   onGoToMonthlyAttendance: () => void;
   onGoToMonthlySummary: () => void;
   onOpenStudentList: () => void;
@@ -21,6 +23,8 @@ interface DetalhesTurmaScreenProps {
 
 export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   classGroup,
+  userRole = 'admin',
+  canLaunchAttendance = true,
   onGoToMonthlyAttendance,
   onOpenStudentList,
   onOpenStudentGrid,
@@ -100,30 +104,83 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         <section className="xl:col-span-6 flex flex-col justify-between gap-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
             {/* Main Action 1: Lançar Faltas / Estudantes */}
-            <button
-              onClick={onGoToMonthlyAttendance}
-              type="button"
-              className="w-full min-h-[78px] bg-[#005035] hover:bg-[#003824] text-white rounded-2xl p-4 shadow-md flex items-center justify-between gap-3 text-left transition-all active:scale-[0.99] cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[28px] text-[#a4f3ca]">
-                    edit_calendar
-                  </span>
+            {userRole === 'peb2' ? (
+              <button
+                onClick={onGoToMonthlyAttendance}
+                type="button"
+                className="w-full min-h-[78px] bg-[#7a4100] hover:bg-[#5c3000] text-white rounded-2xl p-4 shadow-md flex items-center justify-between gap-3 text-left transition-all active:scale-[0.99] cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[28px]">
+                      fact_check
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[1.05rem] font-black leading-tight block">
+                      Frequência do Mês
+                    </span>
+                    <span className="text-[0.78rem] text-white/85 font-semibold">
+                      Modo consulta (PEB II)
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[1.05rem] font-black leading-tight block">
-                    Lançar Faltas
-                  </span>
-                  <span className="text-[0.78rem] text-[#a4f3ca] font-semibold">
-                    Registrar faltas e atestados
-                  </span>
+                <span className="material-symbols-outlined text-[24px]">
+                  arrow_forward
+                </span>
+              </button>
+            ) : canLaunchAttendance ? (
+              <button
+                onClick={onGoToMonthlyAttendance}
+                type="button"
+                className="w-full min-h-[78px] bg-[#005035] hover:bg-[#003824] text-white rounded-2xl p-4 shadow-md flex items-center justify-between gap-3 text-left transition-all active:scale-[0.99] cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[28px] text-[#a4f3ca]">
+                      edit_calendar
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[1.05rem] font-black leading-tight block">
+                      Lançar Faltas
+                    </span>
+                    <span className="text-[0.78rem] text-[#a4f3ca] font-semibold">
+                      Salva automático na Planilha
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <span className="material-symbols-outlined text-[24px] text-[#a4f3ca]">
-                arrow_forward
-              </span>
-            </button>
+                <span className="material-symbols-outlined text-[24px] text-[#a4f3ca]">
+                  arrow_forward
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title="Abertura no último dia letivo do mês + 2 primeiros do próximo mês"
+                className="w-full min-h-[78px] bg-[#edeeec] text-[#566366] border border-[#c0c8cb] rounded-2xl p-4 flex items-center justify-between gap-3 text-left cursor-not-allowed"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-[#e1e3e1] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[26px] text-[#566366]">
+                      lock_clock
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[1rem] font-black leading-tight block text-[#41484b]">
+                      Lançar Faltas
+                    </span>
+                    <span className="text-[0.75rem] text-[#566366] font-semibold">
+                      Abre no fecho mensal
+                    </span>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-[22px] text-[#71787b]">
+                  lock
+                </span>
+              </button>
+            )}
 
             {/* Main Action 2: Visualizar Estudantes */}
             <button
@@ -137,10 +194,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 </div>
                 <div>
                   <span className="text-[1.05rem] font-black leading-tight block">
-                    Fichas em Tela Cheia
+                    Ver Estudantes
                   </span>
                   <span className="text-[0.78rem] text-[#bdeafa] font-semibold">
-                    Ver {classGroup.totalStudents} estudantes
+                    {classGroup.totalStudents} fichas • Livre 24h
                   </span>
                 </div>
               </div>
@@ -150,24 +207,30 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div
+            className={`grid grid-cols-1 ${
+              userRole !== 'usuario' ? 'sm:grid-cols-2' : ''
+            } gap-3`}
+          >
             <button
               onClick={() => downloadClassCSV(classGroup)}
               type="button"
               className="w-full min-h-[52px] bg-white hover:bg-[#f3f4f2] text-[#005035] rounded-2xl px-4 shadow-2xs border-2 border-[#a4f3ca] flex items-center justify-center gap-2 font-extrabold text-[0.92rem] transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[22px]">download</span>
-              <span>Baixar Planilha (.csv)</span>
+              <span>Baixar Planilha da Turma (.csv)</span>
             </button>
 
-            <button
-              onClick={onBackToClasses}
-              type="button"
-              className="w-full min-h-[52px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#003440] font-extrabold text-[0.92rem] rounded-2xl flex items-center justify-center gap-2 cursor-pointer transition-colors border border-[#b4c0c4]"
-            >
-              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-              <span>Voltar às Turmas</span>
-            </button>
+            {userRole !== 'usuario' && (
+              <button
+                onClick={onBackToClasses}
+                type="button"
+                className="w-full min-h-[52px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#003440] font-extrabold text-[0.92rem] rounded-2xl flex items-center justify-center gap-2 cursor-pointer transition-colors border border-[#b4c0c4]"
+              >
+                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                <span>Voltar às 40 Turmas</span>
+              </button>
+            )}
           </div>
         </section>
       </div>

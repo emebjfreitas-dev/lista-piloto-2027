@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const showBackButton =
     currentScreen === 'frequencia_mensal' ||
-    currentScreen === 'detalhes' ||
+    (currentScreen === 'detalhes' && userRole !== 'usuario') ||
     currentScreen === 'dias_letivos' ||
     currentScreen === 'planilha' ||
     currentScreen === 'usuarios_acesso';
@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[1.025rem] font-extrabold text-[#003440] leading-tight truncate">
                 {showBackButton
                   ? getScreenTitle()
-                  : 'Lista Piloto 2027 • EMEB Joaquim Candelário de Freitas'}
+                  : 'Lista Piloto 2027 • EMEB Professor Joaquim Candelário de Freitas'}
               </span>
               <span className="text-[0.725rem] font-bold text-[#436370] truncate">
                 {showBackButton

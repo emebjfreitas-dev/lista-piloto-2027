@@ -3,8 +3,7 @@ import { AuthorizedUser } from '../types';
 import {
   APP_LOGO_URL,
   APP_LOGO_FALLBACK_URL,
-  SCHOOL_NAME,
-  CITY_NAME,
+  SCHOOL_PATRON_WATERMARK_URL,
   INSTITUTIONAL_EMAIL_DOMAIN,
 } from '../data/mockData';
 import { isValidInstitutionalEmail, findAuthorizedUserByEmail } from '../services/db';
@@ -121,35 +120,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   return (
     <div className="relative min-h-screen bg-[#f4f7f5] text-[#0f1614] flex items-center justify-center p-4 overflow-hidden animate-gentle-fade">
-      {/* Marca d'água de fundo em tela cheia com o Brasão Oficial */}
+      {/* Marca d'água de fundo em tela cheia com a Foto Oficial da Escola (Flickr) */}
       <div
         aria-hidden="true"
         className="pointer-events-none select-none fixed inset-0 flex items-center justify-center overflow-hidden z-0"
       >
         <img
-          src={APP_LOGO_URL}
+          src={SCHOOL_PATRON_WATERMARK_URL}
           alt=""
           referrerPolicy="no-referrer"
-          onError={(e) => {
-            e.currentTarget.onerror = null;
-            e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-          }}
-          className="w-[540px] sm:w-[720px] lg:w-[900px] max-w-none aspect-square object-contain opacity-[0.075] scale-110 blur-[0.5px] mix-blend-multiply"
+          className="w-full h-full object-cover opacity-[0.13] scale-105 mix-blend-multiply"
         />
       </div>
 
-      <main className="relative z-10 w-full max-w-[400px] bg-white/92 backdrop-blur-md rounded-3xl shadow-sm border border-[#d5dddf] px-7 py-9 flex flex-col items-center text-center space-y-6 overflow-hidden">
-        {/* Marca d'água sutil interna no cartão */}
+      <main className="relative z-10 w-full max-w-[420px] bg-white/94 backdrop-blur-md rounded-3xl shadow-sm border border-[#d5dddf] px-7 py-9 flex flex-col items-center text-center space-y-6 overflow-hidden">
+        {/* Marca d'água sutil interna no cartão com a Foto Oficial */}
         <img
-          src={APP_LOGO_URL}
+          src={SCHOOL_PATRON_WATERMARK_URL}
           alt=""
           aria-hidden="true"
           referrerPolicy="no-referrer"
-          onError={(e) => {
-            e.currentTarget.onerror = null;
-            e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-          }}
-          className="pointer-events-none select-none absolute -bottom-16 -right-16 w-64 h-64 object-contain opacity-[0.045] mix-blend-multiply"
+          className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-[0.055] mix-blend-multiply"
         />
 
         {/* Brasão Oficial de Jundiaí */}
@@ -172,7 +163,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             Lista Piloto 2027
           </h1>
           <p className="text-[0.96rem] font-bold text-[#005035] leading-snug">
-            EMEB Joaquim Candelário de Freitas
+            EMEB Professor Joaquim Candelário de Freitas
           </p>
           <div className="pt-1 space-y-0.5">
             <p className="text-[0.76rem] font-extrabold uppercase tracking-wide text-[#003440]">
@@ -234,16 +225,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </div>
         )}
 
-        {/* Botão Único Google Workspace */}
-        <div className="w-full space-y-3">
+        {/* Botão Único E-mail Institucional @educacao.jundiai.sp.gov.br */}
+        <div className="relative z-10 w-full space-y-2.5">
           <button
             type="button"
             onClick={handleWorkspaceLogin}
             disabled={loading}
-            className="w-full min-h-[54px] bg-[#003440] hover:bg-[#004c5c] text-white rounded-2xl font-extrabold text-[0.94rem] flex items-center justify-center gap-3 px-5 shadow-xs cursor-pointer active:scale-[0.99] transition-all disabled:opacity-60"
+            className="w-full min-h-[64px] bg-[#003440] hover:bg-[#004c5c] text-white rounded-2xl px-4 py-3 shadow-sm cursor-pointer active:scale-[0.99] transition-all disabled:opacity-60 flex items-center justify-center gap-3.5"
           >
-            <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0">
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shrink-0 shadow-2xs">
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
@@ -262,14 +253,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 />
               </svg>
             </div>
-            <span>
-              {loading ? 'Autenticando...' : 'Entrar com Google Workspace'}
-            </span>
+            <div className="flex flex-col items-start text-left min-w-0">
+              <span className="font-extrabold text-[0.9rem] leading-tight text-white">
+                {loading
+                  ? 'Autenticando E-mail Institucional...'
+                  : 'Entrar somente com E-mail Institucional'}
+              </span>
+              <span className="font-mono font-bold text-[0.75rem] text-[#bdeafa] leading-tight mt-0.5">
+                {INSTITUTIONAL_EMAIL_DOMAIN}
+              </span>
+            </div>
           </button>
-
-          <p className="text-[0.74rem] font-semibold text-[#566366] font-mono">
-            {INSTITUTIONAL_EMAIL_DOMAIN}
-          </p>
         </div>
       </main>
     </div>

@@ -3,13 +3,13 @@ import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils
 
 export const CITY_NAME = 'Prefeitura Municipal de Jundiaí';
 export const SECRETARY_NAME = 'Secretaria Municipal de Educação';
-export const SCHOOL_NAME = 'EMEB Joaquim Candelário de Freitas';
+export const SCHOOL_NAME = 'EMEB Professor Joaquim Candelário de Freitas';
 export const INSTITUTIONAL_EMAIL_DOMAIN = '@educacao.jundiai.sp.gov.br';
 
 const formatDisplayNameFromEmail = (email: string): string => {
   const prefix = email.split('@')[0] || '';
   if (prefix === 'emebjfreitas') {
-    return 'EMEB Joaquim Candelário de Freitas (Direção / Admin)';
+    return 'EMEB Professor Joaquim Candelário de Freitas (Direção / Admin)';
   }
   return prefix
     .replace(/\d+/g, '')
@@ -186,6 +186,8 @@ export const APP_LOGO_URL =
   'https://jundiai.sp.gov.br/a-cidade/wp-content/uploads/sites/31/2024/11/brasao_tradicional_jundiai_v1656_solitario_2024-1.png';
 export const APP_LOGO_FALLBACK_URL =
   'https://jundiai.sp.gov.br/a-cidade/wp-content/uploads/sites/31/2024/11/brasao_tradicional_jundiai_v1656_solitario_2024-1.png';
+export const SCHOOL_PATRON_WATERMARK_URL =
+  'https://live.staticflickr.com/65535/51747624614_48845297df_b.jpg';
 
 export const TEACHER_AVATAR_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuD1tNB8f_YzRDEnOX7J-c3VPCSR3ojnGgdR5a2C4rW2hVcV660D4e5OWn63fjSZK5KQ4g_yWHlJoeOx5KEvQt593NNKaIQrl5O6nr3nZQv4gi2FC7TNoRqsU30o2GhNtBb5wK00uLoqwqm3e_2gjJp_gVfrvPkEi3zNpz-o-Xq0RYzfFlB5HQCeT-3OSYttOQz1KQPUGHkJv-v7s6FQHQleuYLnJHtRcjgsw6Gkt0P6zsimskCx0x2m';
 

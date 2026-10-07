@@ -324,8 +324,8 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           filteredClasses.map((cls) => {
             const isInfantil = cls.name.startsWith('GRUPO');
             const shortBadge = isInfantil
-              ? cls.name.replace('GRUPO ', 'G')
-              : cls.name.replace(' ANO ', 'º');
+              ? cls.name.replace(/^GRUPO\s*0?/i, 'G').replace(/\s+/g, '')
+              : cls.name.replace(/\s*ANO\s*/i, '');
 
             return (
               <div
@@ -335,11 +335,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                 {/* Class Details Header */}
                 <div
                   onClick={() => {
-                    if (isLaunchButtonOpen || userRole === 'peb2') {
-                      onSelectClassForMonthlyAttendance(cls);
-                    } else if (onOpenClassStudentList) {
-                      onOpenClassStudentList(cls);
-                    }
+                    onSelectClassForDetails(cls);
                   }}
                   className="cursor-pointer flex items-start gap-3.5 min-w-0"
                 >
@@ -362,7 +358,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                         {cls.presenceRate}% presença
                       </span>
                     </div>
-                    <p className="text-[0.92rem] text-[#41484b] font-semibold mt-0.5">
+                    <p className="text-[0.9rem] text-[#41484b] font-semibold mt-0.5">
                       {cls.grade} • {cls.room}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -378,63 +374,59 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   </div>
                 </div>
 
-                {/* Clear & Prominent Action Buttons: Visualizar Estudantes (Sempre Disponível) + Lançar Faltas (Janela ou Excepcional) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-3 border-t border-[#edeeec]">
-                  {/* Botão 1: Visualizar Estudantes (SEMPRE DISPONÍVEL O TEMPO TODO) */}
+                {/* Clear, Cohesive & Intelligent Action Buttons (No truncated '...' text!) */}
+                <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-[#edeeec]">
+                  {/* Botão 1: Ver Estudantes (SEMPRE DISPONÍVEL O TEMPO TODO) */}
                   <button
                     type="button"
                     onClick={() => {
-                      if (onOpenClassStudentList) {
-                        onOpenClassStudentList(cls);
-                      } else {
-                        onSelectClassForDetails(cls);
-                      }
+                      onSelectClassForDetails(cls);
                     }}
-                    className="w-full min-h-[54px] px-3.5 py-2.5 rounded-xl bg-[#003440] hover:bg-[#004c5c] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+                    className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#003440] hover:bg-[#004c5c] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 text-left">
-                      <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-[22px] text-[#bdeafa]">
+                    <div className="flex items-center gap-2 min-w-0 text-left">
+                      <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[20px] text-[#bdeafa]">
                           badge
                         </span>
                       </div>
                       <div className="min-w-0">
-                        <span className="block font-black text-[0.92rem] leading-tight truncate">
-                          Visualizar Estudantes
+                        <span className="block font-extrabold text-[0.86rem] leading-tight">
+                          Ver Estudantes
                         </span>
-                        <span className="block text-[0.72rem] text-[#bdeafa] font-semibold truncate">
-                          Sempre disponível ({cls.totalStudents} fichas)
+                        <span className="block text-[0.7rem] text-[#bdeafa] font-semibold leading-tight mt-0.5">
+                          {cls.totalStudents} fichas • Livre 24h
                         </span>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-[20px] text-[#bdeafa] shrink-0">
+                    <span className="material-symbols-outlined text-[18px] text-[#bdeafa] shrink-0">
                       visibility
                     </span>
                   </button>
 
-                  {/* Botão 2: Lançar Faltas (Apenas no último dia letivo + 2 primeiros do próximo mês, ou quando aberto excepcionalmente na aba Acessos) */}
+                  {/* Botão 2: Lançar Faltas / Consultar Frequência */}
                   {userRole === 'peb2' ? (
                     <button
                       type="button"
                       onClick={() => onSelectClassForMonthlyAttendance(cls)}
-                      className="w-full min-h-[54px] px-3.5 py-2.5 rounded-xl bg-[#7a4100] hover:bg-[#5c3000] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+                      className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#7a4100] hover:bg-[#5c3000] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 text-left">
-                        <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[22px]">
+                      <div className="flex items-center gap-2 min-w-0 text-left">
+                        <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[20px]">
                             fact_check
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <span className="block font-black text-[0.92rem] leading-tight truncate">
-                            Consultar Frequência
+                          <span className="block font-extrabold text-[0.86rem] leading-tight">
+                            Ver Frequência
                           </span>
-                          <span className="block text-[0.72rem] text-white/85 font-semibold truncate">
-                            Somente Visualização
+                          <span className="block text-[0.7rem] text-white/85 font-semibold leading-tight mt-0.5">
+                            Modo Leitura
                           </span>
                         </div>
                       </div>
-                      <span className="material-symbols-outlined text-[20px] shrink-0 opacity-90">
+                      <span className="material-symbols-outlined text-[18px] shrink-0 opacity-90">
                         arrow_forward
                       </span>
                     </button>
@@ -442,24 +434,24 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectClassForMonthlyAttendance(cls)}
-                      className="w-full min-h-[54px] px-3.5 py-2.5 rounded-xl bg-[#005035] hover:bg-[#003824] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+                      className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#005035] hover:bg-[#003824] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 text-left">
-                        <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[22px]">
+                      <div className="flex items-center gap-2 min-w-0 text-left">
+                        <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[20px] text-[#a4f3ca]">
                             edit_calendar
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <span className="block font-black text-[0.92rem] leading-tight truncate">
+                          <span className="block font-extrabold text-[0.86rem] leading-tight">
                             Lançar Faltas
                           </span>
-                          <span className="block text-[0.72rem] text-[#a4f3ca] font-semibold truncate">
-                            Salva automático na Planilha
+                          <span className="block text-[0.7rem] text-[#a4f3ca] font-semibold leading-tight mt-0.5">
+                            Aberto • Salva auto
                           </span>
                         </div>
                       </div>
-                      <span className="material-symbols-outlined text-[20px] shrink-0 opacity-90">
+                      <span className="material-symbols-outlined text-[18px] text-[#a4f3ca] shrink-0">
                         arrow_forward
                       </span>
                     </button>
@@ -468,24 +460,24 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                       type="button"
                       disabled
                       title="O lançamento de faltas abre no último dia letivo do mês e nos 2 primeiros dias letivos do próximo mês (ou mediante liberação excepcional na aba Acessos)."
-                      className="w-full min-h-[54px] px-3.5 py-2.5 rounded-xl bg-[#edeeec] text-[#71787b] border border-[#c0c8cb] flex items-center justify-between gap-2 cursor-not-allowed opacity-85"
+                      className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#f4f7f5] text-[#566366] border border-[#c0c8cb] flex items-center justify-between gap-2 cursor-not-allowed"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 text-left">
-                        <div className="w-9 h-9 rounded-lg bg-[#e1e3e1] flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[20px] text-[#71787b]">
+                      <div className="flex items-center gap-2 min-w-0 text-left">
+                        <div className="w-8 h-8 rounded-lg bg-[#e2e8e5] flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[19px] text-[#566366]">
                             lock_clock
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <span className="block font-extrabold text-[0.86rem] leading-tight truncate">
-                            Lançar Faltas (Fechado)
+                          <span className="block font-extrabold text-[0.85rem] text-[#41484b] leading-tight">
+                            Lançar Faltas
                           </span>
-                          <span className="block text-[0.68rem] text-[#71787b] font-semibold truncate">
-                            Últ. dia letivo + 2 primeiros
+                          <span className="block text-[0.68rem] text-[#566366] font-semibold leading-tight mt-0.5">
+                            Abre no fecho mensal
                           </span>
                         </div>
                       </div>
-                      <span className="material-symbols-outlined text-[18px] shrink-0">
+                      <span className="material-symbols-outlined text-[17px] text-[#71787b] shrink-0">
                         lock
                       </span>
                     </button>
