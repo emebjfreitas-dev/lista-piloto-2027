@@ -122,32 +122,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   return (
     <div className="min-h-screen bg-[#f4f7f5] text-[#0f1614] flex items-center justify-center p-4 animate-gentle-fade">
       <main className="w-full max-w-[400px] bg-white rounded-3xl shadow-sm border border-[#d5dddf] px-7 py-9 flex flex-col items-center text-center space-y-6">
-        {/* Brasão Oficial Solitário de Jundiaí */}
-        <div className="w-20 h-20 flex items-center justify-center">
+        {/* Brasão / Identidade Visual Oficial EMEB Joaquim Candelário de Freitas */}
+        <div className="w-28 h-24 rounded-2xl overflow-hidden border border-[#d5dddf] shadow-xs flex items-center justify-center bg-[#f4f7f5]">
           <img
             src={APP_LOGO_URL}
-            alt="Brasão Oficial de Jundiaí"
+            alt="EMEB Joaquim Candelário de Freitas - PMJ/SME"
             referrerPolicy="no-referrer"
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = APP_LOGO_FALLBACK_URL;
             }}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
           />
         </div>
 
         {/* Tipografia Minimalista */}
         <div className="space-y-1.5">
-          <p className="text-[0.72rem] font-bold uppercase tracking-widest text-[#566366]">
-            {CITY_NAME}
-          </p>
-          <h1 className="text-[1.18rem] font-extrabold text-[#003440] leading-snug">
-            {SCHOOL_NAME}
-          </h1>
-          <p className="text-[0.86rem] font-bold text-[#005035]">
+          <h1 className="text-[1.35rem] font-extrabold text-[#003440] leading-tight">
             Lista Piloto 2027
+          </h1>
+          <p className="text-[0.96rem] font-bold text-[#005035] leading-snug">
+            EMEB Joaquim Candelário de Freitas
           </p>
-          <p className="text-[0.76rem] font-semibold text-[#566366] uppercase tracking-wider">
+          <p className="text-[0.78rem] font-extrabold uppercase tracking-widest text-[#2c373a]">
+            PMJ/SME
+          </p>
+          <p className="text-[0.72rem] font-semibold text-[#566366] uppercase tracking-wider pt-0.5">
             Uso Exclusivo de Professores
           </p>
         </div>

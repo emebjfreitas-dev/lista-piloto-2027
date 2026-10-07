@@ -70,26 +70,28 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-white border border-[#c0c8cb]/70 p-1 flex items-center justify-center shadow-2xs shrink-0">
+            <div className="w-11 h-11 rounded-xl bg-white border border-[#c0c8cb]/70 overflow-hidden flex items-center justify-center shadow-2xs shrink-0">
               <img
                 src={APP_LOGO_URL}
-                alt="Brasão Oficial do Município de Jundiaí"
+                alt="EMEB Joaquim Candelário de Freitas - PMJ/SME"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = APP_LOGO_FALLBACK_URL;
                 }}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover"
               />
             </div>
             <div className="flex flex-col justify-center min-w-0">
               <span className="text-[1.025rem] font-extrabold text-[#003440] leading-tight truncate">
-                {showBackButton ? getScreenTitle() : 'EMEB Prof. Joaquim Candelário de Freitas'}
+                {showBackButton
+                  ? getScreenTitle()
+                  : 'Lista Piloto 2027 • EMEB Joaquim Candelário de Freitas'}
               </span>
               <span className="text-[0.725rem] font-bold text-[#436370] truncate">
                 {showBackButton
-                  ? `${CITY_NAME} • ${SCHOOL_NAME} • 2027`
-                  : subtitle || 'Prefeitura de Jundiaí • SME • Lista Piloto 2027'}
+                  ? 'Lista Piloto 2027 • EMEB Joaquim Candelário de Freitas • PMJ/SME'
+                  : `PMJ/SME • ${subtitle || 'Uso Exclusivo de Professores'}`}
               </span>
             </div>
           </div>
