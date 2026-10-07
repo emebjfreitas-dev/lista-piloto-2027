@@ -761,27 +761,38 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <a
-                        href={
-                          student.fichaPdfDriveUrl ||
-                          (student.fichaPdfDriveId
-                            ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                            : `#doc-${student.id}`)
-                        }
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (onOpenStudentPdf) onOpenStudentPdf(student);
-                          else onOpenStudentGrid(student);
-                        }}
-                        className="doc-hyperlink font-extrabold text-[0.94rem] truncate"
+                      <span
+                        onClick={() => onOpenStudentGrid(student)}
+                        className="font-extrabold text-[0.94rem] text-[#003440] hover:underline truncate cursor-pointer"
                       >
                         {student.name}
-                      </a>
+                      </span>
                       {student.ra && (
                         <span className="font-mono text-[0.7rem] text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5">
                           RA {student.ra}-{student.digRa}
                         </span>
+                      )}
+                      {onOpenStudentPdf && (
+                        <a
+                          href={
+                            student.fichaPdfDriveUrl ||
+                            (student.fichaPdfDriveId
+                              ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
+                              : `#doc-${student.id}`)
+                          }
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onOpenStudentPdf(student);
+                          }}
+                          title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
+                          className="doc-hyperlink px-2 py-0.5 rounded-lg bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold text-[0.68rem] flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">
+                            document_scanner
+                          </span>
+                          <span>Ficha Informativa (Drive)</span>
+                        </a>
                       )}
                       {isTransferred && (
                         <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.64rem] font-black uppercase">
@@ -1104,27 +1115,12 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         </span>
                       )}
                     </div>
-                    <a
-                      href={
-                        student.fichaPdfDriveUrl ||
-                        (student.fichaPdfDriveId
-                          ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                          : `#doc-${student.id}`)
-                      }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (onOpenStudentPdf) {
-                          onOpenStudentPdf(student);
-                        } else {
-                          onOpenStudentGrid(student);
-                        }
-                      }}
-                      title={`Abrir Documento Escaneado (${student.name}.pdf) no Google Drive`}
-                      className="doc-hyperlink text-[1.02rem] font-extrabold leading-snug truncate mt-0.5 block cursor-pointer"
+                    <h3
+                      onClick={() => onOpenStudentGrid(student)}
+                      className="text-[1.02rem] font-extrabold text-[#003440] hover:underline leading-snug truncate mt-0.5 block cursor-pointer"
                     >
                       {student.name}
-                    </a>
+                    </h3>
                     {m.isBelowLegalThreshold ? (
                       <span className="text-[0.72rem] font-extrabold text-[#ba1a1a] flex items-center gap-1 mt-0.5">
                         <span className="material-symbols-outlined text-[14px]">warning</span>
@@ -1323,13 +1319,13 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         e.preventDefault();
                         onOpenStudentPdf(student);
                       }}
-                      className="px-2.5 py-1.5 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-extrabold flex items-center gap-1 cursor-pointer shadow-2xs"
-                      title="Abrir Documento PDF Nominal por Hyperlink"
+                      className="doc-hyperlink px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold flex items-center gap-1 cursor-pointer shadow-2xs transition-colors"
+                      title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
                     >
                       <span className="material-symbols-outlined text-[16px]">
-                        link
+                        document_scanner
                       </span>
-                      <span>Hyperlink Doc PDF</span>
+                      <span>Ficha Informativa (Drive)</span>
                     </a>
                   )}
                 </div>

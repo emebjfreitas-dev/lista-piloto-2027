@@ -6,6 +6,7 @@ interface BottomNavProps {
   userRole?: UserRole;
   selectedClassName?: string;
   onChangeScreen: (screen: ScreenType) => void;
+  onLogout?: () => void;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -13,6 +14,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   userRole = 'admin',
   selectedClassName,
   onChangeScreen,
+  onLogout,
 }) => {
   if (currentScreen === 'login') {
     return null;
@@ -50,7 +52,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'usuarios_acesso',
-      label: 'Acessos',
+      label: 'Prof. & Acessos',
       icon: 'manage_accounts',
       adminOnly: true,
     },
@@ -118,6 +120,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             </button>
           );
         })}
+
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            title="Sair da conta"
+            className="group relative flex flex-col items-center justify-center flex-1 h-full px-1 transition-all duration-200 cursor-pointer select-none active:scale-92 text-[#ba1a1a] hover:text-[#93000a]"
+          >
+            <div className="flex items-center justify-center w-11 h-7 rounded-full bg-[#ffdad6]/40 group-hover:bg-[#ffdad6]/75 transition-colors duration-200">
+              <span className="material-symbols-outlined text-[21px]">logout</span>
+            </div>
+            <span className="text-[0.68rem] font-bold tracking-tight leading-tight mt-0.5 truncate max-w-full text-[#ba1a1a]">
+              Sair
+            </span>
+          </button>
+        )}
       </div>
     </nav>
   );

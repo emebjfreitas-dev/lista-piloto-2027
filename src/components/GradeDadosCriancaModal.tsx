@@ -230,24 +230,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   </span>
                 )}
               </div>
-              <a
-                href={
-                  draft.fichaPdfDriveUrl ||
-                  (draft.fichaPdfDriveId
-                    ? `https://drive.google.com/file/d/${draft.fichaPdfDriveId}/view`
-                    : `#doc-${draft.id}`)
-                }
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (onOpenStudentPdf) onOpenStudentPdf(draft);
-                }}
-                title="Clique no hyperlink para abrir o Documento PDF Nominal"
-                className="text-[1.28rem] sm:text-[1.45rem] font-extrabold leading-tight truncate mt-1 block underline decoration-[#a4f3ca]/70 underline-offset-4 hover:text-[#a4f3ca] transition-colors"
-              >
+              <h2 className="text-[1.28rem] sm:text-[1.45rem] font-extrabold leading-tight truncate mt-1">
                 {draft.name}
-              </a>
+              </h2>
               <p className="text-[0.84rem] text-[#c3e5f4] font-semibold truncate">
-                Grade Interativa de Dados do(a) Estudante (SED + Hyperlink Doc PDF)
+                Grade Interativa de Dados do(a) Estudante (48 Campos SED)
               </p>
             </div>
           </div>
@@ -265,10 +252,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   e.preventDefault();
                   onOpenStudentPdf(draft);
                 }}
-                className="min-h-[42px] px-3.5 rounded-xl bg-[#ba1a1a] hover:bg-[#93000a] text-white font-black text-[0.82rem] flex items-center gap-1.5 border border-[#ffdad6]/50 cursor-pointer shadow-xs"
+                className="min-h-[42px] px-3.5 rounded-xl bg-[#a4f3ca] hover:bg-[#8be8b8] text-[#003440] font-black text-[0.82rem] flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <span className="material-symbols-outlined text-[18px]">link</span>
-                <span>Hyperlink Doc PDF</span>
+                <span className="material-symbols-outlined text-[18px]">document_scanner</span>
+                <span>Ficha Informativa Escaneada (Drive)</span>
               </a>
             )}
             {onOpenPhotoModal && (

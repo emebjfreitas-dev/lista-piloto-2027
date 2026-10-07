@@ -136,26 +136,9 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                           </span>
                         )}
                       </div>
-                      <a
-                        href={
-                          student.fichaPdfDriveUrl ||
-                          (student.fichaPdfDriveId
-                            ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                            : `#doc-${student.id}`)
-                        }
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedStudentId(student.id);
-                          if (onOpenStudentPdf) {
-                            onOpenStudentPdf(student);
-                          }
-                        }}
-                        title={`Abrir Documento PDF Nominal de ${student.name} por Hyperlink`}
-                        className="doc-hyperlink text-[0.98rem] font-extrabold truncate mt-0.5 block"
-                      >
+                      <span className="text-[0.98rem] font-extrabold text-[#003440] truncate mt-0.5 block">
                         {student.name}
-                      </a>
+                      </span>
                       <p className="text-[0.78rem] font-semibold text-[#2c373a] truncate">
                         {student.filiacao1 || student.guardianName || 'Responsável cadastrado'}
                       </p>
@@ -195,26 +178,13 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                   </span>
                 </div>
 
-                {/* Avatar + Name + Upload Photo to Drive */}
+                {/* Avatar + Name + Ficha Informativa Escaneada (Drive) */}
                 <div className="flex items-center gap-3.5 bg-white p-3.5 rounded-2xl border border-[#b4c0c4]">
                   <StudentAvatar student={selectedStudent} size="lg" />
                   <div className="min-w-0 flex-1">
-                    <a
-                      href={
-                        selectedStudent.fichaPdfDriveUrl ||
-                        (selectedStudent.fichaPdfDriveId
-                          ? `https://drive.google.com/file/d/${selectedStudent.fichaPdfDriveId}/view`
-                          : `#doc-${selectedStudent.id}`)
-                      }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (onOpenStudentPdf) onOpenStudentPdf(selectedStudent);
-                      }}
-                      className="doc-hyperlink text-[1.12rem] font-extrabold leading-tight block"
-                      title="Clique no hyperlink para abrir o Documento PDF Nominal"
-                    >
-                      {selectedStudent.name}.pdf
-                    </a>
+                    <h4 className="text-[1.12rem] font-extrabold text-[#003440] leading-tight block">
+                      {selectedStudent.name}
+                    </h4>
                     <p className="text-[0.8rem] font-mono font-bold text-[#2c373a] mt-0.5">
                       RA: {selectedStudent.ra || '—'}-{selectedStudent.digRa || ''}/{selectedStudent.ufRa || 'SP'}
                     </p>
@@ -231,12 +201,12 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                             e.preventDefault();
                             onOpenStudentPdf(selectedStudent);
                           }}
-                          className="px-3 py-1.5 bg-[#ba1a1a] hover:bg-[#93000a] text-white rounded-xl text-[0.77rem] font-black flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          className="doc-hyperlink px-3 py-1.5 bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] rounded-xl text-[0.77rem] font-black flex items-center gap-1.5 shadow-2xs cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[16px]">
-                            link
+                            document_scanner
                           </span>
-                          <span>Hyperlink Doc PDF</span>
+                          <span>Ficha Informativa Escaneada (Drive)</span>
                         </a>
                       )}
 

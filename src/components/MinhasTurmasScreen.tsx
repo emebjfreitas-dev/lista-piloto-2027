@@ -270,31 +270,43 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
       {/* Big Shift Selector & Search: Stacked on Mobile, Side-by-Side on PC 1920x1080 */}
       {userRole !== 'usuario' && (
         <div className="space-y-3 xl:space-y-0 xl:grid xl:grid-cols-12 xl:gap-4 xl:items-center">
-          <div className="grid grid-cols-2 gap-3 xl:col-span-5">
+          <div className="grid grid-cols-3 gap-2.5 xl:col-span-5">
+            <button
+              onClick={() => setSelectedShift('Todos')}
+              type="button"
+              className={`min-h-[56px] rounded-2xl p-2.5 flex items-center justify-center gap-1.5 font-extrabold text-[0.95rem] transition-all cursor-pointer border-2 ${
+                selectedShift === 'Todos'
+                  ? 'bg-[#003440] text-white border-[#003440] shadow-md scale-[1.01]'
+                  : 'bg-white text-[#41484b] border-[#c0c8cb] hover:bg-[#f3f4f2]'
+              }`}
+            >
+              <span>TODAS ({classes.length})</span>
+            </button>
+
             <button
               onClick={() => setSelectedShift('Turno Manhã')}
               type="button"
-              className={`min-h-[60px] rounded-2xl p-3 flex items-center justify-center gap-2.5 font-extrabold text-[1.1rem] transition-all cursor-pointer border-2 ${
+              className={`min-h-[56px] rounded-2xl p-2.5 flex items-center justify-center gap-1.5 font-extrabold text-[0.95rem] transition-all cursor-pointer border-2 ${
                 selectedShift === 'Turno Manhã'
                   ? 'bg-[#003440] text-white border-[#003440] shadow-md scale-[1.01]'
                   : 'bg-white text-[#41484b] border-[#c0c8cb] hover:bg-[#f3f4f2]'
               }`}
             >
-              <span className="text-[24px]">☀️</span>
-              <span>MANHÃ (20)</span>
+              <span className="text-[20px]">☀️</span>
+              <span>MANHÃ ({manhaCount})</span>
             </button>
 
             <button
               onClick={() => setSelectedShift('Turno Tarde')}
               type="button"
-              className={`min-h-[60px] rounded-2xl p-3 flex items-center justify-center gap-2.5 font-extrabold text-[1.1rem] transition-all cursor-pointer border-2 ${
+              className={`min-h-[56px] rounded-2xl p-2.5 flex items-center justify-center gap-1.5 font-extrabold text-[0.95rem] transition-all cursor-pointer border-2 ${
                 selectedShift === 'Turno Tarde'
                   ? 'bg-[#003440] text-white border-[#003440] shadow-md scale-[1.01]'
                   : 'bg-white text-[#41484b] border-[#c0c8cb] hover:bg-[#f3f4f2]'
               }`}
             >
-              <span className="text-[24px]">⛅</span>
-              <span>TARDE (20)</span>
+              <span className="text-[20px]">⛅</span>
+              <span>TARDE ({tardeCount})</span>
             </button>
           </div>
 
@@ -306,8 +318,8 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar turma rápido (ex: GRUPO 04 A, G4B, 1º ANO B, 4º G)..."
-              className="w-full min-h-[60px] pl-12 pr-10 bg-white text-[#191c1b] text-[1.05rem] rounded-2xl border-2 border-[#c0c8cb] focus:border-[#003440] focus:outline-none shadow-xs font-semibold placeholder:text-[#71787b]"
+              placeholder="Buscar turma, professor(a) regente, especialista ou Classe SED..."
+              className="w-full min-h-[56px] pl-12 pr-10 bg-white text-[#191c1b] text-[1rem] rounded-2xl border-2 border-[#c0c8cb] focus:border-[#003440] focus:outline-none shadow-xs font-semibold placeholder:text-[#71787b]"
             />
             {searchTerm && (
               <button
@@ -338,14 +350,16 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         ) : (
           filteredClasses.map((cls) => {
             const isInfantil = cls.name.startsWith('GRUPO');
-            const shortBadge = isInfantil
-              ? cls.name.replace(/^GRUPO\s*0?/i, 'G').replace(/\s+/g, '')
-              : cls.name.replace(/\s*ANO\s*/i, '');
+            const shortBadge =
+              cls.turmaAbrev ||
+              (isInfantil
+                ? cls.name.replace(/^GRUPO\s*0?/i, 'G').replace(/\s+/g, '')
+                : cls.name.replace(/\s*ANO\s*/i, ''));
 
             return (
               <div
                 key={cls.id}
-                className="card-welcoming bg-white rounded-2xl p-5 border border-[#003440]/12 flex flex-col justify-between gap-4"
+                className="card-welcoming bg-white rounded-2xl p-5 border border-[#003440]/12 flex flex-col justify-between gap-3.5"
               >
                 {/* Class Details Header */}
                 <div
@@ -366,17 +380,23 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <h2 className="text-[1.2rem] font-extrabold text-[#003440] group-hover:text-[#005035] transition-colors leading-tight">
+                      <h2 className="text-[1.15rem] font-extrabold text-[#003440] group-hover:text-[#005035] transition-colors leading-tight">
                         {cls.name}
                       </h2>
-                      <span className="font-mono font-extrabold text-[0.82rem] text-[#005035] tabular-nums shrink-0">
+                      <span className="font-mono font-extrabold text-[0.8rem] text-[#005035] tabular-nums shrink-0">
                         {cls.presenceRate}% presença
                       </span>
                     </div>
-                    <p className="text-[0.84rem] text-[#436370] font-semibold mt-0.5">
-                      {cls.grade} · {cls.room}
+                    <p className="text-[0.8rem] text-[#436370] font-semibold mt-0.5 truncate">
+                      {cls.shift.replace('Turno ', '')} · {cls.room}
+                      {cls.classeSedCode ? ` · SED ${cls.classeSedCode}` : ''}
                     </p>
-                    <div className="flex items-center gap-2 mt-1.5 text-[0.78rem] font-bold text-[#374346] tabular-nums">
+                    {cls.teacherName && (
+                      <p className="text-[0.78rem] font-extrabold text-[#005035] truncate mt-1">
+                        {cls.teacherPronoun || 'PROFESSORA'}: {cls.teacherName}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 text-[0.76rem] font-bold text-[#374346] tabular-nums">
                       <span>{cls.totalStudents} estudantes</span>
                       <span aria-hidden="true" className="text-[#a8b5b9]">·</span>
                       <span className={cls.monthlyAbsences > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}>

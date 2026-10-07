@@ -169,15 +169,15 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <span className="material-symbols-outlined text-[19px]">manage_accounts</span>
-                  <span>5. Acessos</span>
+                  <span>5. Prof. &amp; Acessos</span>
                 </button>
               </>
             )}
           </nav>
         )}
 
-        {/* Right slot */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 relative">
+        {/* Right slot: Always-visible Sair button + Avatar Profile */}
+        <div className="flex items-center gap-2 flex-shrink-0 relative">
           {!isAdmin &&
             onRestoreAdminRole &&
             userEmail?.trim().toLowerCase().startsWith('emebjfreitas@') && (
@@ -185,27 +185,16 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={onRestoreAdminRole}
                 title="Sair da simulação e voltar ao painel completo do Administrador"
-                className="min-h-[42px] px-3 rounded-xl bg-[#003440] hover:bg-[#004c5c] text-white flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 shadow-2xs"
+                className="min-h-[40px] px-3 rounded-xl bg-[#003440] hover:bg-[#004c5c] text-white flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 shadow-2xs"
               >
                 <span className="material-symbols-outlined text-[18px]">
                   admin_panel_settings
                 </span>
-                <span className="text-[0.76rem] font-extrabold">
+                <span className="text-[0.75rem] font-extrabold">
                   Voltar p/ ADMIN
                 </span>
               </button>
             )}
-
-          {isAdmin && (
-            <button
-              onClick={onNavigatePlanilha}
-              title="Banco de dados na Planilha Google"
-              className="min-h-[46px] px-2.5 rounded-xl bg-[#edeeec] hover:bg-[#e7e8e6] text-[#005035] flex items-center gap-1 transition-colors cursor-pointer active:scale-95 border border-[#a4f3ca]/60"
-            >
-              <span className="material-symbols-outlined text-[20px]">table_chart</span>
-              <span className="text-[0.8rem] font-bold hidden sm:inline">Planilha</span>
-            </button>
-          )}
 
           <div className="relative">
             <button
@@ -244,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full text-left px-4 py-2.5 text-[0.875rem] text-[#003440] hover:bg-[#f3f4f2] flex items-center gap-2 cursor-pointer font-bold"
                   >
                     <span className="material-symbols-outlined text-[20px]">manage_accounts</span>
-                    Gerenciar Acessos (@educacao.jundiai)
+                    Quadro de Professores &amp; Acessos
                   </button>
                 )}
 
@@ -269,11 +258,22 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-full text-left px-4 py-2.5 text-[0.875rem] text-[#ba1a1a] hover:bg-[#ffdad6]/40 flex items-center gap-2 cursor-pointer font-semibold"
                 >
                   <span className="material-symbols-outlined text-[20px]">logout</span>
-                  Sair da Lista Piloto
+                  Sair da Conta
                 </button>
               </div>
             )}
           </div>
+
+          {/* Botão SAIR sempre visível diretamente na barra superior (Mobile, Tablet e Desktop) */}
+          <button
+            type="button"
+            onClick={onLogout}
+            title="Sair da conta e voltar para a tela de login"
+            className="min-h-[40px] px-3 py-1.5 rounded-xl bg-[#ffdad6]/80 hover:bg-[#ba1a1a] text-[#ba1a1a] hover:text-white border border-[#ba1a1a]/25 font-extrabold text-[0.78rem] flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shrink-0 shadow-2xs"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            <span>Sair</span>
+          </button>
         </div>
       </div>
     </header>

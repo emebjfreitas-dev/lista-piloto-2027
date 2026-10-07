@@ -1829,25 +1829,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             expandable
                           />
                           <div className="min-w-0">
-                            <a
-                              href={
-                                row.fichaPdfDriveUrl ||
-                                (row.fichaPdfDriveId
-                                  ? `https://drive.google.com/file/d/${row.fichaPdfDriveId}/view`
-                                  : `#doc-${row.studentId}`)
-                              }
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (onOpenStudentPdf) {
-                                  onOpenStudentPdf(row.classId, row.studentId);
-                                }
-                              }}
-                              title={`Abrir Documento PDF Escaneado de ${row.nome} no Drive`}
-                              className="doc-hyperlink font-extrabold block text-[0.92rem] truncate"
-                            >
+                            <span className="font-extrabold text-[#003440] block text-[0.92rem] truncate">
                               {row.nome}
-                            </a>
+                            </span>
                             {row.deficiencia && (
                               <span className="inline-block mt-0.5 px-2 py-0.2 rounded-full bg-[#a4f3ca] text-[#003723] text-[0.68rem] font-black">
                                 {row.deficiencia}
@@ -1869,13 +1853,13 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                               e.stopPropagation();
                               onOpenStudentPdf(row.classId, row.studentId);
                             }}
-                            title="Abrir Documento Escaneado no Google Drive"
-                            className="px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:text-white font-black text-[0.72rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+                            title={`Abrir Ficha Informativa Escaneada de ${row.nome} no Google Drive`}
+                            className="doc-hyperlink px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white font-black text-[0.72rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
                           >
                             <span className="material-symbols-outlined text-[15px]">
-                              cloud_done
+                              document_scanner
                             </span>
-                            <span>Doc Drive</span>
+                            <span>Ficha (Drive)</span>
                           </a>
                         )}
                       </div>

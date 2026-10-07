@@ -1026,6 +1026,12 @@ export default function App() {
               saveStoredAccessSessionLogs([]);
             }}
             classes={classes}
+            onUpdateClasses={(updatedClasses) => {
+              setClasses(updatedClasses);
+              saveStoredClasses(updatedClasses);
+              const found = updatedClasses.find((c) => c.id === selectedClass.id);
+              if (found) setSelectedClass(found);
+            }}
             currentUserEmail={currentUserEmail}
             userRole={userRole}
             attendanceWindowConfig={attendanceWindowConfig}
@@ -1236,6 +1242,7 @@ export default function App() {
         currentScreen={currentScreen}
         userRole={userRole}
         selectedClassName={selectedClass?.name}
+        onLogout={handleLogout}
         onChangeScreen={(screen) => {
           if (
             userRole !== 'admin' &&

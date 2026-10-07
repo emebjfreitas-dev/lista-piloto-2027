@@ -798,34 +798,18 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       )}
                     </div>
 
-                    {/* Hyperlink direto para abrir o Documento PDF Escaneado no Drive */}
-                    <a
-                      href={
-                        student.fichaPdfDriveUrl ||
-                        (student.fichaPdfDriveId
-                          ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                          : `#doc-${student.id}`)
-                      }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (onOpenStudentPdf) {
-                          onOpenStudentPdf(student);
-                        } else if (onOpenStudentGrid) {
-                          onOpenStudentGrid(student);
-                        }
-                      }}
-                      title={`Abrir Documento Escaneado (${student.name}.pdf) no Google Drive`}
-                      className={`doc-hyperlink text-[0.95rem] font-extrabold leading-snug line-clamp-2 mt-1 block cursor-pointer ${
+                    {/* Nome Oficial do(a) Estudante (Toque no card expande os dados) */}
+                    <h3
+                      className={`text-[0.95rem] font-extrabold leading-snug line-clamp-2 mt-1 ${
                         isTransferred
-                          ? '!text-[#78350f]'
+                          ? 'text-[#78350f]'
                           : isRemanejado
-                          ? '!text-[#4c1d95]'
-                          : ''
+                          ? 'text-[#4c1d95]'
+                          : 'text-[#003440]'
                       }`}
                     >
                       {student.name}
-                    </a>
+                    </h3>
                   </div>
                 </div>
 
@@ -938,66 +922,52 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 )}
 
-                {/* Rodapé Minimalista do Card: Doc Escaneado Drive + Foto + Ver Tudo (48 Campos) */}
+                {/* Rodapé Minimalista do Card: Único Link = Ficha Informativa Escaneada no Drive + Foto */}
                 <div
                   onClick={(e) => e.stopPropagation()}
                   className="pt-2 border-t border-black/[0.06] flex items-center justify-between gap-1.5 text-[0.72rem]"
                 >
-                  <div className="flex items-center gap-1">
-                    {onOpenStudentPdf && (
-                      <a
-                        href={
-                          student.fichaPdfDriveUrl ||
-                          (student.fichaPdfDriveId
-                            ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                            : `#doc-${student.id}`)
-                        }
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onOpenStudentPdf(student);
-                        }}
-                        title="Abrir Documento PDF Escaneado no Google Drive"
-                        className="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-[#003440] text-[#003440] hover:text-white border border-black/[0.06] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">
-                          document_scanner
-                        </span>
-                        <span>Doc PDF</span>
-                      </a>
-                    )}
+                  {onOpenStudentPdf ? (
+                    <a
+                      href={
+                        student.fichaPdfDriveUrl ||
+                        (student.fichaPdfDriveId
+                          ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
+                          : `#doc-${student.id}`)
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onOpenStudentPdf(student);
+                      }}
+                      title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
+                      className="doc-hyperlink px-2.5 py-1 rounded-xl bg-white/95 hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">
+                        document_scanner
+                      </span>
+                      <span>Ficha Informativa (Drive)</span>
+                    </a>
+                  ) : (
+                    <span />
+                  )}
 
-                    {onOpenPhotoModal && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenPhotoModal(student);
-                        }}
-                        title={`Subir foto para ${OFFICIAL_FOLDER_NAME}/${cleanPhotoFileName}`}
-                        className="px-2.5 py-1 rounded-xl bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">
-                          add_a_photo
-                        </span>
-                        <span>Foto</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onOpenStudentGrid) onOpenStudentGrid(student);
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-[#003440]/10 hover:bg-[#003440] text-[#003440] hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <span>Ver Dados</span>
-                    <span className="material-symbols-outlined text-[14px]">
-                      chevron_right
-                    </span>
-                  </button>
+                  {onOpenPhotoModal && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenPhotoModal(student);
+                      }}
+                      title={`Subir foto para ${OFFICIAL_FOLDER_NAME}/${cleanPhotoFileName}`}
+                      className="px-2.5 py-1 rounded-xl bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">
+                        add_a_photo
+                      </span>
+                      <span>Foto</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -1066,22 +1036,9 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <a
-                        href={
-                          student.fichaPdfDriveUrl ||
-                          (student.fichaPdfDriveId
-                            ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                            : `#doc-${student.id}`)
-                        }
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (onOpenStudentPdf) onOpenStudentPdf(student);
-                        }}
-                        className="doc-hyperlink font-extrabold text-[0.92rem] truncate"
-                      >
+                      <span className="font-extrabold text-[0.92rem] text-[#003440] truncate">
                         {student.name}
-                      </a>
+                      </span>
                       <span className="font-mono text-[0.72rem] text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5">
                         RA {student.ra}-{student.digRa}
                       </span>
@@ -1106,7 +1063,29 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
+                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                  {onOpenStudentPdf && (
+                    <a
+                      href={
+                        student.fichaPdfDriveUrl ||
+                        (student.fichaPdfDriveId
+                          ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
+                          : `#doc-${student.id}`)
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onOpenStudentPdf(student);
+                      }}
+                      title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
+                      className="doc-hyperlink px-2.5 py-1 rounded-xl bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold text-[0.72rem] flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">
+                        document_scanner
+                      </span>
+                      <span>Ficha Informativa (Drive)</span>
+                    </a>
+                  )}
                   <div className="flex items-center gap-2 font-mono text-[0.76rem] tabular-nums">
                     <span className="px-2.5 py-1 rounded-xl bg-[#eaf6ef] text-[#005035] font-bold">
                       Presença: {m.presencas}d ({m.frequenciaPercent}%)
@@ -1138,7 +1117,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-extrabold uppercase tracking-wider text-[0.68rem]">
               <tr>
                 <th className="py-3 px-3 text-center">Nº</th>
-                <th className="py-3 px-3">Estudante (Foto + Doc PDF)</th>
+                <th className="py-3 px-3">Estudante &amp; Ficha Informativa (Drive)</th>
                 <th className="py-3 px-2.5">RA</th>
                 <th className="py-3 px-3">Filiação 1 (Nome da Mãe)</th>
                 <th className="py-3 px-3">Filiação 2 (Nome do Pai)</th>
@@ -1185,25 +1164,39 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       {student.number.toString().padStart(2, '0')}
                     </td>
                     <td className="py-2.5 px-3">
-                      <div className="flex items-center gap-2.5">
-                        <StudentAvatar
-                          student={student}
-                          size="sm"
-                          expandableOnClick={true}
-                        />
-                        <a
-                          href={
-                            student.fichaPdfDriveUrl || `#doc-${student.id}`
-                          }
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (onOpenStudentPdf) onOpenStudentPdf(student);
-                          }}
-                          className="doc-hyperlink font-bold text-[#003440]"
-                        >
-                          {student.name}
-                        </a>
+                      <div className="flex items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <StudentAvatar
+                            student={student}
+                            size="sm"
+                            expandableOnClick={true}
+                          />
+                          <span className="font-bold text-[#003440] truncate">
+                            {student.name}
+                          </span>
+                        </div>
+                        {onOpenStudentPdf && (
+                          <a
+                            href={
+                              student.fichaPdfDriveUrl ||
+                              (student.fichaPdfDriveId
+                                ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
+                                : `#doc-${student.id}`)
+                            }
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onOpenStudentPdf(student);
+                            }}
+                            title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
+                            className="doc-hyperlink px-2 py-0.5 rounded-lg bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold text-[0.68rem] flex items-center gap-1 shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">
+                              document_scanner
+                            </span>
+                            <span>Ficha (Drive)</span>
+                          </a>
+                        )}
                       </div>
                     </td>
                     <td className="py-2.5 px-2.5 font-mono text-[#436370]">
