@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScreenType } from '../types';
+import { ScreenType, UserRole } from '../types';
 import { APP_LOGO_URL, APP_LOGO_FALLBACK_URL, SCHOOL_NAME, CITY_NAME } from '../data/mockData';
 import { StudentAvatar } from './StudentAvatar';
 
@@ -9,6 +9,7 @@ interface HeaderProps {
   subtitle?: string;
   userEmail?: string;
   userName?: string;
+  userRole?: UserRole;
   onBack?: () => void;
   onChangeScreen?: (screen: ScreenType) => void;
   onNavigatePlanilha: () => void;
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   subtitle,
   userEmail,
   userName,
+  userRole = 'admin',
   onBack,
   onChangeScreen,
   onNavigatePlanilha,
@@ -30,6 +32,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   // If on login, do not show top bar
   if (currentScreen === 'login') return null;
+
+  const isAdmin = userRole === 'admin';
 
   const showBackButton =
     currentScreen === 'frequencia_mensal' ||
@@ -85,13 +89,13 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[0.725rem] font-bold text-[#436370] truncate">
                 {showBackButton
                   ? `${CITY_NAME} • ${SCHOOL_NAME} • 2027`
-                  : subtitle || 'Prefeitura de Jundiaí • SME • Ano Letivo 2027'}
+                  : subtitle || 'Prefeitura de Jundiaí • SME • Lista Piloto 2027'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Center slot: Big Easy Navigation Bar on PC 21" 1920x1080 (Hidden on Mobile so Mobile stays 100% intact) */}
+        {/* Center slot: Navigation Bar on PC 21" 1920x1080 (Streamlined for PEB I & PEB II, Full for ADMIN) */}
         {onChangeScreen && (
           <nav
             aria-label="Navegação Principal Desktop"
@@ -107,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-[22px]">groups</span>
-              <span>1. Minhas Turmas</span>
+              <span>{userRole === 'usuario' ? '1. Minha Turma' : '1. Turmas'}</span>
             </button>
 
             <button
@@ -120,60 +124,66 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-[22px]">edit_calendar</span>
-              <span>2. Lançar Faltas</span>
+              <span>{userRole === 'peb2' ? '2. Frequência' : '2. Lançar Faltas'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => onChangeScreen('planilha')}
-              className={`min-h-[46px] px-4 rounded-xl font-black text-[0.9rem] flex items-center gap-2 transition-all cursor-pointer ${
-                currentScreen === 'planilha'
-                  ? 'bg-[#003440] text-white shadow-xs'
-                  : 'text-[#003440] hover:bg-white'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[22px]">table_chart</span>
-              <span>3. Planilha & Fotos</span>
-            </button>
+            {isAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onChangeScreen('planilha')}
+                  className={`min-h-[46px] px-4 rounded-xl font-black text-[0.9rem] flex items-center gap-2 transition-all cursor-pointer ${
+                    currentScreen === 'planilha'
+                      ? 'bg-[#003440] text-white shadow-xs'
+                      : 'text-[#003440] hover:bg-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[22px]">table_chart</span>
+                  <span>3. Planilha & Fotos</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => onChangeScreen('dias_letivos')}
-              className={`min-h-[46px] px-3.5 rounded-xl font-black text-[0.88rem] flex items-center gap-1.5 transition-all cursor-pointer ${
-                currentScreen === 'dias_letivos'
-                  ? 'bg-[#003440] text-white shadow-xs'
-                  : 'text-[#003440] hover:bg-white'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[21px]">calendar_month</span>
-              <span>4. 200 Dias</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeScreen('dias_letivos')}
+                  className={`min-h-[46px] px-3.5 rounded-xl font-black text-[0.88rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                    currentScreen === 'dias_letivos'
+                      ? 'bg-[#003440] text-white shadow-xs'
+                      : 'text-[#003440] hover:bg-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[21px]">calendar_month</span>
+                  <span>4. 200 Dias</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => onChangeScreen('usuarios_acesso')}
-              className={`min-h-[46px] px-3.5 rounded-xl font-black text-[0.88rem] flex items-center gap-1.5 transition-all cursor-pointer ${
-                currentScreen === 'usuarios_acesso'
-                  ? 'bg-[#005035] text-white shadow-xs'
-                  : 'text-[#003440] hover:bg-white'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[21px]">manage_accounts</span>
-              <span>5. Acessos</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeScreen('usuarios_acesso')}
+                  className={`min-h-[46px] px-3.5 rounded-xl font-black text-[0.88rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                    currentScreen === 'usuarios_acesso'
+                      ? 'bg-[#005035] text-white shadow-xs'
+                      : 'text-[#003440] hover:bg-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[21px]">manage_accounts</span>
+                  <span>5. Acessos</span>
+                </button>
+              </>
+            )}
           </nav>
         )}
 
         {/* Right slot */}
         <div className="flex items-center gap-1.5 flex-shrink-0 relative">
-          <button
-            onClick={onNavigatePlanilha}
-            title="Banco de dados na Planilha Google"
-            className="min-h-[46px] px-2.5 rounded-xl bg-[#edeeec] hover:bg-[#e7e8e6] text-[#005035] flex items-center gap-1 transition-colors cursor-pointer active:scale-95 border border-[#a4f3ca]/60"
-          >
-            <span className="material-symbols-outlined text-[20px]">table_chart</span>
-            <span className="text-[0.8rem] font-bold hidden sm:inline">Planilha</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={onNavigatePlanilha}
+              title="Banco de dados na Planilha Google"
+              className="min-h-[46px] px-2.5 rounded-xl bg-[#edeeec] hover:bg-[#e7e8e6] text-[#005035] flex items-center gap-1 transition-colors cursor-pointer active:scale-95 border border-[#a4f3ca]/60"
+            >
+              <span className="material-symbols-outlined text-[20px]">table_chart</span>
+              <span className="text-[0.8rem] font-bold hidden sm:inline">Planilha</span>
+            </button>
+          )}
 
           <div className="relative">
             <button
@@ -193,7 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-[#edeeec] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-4 py-3 border-b border-[#edeeec]">
                   <p className="text-[0.92rem] font-bold text-[#003440] truncate">
-                    {userName || 'Direção / Coordenação EMEB'}
+                    {userName || 'Professor(a) EMEB'}
                   </p>
                   <p className="text-[0.75rem] font-mono text-[#005035] font-bold truncate">
                     {userEmail || 'emebjfreitas@educacao.jundiai.sp.gov.br'}
@@ -202,7 +212,8 @@ export const Header: React.FC<HeaderProps> = ({
                     {SCHOOL_NAME}
                   </p>
                 </div>
-                {onChangeScreen && (
+
+                {isAdmin && onChangeScreen && (
                   <button
                     onClick={() => {
                       setShowProfileMenu(false);
@@ -214,16 +225,20 @@ export const Header: React.FC<HeaderProps> = ({
                     Gerenciar Acessos (@educacao.jundiai)
                   </button>
                 )}
-                <button
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    onNavigatePlanilha();
-                  }}
-                  className="w-full text-left px-4 py-2.5 text-[0.875rem] text-[#005035] hover:bg-[#a4f3ca]/20 flex items-center gap-2 cursor-pointer font-bold"
-                >
-                  <span className="material-symbols-outlined text-[20px]">table_chart</span>
-                  Planilha Google da Escola
-                </button>
+
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      onNavigatePlanilha();
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-[0.875rem] text-[#005035] hover:bg-[#a4f3ca]/20 flex items-center gap-2 cursor-pointer font-bold"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">table_chart</span>
+                    Planilha Google da Escola
+                  </button>
+                )}
+
                 <button
                   onClick={() => {
                     setShowProfileMenu(false);
@@ -232,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-full text-left px-4 py-2.5 text-[0.875rem] text-[#ba1a1a] hover:bg-[#ffdad6]/40 flex items-center gap-2 cursor-pointer font-semibold"
                 >
                   <span className="material-symbols-outlined text-[20px]">logout</span>
-                  Sair do Diário Escolar
+                  Sair da Lista Piloto
                 </button>
               </div>
             )}

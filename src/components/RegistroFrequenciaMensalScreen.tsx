@@ -473,15 +473,17 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               </button>
             )}
 
-            <button
-              onClick={onNavigateToSheet}
-              type="button"
-              title="Ver Tabulação Nominal de Faltas e Atestados na Planilha Banco de Dados"
-              className="px-3.5 min-h-[44px] bg-[#003440] hover:bg-[#1e4b58] text-white rounded-xl font-extrabold text-[0.85rem] flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">table_chart</span>
-              <span>Ver Aba Nominal na Planilha</span>
-            </button>
+            {userRole === 'admin' && (
+              <button
+                onClick={onNavigateToSheet}
+                type="button"
+                title="Ver Tabulação Nominal de Faltas e Atestados na Planilha Banco de Dados"
+                className="px-3.5 min-h-[44px] bg-[#003440] hover:bg-[#1e4b58] text-white rounded-xl font-extrabold text-[0.85rem] flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">table_chart</span>
+                <span>Ver Aba Nominal na Planilha</span>
+              </button>
+            )}
 
             <button
               onClick={() =>

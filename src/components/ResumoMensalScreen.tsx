@@ -369,14 +369,16 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           <span>Baixar Relatório do Mês em PDF grande para imprimir</span>
         </button>
 
-        <button
-          onClick={onNavigateToSheet}
-          type="button"
-          className="w-full min-h-[54px] px-6 rounded-xl bg-white hover:bg-[#f3f4f2] text-[#005035] font-bold text-[0.95rem] flex items-center justify-center gap-2.5 shadow-sm transition-transform active:scale-[0.98] cursor-pointer border border-[#a4f3ca]"
-        >
-          <span className="material-symbols-outlined text-[24px]">table_chart</span>
-          <span>Conferir Dados no Banco da Planilha Google</span>
-        </button>
+        {userRole === 'admin' && (
+          <button
+            onClick={onNavigateToSheet}
+            type="button"
+            className="w-full min-h-[54px] px-6 rounded-xl bg-white hover:bg-[#f3f4f2] text-[#005035] font-bold text-[0.95rem] flex items-center justify-center gap-2.5 shadow-sm transition-transform active:scale-[0.98] cursor-pointer border border-[#a4f3ca]"
+          >
+            <span className="material-symbols-outlined text-[24px]">table_chart</span>
+            <span>Conferir Dados no Banco da Planilha Google</span>
+          </button>
+        )}
       </div>
     </div>
   );

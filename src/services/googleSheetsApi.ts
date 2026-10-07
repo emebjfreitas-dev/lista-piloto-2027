@@ -2,6 +2,8 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   User,
@@ -183,6 +185,24 @@ export const initAuth = (
   });
 };
 
+export const checkGoogleRedirectResult = async (): Promise<{
+  user: User;
+  accessToken: string;
+} | null> => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (!result) return null;
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+    }
+    return { user: result.user, accessToken: cachedAccessToken || '' };
+  } catch (err) {
+    console.warn('Redirect auth check:', err);
+    return null;
+  }
+};
+
 export const googleSignIn = async (): Promise<{
   user: User;
   accessToken: string;
@@ -191,16 +211,19 @@ export const googleSignIn = async (): Promise<{
     isSigningIn = true;
     const result = await signInWithPopup(auth, provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error(
-        'Não foi possível obter o token de acesso do Google Sheets e Google Drive.'
-      );
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
     }
-
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
+    return { user: result.user, accessToken: cachedAccessToken || '' };
   } catch (error: any) {
     console.error('Erro ao autenticar com Google:', error);
+    if (
+      error?.code === 'auth/popup-blocked' ||
+      error?.code === 'auth/operation-not-supported-in-this-environment'
+    ) {
+      await signInWithRedirect(auth, provider);
+      return null;
+    }
     throw error;
   } finally {
     isSigningIn = false;

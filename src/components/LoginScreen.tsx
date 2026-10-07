@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthorizedUser } from '../types';
 import {
   APP_LOGO_URL,
@@ -8,7 +8,11 @@ import {
   INSTITUTIONAL_EMAIL_DOMAIN,
 } from '../data/mockData';
 import { isValidInstitutionalEmail, findAuthorizedUserByEmail } from '../services/db';
-import { googleSignIn, logoutGoogle } from '../services/googleSheetsApi';
+import {
+  googleSignIn,
+  logoutGoogle,
+  checkGoogleRedirectResult,
+} from '../services/googleSheetsApi';
 
 interface LoginScreenProps {
   authorizedUsers: AuthorizedUser[];
@@ -21,53 +25,93 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [unauthorizedHost, setUnauthorizedHost] = useState<string | null>(null);
+  const [copiedHost, setCopiedHost] = useState(false);
+
+  const validateAndCompleteLogin = async (authenticatedEmail: string) => {
+    const cleanEmail = authenticatedEmail.trim().toLowerCase();
+    if (!cleanEmail) {
+      await logoutGoogle();
+      setErrorMsg('Selecione sua conta institucional Google Workspace.');
+      return;
+    }
+
+    if (!isValidInstitutionalEmail(cleanEmail)) {
+      await logoutGoogle();
+      setErrorMsg(
+        `Acesso restrito a contas ${INSTITUTIONAL_EMAIL_DOMAIN} (${cleanEmail} recusado).`
+      );
+      return;
+    }
+
+    const registeredUser = findAuthorizedUserByEmail(
+      cleanEmail,
+      authorizedUsers
+    );
+    if (!registeredUser) {
+      await logoutGoogle();
+      setErrorMsg(
+        `O e-mail ${cleanEmail} não consta na lista de acessos autorizados da EMEB.`
+      );
+      return;
+    }
+
+    if (!registeredUser.active) {
+      await logoutGoogle();
+      setErrorMsg(`O acesso de ${cleanEmail} encontra-se suspenso.`);
+      return;
+    }
+
+    onLoginSuccess(registeredUser);
+  };
+
+  // Recover login if browser used redirect flow (e.g. mobile Safari/Chrome or blocked popup)
+  useEffect(() => {
+    let mounted = true;
+    checkGoogleRedirectResult().then((res) => {
+      if (mounted && res?.user?.email) {
+        validateAndCompleteLogin(res.user.email);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleWorkspaceLogin = async () => {
     setErrorMsg(null);
+    setUnauthorizedHost(null);
     setLoading(true);
     try {
       const res = await googleSignIn();
-      const authenticatedEmail = res?.user?.email?.trim().toLowerCase() || '';
-
-      if (!authenticatedEmail) {
-        await logoutGoogle();
-        setErrorMsg('Selecione sua conta institucional Google Workspace.');
+      if (!res) {
+        // Redirect flow initiated
         return;
       }
-
-      if (!isValidInstitutionalEmail(authenticatedEmail)) {
-        await logoutGoogle();
-        setErrorMsg(
-          `Acesso restrito a contas ${INSTITUTIONAL_EMAIL_DOMAIN} (${authenticatedEmail} recusado).`
-        );
-        return;
-      }
-
-      const registeredUser = findAuthorizedUserByEmail(
-        authenticatedEmail,
-        authorizedUsers
-      );
-      if (!registeredUser) {
-        await logoutGoogle();
-        setErrorMsg(
-          `O e-mail ${authenticatedEmail} não consta na lista de acessos autorizados da EMEB.`
-        );
-        return;
-      }
-
-      if (!registeredUser.active) {
-        await logoutGoogle();
-        setErrorMsg(`O acesso de ${authenticatedEmail} encontra-se suspenso.`);
-        return;
-      }
-
-      onLoginSuccess(registeredUser);
+      const authenticatedEmail = res?.user?.email || '';
+      await validateAndCompleteLogin(authenticatedEmail);
     } catch (err: any) {
-      if (err?.code === 'auth/popup-closed-by-user') {
-        setErrorMsg('Autenticação cancelada.');
-      } else {
+      const code = err?.code || '';
+      const msg = String(err?.message || '');
+      const currentHostname = window.location.hostname;
+
+      if (
+        code === 'auth/unauthorized-domain' ||
+        msg.includes('unauthorized-domain') ||
+        msg.includes('domain is not authorized')
+      ) {
+        setUnauthorizedHost(currentHostname);
         setErrorMsg(
-          `Utilize exclusivamente sua conta Google Workspace ${INSTITUTIONAL_EMAIL_DOMAIN}.`
+          `Falta autorizar o endereço "${currentHostname}" no Firebase para abrir a janela do Google.`
+        );
+      } else if (code === 'auth/popup-closed-by-user') {
+        setErrorMsg('Janela de login fechada antes de concluir.');
+      } else if (code === 'auth/cancelled-popup-request') {
+        // ignore duplicate click
+      } else {
+        setUnauthorizedHost(currentHostname);
+        setErrorMsg(
+          `Não foi possível abrir o login Google em "${currentHostname}". Verifique se este domínio está autorizado no Firebase.`
         );
       }
     } finally {
@@ -77,7 +121,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   return (
     <div className="min-h-screen bg-[#f4f7f5] text-[#0f1614] flex items-center justify-center p-4 animate-gentle-fade">
-      <main className="w-full max-w-[390px] bg-white rounded-3xl shadow-sm border border-[#d5dddf] px-7 py-9 flex flex-col items-center text-center space-y-7">
+      <main className="w-full max-w-[400px] bg-white rounded-3xl shadow-sm border border-[#d5dddf] px-7 py-9 flex flex-col items-center text-center space-y-6">
         {/* Brasão Oficial Solitário de Jundiaí */}
         <div className="w-20 h-20 flex items-center justify-center">
           <img
@@ -108,13 +152,50 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </p>
         </div>
 
-        {/* Mensagem de erro concisa (se houver) */}
+        {/* Mensagem de erro + Ajuda Direta caso falte autorizar o domínio do GitHub no Firebase */}
         {errorMsg && (
-          <div className="w-full p-3.5 rounded-2xl bg-[#fff8f7] border border-[#ba1a1a]/40 text-[#ba1a1a] text-[0.8rem] font-bold flex items-center gap-2 text-left">
-            <span className="material-symbols-outlined text-[18px] shrink-0">
-              error
-            </span>
-            <span>{errorMsg}</span>
+          <div className="w-full p-3.5 rounded-2xl bg-[#fff8f7] border border-[#ba1a1a]/40 text-[#ba1a1a] text-[0.78rem] font-bold space-y-2.5 text-left">
+            <div className="flex items-start gap-2">
+              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">
+                error
+              </span>
+              <span>{errorMsg}</span>
+            </div>
+
+            {unauthorizedHost && (
+              <div className="p-2.5 rounded-xl bg-white border border-[#ba1a1a]/25 text-[#0f1614] space-y-2">
+                <p className="text-[0.74rem] font-semibold text-[#2c373a]">
+                  Para liberar a janela do Google no GitHub (leva 15 segundos):
+                </p>
+                <div className="flex items-center justify-between gap-2 bg-[#f4f7f5] px-2.5 py-1.5 rounded-lg border border-[#a8b5b9]">
+                  <code className="font-mono text-[0.74rem] font-bold text-[#003440] truncate">
+                    {unauthorizedHost}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(unauthorizedHost);
+                      setCopiedHost(true);
+                      setTimeout(() => setCopiedHost(false), 2000);
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#003440] text-white text-[0.68rem] font-bold cursor-pointer shrink-0"
+                  >
+                    {copiedHost ? '✓ Copiado' : 'Copiar'}
+                  </button>
+                </div>
+                <a
+                  href="https://console.firebase.google.com/project/gen-lang-client-0243513788/authentication/settings"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-3 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-extrabold text-[0.74rem] flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[15px]">
+                    open_in_new
+                  </span>
+                  <span>Abrir Painel Firebase e Colar Domínio</span>
+                </a>
+              </div>
+            )}
           </div>
         )}
 

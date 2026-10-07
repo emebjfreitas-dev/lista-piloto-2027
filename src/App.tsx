@@ -398,9 +398,20 @@ export default function App() {
         }
         userEmail={currentUserEmail}
         userName={currentUserName}
+        userRole={userRole}
         onBack={handleBack}
-        onChangeScreen={(screen) => setCurrentScreen(screen)}
-        onNavigatePlanilha={() => setCurrentScreen('planilha')}
+        onChangeScreen={(screen) => {
+          if (
+            userRole !== 'admin' &&
+            (screen === 'planilha' || screen === 'dias_letivos' || screen === 'usuarios_acesso')
+          ) {
+            return;
+          }
+          setCurrentScreen(screen);
+        }}
+        onNavigatePlanilha={() => {
+          if (userRole === 'admin') setCurrentScreen('planilha');
+        }}
         onLogout={handleLogout}
       />
 
@@ -574,6 +585,12 @@ export default function App() {
         userRole={userRole}
         selectedClassName={selectedClass?.name}
         onChangeScreen={(screen) => {
+          if (
+            userRole !== 'admin' &&
+            (screen === 'planilha' || screen === 'dias_letivos' || screen === 'usuarios_acesso')
+          ) {
+            return;
+          }
           setCurrentScreen(screen);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}

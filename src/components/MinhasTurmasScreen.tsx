@@ -95,104 +95,60 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         </div>
       )}
 
-      {/* Top Control Row: Stacked on Mobile, Side-by-Side 12-Col Landscape on PC 1920x1080 */}
+      {/* Top Control Row: Perfil de Acesso Ativo visible ONLY for ADMIN */}
       <div className="space-y-5 xl:space-y-0 xl:grid xl:grid-cols-12 xl:gap-5 xl:items-stretch">
-        {/* Role-Based Access Control Switcher (ADMIN / USUÁRIO / PEB II) */}
-        <section className="xl:col-span-5 bg-white rounded-2xl p-4 shadow-sm border-2 border-[#003440]/15 space-y-3 flex flex-col justify-between">
-        <div className="flex items-center justify-between">
-          <span className="text-[0.8rem] font-black text-[#003440] uppercase tracking-wide flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-            <span>Perfil de Acesso Ativo:</span>
-          </span>
-          <span className="text-[0.75rem] font-bold px-2.5 py-0.5 rounded-full bg-[#c3e5f4] text-[#001f29]">
-            {userRole === 'admin'
-              ? 'Acesso Pleno (Todos Recursos)'
-              : userRole === 'usuario'
-              ? 'Apenas Sua Turma (Edição)'
-              : 'Todas as Turmas (Só Visualização)'}
-          </span>
-        </div>
+        {userRole === 'admin' && (
+          <section className="xl:col-span-5 bg-white rounded-2xl p-4 shadow-sm border-2 border-[#003440]/15 space-y-3 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.8rem] font-black text-[#003440] uppercase tracking-wide flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                <span>Perfil de Acesso Ativo (Exclusivo Admin):</span>
+              </span>
+              <span className="text-[0.75rem] font-bold px-2.5 py-0.5 rounded-full bg-[#c3e5f4] text-[#001f29]">
+                Acesso Pleno (Todos Recursos)
+              </span>
+            </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => onChangeRole('admin')}
-            className={`p-2.5 rounded-xl font-extrabold text-[0.85rem] flex flex-col items-center justify-center gap-1 border-2 cursor-pointer transition-all ${
-              userRole === 'admin'
-                ? 'bg-[#003440] text-white border-[#003440] shadow-sm'
-                : 'bg-[#f3f4f2] text-[#41484b] border-[#c0c8cb] hover:bg-[#e7e8e6]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[22px]">verified_user</span>
-            <span>ADMIN</span>
-            <span className="text-[0.65rem] font-semibold opacity-80">Acesso Pleno</span>
-          </button>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => onChangeRole('admin')}
+                className="p-2.5 rounded-xl font-extrabold text-[0.85rem] flex flex-col items-center justify-center gap-1 border-2 cursor-pointer transition-all bg-[#003440] text-white border-[#003440] shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[22px]">verified_user</span>
+                <span>ADMIN</span>
+                <span className="text-[0.65rem] font-semibold opacity-80">Acesso Pleno</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => onChangeRole('usuario')}
-            className={`p-2.5 rounded-xl font-extrabold text-[0.85rem] flex flex-col items-center justify-center gap-1 border-2 cursor-pointer transition-all ${
-              userRole === 'usuario'
-                ? 'bg-[#005035] text-white border-[#005035] shadow-sm'
-                : 'bg-[#f3f4f2] text-[#41484b] border-[#c0c8cb] hover:bg-[#e7e8e6]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[22px]">person</span>
-            <span>USUÁRIO</span>
-            <span className="text-[0.65rem] font-semibold opacity-80">Só Sua Turma</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => onChangeRole('usuario')}
+                className="p-2.5 rounded-xl font-extrabold text-[0.85rem] flex flex-col items-center justify-center gap-1 border-2 cursor-pointer transition-all bg-[#f3f4f2] text-[#41484b] border-[#c0c8cb] hover:bg-[#e7e8e6]"
+              >
+                <span className="material-symbols-outlined text-[22px]">person</span>
+                <span>PEB I</span>
+                <span className="text-[0.65rem] font-semibold opacity-80">Simular Turma</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => onChangeRole('peb2')}
-            className={`p-2.5 rounded-xl font-extrabold text-[0.85rem] flex flex-col items-center justify-center gap-1 border-2 cursor-pointer transition-all ${
-              userRole === 'peb2'
-                ? 'bg-[#7a4100] text-white border-[#7a4100] shadow-sm'
-                : 'bg-[#f3f4f2] text-[#41484b] border-[#c0c8cb] hover:bg-[#e7e8e6]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[22px]">visibility</span>
-            <span>PEB II</span>
-            <span className="text-[0.65rem] font-semibold opacity-80">Só Visualização</span>
-          </button>
-        </div>
-
-        {/* If USUÁRIO (PEB I), allow selecting which class belongs to this teacher */}
-        {userRole === 'usuario' && (
-          <div className="pt-2 border-t border-[#edeeec] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <label className="text-[0.85rem] font-extrabold text-[#005035]">
-              Sua Turma Vinculada:
-            </label>
-            <select
-              value={assignedClassId}
-              onChange={(e) => onChangeAssignedClassId(e.target.value)}
-              className="flex-1 min-h-[42px] px-3 bg-[#eaf6ef] text-[#003723] font-black text-[0.95rem] rounded-xl border border-[#a4f3ca] cursor-pointer"
-            >
-              <optgroup label="☀️ Turno Manhã">
-                {classes
-                  .filter((c) => c.shift === 'Turno Manhã')
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} — {c.grade}
-                    </option>
-                  ))}
-              </optgroup>
-              <optgroup label="⛅ Turno Tarde">
-                {classes
-                  .filter((c) => c.shift === 'Turno Tarde')
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} — {c.grade}
-                    </option>
-                  ))}
-              </optgroup>
-            </select>
-          </div>
+              <button
+                type="button"
+                onClick={() => onChangeRole('peb2')}
+                className="p-2.5 rounded-xl font-extrabold text-[0.85rem] flex flex-col items-center justify-center gap-1 border-2 cursor-pointer transition-all bg-[#f3f4f2] text-[#41484b] border-[#c0c8cb] hover:bg-[#e7e8e6]"
+              >
+                <span className="material-symbols-outlined text-[22px]">visibility</span>
+                <span>PEB II</span>
+                <span className="text-[0.65rem] font-semibold opacity-80">Simular Leitura</span>
+              </button>
+            </div>
+          </section>
         )}
-      </section>
 
         {/* Senior Friendly Top Card */}
-        <section className="xl:col-span-7 bg-white rounded-2xl p-5 shadow-sm border border-[#e1e3e1] space-y-4 flex flex-col justify-between">
+        <section
+          className={`${
+            userRole === 'admin' ? 'xl:col-span-7' : 'xl:col-span-12'
+          } bg-white rounded-2xl p-5 shadow-sm border border-[#e1e3e1] space-y-4 flex flex-col justify-between`}
+        >
         <div className="flex items-start justify-between gap-2">
           <div>
             <span className="inline-block px-3 py-1 bg-[#c3e5f4] text-[#001f29] font-black text-[0.85rem] rounded-full mb-1">
