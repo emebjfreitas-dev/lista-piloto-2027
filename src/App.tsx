@@ -50,10 +50,70 @@ import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
 import { ConfigurarDiasLetivosTurmasModal } from './components/ConfigurarDiasLetivosTurmasModal';
 
+const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
+
+interface PersistedAuthSession {
+  email: string;
+  name: string;
+  role: UserRole;
+  assignedClassId: string;
+  selectedClassId: string;
+  screen: ScreenType;
+  sessionId: string | null;
+}
+
+const getSavedActiveAuthSession = (): PersistedAuthSession | null => {
+  try {
+    const raw = localStorage.getItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.email === 'string' && parsed.email.includes('@')) {
+      return parsed;
+    }
+  } catch {
+    // ignore storage read error
+  }
+  return null;
+};
+
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
-  const [classes, setClasses] = useState<ClassGroup[]>(() => getStoredClasses());
-  const [selectedClass, setSelectedClass] = useState<ClassGroup>(() => classes[0] || getStoredClasses()[0]);
+  const initialClasses = getStoredClasses();
+  const initialSavedSession = getSavedActiveAuthSession();
+
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
+    if (!initialSavedSession) return 'login';
+    const savedScreen = initialSavedSession.screen;
+    if (initialSavedSession.role === 'usuario') {
+      return savedScreen === 'frequencia_mensal' || savedScreen === 'resumo'
+        ? savedScreen
+        : 'detalhes';
+    }
+    if (initialSavedSession.role === 'peb2') {
+      if (
+        savedScreen === 'planilha' ||
+        savedScreen === 'dias_letivos' ||
+        savedScreen === 'usuarios_acesso' ||
+        savedScreen === 'login'
+      ) {
+        return 'turmas';
+      }
+      return savedScreen || 'turmas';
+    }
+    return savedScreen && savedScreen !== 'login' ? savedScreen : 'turmas';
+  });
+
+  const [classes, setClasses] = useState<ClassGroup[]>(() => initialClasses);
+  const [selectedClass, setSelectedClass] = useState<ClassGroup>(() => {
+    const targetId =
+      initialSavedSession?.role === 'usuario'
+        ? initialSavedSession.assignedClassId
+        : initialSavedSession?.selectedClassId;
+    if (targetId) {
+      const found = initialClasses.find((c) => c.id === targetId);
+      if (found) return found;
+    }
+    return initialClasses[0];
+  });
   const [instantSheetSyncStatus, setInstantSheetSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
   const sheetWriteTimerRef = React.useRef<number | null>(null);
 
@@ -64,17 +124,50 @@ export default function App() {
   const [accessSessionLogs, setAccessSessionLogs] = useState<UserAccessSessionLog[]>(() =>
     getStoredAccessSessionLogs()
   );
-  const activeSessionIdRef = React.useRef<string | null>(null);
+  const activeSessionIdRef = React.useRef<string | null>(
+    initialSavedSession?.sessionId || null
+  );
   const [currentUserEmail, setCurrentUserEmail] = useState<string>(
-    'emebjfreitas@jundiai.sp.gov.br'
+    initialSavedSession?.email || 'emebjfreitas@jundiai.sp.gov.br'
   );
   const [currentUserName, setCurrentUserName] = useState<string>(
-    'EMEB Professor Joaquim Candelário de Freitas (Direção / Admin)'
+    initialSavedSession?.name ||
+      'EMEB Professor Joaquim Candelário de Freitas (Direção / Admin)'
   );
-  const [userRole, setUserRole] = useState<UserRole>('admin');
-  const [assignedClassId, setAssignedClassId] = useState<string>(() => classes[0]?.id || 'g04a');
+  const [userRole, setUserRole] = useState<UserRole>(
+    initialSavedSession?.role || 'admin'
+  );
+  const [assignedClassId, setAssignedClassId] = useState<string>(
+    () => initialSavedSession?.assignedClassId || initialClasses[0]?.id || 'g04a'
+  );
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
+
+  // Automatically save current screen, selected class, and user session while logged in so page refresh returns to the exact coherent page
+  useEffect(() => {
+    if (currentScreen === 'login') return;
+    try {
+      const payload: PersistedAuthSession = {
+        email: currentUserEmail,
+        name: currentUserName,
+        role: userRole,
+        assignedClassId,
+        selectedClassId: selectedClass?.id || initialClasses[0]?.id || 'g04a',
+        screen: currentScreen,
+        sessionId: activeSessionIdRef.current,
+      };
+      localStorage.setItem(ACTIVE_AUTH_SESSION_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore storage write error
+    }
+  }, [
+    currentScreen,
+    currentUserEmail,
+    currentUserName,
+    userRole,
+    assignedClassId,
+    selectedClass,
+  ]);
 
   const handleUpdateAttendanceWindowConfig = (nextConfig: AttendanceWindowConfig) => {
     setAttendanceWindowConfig(nextConfig);
@@ -484,6 +577,11 @@ export default function App() {
   }, [currentScreen]);
 
   const handleLogout = async () => {
+    try {
+      localStorage.removeItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     const sessId = activeSessionIdRef.current;
     if (sessId) {
       const now = new Date();

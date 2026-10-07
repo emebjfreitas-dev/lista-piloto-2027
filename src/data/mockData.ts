@@ -1,7 +1,7 @@
 import { ClassGroup, Student, GoogleSheetConfig, SheetRowData, SchoolDay, AuthorizedUser } from '../types';
 import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils/attendanceRules';
 
-export const CITY_NAME = 'Prefeitura Municipal de Jundiaí';
+export const CITY_NAME = 'Prefeitura do Município de Jundiaí';
 export const SECRETARY_NAME = 'Secretaria Municipal de Educação';
 export const SCHOOL_NAME = 'EMEB Professor Joaquim Candelário de Freitas';
 export const INSTITUTIONAL_EMAIL_DOMAIN = '@educacao.jundiai.sp.gov.br';

@@ -90,8 +90,8 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               <span className="text-[0.725rem] font-bold text-[#436370] truncate">
                 {showBackButton
-                  ? 'Prefeitura Municipal de Jundiaí • Secretaria Municipal de Educação'
-                  : `Prefeitura Municipal de Jundiaí • Secretaria Municipal de Educação • ${subtitle || 'Uso Exclusivo de Professores'}`}
+                  ? 'Prefeitura do Município de Jundiaí • Secretaria Municipal de Educação'
+                  : `Prefeitura do Município de Jundiaí • Secretaria Municipal de Educação • ${subtitle || 'Uso Exclusivo de Professores'}`}
               </span>
             </div>
           </div>

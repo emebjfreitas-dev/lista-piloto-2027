@@ -167,7 +167,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </p>
           <div className="pt-1 space-y-0.5">
             <p className="text-[0.76rem] font-extrabold uppercase tracking-wide text-[#003440]">
-              Prefeitura Municipal de Jundiaí
+              Prefeitura do Município de Jundiaí
             </p>
             <p className="text-[0.73rem] font-bold uppercase tracking-wide text-[#2c373a]">
               Secretaria Municipal de Educação
