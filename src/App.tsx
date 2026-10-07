@@ -48,7 +48,7 @@ import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModa
 import { ConfigurarDiasLetivosTurmasModal } from './components/ConfigurarDiasLetivosTurmasModal';
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('turmas');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('login');
   const [classes, setClasses] = useState<ClassGroup[]>(() => getStoredClasses());
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(() => classes[0] || getStoredClasses()[0]);
   const [instantSheetSyncStatus, setInstantSheetSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
