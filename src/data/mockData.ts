@@ -975,13 +975,14 @@ export const generateSedStudentsForClass = (
     const cleanEmailName = name.toLowerCase().split(' ').slice(0, 2).join('.');
 
     let absences = 0;
-    if (i === 4) absences = 4;
+    if (i === 4) absences = isInfantil ? 9 : 6; // Acusa alerta legal (<60% Ed. Infantil com 11/20 = 55%, ou <75% Ens. Fundamental com 14/20 = 70%)
     else if (i === 8) absences = 2;
     else if (i === 11) absences = 1;
 
     // Simular recorte real de matrícula dentro do mês para alguns alunos (entrou depois ou saiu antes)
     const enteredLate = i === 5;
     const leftEarly = i === 10;
+    const nisNumber = `204.${(10000 + i * 317).toString().slice(0, 5)}.${(80 + (i % 19)).toString()}-${i % 9}`;
 
     students.push({
       id: `${classId}-s${i}`,
@@ -1011,6 +1012,8 @@ export const generateSedStudentsForClass = (
       nacionalidade: 'BRASILEIRA',
       municipioNascimento: 'JUNDIAI - SP',
       cpf: `59${Math.floor(100 + i * 11)}.${Math.floor(200 + i * 13)}.888-${Math.floor(10 + i)}`,
+      nis: nisNumber,
+      cartaoSus: `700.00${10 + i}.8899.00${10 + i}`,
       cep: '13.214-220',
       logradouro: 'RUA DOUTOR CANDIDO MOJOLA',
       numeroResidencia: (100 + i * 7).toString(),
@@ -1024,7 +1027,10 @@ export const generateSedStudentsForClass = (
       status: absences > 0 ? 'absent' : 'present',
       totalAbsencesMonth: absences,
       justifiedAbsences: absences >= 2 ? 1 : 0,
-      alert: absences >= 4 ? `Atenção: ${absences} faltas acumuladas` : undefined,
+      alert:
+        absences >= (isInfantil ? 9 : 6)
+          ? `Alerta Bolsa Família / LDB: Presença abaixo de ${isInfantil ? '60%' : '75%'}`
+          : undefined,
       initials,
     });
   }
@@ -1216,14 +1222,13 @@ export const generateSheetRowsFromClasses = (classes: ClassGroup[]): SheetRowDat
         percentAtestadosSobreFaltas,
         percentAtestadosSobreDias,
         frequenciaPercent: m.frequenciaPercent,
-        situacao:
-          m.faltas >= 4
-            ? 'Alerta de Infrequência'
-            : !m.isMesCheio
-            ? `Recorte Parcial (${m.diasLetivosMatriculados}/${m.diasLetivosMes}d)`
-            : m.frequenciaPercent === 100
-            ? '100% Presença'
-            : 'Regular',
+        situacao: m.isBelowLegalThreshold
+          ? `Alerta <${m.minLegalPresencePercent}% (${m.isEducacaoInfantil ? 'Ed. Infantil' : 'Ens. Fund.'})`
+          : !m.isMesCheio
+          ? `Recorte Parcial (${m.diasLetivosMatriculados}/${m.diasLetivosMes}d)`
+          : m.frequenciaPercent === 100
+          ? '100% Presença'
+          : `Regular (≥${m.minLegalPresencePercent}%)`,
         observacoesAtestado: s.notes || '',
         responsavel: s.filiacao1 || s.guardianName || 'Não informado',
         telefone: s.telefones || s.guardianPhone || '(11) 98765-4321',

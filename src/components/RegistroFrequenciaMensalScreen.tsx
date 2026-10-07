@@ -125,24 +125,54 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     commitInstantUpdate(restored, diasLetivosMes, selectedMonthName);
   };
 
-  // Switch month and adjust total school days of that month (per class configuration)
+  // Switch month and load/adjust school days and attendance for that specific month (Fev./27 to Dez./27)
   const handleMonthChange = (monthName: string) => {
     const newMonthDays = getClassSchoolDaysForMonth(classGroup, monthName);
     setSelectedMonthName(monthName);
     setDiasLetivosMes(newMonthDays);
 
     const nextStudents = students.map((s) => {
+      // Save current month entry first into map
+      const prevMap = { ...(s.monthlyAttendanceByMonth || {}) };
+      prevMap[selectedMonthName] = {
+        diasLetivosRecorte: s.diasLetivosRecorte || diasLetivosMes,
+        faltas: s.totalAbsencesMonth || 0,
+        atestados: Math.min(s.totalAbsencesMonth || 0, s.justifiedAbsences || 0),
+        observacao: s.notes,
+      };
+
+      // Load target month entry if already recorded, otherwise clamp proportionally
+      const savedTarget = prevMap[monthName];
+      if (savedTarget) {
+        const nextRecorte = Math.max(1, Math.min(newMonthDays, savedTarget.diasLetivosRecorte || newMonthDays));
+        const nextFaltas = Math.max(0, Math.min(nextRecorte, savedTarget.faltas || 0));
+        const nextAtestados = Math.max(0, Math.min(nextFaltas, savedTarget.atestados || 0));
+        return {
+          ...s,
+          diasLetivosRecorte: nextRecorte,
+          totalAbsencesMonth: nextFaltas,
+          justifiedAbsences: nextAtestados,
+          monthlyAttendanceByMonth: prevMap,
+        };
+      }
+
       const currentMetrics = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
       const nextRecorte = currentMetrics.isMesCheio
         ? newMonthDays
         : Math.min(newMonthDays, currentMetrics.diasLetivosMatriculados);
       const nextFaltas = Math.min(nextRecorte, s.totalAbsencesMonth);
       const nextAtestados = Math.min(nextFaltas, s.justifiedAbsences || 0);
+      prevMap[monthName] = {
+        diasLetivosRecorte: nextRecorte,
+        faltas: nextFaltas,
+        atestados: nextAtestados,
+      };
       return {
         ...s,
         diasLetivosRecorte: nextRecorte,
         totalAbsencesMonth: nextFaltas,
         justifiedAbsences: nextAtestados,
+        monthlyAttendanceByMonth: prevMap,
       };
     });
     commitInstantUpdate(nextStudents, newMonthDays, monthName);
@@ -171,13 +201,32 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
       const nextFaltas = Math.max(0, Math.min(m.diasLetivosMatriculados, m.faltas + delta));
       const nextAtestados = Math.min(nextFaltas, m.atestados);
+      const nextPresencas = Math.max(0, m.diasLetivosMatriculados - nextFaltas);
+      const nextFreqPct =
+        m.diasLetivosMatriculados > 0
+          ? Math.round((nextPresencas / m.diasLetivosMatriculados) * 100)
+          : 100;
+      const isBelowLegal = nextFreqPct < m.minLegalPresencePercent;
+
+      const nextMonthMap = {
+        ...(s.monthlyAttendanceByMonth || {}),
+        [selectedMonthName]: {
+          diasLetivosRecorte: m.diasLetivosMatriculados,
+          faltas: nextFaltas,
+          atestados: nextAtestados,
+          observacao: s.notes,
+        },
+      };
 
       return {
         ...s,
         totalAbsencesMonth: nextFaltas,
         justifiedAbsences: nextAtestados,
+        monthlyAttendanceByMonth: nextMonthMap,
         status: nextFaltas > 0 ? 'absent' : 'present',
-        alert: nextFaltas >= 4 ? `Atenção: ${nextFaltas} faltas acumuladas` : undefined,
+        alert: isBelowLegal
+          ? `Alerta Bolsa Família / LDB: Presença (${nextFreqPct}%) abaixo de ${m.minLegalPresencePercent}%`
+          : undefined,
       };
     });
 
@@ -220,9 +269,19 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       }
 
       const nextAtestados = Math.max(0, Math.min(m.faltas, m.atestados + delta));
+      const nextMonthMap = {
+        ...(s.monthlyAttendanceByMonth || {}),
+        [selectedMonthName]: {
+          diasLetivosRecorte: m.diasLetivosMatriculados,
+          faltas: m.faltas,
+          atestados: nextAtestados,
+          observacao: s.notes,
+        },
+      };
       return {
         ...s,
         justifiedAbsences: nextAtestados,
+        monthlyAttendanceByMonth: nextMonthMap,
       };
     });
 
@@ -623,45 +682,41 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           return (
             <div
               key={student.id}
-              className={`card-welcoming bg-white rounded-2xl p-4 shadow-xs border-2 ${
-                m.faltas >= 4
-                  ? 'border-[#ba1a1a]/60 bg-[#fff8f7]'
+              className={`card-welcoming bg-white rounded-2xl p-4 shadow-xs border ${
+                m.isBelowLegalThreshold
+                  ? 'border-[#ba1a1a]/50 bg-[#fff8f7]'
                   : !m.isMesCheio
-                  ? 'border-[#003440]/40'
-                  : 'border-[#b4c0c4]/80'
+                  ? 'border-[#003440]/35'
+                  : 'border-[#003440]/12'
               }`}
             >
-              {/* Student Header (Clickable to open Interactive Data Grid) */}
-              <div className="flex items-start justify-between gap-3 pb-3 border-b-2 border-[#edeeec]">
-                <div
-                  onClick={() => onOpenStudentGrid(student)}
-                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group"
-                  title="Clique para abrir a Ficha Completa deste(a) estudante"
-                >
-                  <div className="relative shrink-0">
-                    <StudentAvatar student={student} size="lg" />
-                    <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#003440] text-white flex items-center justify-center shadow-xs">
-                      <span className="material-symbols-outlined text-[13px]">grid_on</span>
-                    </span>
-                  </div>
+              {/* Student Header: Photo expands on click + Name hyperlink opens scanned PDF in Drive */}
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#003440]/10">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <StudentAvatar
+                    student={student}
+                    size="lg"
+                    expandableOnClick={true}
+                    onUploadPhotoClick={() => onOpenPhotoModal(student)}
+                  />
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[0.8rem] font-bold text-[#71787b]">
+                      <span className="text-[0.76rem] font-extrabold text-[#003440]">
                         Nº {student.number.toString().padStart(2, '0')}
                       </span>
                       {student.ra && (
-                        <span className="text-[0.7rem] bg-[#edeeec] px-1.5 py-0.2 rounded font-mono text-[#003440]">
-                          RA: {student.ra}-{student.digRa}
+                        <span className="text-[0.7rem] bg-[#f1f4f3] px-1.5 py-0.5 rounded font-mono text-[#003440]">
+                          RA {student.ra}-{student.digRa}
                         </span>
                       )}
                       {student.situacao && student.situacao !== 'ATIVO' && (
-                        <span className="text-[0.7rem] font-extrabold bg-[#ffdad6] text-[#ba1a1a] px-2 py-0.5 rounded-full">
+                        <span className="text-[0.68rem] font-extrabold bg-[#ffdad6] text-[#ba1a1a] px-2 py-0.5 rounded-full">
                           {student.situacao}
                         </span>
                       )}
                       {student.deficiencia && (
-                        <span className="text-[0.7rem] font-extrabold bg-[#a4f3ca] text-[#003723] px-2 py-0.5 rounded-full">
+                        <span className="text-[0.68rem] font-extrabold bg-[#a4f3ca] text-[#003723] px-2 py-0.5 rounded-full">
                           {student.deficiencia}
                         </span>
                       )}
@@ -682,26 +737,39 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                           onOpenStudentGrid(student);
                         }
                       }}
-                      title={`Abrir Documento PDF Nominal de ${student.name} por Hyperlink`}
-                      className="doc-hyperlink text-[1.14rem] font-extrabold leading-snug truncate mt-0.5 block"
+                      title={`Abrir Documento Escaneado (${student.name}.pdf) no Google Drive`}
+                      className="doc-hyperlink text-[1.02rem] font-extrabold leading-snug truncate mt-0.5 block cursor-pointer"
                     >
                       {student.name}
                     </a>
-                    <span className="text-[0.76rem] font-bold text-[#005035] flex items-center gap-1 mt-0.5">
-                      <span className="material-symbols-outlined text-[14px]">link</span>
-                      <span>Hyperlink no nome abre o Doc PDF • Foto abre os 48 Campos</span>
-                    </span>
+                    {m.isBelowLegalThreshold ? (
+                      <span className="text-[0.72rem] font-extrabold text-[#ba1a1a] flex items-center gap-1 mt-0.5">
+                        <span className="material-symbols-outlined text-[14px]">warning</span>
+                        <span>
+                          Abaixo de {m.minLegalPresencePercent}% ({m.isEducacaoInfantil ? 'Ed. Infantil' : 'Ens. Fund.'} · Bolsa Família)
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-[0.72rem] font-medium text-[#5a676b] block truncate mt-0.5">
+                        {student.filiacao1 || student.guardianName || 'Responsável cadastrado'}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Live Student Attendance Percentage Pill */}
                 <div
                   onClick={() => onOpenStudentGrid(student)}
-                  className="text-right shrink-0 bg-[#f3f4f2] hover:bg-[#e7e8e6] px-3 py-1.5 rounded-xl border border-[#e1e3e1] cursor-pointer"
+                  title={`Mínimo legal exigido: ${m.minLegalPresencePercent}%`}
+                  className={`text-right shrink-0 px-3 py-1.5 rounded-xl border cursor-pointer ${
+                    m.isBelowLegalThreshold
+                      ? 'bg-[#ffdad6] border-[#ba1a1a]/40 text-[#ba1a1a]'
+                      : 'bg-[#f5f7f6] hover:bg-[#e7e8e6] border-[#003440]/12'
+                  }`}
                 >
                   <span
-                    className={`text-[1.25rem] font-black block leading-none ${
-                      m.frequenciaPercent < 75
+                    className={`text-[1.2rem] font-black block leading-none tabular-nums ${
+                      m.isBelowLegalThreshold
                         ? 'text-[#ba1a1a]'
                         : m.frequenciaPercent < 85
                         ? 'text-[#8c5000]'
@@ -710,8 +778,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   >
                     {m.frequenciaPercent}%
                   </span>
-                  <span className="text-[0.7rem] font-bold text-[#41484b] block mt-0.5">
-                    {m.presencas}/{m.diasLetivosMatriculados} dias
+                  <span className="text-[0.68rem] font-bold text-[#41484b] block mt-0.5 tabular-nums">
+                    {m.presencas}/{m.diasLetivosMatriculados}d
                   </span>
                 </div>
               </div>

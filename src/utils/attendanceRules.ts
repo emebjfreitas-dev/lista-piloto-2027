@@ -12,7 +12,101 @@ export interface StudentAttendanceMetrics {
   frequenciaPercent: number;
   maxFaltasPermitidas: number;
   maxAtestadosPermitidos: number;
+  isEducacaoInfantil: boolean;
+  minLegalPresencePercent: number;
+  isBelowLegalThreshold: boolean;
+  legalAlertReason: string;
 }
+
+export interface BimesterDefinition {
+  id: '1bim' | '2bim' | '3bim' | '4bim' | 'anual';
+  label: string;
+  shortLabel: string;
+  periodLabel: string;
+  months: Array<{ name: string; defaultDays: number }>;
+}
+
+export const OFFICIAL_BIMESTERS_2027: BimesterDefinition[] = [
+  {
+    id: '1bim',
+    label: '1º Bimestre (Fev./27 a Abr./27)',
+    shortLabel: '1º Bim. (Fev–Abr/27)',
+    periodLabel: 'Fevereiro, Março e Abril de 2027',
+    months: [
+      { name: 'Fevereiro', defaultDays: 16 },
+      { name: 'Março', defaultDays: 22 },
+      { name: 'Abril', defaultDays: 20 },
+    ],
+  },
+  {
+    id: '2bim',
+    label: '2º Bimestre (Mai./27 a Jul./27)',
+    shortLabel: '2º Bim. (Mai–Jul/27)',
+    periodLabel: 'Maio, Junho e Julho de 2027',
+    months: [
+      { name: 'Maio', defaultDays: 20 },
+      { name: 'Junho', defaultDays: 20 },
+      { name: 'Julho', defaultDays: 10 },
+    ],
+  },
+  {
+    id: '3bim',
+    label: '3º Bimestre (Ago./27 a Set./27)',
+    shortLabel: '3º Bim. (Ago–Set/27)',
+    periodLabel: 'Agosto e Setembro de 2027',
+    months: [
+      { name: 'Agosto', defaultDays: 22 },
+      { name: 'Setembro', defaultDays: 20 },
+    ],
+  },
+  {
+    id: '4bim',
+    label: '4º Bimestre (Out./27 a Dez./27)',
+    shortLabel: '4º Bim. (Out–Dez/27)',
+    periodLabel: 'Outubro, Novembro e Dezembro de 2027',
+    months: [
+      { name: 'Outubro', defaultDays: 20 },
+      { name: 'Novembro', defaultDays: 18 },
+      { name: 'Dezembro', defaultDays: 12 },
+    ],
+  },
+  {
+    id: 'anual',
+    label: 'Consolidado Anual (Fev./27 a Dez./27)',
+    shortLabel: 'Anual (Fev–Dez/27)',
+    periodLabel: 'Fevereiro a Dezembro de 2027 (200 Dias Letivos)',
+    months: [
+      { name: 'Fevereiro', defaultDays: 16 },
+      { name: 'Março', defaultDays: 22 },
+      { name: 'Abril', defaultDays: 20 },
+      { name: 'Maio', defaultDays: 20 },
+      { name: 'Junho', defaultDays: 20 },
+      { name: 'Julho', defaultDays: 10 },
+      { name: 'Agosto', defaultDays: 22 },
+      { name: 'Setembro', defaultDays: 20 },
+      { name: 'Outubro', defaultDays: 20 },
+      { name: 'Novembro', defaultDays: 18 },
+      { name: 'Dezembro', defaultDays: 12 },
+    ],
+  },
+];
+
+export const isStudentEducacaoInfantil = (student: Student, className?: string): boolean => {
+  const tipo = (student.tipoEnsino || '').toUpperCase();
+  const turma = (student.turma || className || '').toUpperCase();
+  return (
+    tipo.includes('INFANTIL') ||
+    turma.startsWith('GRUPO') ||
+    turma.startsWith('G04') ||
+    turma.startsWith('G05') ||
+    turma.startsWith('G4') ||
+    turma.startsWith('G5')
+  );
+};
+
+export const getLegalMinimumPresencePercent = (student: Student, className?: string): number => {
+  return isStudentEducacaoInfantil(student, className) ? 60 : 75;
+};
 
 export interface ClassAttendanceMetrics {
   diasLetivosMes: number;
@@ -187,6 +281,18 @@ export const getStudentAttendanceMetrics = (
   const frequenciaPercent =
     diasMatriculados > 0 ? Math.round((presencas / diasMatriculados) * 100) : 100;
 
+  // Regra 4: Limite legal LDB / Bolsa Família:
+  // Educação Infantil acusa problema com < 60% de presença
+  // Ensino Fundamental acusa problema com < 75% de presença
+  const isEducacaoInfantil = isStudentEducacaoInfantil(student);
+  const minLegalPresencePercent = isEducacaoInfantil ? 60 : 75;
+  const isBelowLegalThreshold = frequenciaPercent < minLegalPresencePercent;
+  const legalAlertReason = isBelowLegalThreshold
+    ? isEducacaoInfantil
+      ? `Alerta Ed. Infantil: Presença (${frequenciaPercent}%) abaixo do mínimo legal de 60%`
+      : `Alerta Ens. Fundamental: Presença (${frequenciaPercent}%) abaixo do mínimo legal de 75%`
+    : 'Frequência Regular';
+
   return {
     diasLetivosMes: maxMonthDays,
     diasLetivosMatriculados: diasMatriculados,
@@ -199,6 +305,150 @@ export const getStudentAttendanceMetrics = (
     frequenciaPercent,
     maxFaltasPermitidas,
     maxAtestadosPermitidos,
+    isEducacaoInfantil,
+    minLegalPresencePercent,
+    isBelowLegalThreshold,
+    legalAlertReason,
+  };
+};
+
+export interface StudentMonthBreakdown {
+  monthName: string;
+  diasLetivos: number;
+  presencas: number;
+  faltas: number;
+  atestados: number;
+  faltasNaoJustificadas: number;
+  frequenciaPercent: number;
+  isBelowLegalThreshold: boolean;
+}
+
+export interface StudentBimesterReportRow {
+  student: Student;
+  classId: string;
+  className: string;
+  shift: string;
+  isEducacaoInfantil: boolean;
+  minLegalPresencePercent: number;
+  monthsBreakdown: StudentMonthBreakdown[];
+  totalDiasBimestre: number;
+  totalPresencasBimestre: number;
+  totalFaltasBimestre: number;
+  totalAtestadosBimestre: number;
+  totalSemAtestadoBimestre: number;
+  frequenciaBimestrePercent: number;
+  isBelowLegalThresholdBimestre: boolean;
+  hasAnyMonthBelowThreshold: boolean;
+  bolsaFamiliaMotivoPadrao: string;
+}
+
+/**
+ * Calcula o histórico mensal e bimestral do estudante a partir de Fev./2027 (para Relatórios Bimestrais e Sistema Presença / Bolsa Família)
+ */
+export const getStudentBimesterReport = (
+  student: Student,
+  cls: ClassGroup,
+  bimesterId: '1bim' | '2bim' | '3bim' | '4bim' | 'anual' = '1bim'
+): StudentBimesterReportRow => {
+  const bimester =
+    OFFICIAL_BIMESTERS_2027.find((b) => b.id === bimesterId) || OFFICIAL_BIMESTERS_2027[0];
+  const isInfantil = isStudentEducacaoInfantil(student, cls.name);
+  const minLegal = isInfantil ? 60 : 75;
+
+  // Deterministic seed based on student number and current October metrics if month wasn't explicitly edited yet
+  const baseFaltasOut = student.totalAbsencesMonth || 0;
+  const baseAtestOut = Math.min(baseFaltasOut, student.justifiedAbsences || 0);
+
+  let totalDiasBimestre = 0;
+  let totalPresencasBimestre = 0;
+  let totalFaltasBimestre = 0;
+  let totalAtestadosBimestre = 0;
+  let hasAnyMonthBelowThreshold = false;
+
+  const monthsBreakdown: StudentMonthBreakdown[] = bimester.months.map((mObj, mIdx) => {
+    const configuredDays =
+      (cls.monthlySchoolDays && cls.monthlySchoolDays[mObj.name]) || mObj.defaultDays;
+
+    const explicitMonth = student.monthlyAttendanceByMonth?.[mObj.name];
+    let diasRecorte = configuredDays;
+    let faltas = 0;
+    let atestados = 0;
+
+    if (explicitMonth) {
+      diasRecorte = Math.max(1, Math.min(configuredDays, explicitMonth.diasLetivosRecorte || configuredDays));
+      faltas = Math.max(0, Math.min(diasRecorte, explicitMonth.faltas || 0));
+      atestados = Math.max(0, Math.min(faltas, explicitMonth.atestados || 0));
+    } else if (mObj.name === 'Outubro') {
+      diasRecorte = Math.max(1, Math.min(configuredDays, student.diasLetivosRecorte || configuredDays));
+      faltas = Math.max(0, Math.min(diasRecorte, baseFaltasOut));
+      atestados = Math.max(0, Math.min(faltas, baseAtestOut));
+    } else {
+      // Espelha proporcionalmente ou mantém histórico realista a partir de Fev./27
+      if (baseFaltasOut >= 4) {
+        faltas = Math.min(configuredDays, Math.max(1, baseFaltasOut - (mIdx % 2)));
+        atestados = Math.min(faltas, baseAtestOut);
+      } else if (baseFaltasOut > 0) {
+        faltas = (student.number + mIdx) % 2 === 0 ? baseFaltasOut : Math.max(0, baseFaltasOut - 1);
+        atestados = Math.min(faltas, baseAtestOut);
+      } else {
+        faltas = 0;
+        atestados = 0;
+      }
+    }
+
+    const presencas = Math.max(0, diasRecorte - faltas);
+    const freqPct = diasRecorte > 0 ? Math.round((presencas / diasRecorte) * 100) : 100;
+    const belowMonth = freqPct < minLegal;
+    if (belowMonth) hasAnyMonthBelowThreshold = true;
+
+    totalDiasBimestre += diasRecorte;
+    totalPresencasBimestre += presencas;
+    totalFaltasBimestre += faltas;
+    totalAtestadosBimestre += atestados;
+
+    return {
+      monthName: mObj.name,
+      diasLetivos: diasRecorte,
+      presencas,
+      faltas,
+      atestados,
+      faltasNaoJustificadas: Math.max(0, faltas - atestados),
+      frequenciaPercent: freqPct,
+      isBelowLegalThreshold: belowMonth,
+    };
+  });
+
+  const totalSemAtestadoBimestre = Math.max(0, totalFaltasBimestre - totalAtestadosBimestre);
+  const frequenciaBimestrePercent =
+    totalDiasBimestre > 0 ? Math.round((totalPresencasBimestre / totalDiasBimestre) * 100) : 100;
+  const isBelowLegalThresholdBimestre =
+    frequenciaBimestrePercent < minLegal || hasAnyMonthBelowThreshold;
+
+  const bolsaFamiliaMotivoPadrao = isBelowLegalThresholdBimestre
+    ? totalAtestadosBimestre > 0
+      ? 'Doença do aluno / Atestado médico parcial — Acionar Busca Ativa'
+      : 'Infrequência sem justificativa (<' + minLegal + '%) — Acionar Busca Ativa / Conselho'
+    : totalAtestadosBimestre > 0
+    ? `Frequência cumprida (${totalAtestadosBimestre} atestado(s) médico(s) arquivado(s))`
+    : `Frequência regular cumprida (≥${minLegal}%)`;
+
+  return {
+    student,
+    classId: cls.id,
+    className: cls.name,
+    shift: cls.shift.replace('Turno ', ''),
+    isEducacaoInfantil: isInfantil,
+    minLegalPresencePercent: minLegal,
+    monthsBreakdown,
+    totalDiasBimestre,
+    totalPresencasBimestre,
+    totalFaltasBimestre,
+    totalAtestadosBimestre,
+    totalSemAtestadoBimestre,
+    frequenciaBimestrePercent,
+    isBelowLegalThresholdBimestre,
+    hasAnyMonthBelowThreshold,
+    bolsaFamiliaMotivoPadrao,
   };
 };
 

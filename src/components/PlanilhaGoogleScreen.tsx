@@ -10,6 +10,11 @@ import {
 import { downloadSpreadsheetXLSX, getStoredAuthorizedUsers } from '../services/db';
 import { StudentAvatar } from './StudentAvatar';
 import {
+  getStudentBimesterReport,
+  OFFICIAL_BIMESTERS_2027,
+  StudentBimesterReportRow,
+} from '../utils/attendanceRules';
+import {
   OFFICIAL_ADMIN_EMAIL,
   initAuth,
   googleSignIn,
@@ -59,11 +64,20 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   const [activeTab, setActiveTab] = useState<
     | 'nominal_infantil'
     | 'nominal_fundamental'
+    | 'bimestral_bolsa'
     | 'frequencia'
     | 'dias_letivos'
     | 'turmas'
     | 'emails_permitidos'
   >('nominal_infantil');
+  const [selectedBimesterId, setSelectedBimesterId] = useState<
+    '1bim' | '2bim' | '3bim' | '4bim' | 'anual'
+  >('1bim');
+  const [bimesterSegmentFilter, setBimesterSegmentFilter] = useState<
+    'all' | 'infantil' | 'fundamental'
+  >('all');
+  const [bimesterAlertOnly, setBimesterAlertOnly] = useState(false);
+  const [showCloudSettingsDrawer, setShowCloudSettingsDrawer] = useState(false);
   const [emailSearchTab6, setEmailSearchTab6] = useState('');
   const permittedEmailsList = useMemo(
     () => authorizedUsers || getStoredAuthorizedUsers(),
@@ -479,11 +493,12 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
       const matchesTurma = filterTurma === 'all' || r.turma === filterTurma;
       const matchesTurno = filterTurno === 'all' || r.turno === filterTurno;
+      const minLegal = r.tipoEnsino === 'EDUCACAO INFANTIL' ? 60 : 75;
       const matchesStatus =
         filterStatus === 'all' ||
         (filterStatus === 'com_faltas' && r.faltasMes > 0) ||
         (filterStatus === 'com_atestado' && r.faltasJustificadas > 0) ||
-        (filterStatus === 'alerta' && r.faltasMes >= 4);
+        (filterStatus === 'alerta' && r.frequenciaPercent < minLegal);
 
       const matchesSearch =
         q === '' ||
@@ -515,6 +530,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     let estudantesEmAlerta = 0;
 
     rows.forEach((r) => {
+      const minLegal = r.tipoEnsino === 'EDUCACAO INFANTIL' ? 60 : 75;
       totalDiasRecorte += r.diasLetivosMatriculados;
       totalPresencas += r.presencasMes;
       totalFaltas += r.faltasMes;
@@ -522,7 +538,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       totalSemAtestado += r.faltasSemAtestado;
       if (r.faltasMes > 0) estudantesComFaltas += 1;
       if (r.faltasJustificadas > 0) estudantesComAtestados += 1;
-      if (r.faltasMes >= 4) estudantesEmAlerta += 1;
+      if (r.frequenciaPercent < minLegal) estudantesEmAlerta += 1;
     });
 
     const pctPresenca =
@@ -603,6 +619,157 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       )}/edit`
     : 'https://docs.google.com/spreadsheets/create';
 
+  const currentBimesterDef = useMemo(
+    () =>
+      OFFICIAL_BIMESTERS_2027.find((b) => b.id === selectedBimesterId) ||
+      OFFICIAL_BIMESTERS_2027[0],
+    [selectedBimesterId]
+  );
+
+  const bimesterReportRows = useMemo<StudentBimesterReportRow[]>(() => {
+    const q = searchQuery.toLowerCase().trim();
+    const list: StudentBimesterReportRow[] = [];
+    classes.forEach((cls) => {
+      cls.students.forEach((st) => {
+        const rep = getStudentBimesterReport(st, cls, selectedBimesterId);
+        if (bimesterSegmentFilter === 'infantil' && !rep.isEducacaoInfantil) return;
+        if (bimesterSegmentFilter === 'fundamental' && rep.isEducacaoInfantil) return;
+        if (filterTurma !== 'all' && rep.className !== filterTurma) return;
+        if (filterTurno !== 'all' && rep.shift !== filterTurno) return;
+        if (bimesterAlertOnly && !rep.isBelowLegalThresholdBimestre) return;
+        if (
+          q !== '' &&
+          !st.name.toLowerCase().includes(q) &&
+          !(st.ra || '').toLowerCase().includes(q) &&
+          !(st.nis || '').toLowerCase().includes(q)
+        ) {
+          return;
+        }
+        list.push(rep);
+      });
+    });
+    return list;
+  }, [
+    classes,
+    selectedBimesterId,
+    bimesterSegmentFilter,
+    filterTurma,
+    filterTurno,
+    bimesterAlertOnly,
+    searchQuery,
+  ]);
+
+  const bimesterSummaryStats = useMemo(() => {
+    let totalDias = 0;
+    let totalPresencas = 0;
+    let totalFaltas = 0;
+    let totalAtestados = 0;
+    let alertInfantilCount = 0;
+    let alertFundamentalCount = 0;
+
+    bimesterReportRows.forEach((r) => {
+      totalDias += r.totalDiasBimestre;
+      totalPresencas += r.totalPresencasBimestre;
+      totalFaltas += r.totalFaltasBimestre;
+      totalAtestados += r.totalAtestadosBimestre;
+      if (r.isBelowLegalThresholdBimestre) {
+        if (r.isEducacaoInfantil) alertInfantilCount += 1;
+        else alertFundamentalCount += 1;
+      }
+    });
+
+    const pctPresenca =
+      totalDias > 0 ? Math.round((totalPresencas / totalDias) * 100) : 100;
+
+    return {
+      totalEstudantes: bimesterReportRows.length,
+      totalDias,
+      totalPresencas,
+      totalFaltas,
+      totalAtestados,
+      pctPresenca,
+      alertInfantilCount,
+      alertFundamentalCount,
+      totalAlertCount: alertInfantilCount + alertFundamentalCount,
+    };
+  }, [bimesterReportRows]);
+
+  const handleDownloadBolsaFamiliaCSV = () => {
+    const monthHeaders = currentBimesterDef.months.flatMap((m) => [
+      `${m.name.toUpperCase()} - DIAS LETIVOS`,
+      `${m.name.toUpperCase()} - FALTAS`,
+      `${m.name.toUpperCase()} - ATESTADOS`,
+      `${m.name.toUpperCase()} - % PRESENÇA`,
+    ]);
+
+    const headers = [
+      'SEGMENTO',
+      'TURMA',
+      'TURNO',
+      'Nº',
+      'ESTUDANTE',
+      'NIS (BOLSA FAMÍLIA)',
+      'RA OFICIAL',
+      'DATA NASCIMENTO',
+      'MÍNIMO LEGAL EXIGIDO (%)',
+      ...monthHeaders,
+      'TOTAL DIAS NO BIMESTRE',
+      'TOTAL FALTAS NO BIMESTRE',
+      'TOTAL ATESTADOS NO BIMESTRE',
+      'TOTAL FALTAS S/ ATESTADO',
+      '% PRESENÇA CONSOLIDADA BIMESTRE',
+      'STATUS BOLSA FAMÍLIA / LDB',
+      'MOTIVO / PROVIDÊNCIA SISTEMA PRESENÇA MEC',
+    ];
+
+    const csvRows = [
+      headers.join(';'),
+      ...bimesterReportRows.map((r) => {
+        const monthCols = r.monthsBreakdown.flatMap((mb) => [
+          mb.diasLetivos,
+          mb.faltas,
+          mb.atestados,
+          `${mb.frequenciaPercent}%`,
+        ]);
+        return [
+          r.isEducacaoInfantil ? 'EDUCACAO INFANTIL' : 'ENSINO FUNDAMENTAL',
+          r.className,
+          r.shift,
+          r.student.number,
+          `"${r.student.name}"`,
+          `"${r.student.nis || ''}"`,
+          `"${r.student.ra || ''}-${r.student.digRa || ''}"`,
+          `"${r.student.dataNascimento || ''}"`,
+          `${r.minLegalPresencePercent}%`,
+          ...monthCols,
+          r.totalDiasBimestre,
+          r.totalFaltasBimestre,
+          r.totalAtestadosBimestre,
+          r.totalSemAtestadoBimestre,
+          `${r.frequenciaBimestrePercent}%`,
+          r.isBelowLegalThresholdBimestre
+            ? `ALERTA INFREQUENCIA (<${r.minLegalPresencePercent}%)`
+            : `REGULAR (>=${r.minLegalPresencePercent}%)`,
+          `"${r.bolsaFamiliaMotivoPadrao}"`,
+        ].join(';');
+      }),
+    ];
+
+    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], {
+      type: 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Relatorio_${currentBimesterDef.id.toUpperCase()}_Bolsa_Familia_2027_EMEB_Joaquim_Candelario.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(
+      'success',
+      `Relatório ${currentBimesterDef.shortLabel} (Sistema Presença / Bolsa Família) exportado com sucesso!`
+    );
+  };
+
   return (
     <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-4 pb-36">
       {/* Status Toast */}
@@ -631,500 +798,764 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
         </div>
       )}
 
-      {/* Google Sheets & Google Drive Real Database Card */}
-      <section className="bg-white rounded-2xl p-5 shadow-sm border-2 border-[#005035]/25 space-y-4">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#a4f3ca]/60 text-[#003723] text-[0.78rem] font-black">
+      {/* Apple OS Minimalist Executive Header + Collapsible Cloud Workspace Drawer (Zero Feature Loss) */}
+      <section className="card-welcoming bg-white rounded-2xl p-4 sm:p-5 border border-[#003440]/12 space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-[0.74rem] font-bold">
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full ${
+                  needsAuth
+                    ? 'bg-[#f1f4f3] text-[#436370]'
+                    : 'bg-[#eaf6ef] text-[#005035]'
+                }`}
+              >
                 <span
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-1.5 h-1.5 rounded-full ${
                     needsAuth ? 'bg-[#ba1a1a]' : 'bg-[#005035]'
                   }`}
                 ></span>
-                {needsAuth
-                  ? 'Desconectado do Google'
-                  : `Conectado: ${googleUserEmail}`}
+                <span>
+                  {needsAuth ? 'Modo Local · Google Desconectado' : `Cloud Ativo: ${googleUserEmail}`}
+                </span>
               </span>
-              <span className="inline-block px-2.5 py-1 rounded-full bg-[#003440] text-white text-[0.72rem] font-black">
-                Admin Editor Único: {OFFICIAL_ADMIN_EMAIL}
+              <span className="text-[#5a676b] hidden sm:inline">·</span>
+              <span className="text-[#436370] font-semibold truncate">
+                {SCHOOL_NAME} · 200 Dias Letivos
               </span>
             </div>
 
-            <h1 className="text-[1.4rem] font-extrabold text-[#003440] leading-tight mt-2">
-              Banco de Dados Real (48 Colunas SED + Pasta Drive)
+            <h1 className="text-[1.35rem] sm:text-[1.5rem] font-extrabold text-[#003440] leading-tight mt-1">
+              Central de Tabulação & Relatórios Oficiais
             </h1>
-            <p className="text-[0.88rem] text-[#41484b] mt-0.5">
-              {SCHOOL_NAME} • {CITY_NAME} • 200 Dias Letivos
-            </p>
           </div>
 
-          {!needsAuth && (
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {needsAuth ? (
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isLoggingIn}
+                className="min-h-[40px] px-3.5 rounded-xl bg-white hover:bg-[#f5f7f6] text-[#003440] font-bold text-[0.8rem] border border-[#003440]/20 shadow-2xs flex items-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px] text-[#005035]">
+                  cloud_sync
+                </span>
+                <span>{isLoggingIn ? 'Conectando...' : 'Conectar Google'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isSyncingCloud || !spreadsheetInput.trim()}
+                onClick={handleReadFromGoogleSheet}
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-bold text-[0.8rem] border border-[#005035]/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+              >
+                <span className="material-symbols-outlined text-[18px]">sync</span>
+                <span>Sincronizar Nuvem</span>
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={handleGoogleLogout}
-              className="px-3 py-1.5 rounded-xl bg-[#f3f4f2] hover:bg-[#e7e8e6] text-[#41484b] font-bold text-[0.78rem] border border-[#c0c8cb] cursor-pointer shrink-0"
+              onClick={handleDownloadExcel}
+              className="min-h-[40px] px-3.5 rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.8rem] flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
-              Sair
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              <span>Exportar Planilha (.xlsx)</span>
             </button>
-          )}
+
+            <button
+              type="button"
+              onClick={() => setShowCloudSettingsDrawer(!showCloudSettingsDrawer)}
+              className={`min-h-[40px] px-3.5 rounded-xl font-bold text-[0.8rem] flex items-center gap-1.5 border cursor-pointer transition-colors ${
+                showCloudSettingsDrawer
+                  ? 'bg-[#005035] text-white border-[#005035]'
+                  : 'bg-[#f5f7f6] hover:bg-[#e3e8e6] text-[#003440] border-[#003440]/12'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {showCloudSettingsDrawer ? 'expand_less' : 'tune'}
+              </span>
+              <span>Drive, Fotos & Links</span>
+            </button>
+          </div>
         </div>
 
-        {/* Official Sign in with Google button if not authenticated */}
-        {needsAuth ? (
-          <div className="bg-[#f3f4f2] p-4 rounded-2xl border border-[#c0c8cb] space-y-3 text-center">
-            <p className="text-[0.92rem] text-[#191c1b] font-semibold">
-              Entre com a conta administrativa (<strong>{OFFICIAL_ADMIN_EMAIL}</strong>) para criar automaticamente a <strong>Planilha Real no Google Sheets</strong> e a <strong>Pasta Real de Fotos no Google Drive</strong>:
-            </p>
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={isLoggingIn}
-              className="gsi-material-button mx-auto w-full max-w-sm min-h-[54px] bg-white hover:bg-[#f8faf9] text-[#191c1b] font-extrabold text-[0.98rem] rounded-xl border-2 border-[#c0c8cb] shadow-sm flex items-center justify-center gap-3 px-5 cursor-pointer transition-all active:scale-98"
-            >
-              <div className="w-6 h-6 shrink-0">
-                <svg
-                  version="1.1"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 48 48"
-                  style={{ display: 'block', width: '100%', height: '100%' }}
-                >
-                  <path
-                    fill="#EA4335"
-                    d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-                  ></path>
-                  <path
-                    fill="#4285F4"
-                    d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-                  ></path>
-                  <path
-                    fill="#FBBC05"
-                    d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-                  ></path>
-                  <path
-                    fill="#34A853"
-                    d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-                  ></path>
-                  <path fill="none" d="M0 0h48v48H0z"></path>
-                </svg>
-              </div>
-              <span className="gsi-material-button-contents">
-                {isLoggingIn
-                  ? 'Conectando Google Sheets & Drive...'
-                  : 'Sign in with Google (Criar Planilha & Pasta Real)'}
-              </span>
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3 bg-[#f8faf9] p-4 rounded-2xl border border-[#e1e3e1]">
-            {isAdmin ? (
-              <>
-                <button
-                  type="button"
-                  disabled={isSyncingCloud}
-                  onClick={handleRequestCreateRealDatabaseAndFolder}
-                  className="w-full min-h-[56px] px-4 bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.98rem] rounded-xl flex items-center justify-center gap-2.5 shadow-md cursor-pointer disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined text-[24px]">
-                    rocket_launch
+        {/* Collapsible Cloud, Drive Folders, Bulk Photos & SED TSV Importer Drawer (Zero Loss) */}
+        {showCloudSettingsDrawer && (
+          <div className="pt-3 border-t border-[#003440]/10 space-y-3 animate-gentle-fade">
+            {!needsAuth ? (
+              <div className="space-y-3 bg-[#f5f7f6] p-3.5 rounded-2xl border border-[#003440]/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.78rem] font-extrabold text-[#003440]">
+                    Sincronização Google Sheets & Pastas Nomeadas no Drive ({OFFICIAL_ADMIN_EMAIL})
                   </span>
-                  <span>
-                    {isSyncingCloud
-                      ? 'Criando Planilha e Pasta no seu Google...'
-                      : '1. Criar Planilha Real (48 Colunas SED) + Pasta Real de Fotos'}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={handleGoogleLogout}
+                    className="px-2.5 py-1 rounded-lg bg-white text-[#41484b] font-bold text-[0.74rem] border border-[#c0c8cb] cursor-pointer"
+                  >
+                    Desconectar Conta
+                  </button>
+                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {isAdmin ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      disabled={isSyncingCloud}
+                      onClick={handleRequestCreateRealDatabaseAndFolder}
+                      className="min-h-[42px] px-3 bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.8rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
+                      <span>Criar Planilha + Pasta Drive</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSyncingCloud}
+                      onClick={handleRequestCreateDriveFolderOnly}
+                      className="min-h-[42px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.8rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">create_new_folder</span>
+                      <span>Criar Pasta de Fotos</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSyncingCloud || !spreadsheetInput.trim()}
+                      onClick={handleRequestWriteSheet}
+                      className="min-h-[42px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.8rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
+                      <span>Gravar Dados na Planilha</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-[#fff8f0] rounded-xl border border-[#e6c387] text-[0.78rem] font-bold text-[#8c5000]">
+                    Somente o Administrador ({OFFICIAL_ADMIN_EMAIL}) edita a estrutura de pastas no Drive.
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled={isSyncingCloud}
-                    onClick={handleRequestCreateDriveFolderOnly}
-                    className="min-h-[48px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-extrabold text-[0.85rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    onClick={handleSyncDrivePhotosNow}
+                    className="min-h-[40px] px-3 bg-white hover:bg-[#eaf6ef] text-[#005035] border border-[#005035]/25 font-bold text-[0.78rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[20px]">
-                      create_new_folder
-                    </span>
-                    <span>Criar Pasta Real no Drive</span>
+                    <span className="material-symbols-outlined text-[18px]">photo_library</span>
+                    <span>Vincular Fotos da Pasta do Drive</span>
                   </button>
 
                   <button
                     type="button"
-                    disabled={isSyncingCloud || !spreadsheetInput.trim()}
-                    onClick={handleRequestWriteSheet}
-                    className="min-h-[48px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-extrabold text-[0.85rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    disabled={isSyncingCloud}
+                    onClick={handleSyncNominalPdfsNow}
+                    className="min-h-[40px] px-3 bg-white hover:bg-[#fff8f7] text-[#ba1a1a] border border-[#ba1a1a]/25 font-bold text-[0.78rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[20px]">
-                      cloud_upload
-                    </span>
-                    <span>Atualizar Planilha Atual</span>
+                    <span className="material-symbols-outlined text-[18px]">document_scanner</span>
+                    <span>Vincular Subpastas de PDFs Escaneados</span>
                   </button>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="p-3 bg-[#fff8f0] rounded-xl border border-[#e6c387] text-[0.82rem] font-bold text-[#8c5000]">
-                🔒 Somente o Administrador ({OFFICIAL_ADMIN_EMAIL}) pode criar ou editar as planilhas e pastas no Google Drive.
+              <div className="bg-[#f5f7f6] p-3.5 rounded-2xl border border-[#003440]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-[0.8rem] text-[#374346] font-medium">
+                  Autentique com <strong>{OFFICIAL_ADMIN_EMAIL}</strong> para sincronizar diretamente com o Google Sheets e pastas do Google Drive.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoggingIn}
+                  className="px-4 min-h-[40px] bg-white hover:bg-[#f8faf9] text-[#003440] font-bold text-[0.8rem] rounded-xl border border-[#003440]/20 shadow-2xs shrink-0 cursor-pointer"
+                >
+                  Sign in with Google
+                </button>
               </div>
             )}
+
+            {/* Bulk Photo Upload + SED TSV Importer + Links */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
+              {/* 1. Bulk Photos */}
+              <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-[0.76rem] font-extrabold text-[#003440] block truncate">
+                    Subir Fotos em Lote (NOME.jpg)
+                  </span>
+                  <span className="text-[0.7rem] text-[#5a676b] block truncate">
+                    Salva na pasta nomeada automaticamente
+                  </span>
+                </div>
+                <input
+                  ref={bulkPhotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleBulkLocalPhotosChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  disabled={isSyncingCloud}
+                  onClick={() => bulkPhotoInputRef.current?.click()}
+                  className="px-3 min-h-[36px] rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.74rem] shrink-0 cursor-pointer"
+                >
+                  Selecionar JPGs
+                </button>
+              </div>
+
+              {/* 2. Link Planilha */}
+              <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[0.74rem] font-extrabold text-[#003440] truncate">
+                    Planilha ({connectedTitle})
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLink('sheet', currentSheetFullUrl)}
+                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.68rem] border border-[#c0c8cb] cursor-pointer"
+                    >
+                      {copiedKey === 'sheet' ? '✓' : 'Copiar'}
+                    </button>
+                    <a
+                      href={currentSheetFullUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-0.5 rounded bg-[#005035] text-white font-bold text-[0.68rem]"
+                    >
+                      Abrir
+                    </a>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  readOnly={!isAdmin}
+                  value={spreadsheetInput}
+                  onChange={(e) => setSpreadsheetInput(e.target.value)}
+                  placeholder="ID ou URL da Planilha Google..."
+                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.72rem] rounded-lg border border-[#c0c8cb]"
+                />
+              </div>
+
+              {/* 3. Link Pasta Drive */}
+              <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[0.74rem] font-extrabold text-[#003440] truncate">
+                    Pasta Nomeada Fotos (Drive)
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLink('drive', driveFolderUrl)}
+                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.68rem] border border-[#c0c8cb] cursor-pointer"
+                    >
+                      {copiedKey === 'drive' ? '✓' : 'Copiar'}
+                    </button>
+                    <a
+                      href={driveFolderUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-0.5 rounded bg-[#003440] text-white font-bold text-[0.68rem]"
+                    >
+                      Drive
+                    </a>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  readOnly={!isAdmin}
+                  value={driveFolderUrl}
+                  onChange={(e) => {
+                    setDriveFolderUrl(e.target.value);
+                    savePhotosDriveFolderUrl(e.target.value);
+                  }}
+                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.72rem] rounded-lg border border-[#c0c8cb]"
+                />
+              </div>
+            </div>
+
+            {isAdmin && (
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[0.73rem] text-[#5a676b]">
+                  Sincronização automática ativa: faltas e atestados lançados salvam direto na planilha.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowTsvImporter(!showTsvImporter)}
+                  className="text-[0.75rem] font-bold text-[#005035] hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[15px]">content_paste</span>
+                  <span>{showTsvImporter ? 'Fechar Importador SED' : 'Colar Dados SED (48 Colunas)'}</span>
+                </button>
+              </div>
+            )}
+
+            {showTsvImporter && isAdmin && (
+              <div className="bg-[#eaf6ef] p-3 rounded-xl border border-[#005035]/30 space-y-2">
+                <textarea
+                  rows={3}
+                  value={rawTsvText}
+                  onChange={(e) => setRawTsvText(e.target.value)}
+                  placeholder="Cole aqui as linhas copiadas da SED / Excel com as 48 colunas..."
+                  className="w-full p-2 bg-white text-[#191c1b] font-mono text-[0.74rem] rounded-lg border border-[#c0c8cb]"
+                />
+                <button
+                  type="button"
+                  onClick={handleImportSedTsv}
+                  className="w-full min-h-[38px] bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.82rem] rounded-lg cursor-pointer"
+                >
+                  Importar Linhas SED
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Apple OS Semantic Segmented Control Bar (Clean, Cohesive, Zero Clutter) */}
+      <div className="bg-[#e6ebea]/90 backdrop-blur-md p-1.5 rounded-2xl border border-[#003440]/10 flex items-center gap-1 overflow-x-auto">
+        {[
+          {
+            id: 'nominal_infantil',
+            label: 'Ed. Infantil (<60%)',
+            icon: 'child_care',
+          },
+          {
+            id: 'nominal_fundamental',
+            label: 'Ens. Fundamental (<75%)',
+            icon: 'school',
+          },
+          {
+            id: 'bimestral_bolsa',
+            label: 'Relatórios Bimestrais & Bolsa Família (Fev./27)',
+            icon: 'assessment',
+          },
+          {
+            id: 'frequencia',
+            label: 'Base SED (48 Col.)',
+            icon: 'dataset',
+          },
+          {
+            id: 'turmas',
+            label: `Turmas (${classes.length})`,
+            icon: 'groups',
+          },
+          {
+            id: 'dias_letivos',
+            label: '200 Dias Letivos',
+            icon: 'calendar_month',
+          },
+          {
+            id: 'emails_permitidos',
+            label: `Acessos (${permittedEmailsList.length})`,
+            icon: 'verified_user',
+          },
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setFilterTurma('all');
+              }}
+              className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-[0.8rem] flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                isActive
+                  ? 'bg-white text-[#003440] shadow-[0_2px_8px_rgba(0,52,64,0.12)] font-extrabold'
+                  : 'text-[#436370] hover:text-[#003440] hover:bg-white/50'
+              }`}
+            >
+              <span
+                className={`material-symbols-outlined text-[18px] ${
+                  isActive ? 'text-[#005035]' : 'text-[#5a676b]'
+                }`}
+              >
+                {tab.icon}
+              </span>
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* NEW TAB: Relatórios Bimestrais com Faltas e Atestados por Mês (a partir de Fev./27) para o Sistema Bolsa Família / MEC */}
+      {activeTab === 'bimestral_bolsa' && (
+        <section className="card-welcoming bg-white rounded-2xl p-5 border border-[#003440]/12 space-y-4 animate-gentle-fade">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#003440]/10">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#005035] text-white text-[0.72rem] font-extrabold uppercase tracking-wider">
+                  Sistema Presença MEC · Bolsa Família (A partir de Fev./2027)
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-[#f5f7f6] text-[#003440] text-[0.72rem] font-bold border border-[#003440]/12">
+                  Ed. Infantil: alerta &lt; 60% · Ens. Fundamental: alerta &lt; 75%
+                </span>
+              </div>
+              <h2 className="text-[1.25rem] sm:text-[1.35rem] font-extrabold text-[#003440] mt-1">
+                Relatório Bimestral de Faltas e Atestados por Mês — {currentBimesterDef.label}
+              </h2>
+              <p className="text-[0.82rem] text-[#436370] font-medium">
+                Consolidação mensal de {currentBimesterDef.periodLabel} com NIS, RA, Faltas, Atestados e % de Presença para lançamento no Sistema Bolsa Família.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleDownloadBolsaFamiliaCSV}
+                className="min-h-[42px] px-4 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.82rem] flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">download</span>
+                <span>Exportar Planilha Bolsa Família (.csv)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="min-h-[42px] px-3.5 rounded-xl bg-[#f5f7f6] hover:bg-[#e3e8e6] text-[#003440] font-bold text-[0.82rem] border border-[#003440]/15 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">print</span>
+                <span>Imprimir Bimestre</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Bimester Pill Selector (1º Bim Fev-Abr/27, 2º Bim Mai-Jul/27, 3º Bim Ago-Set/27, 4º Bim Out-Dez/27, Consolidado Anual) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-[#f5f7f6] p-2 rounded-xl border border-[#003440]/10">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {OFFICIAL_BIMESTERS_2027.map((bim) => {
+                const active = selectedBimesterId === bim.id;
+                return (
+                  <button
+                    key={bim.id}
+                    type="button"
+                    onClick={() => setSelectedBimesterId(bim.id)}
+                    className={`px-3.5 py-2 rounded-lg font-bold text-[0.78rem] transition-all cursor-pointer ${
+                      active
+                        ? 'bg-[#003440] text-white shadow-2xs font-extrabold'
+                        : 'bg-white text-[#436370] hover:text-[#003440]'
+                    }`}
+                  >
+                    {bim.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {(['all', 'infantil', 'fundamental'] as const).map((seg) => (
+                <button
+                  key={seg}
+                  type="button"
+                  onClick={() => setBimesterSegmentFilter(seg)}
+                  className={`px-3 py-1.5 rounded-lg text-[0.75rem] font-bold cursor-pointer ${
+                    bimesterSegmentFilter === seg
+                      ? 'bg-[#005035] text-white'
+                      : 'bg-white text-[#436370] hover:text-[#003440]'
+                  }`}
+                >
+                  {seg === 'all'
+                    ? 'Todos Segmentos'
+                    : seg === 'infantil'
+                    ? 'Só Ed. Infantil (<60%)'
+                    : 'Só Ens. Fundamental (<75%)'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 4 Minimalist KPI Cards for Bimester & Bolsa Família */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-xl bg-[#f8faf9] border border-[#003440]/10">
+              <span className="text-[0.7rem] font-bold text-[#5a676b] uppercase tracking-wider block">
+                Estudantes no Bimestre
+              </span>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="text-[1.5rem] font-black text-[#003440] tabular-nums">
+                  {bimesterSummaryStats.totalEstudantes}
+                </span>
+                <span className="text-[0.75rem] font-bold text-[#005035]">
+                  Freq. Média: {bimesterSummaryStats.pctPresenca}%
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#f8faf9] border border-[#003440]/10">
+              <span className="text-[0.7rem] font-bold text-[#5a676b] uppercase tracking-wider block">
+                Faltas & Atestados no Período
+              </span>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="text-[1.5rem] font-black text-[#ba1a1a] tabular-nums">
+                  {bimesterSummaryStats.totalFaltas} faltas
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] text-[0.74rem] font-bold">
+                  {bimesterSummaryStats.totalAtestados} atestados
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#fff8f7] border border-[#ba1a1a]/25">
+              <span className="text-[0.7rem] font-bold text-[#ba1a1a] uppercase tracking-wider block">
+                Alerta Ed. Infantil (&lt; 60% Presença)
+              </span>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="text-[1.5rem] font-black text-[#ba1a1a] tabular-nums">
+                  {bimesterSummaryStats.alertInfantilCount}
+                </span>
+                <span className="text-[0.72rem] font-semibold text-[#93000a]">
+                  limite mínimo 60% (LDB/MEC)
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#fff8f7] border border-[#ba1a1a]/25">
+              <span className="text-[0.7rem] font-bold text-[#ba1a1a] uppercase tracking-wider block">
+                Alerta Ens. Fundamental (&lt; 75% Presença)
+              </span>
+              <div className="flex items-baseline justify-between mt-1">
+                <span className="text-[1.5rem] font-black text-[#ba1a1a] tabular-nums">
+                  {bimesterSummaryStats.alertFundamentalCount}
+                </span>
+                <span className="text-[0.72rem] font-semibold text-[#93000a]">
+                  limite mínimo 75% (LDB/MEC)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <select
+              value={filterTurma}
+              onChange={(e) => setFilterTurma(e.target.value)}
+              className="w-full min-h-[42px] px-3 bg-[#f5f7f6] text-[#003440] font-bold rounded-xl border border-[#003440]/15 text-[0.84rem]"
+            >
+              <option value="all">Todas as Turmas ({classes.length})</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name} — {c.shift.replace('Turno ', '')}
+                </option>
+              ))}
+            </select>
 
             <button
               type="button"
-              disabled={isSyncingCloud || !spreadsheetInput.trim()}
-              onClick={handleReadFromGoogleSheet}
-              className="w-full min-h-[50px] px-4 bg-white hover:bg-[#e7e8e6] text-[#003440] border-2 border-[#003440] font-extrabold text-[0.9rem] rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
+              onClick={() => setBimesterAlertOnly(!bimesterAlertOnly)}
+              className={`min-h-[42px] px-3 rounded-xl font-bold text-[0.82rem] border flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                bimesterAlertOnly
+                  ? 'bg-[#ba1a1a] text-white border-[#ba1a1a]'
+                  : 'bg-[#fff8f7] text-[#ba1a1a] border-[#ba1a1a]/30 hover:bg-[#ffdad6]'
+              }`}
             >
-              <span className="material-symbols-outlined text-[20px]">
-                sync
+              <span className="material-symbols-outlined text-[18px]">warning</span>
+              <span>
+                {bimesterAlertOnly
+                  ? `Exibindo Só Alertas Bolsa Família (${bimesterSummaryStats.totalAlertCount})`
+                  : `Filtrar Só Alertas <60% Inf. / <75% Fund. (${bimesterSummaryStats.totalAlertCount})`}
               </span>
-              <span>Sincronizar Agora (Ler Estudantes da Planilha + Fotos da Pasta Drive)</span>
             </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                disabled={isSyncingCloud}
-                onClick={handleSyncDrivePhotosNow}
-                className="w-full min-h-[46px] px-4 bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#003723] border border-[#005035]/30 font-extrabold text-[0.84rem] rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  photo_library
-                </span>
-                <span>Sincronizar Fotos da Pasta do Drive</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={isSyncingCloud}
-                onClick={handleSyncNominalPdfsNow}
-                className="w-full min-h-[46px] px-4 bg-[#fff8f7] hover:bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/30 font-extrabold text-[0.84rem] rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  picture_as_pdf
-                </span>
-                <span>Sincronizar Subpastas de PDFs Nominais</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Rule Banner: Manual Sheet -> Auto App | App -> Sheet Only on Absences */}
-        <div className="p-3.5 rounded-xl bg-[#eaf6ef] border border-[#a4f3ca] space-y-1.5 text-[0.8rem] text-[#003723]">
-          <p className="font-black flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[18px]">verified</span>
-            <span>Regra Oficial de Sincronização Automática:</span>
-          </p>
-          <p>
-            • <strong>Google Sheets + Pasta Drive → App (Automático):</strong> Os dados de estudantes (48 colunas SED), turmas, 200 dias letivos e as fotos soltas na pasta (<code className="font-mono">NOME DO ESTUDANTE.jpg</code>) atualizam o aplicativo automaticamente.
-          </p>
-          <p>
-            • <strong>App → Google Sheets (Apenas Faltas):</strong> O aplicativo alimenta a planilha <strong>somente no preenchimento de faltas/atestados</strong>, sem sobrescrever os dados cadastrais dos estudantes editados manualmente na planilha.
-          </p>
-        </div>
-
-        {/* Bulk Photo Selector from Computer Folder (matches by student name) */}
-        <div className="bg-[#f3f4f2] p-3.5 rounded-xl border border-[#c0c8cb] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div>
-            <span className="text-[0.82rem] font-black text-[#003440] block">
-              📸 Sincronizar Várias Fotos de Uma Vez (Pelo Nome do Arquivo JPG)
-            </span>
-            <span className="text-[0.75rem] text-[#41484b] block">
-              Selecione todas as fotos da pasta (<code className="font-mono">RAUANNY GRAZIELLY DA SILVA LIMA.jpg</code>, etc.) para vincular automaticamente a cada estudante:
-            </span>
-          </div>
-          <input
-            ref={bulkPhotoInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleBulkLocalPhotosChange}
-            className="hidden"
-          />
-          <button
-            type="button"
-            disabled={isSyncingCloud}
-            onClick={() => bulkPhotoInputRef.current?.click()}
-            className="px-3.5 min-h-[44px] rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-extrabold text-[0.8rem] flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">upload_file</span>
-            <span>Selecionar Fotos JPG</span>
-          </button>
-        </div>
-
-        {/* LIVE LINKS: Planilha Real & Pasta Real de Fotos */}
-        <div className="pt-3 border-t border-[#edeeec] space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[0.82rem] font-black text-[#003440] uppercase">
-              Links Reais da Planilha e da Pasta de Fotos:
-            </p>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setShowTsvImporter(!showTsvImporter)}
-                className="text-[0.78rem] font-extrabold text-[#005035] hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-[16px]">content_paste</span>
-                <span>{showTsvImporter ? 'Fechar Importador SED' : 'Colar Dados SED (48 Colunas)'}</span>
-              </button>
-            )}
-          </div>
-
-          {/* Importer for Raw SED TSV (48 Columns) */}
-          {showTsvImporter && isAdmin && (
-            <div className="bg-[#eaf6ef] p-3.5 rounded-xl border-2 border-[#005035]/30 space-y-2.5">
-              <p className="text-[0.82rem] font-bold text-[#003723]">
-                Cole abaixo as linhas copiadas da SED / Excel (com as 48 colunas de <em>TIPO DE ENSINO</em> até <em>SUCESSÃO ESCOLAR</em>):
-              </p>
-              <textarea
-                rows={4}
-                value={rawTsvText}
-                onChange={(e) => setRawTsvText(e.target.value)}
-                placeholder="EDUCACAO INFANTIL	1	1	ALICE DE BARROS PIRES	123667009	7	SP	15/07/2021..."
-                className="w-full p-2.5 bg-white text-[#191c1b] font-mono text-[0.75rem] rounded-xl border border-[#c0c8cb] focus:outline-none focus:border-[#005035]"
-              />
-              <button
-                type="button"
-                onClick={handleImportSedTsv}
-                className="w-full min-h-[44px] bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.88rem] rounded-xl cursor-pointer"
-              >
-                Importar Linhas SED para o Banco de Dados
-              </button>
-            </div>
-          )}
-
-          {/* Link 1: Planilha Google Sheets */}
-          <div className="bg-[#f3f4f2] p-3 rounded-xl border border-[#c0c8cb] space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[0.78rem] font-extrabold text-[#003440]">
-                📊 1. Link da Planilha Banco de Dados ({connectedTitle}):
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleCopyLink('sheet', currentSheetFullUrl)}
-                  className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#e7e8e6] text-[#003440] font-bold text-[0.74rem] border border-[#c0c8cb] cursor-pointer"
-                >
-                  {copiedKey === 'sheet' ? '✓ Copiado!' : 'Copiar Link'}
-                </button>
-                <a
-                  href={currentSheetFullUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.74rem] flex items-center gap-1"
-                >
-                  <span>Abrir Planilha</span>
-                  <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                </a>
-              </div>
-            </div>
             <input
               type="text"
-              readOnly={!isAdmin}
-              value={spreadsheetInput}
-              onChange={(e) => setSpreadsheetInput(e.target.value)}
-              placeholder="Cole o link https://docs.google.com/spreadsheets/d/... ou clique em Criar Planilha Real acima"
-              className="w-full px-3 py-2 bg-white text-[#003440] font-mono text-[0.78rem] rounded-lg border border-[#c0c8cb]"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nome, RA ou NIS (Bolsa Família)..."
+              className="w-full min-h-[42px] px-3 bg-[#f5f7f6] text-[#191c1b] font-semibold rounded-xl border border-[#003440]/15 text-[0.84rem]"
             />
           </div>
 
-          {/* Link 2: Pasta Real de Fotos no Google Drive */}
-          <div className="bg-[#f3f4f2] p-3 rounded-xl border border-[#c0c8cb] space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[0.78rem] font-extrabold text-[#003440]">
-                📁 2. Link da Pasta Real de Fotos (Google Drive):
-                {isRealDriveCreated && (
-                  <span className="ml-1.5 px-2 py-0.5 rounded-full bg-[#a4f3ca] text-[#003723] text-[0.68rem]">
-                    Pasta Real Criada
-                  </span>
-                )}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleCopyLink('drive', driveFolderUrl)}
-                  className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#e7e8e6] text-[#003440] font-bold text-[0.74rem] border border-[#c0c8cb] cursor-pointer"
-                >
-                  {copiedKey === 'drive' ? '✓ Copiado!' : 'Copiar Link'}
-                </button>
-                <a
-                  href={driveFolderUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1 rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.74rem] flex items-center gap-1"
-                >
-                  <span>Abrir Pasta no Drive</span>
-                  <span className="material-symbols-outlined text-[14px]">folder_shared</span>
-                </a>
-              </div>
-            </div>
-            <input
-              type="text"
-              readOnly={!isAdmin}
-              value={driveFolderUrl}
-              onChange={(e) => {
-                setDriveFolderUrl(e.target.value);
-                savePhotosDriveFolderUrl(e.target.value);
-              }}
-              className="w-full px-3 py-2 bg-white text-[#003440] font-mono text-[0.78rem] rounded-lg border border-[#c0c8cb]"
-            />
+          {/* Bimester & Bolsa Família Table with Month-by-Month Faltas & Atestados */}
+          <div className="border border-[#003440]/15 rounded-2xl overflow-x-auto max-h-[580px]">
+            <table className="w-full text-left text-[0.78rem] border-collapse min-w-[1220px]">
+              <thead className="bg-[#003440] text-white sticky top-0 z-10 font-bold uppercase tracking-tight">
+                <tr>
+                  <th className="py-3 px-2.5">Turma / Seg.</th>
+                  <th className="py-3 px-3">Estudante (Foto / Doc Drive)</th>
+                  <th className="py-3 px-2.5 text-center">NIS (Bolsa Família) / RA</th>
+                  <th className="py-3 px-2 text-center">Mín. Legal</th>
+                  {currentBimesterDef.months.map((m) => (
+                    <th
+                      key={m.name}
+                      className="py-3 px-2.5 text-center bg-[#1e4b58] border-l border-white/15"
+                    >
+                      {m.name.slice(0, 3)}. / 27
+                      <span className="block text-[0.65rem] font-normal text-[#bdeafa]">
+                        Faltas · Atest. · %
+                      </span>
+                    </th>
+                  ))}
+                  <th className="py-3 px-2.5 text-center bg-[#7c1d1d] border-l border-white/15">
+                    Total Bimestre
+                    <span className="block text-[0.65rem] font-normal text-[#ffdad6]">
+                      Faltas / Atestados
+                    </span>
+                  </th>
+                  <th className="py-3 px-2.5 text-center bg-[#005035]">
+                    % Presença Bim.
+                  </th>
+                  <th className="py-3 px-3 text-left">
+                    Status Sistema Bolsa Família / LDB
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#edeeec]">
+                {bimesterReportRows.slice(0, 250).map((r, idx) => (
+                  <tr
+                    key={`${r.classId}-${r.student.id}`}
+                    onClick={() => onOpenStudentGrid?.(r.classId, r.student.id)}
+                    className={`cursor-pointer hover:bg-[#c3e5f4]/25 transition-colors ${
+                      r.isBelowLegalThresholdBimestre
+                        ? 'bg-[#fff8f7]'
+                        : idx % 2 === 0
+                        ? 'bg-white'
+                        : 'bg-[#f9faf8]'
+                    }`}
+                  >
+                    <td className="py-2.5 px-2.5">
+                      <span className="font-extrabold text-[#003440] block">{r.className}</span>
+                      <span
+                        className={`inline-block px-1.5 py-0.2 rounded text-[0.65rem] font-bold ${
+                          r.isEducacaoInfantil
+                            ? 'bg-[#eaf6ef] text-[#005035]'
+                            : 'bg-[#c3e5f4]/60 text-[#003440]'
+                        }`}
+                      >
+                        {r.isEducacaoInfantil ? 'ED. INFANTIL' : 'ENS. FUND.'}
+                      </span>
+                    </td>
+
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center gap-2.5">
+                        <StudentAvatar
+                          student={r.student}
+                          size="sm"
+                          expandableOnClick={true}
+                        />
+                        <div className="min-w-0">
+                          <a
+                            href={
+                              r.student.fichaPdfDriveUrl ||
+                              (r.student.fichaPdfDriveId
+                                ? `https://drive.google.com/file/d/${r.student.fichaPdfDriveId}/view`
+                                : `#doc-${r.student.id}`)
+                            }
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onOpenStudentPdf?.(r.classId, r.student.id);
+                            }}
+                            className="doc-hyperlink font-extrabold text-[#003440] block truncate max-w-[230px]"
+                            title="Abrir Documento Escaneado no Google Drive"
+                          >
+                            {r.student.name}
+                          </a>
+                          <span className="text-[0.68rem] text-[#5a676b] block">
+                            Nº {r.student.number.toString().padStart(2, '0')} · Nasc: {r.student.dataNascimento}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="py-2.5 px-2.5 text-center font-mono">
+                      <span className="font-bold text-[#003440] block">
+                        NIS: {r.student.nis || '—'}
+                      </span>
+                      <span className="text-[0.68rem] text-[#5a676b]">
+                        RA {r.student.ra}-{r.student.digRa}
+                      </span>
+                    </td>
+
+                    <td className="py-2.5 px-2 text-center font-mono font-bold text-[#003440]">
+                      {r.minLegalPresencePercent}%
+                    </td>
+
+                    {r.monthsBreakdown.map((mb) => (
+                      <td
+                        key={mb.monthName}
+                        className={`py-2.5 px-2 text-center border-l border-[#edeeec] font-mono tabular-nums ${
+                          mb.isBelowLegalThreshold ? 'bg-[#ffdad6]/45' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          <span
+                            className={`font-bold ${
+                              mb.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#5a676b]'
+                            }`}
+                          >
+                            {mb.faltas}f
+                          </span>
+                          <span className="text-[#a8b5b9]">·</span>
+                          <span className="text-[#005035] font-bold">
+                            {mb.atestados}at
+                          </span>
+                        </div>
+                        <span
+                          className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[0.68rem] font-extrabold ${
+                            mb.isBelowLegalThreshold
+                              ? 'bg-[#ba1a1a] text-white'
+                              : 'bg-[#f1f4f3] text-[#003440]'
+                          }`}
+                        >
+                          {mb.frequenciaPercent}%
+                        </span>
+                      </td>
+                    ))}
+
+                    <td className="py-2.5 px-2.5 text-center border-l border-[#edeeec] font-mono tabular-nums">
+                      <span className="font-extrabold text-[#ba1a1a]">
+                        {r.totalFaltasBimestre}f
+                      </span>
+                      <span className="mx-1 text-[#a8b5b9]">/</span>
+                      <span className="font-extrabold text-[#005035]">
+                        {r.totalAtestadosBimestre} atest.
+                      </span>
+                      <span className="block text-[0.66rem] text-[#5a676b]">
+                        ({r.totalDiasBimestre}d letivos)
+                      </span>
+                    </td>
+
+                    <td className="py-2.5 px-2.5 text-center font-mono tabular-nums">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[0.78rem] font-black ${
+                          r.isBelowLegalThresholdBimestre
+                            ? 'bg-[#ba1a1a] text-white'
+                            : 'bg-[#eaf6ef] text-[#005035]'
+                        }`}
+                      >
+                        {r.frequenciaBimestrePercent}%
+                      </span>
+                    </td>
+
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-extrabold ${
+                          r.isBelowLegalThresholdBimestre
+                            ? 'bg-[#ffdad6] text-[#ba1a1a]'
+                            : 'bg-[#eaf6ef] text-[#005035]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">
+                          {r.isBelowLegalThresholdBimestre ? 'warning' : 'verified'}
+                        </span>
+                        <span>
+                          {r.isBelowLegalThresholdBimestre
+                            ? `Alerta <${r.minLegalPresencePercent}% (${r.isEducacaoInfantil ? 'Infantil' : 'Fund.'})`
+                            : `Regular (≥${r.minLegalPresencePercent}%)`}
+                        </span>
+                      </span>
+                      <span className="block text-[0.68rem] text-[#436370] mt-0.5 truncate max-w-[240px]">
+                        {r.bolsaFamiliaMotivoPadrao}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          {/* Link 3: Hyperlink Direto dos Documentos PDF Nominais (Fichas Informativas) */}
-          <div className="bg-[#fff8f7] p-3.5 rounded-xl border border-[#ba1a1a]/30 space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[0.82rem] font-extrabold text-[#ba1a1a] flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[18px]">link</span>
-                <span>📄 3. Hyperlinks Diretos dos Documentos PDF Nominais (Sem abrir pasta):</span>
-              </span>
-              <button
-                type="button"
-                disabled={isSyncingCloud}
-                onClick={handleSyncNominalPdfsNow}
-                className="px-3 py-1.5 rounded-lg bg-[#ba1a1a] hover:bg-[#93000a] text-white font-black text-[0.76rem] flex items-center gap-1 cursor-pointer disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-[15px]">sync</span>
-                <span>Atualizar Hyperlinks dos Docs PDF</span>
-              </button>
-            </div>
-            <p className="text-[0.78rem] text-[#2c373a] font-semibold">
-              Cada estudante na tabela abaixo possui um <strong>hyperlink direto no próprio nome</strong> (e no botão <strong>Hyperlink Doc</strong>) que abre imediatamente o documento <code className="font-mono">NOME DO ESTUDANTE.pdf</code> no aplicativo, sem precisar abrir pastas.
-            </p>
-          </div>
-        </div>
-
-        {/* Secondary Action: Download Offline .xlsx */}
-        <button
-          onClick={handleDownloadExcel}
-          type="button"
-          className="w-full min-h-[48px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#003440] font-extrabold text-[0.92rem] rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[22px]">download</span>
-          <span>Baixar Planilha Completa (.xlsx - Abas Nominais Infantil e Fundamental + 48 Colunas SED + 200 Dias)</span>
-        </button>
-      </section>
-
-      {/* Detailed 6-Tabs Selector: Educação Infantil Nominal, Ensino Fundamental Nominal, Base SED 48 Col, 200 Dias, 40 Turmas, E-mails Permitidos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 bg-[#edeeec] p-2 rounded-2xl border border-[#c0c8cb]/70">
-        <button
-          onClick={() => {
-            setActiveTab('nominal_infantil');
-            setFilterTurma('all');
-          }}
-          type="button"
-          className={`py-3 px-3 rounded-xl font-black text-[0.84rem] text-left sm:text-center transition-all cursor-pointer flex items-center sm:flex-col justify-between sm:justify-center gap-1 ${
-            activeTab === 'nominal_infantil'
-              ? 'bg-[#005035] text-white shadow-sm'
-              : 'bg-white/70 text-[#003440] hover:bg-white'
-          }`}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[20px]">child_care</span>
-            <span>1. Educação Infantil (Nominal)</span>
-          </span>
-          <span className={`text-[0.7rem] font-bold px-2 py-0.5 rounded-full ${
-            activeTab === 'nominal_infantil' ? 'bg-white/20 text-white' : 'bg-[#eaf6ef] text-[#005035]'
-          }`}>
-            Faltas & Atestados (Qtd e %)
-          </span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab('nominal_fundamental');
-            setFilterTurma('all');
-          }}
-          type="button"
-          className={`py-3 px-3 rounded-xl font-black text-[0.84rem] text-left sm:text-center transition-all cursor-pointer flex items-center sm:flex-col justify-between sm:justify-center gap-1 ${
-            activeTab === 'nominal_fundamental'
-              ? 'bg-[#003440] text-white shadow-sm'
-              : 'bg-white/70 text-[#003440] hover:bg-white'
-          }`}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[20px]">school</span>
-            <span>2. Ensino Fundamental (Nominal)</span>
-          </span>
-          <span className={`text-[0.7rem] font-bold px-2 py-0.5 rounded-full ${
-            activeTab === 'nominal_fundamental' ? 'bg-white/20 text-white' : 'bg-[#c3e5f4]/60 text-[#003440]'
-          }`}>
-            Faltas & Atestados (Qtd e %)
-          </span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab('frequencia');
-            setFilterTurma('all');
-          }}
-          type="button"
-          className={`py-3 px-3 rounded-xl font-extrabold text-[0.84rem] text-left sm:text-center transition-all cursor-pointer flex items-center sm:flex-col justify-between sm:justify-center gap-1 ${
-            activeTab === 'frequencia'
-              ? 'bg-[#003440] text-white shadow-sm'
-              : 'bg-white/70 text-[#41484b] hover:bg-white hover:text-[#003440]'
-          }`}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[20px]">dataset</span>
-            <span>3. Base Geral SED (48 Col.)</span>
-          </span>
-          <span className="text-[0.7rem] opacity-80">Todos os Segmentos</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('dias_letivos')}
-          type="button"
-          className={`py-3 px-3 rounded-xl font-extrabold text-[0.84rem] text-left sm:text-center transition-all cursor-pointer flex items-center sm:flex-col justify-between sm:justify-center gap-1 ${
-            activeTab === 'dias_letivos'
-              ? 'bg-[#003440] text-white shadow-sm'
-              : 'bg-white/70 text-[#41484b] hover:bg-white hover:text-[#003440]'
-          }`}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[20px]">calendar_month</span>
-            <span>4. 200 Dias Letivos</span>
-          </span>
-          <span className="text-[0.7rem] opacity-80">Calendário SME 2027</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('turmas')}
-          type="button"
-          className={`py-3 px-3 rounded-xl font-extrabold text-[0.84rem] text-left sm:text-center transition-all cursor-pointer flex items-center sm:flex-col justify-between sm:justify-center gap-1 ${
-            activeTab === 'turmas'
-              ? 'bg-[#003440] text-white shadow-sm'
-              : 'bg-white/70 text-[#41484b] hover:bg-white hover:text-[#003440]'
-          }`}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[20px]">groups</span>
-            <span>5. Quadro de Turmas ({classes.length})</span>
-          </span>
-          <span className="text-[0.7rem] opacity-80">Resumo por Turma</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('emails_permitidos')}
-          type="button"
-          className={`py-3 px-3 rounded-xl font-black text-[0.84rem] text-left sm:text-center transition-all cursor-pointer flex items-center sm:flex-col justify-between sm:justify-center gap-1 ${
-            activeTab === 'emails_permitidos'
-              ? 'bg-[#005035] text-white shadow-sm'
-              : 'bg-white/70 text-[#005035] hover:bg-white'
-          }`}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[20px]">verified_user</span>
-            <span>6. E-mails Permitidos ({permittedEmailsList.length})</span>
-          </span>
-          <span
-            className={`text-[0.7rem] font-bold px-2 py-0.5 rounded-full ${
-              activeTab === 'emails_permitidos'
-                ? 'bg-white/20 text-white'
-                : 'bg-[#eaf6ef] text-[#005035]'
-            }`}
-          >
-            Workspace {INSTITUTIONAL_EMAIL_DOMAIN}
-          </span>
-        </button>
-      </div>
+        </section>
+      )}
 
       {/* Tabs 1, 2 & 3: Tabulação Nominal Detalhada (Educação Infantil / Ensino Fundamental / Base Geral SED) */}
       {(activeTab === 'nominal_infantil' ||
@@ -1289,7 +1720,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 </span>
               </div>
               <span className="text-[0.74rem] font-bold text-[#ba1a1a]">
-                {stageStats.estudantesEmAlerta} estudantes em alerta (≥4 faltas)
+                {stageStats.estudantesEmAlerta} em alerta legal (&lt;60% Ed. Inf. / &lt;75% Fund.)
               </span>
             </div>
           </div>
@@ -1329,7 +1760,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <option value="all">📋 Todos os Estudantes ({stageStats.totalEstudantes})</option>
               <option value="com_faltas">🔴 Somente Estudantes com Faltas</option>
               <option value="com_atestado">🏥 Somente Estudantes com Atestado</option>
-              <option value="alerta">⚠️ Em Alerta de Infrequência (≥4 Faltas)</option>
+              <option value="alerta">⚠️ Em Alerta Legal (&lt;60% Ed. Inf. / &lt;75% Fund.)</option>
             </select>
 
             <input
@@ -1366,17 +1797,20 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   <th className="py-3 px-2.5 text-center bg-[#6b3b00]">
                     Faltas S/ Atestado (Qtd)
                   </th>
-                  <th className="py-3 px-2.5 text-center">Situação / Obs.</th>
+                  <th className="py-3 px-2.5 text-center">Situação Legal / Obs.</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredFrequenciaRows.slice(0, 250).map((row, idx) => (
+                {filteredFrequenciaRows.slice(0, 250).map((row, idx) => {
+                  const minLegal = row.tipoEnsino === 'EDUCACAO INFANTIL' ? 60 : 75;
+                  const isLegalAlert = row.frequenciaPercent < minLegal;
+                  return (
                   <tr
                     key={row.id}
                     onClick={() => onOpenStudentGrid?.(row.classId, row.studentId)}
                     title="Clique para abrir a Grade de Dados Interativa (48 Campos SED) deste(a) estudante"
                     className={`border-b border-[#edeeec] cursor-pointer hover:bg-[#c3e5f4]/35 transition-colors ${
-                      row.faltasMes >= 4
+                      isLegalAlert
                         ? 'bg-[#fff8f7]'
                         : idx % 2 === 0
                         ? 'bg-white'
@@ -1391,7 +1825,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             : 'bg-[#c3e5f4]/60 text-[#003440]'
                         }`}
                       >
-                        {row.tipoEnsino === 'EDUCACAO INFANTIL' ? 'ED. INFANTIL' : 'ENS. FUNDAMENTAL'}
+                        {row.tipoEnsino === 'EDUCACAO INFANTIL' ? 'ED. INFANTIL (≥60%)' : 'ENS. FUNDAMENTAL (≥75%)'}
                       </span>
                       <span className="block text-[0.72rem] text-[#41484b] font-semibold mt-0.5">
                         {row.etapaSerie}
@@ -1416,6 +1850,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             name={row.nome}
                             photoUrl={row.fotoUrl}
                             size="sm"
+                            expandable
                           />
                           <div className="min-w-0">
                             <a
@@ -1432,7 +1867,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                                   onOpenStudentPdf(row.classId, row.studentId);
                                 }
                               }}
-                              title={`Abrir Documento PDF Nominal de ${row.nome} por Hyperlink`}
+                              title={`Abrir Documento PDF Escaneado de ${row.nome} no Drive`}
                               className="doc-hyperlink font-extrabold block text-[0.92rem] truncate"
                             >
                               {row.nome}
@@ -1458,13 +1893,13 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                               e.stopPropagation();
                               onOpenStudentPdf(row.classId, row.studentId);
                             }}
-                            title="Abrir Documento PDF Nominal deste(a) estudante por Hyperlink"
-                            className="px-2.5 py-1 rounded-lg bg-[#ffdad6]/80 hover:bg-[#ba1a1a] text-[#ba1a1a] hover:text-white font-black text-[0.72rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+                            title="Abrir Documento Escaneado no Google Drive"
+                            className="px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:text-white font-black text-[0.72rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
                           >
                             <span className="material-symbols-outlined text-[15px]">
-                              link
+                              cloud_done
                             </span>
-                            <span>Hyperlink Doc</span>
+                            <span>Doc Drive</span>
                           </a>
                         )}
                       </div>
@@ -1498,7 +1933,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       </span>
                       <span
                         className={`ml-1.5 px-2 py-0.5 rounded-full text-[0.74rem] font-black ${
-                          row.frequenciaPercent < 75
+                          isLegalAlert
                             ? 'bg-[#ffdad6] text-[#ba1a1a]'
                             : 'bg-[#a4f3ca]/70 text-[#003723]'
                         }`}
@@ -1570,7 +2005,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     <td className="py-2.5 px-2.5 text-center">
                       <span
                         className={`inline-block px-2 py-0.5 rounded-full text-[0.7rem] font-black ${
-                          row.faltasMes >= 4
+                          isLegalAlert
                             ? 'bg-[#ffdad6] text-[#ba1a1a]'
                             : row.frequenciaPercent === 100
                             ? 'bg-[#eaf6ef] text-[#005035]'
@@ -1586,7 +2021,8 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       )}
                     </td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
               {/* Sticky Summary Footer Row with Totals & Percentages */}
               <tfoot className="bg-[#003440] text-white font-black text-[0.8rem] sticky bottom-0">

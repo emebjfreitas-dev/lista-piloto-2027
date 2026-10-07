@@ -39,19 +39,38 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   onBackToClasses,
 }) => {
   const [searchStudent, setSearchStudent] = useState('');
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [filterAlertOnly, setFilterAlertOnly] = useState(false);
   const savedDriveFolder = getSavedPhotosDriveFolderInfo();
   const diasLetivosMes = classGroup.classesHeld || 20;
+  const isInfantilClass =
+    classGroup.name.toUpperCase().startsWith('GRUPO') ||
+    classGroup.grade.toUpperCase().includes('INFANTIL');
+  const minLegalPresence = isInfantilClass ? 60 : 75;
+
+  const alertStudentsCount = useMemo(() => {
+    return classGroup.students.filter((s) => {
+      const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+      return m.isBelowLegalThreshold;
+    }).length;
+  }, [classGroup.students, diasLetivosMes]);
 
   const filteredStudents = useMemo(() => {
     const q = searchStudent.toLowerCase().trim();
-    return classGroup.students.filter(
-      (s) =>
+    return classGroup.students.filter((s) => {
+      const matchesQuery =
         q === '' ||
         s.name.toLowerCase().includes(q) ||
         s.number.toString().includes(q) ||
-        (s.ra && s.ra.toLowerCase().includes(q))
-    );
-  }, [classGroup.students, searchStudent]);
+        (s.ra && s.ra.toLowerCase().includes(q));
+      if (!matchesQuery) return false;
+      if (filterAlertOnly) {
+        const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+        return m.isBelowLegalThreshold;
+      }
+      return true;
+    });
+  }, [classGroup.students, searchStudent, filterAlertOnly, diasLetivosMes]);
 
   return (
     <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-5 pb-36 animate-gentle-fade">
@@ -280,22 +299,43 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
       {/* Direct Responsive Student Grid (1 col Mobile, 2 cols Tablet, 3 cols Laptop, 4 cols Widescreen 1920x1080) */}
       <section className="card-welcoming bg-white rounded-2xl p-4 sm:p-6 border border-[#003440]/12 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
-            <h2 className="text-[1.18rem] font-extrabold text-[#003440] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[22px] text-[#005035]">
-                groups
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-[1.18rem] font-extrabold text-[#003440] flex items-center gap-2">
+                <span className="material-symbols-outlined text-[22px] text-[#005035]">
+                  groups
+                </span>
+                <span>
+                  Estudantes da Turma {classGroup.name} ({filteredStudents.length})
+                </span>
+              </h2>
+              <span className="px-2.5 py-0.5 rounded-full bg-[#f1f4f3] text-[#003440] text-[0.73rem] font-bold border border-[#003440]/12">
+                Mínimo Legal LDB / Bolsa Família: {minLegalPresence}% ({isInfantilClass ? 'Ed. Infantil' : 'Ens. Fundamental'})
               </span>
-              <span>
-                Estudantes da Turma {classGroup.name} ({filteredStudents.length})
-              </span>
-            </h2>
-            <p className="text-[0.84rem] text-[#436370] font-medium">
-              Clique no <strong>nome do(a) estudante</strong> para abrir o <strong>Documento PDF Nominal</strong> ou em <strong>Dados</strong> para a Ficha SED.
+              {alertStudentsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilterAlertOnly(!filterAlertOnly)}
+                  className={`px-2.5 py-0.5 rounded-full text-[0.73rem] font-extrabold flex items-center gap-1 cursor-pointer transition-colors ${
+                    filterAlertOnly
+                      ? 'bg-[#ba1a1a] text-white'
+                      : 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-[#ba1a1a] hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[14px]">warning</span>
+                  <span>
+                    {alertStudentsCount} abaixo de {minLegalPresence}% {filterAlertOnly ? '(Ver Todos)' : '(Filtrar)'}
+                  </span>
+                </button>
+              )}
+            </div>
+            <p className="text-[0.83rem] text-[#436370] font-medium mt-0.5">
+              Toque na <strong>foto</strong> para expandir · no <strong>hyperlink do nome</strong> para abrir o Doc Escaneado no Drive · ou em <strong>Expandir Dados</strong> no balão.
             </p>
           </div>
 
-          <div className="relative w-full sm:w-80">
+          <div className="relative w-full lg:w-80">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5a676b] text-[20px]">
               search
             </span>
@@ -309,37 +349,63 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 items-start">
           {filteredStudents.map((student) => {
             const m = getStudentAttendanceMetrics(
               student,
               diasLetivosMes,
               OFFICIAL_OCTOBER_DAYS
             );
+            const isExpanded = expandedStudentId === student.id;
+            const cleanPhotoFileName = `${student.name
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .toUpperCase()
+              .trim()}.jpg`;
+
             return (
               <div
                 key={student.id}
-                className="card-welcoming bg-[#fafbfa] hover:bg-white rounded-2xl p-4 border border-[#003440]/12 flex flex-col justify-between gap-3"
+                onClick={() => setExpandedStudentId(isExpanded ? null : student.id)}
+                className={`card-welcoming rounded-2xl p-4 border flex flex-col justify-between gap-3 cursor-pointer transition-all ${
+                  m.isBelowLegalThreshold
+                    ? 'bg-[#fff8f7] border-[#ba1a1a]/45'
+                    : isExpanded
+                    ? 'bg-white border-[#003440]/40 ring-2 ring-[#003440]/10'
+                    : 'bg-[#fafbfa] hover:bg-white border-[#003440]/12'
+                }`}
               >
+                {/* Top Header inside Student Balloon: Expandable Photo + Direct Hyperlink to Scanned PDF + Quick Preview */}
                 <div className="flex items-start gap-3">
-                  <div
-                    onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
-                    className="cursor-pointer shrink-0"
-                  >
-                    <StudentAvatar student={student} size="md" />
-                  </div>
+                  <StudentAvatar
+                    student={student}
+                    size="md"
+                    expandableOnClick={true}
+                    onUploadPhotoClick={
+                      onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined
+                    }
+                  />
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5 text-[0.72rem] font-bold text-[#436370] tabular-nums">
-                      <span>Nº {student.number.toString().padStart(2, '0')}</span>
-                      {student.ra && (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <span className="font-mono text-[#003440]">
-                            RA {student.ra}-{student.digRa}
-                          </span>
-                        </>
-                      )}
+                    <div className="flex flex-wrap items-center justify-between gap-1 text-[0.72rem] font-bold text-[#436370] tabular-nums">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[#003440] font-extrabold">
+                          Nº {student.number.toString().padStart(2, '0')}
+                        </span>
+                        {student.ra && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="font-mono text-[#003440]">
+                              RA {student.ra}-{student.digRa}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <span className="material-symbols-outlined text-[18px] text-[#5a676b]">
+                        {isExpanded ? 'expand_less' : 'expand_more'}
+                      </span>
                     </div>
+
+                    {/* Direct Hyperlink to Scanned PDF in Google Drive right on the student name */}
                     <a
                       href={
                         student.fichaPdfDriveUrl ||
@@ -349,30 +415,143 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       }
                       onClick={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         if (onOpenStudentPdf) {
                           onOpenStudentPdf(student);
                         } else if (onOpenStudentGrid) {
                           onOpenStudentGrid(student);
                         }
                       }}
-                      title={`Abrir Documento PDF Nominal de ${student.name} por Hyperlink`}
-                      className="doc-hyperlink text-[0.95rem] font-extrabold leading-snug truncate mt-0.5 block cursor-pointer"
+                      title={`Abrir Documento Escaneado (${student.name}.pdf) no Google Drive`}
+                      className="doc-hyperlink text-[0.94rem] font-extrabold leading-snug truncate mt-0.5 block cursor-pointer"
                     >
                       {student.name}
                     </a>
-                    <p className="text-[0.75rem] font-medium text-[#5a676b] truncate mt-0.5">
-                      {student.filiacao1 || student.guardianName || 'Responsável cadastrado'}
-                    </p>
+
+                    {/* Compact Data Preview always visible on the card */}
+                    <div className="text-[0.73rem] text-[#5a676b] font-medium mt-1 space-y-0.5">
+                      <p className="truncate">
+                        <strong className="text-[#374346]">Resp.:</strong>{' '}
+                        {student.filiacao1 || student.guardianName || 'Não informado'}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[0.7rem] font-mono">
+                        {student.dataNascimento && (
+                          <span>Nasc: {student.dataNascimento}</span>
+                        )}
+                        {student.telefones && (
+                          <>
+                            <span>·</span>
+                            <span className="text-[#005035] font-semibold">
+                              {student.telefones}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-2.5 border-t border-[#003440]/8 flex items-center justify-between gap-2 text-[0.75rem]">
-                  <div className="flex items-center gap-1.5 font-mono font-bold tabular-nums">
-                    <span className={m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}>
-                      {m.faltas} {m.faltas === 1 ? 'falta' : 'faltas'}
+                {/* Legal Attendance Alert Banner (Pertinent only when < 60% Infantil or < 75% Fundamental) */}
+                {m.isBelowLegalThreshold && (
+                  <div className="px-2.5 py-1.5 rounded-xl bg-[#ffdad6]/85 border border-[#ba1a1a]/30 text-[#93000a] text-[0.72rem] font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px] shrink-0">
+                      warning
                     </span>
+                    <span className="leading-tight">
+                      Presença {m.frequenciaPercent}% abaixo do mínimo legal ({m.minLegalPresencePercent}% · Bolsa Família)
+                    </span>
+                  </div>
+                )}
+
+                {/* Inline Expandable SED Preview Drawer when clicking the card */}
+                {isExpanded && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-3 rounded-xl bg-[#f5f7f6] border border-[#003440]/12 space-y-2 text-[0.74rem] animate-gentle-fade"
+                  >
+                    <div className="flex items-center justify-between border-b border-[#003440]/10 pb-1.5">
+                      <span className="font-extrabold text-[#003440] uppercase tracking-wider text-[0.68rem]">
+                        Prévia Rápida · Dados SED & Drive
+                      </span>
+                      <span className="font-mono text-[0.68rem] text-[#005035] font-bold">
+                        Recorte: {m.diasLetivosMatriculados}/{m.diasLetivosMes}d
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[#374346]">
+                      <div>
+                        <span className="text-[#5a676b] block text-[0.66rem]">NIS (Bolsa Família)</span>
+                        <span className="font-mono font-bold text-[#003440]">
+                          {student.nis || 'Não cadastrado'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[#5a676b] block text-[0.66rem]">CPF / SUS</span>
+                        <span className="font-mono font-bold text-[#003440] truncate block">
+                          {student.cpf || student.cartaoSus || '—'}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-[#5a676b] block text-[0.66rem]">Filiação 1 e 2</span>
+                        <span className="font-semibold text-[#0f1715] block truncate">
+                          {student.filiacao1 || '—'} {student.filiacao2 ? `/ ${student.filiacao2}` : ''}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-[#5a676b] block text-[0.66rem]">Endereço Residencial</span>
+                        <span className="font-medium text-[#0f1715] block truncate">
+                          {student.logradouro
+                            ? `${student.logradouro}, ${student.numeroResidencia || 'S/N'} - ${student.bairro || ''}`
+                            : 'Endereço na ficha completa'}
+                        </span>
+                      </div>
+                      <div className="col-span-2 pt-1 border-t border-[#003440]/8 flex items-center justify-between text-[0.68rem]">
+                        <span className="text-[#5a676b] truncate" title={OFFICIAL_FOLDER_NAME}>
+                          Pasta Foto: <code className="font-mono text-[#005035]">{cleanPhotoFileName}</code>
+                        </span>
+                        <span className="font-bold text-[#003440]">
+                          Atestados: {m.atestados}
+                        </span>
+                      </div>
+                    </div>
+
+                    {onOpenStudentGrid && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenStudentGrid(student)}
+                        className="w-full min-h-[34px] mt-1 rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.74rem] flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                        <span>Abrir / Editar Todos os 48 Campos SED</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Bottom Action Bar in Student Balloon: Attendance + Direct Scanned Doc Hyperlink + Photo Upload + Expand */}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="pt-2.5 border-t border-[#003440]/8 flex items-center justify-between gap-1.5 text-[0.74rem]"
+                >
+                  <div className="flex items-center gap-1 font-mono font-bold tabular-nums">
+                    <span className={m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}>
+                      {m.faltas}f
+                    </span>
+                    {m.atestados > 0 && (
+                      <span className="text-[#005035]" title="Atestados apresentados">
+                        ({m.atestados}at)
+                      </span>
+                    )}
                     <span aria-hidden="true" className="text-[#a8b5b9]">·</span>
-                    <span className="text-[#003440]">{m.frequenciaPercent}%</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md ${
+                        m.isBelowLegalThreshold
+                          ? 'bg-[#ba1a1a] text-white font-black'
+                          : 'text-[#003440]'
+                      }`}
+                    >
+                      {m.frequenciaPercent}%
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-1">
@@ -386,42 +565,52 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         }
                         onClick={(e) => {
                           e.preventDefault();
+                          e.stopPropagation();
                           onOpenStudentPdf(student);
                         }}
-                        title="Abrir Documento PDF Nominal por Hyperlink"
-                        className="px-2.5 py-1 rounded-lg bg-[#ffdad6]/80 hover:bg-[#ba1a1a] text-[#ba1a1a] hover:text-white font-black flex items-center gap-1 cursor-pointer transition-colors"
+                        title={`Hyperlink direto para abrir o Documento Escaneado (${student.name}.pdf) no Google Drive`}
+                        className="px-2 py-1 rounded-lg bg-[#ffdad6]/85 hover:bg-[#ba1a1a] text-[#ba1a1a] hover:text-white font-extrabold flex items-center gap-1 cursor-pointer transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[15px]">
-                          link
+                        <span className="material-symbols-outlined text-[14px]">
+                          document_scanner
                         </span>
-                        <span>Doc PDF</span>
+                        <span>Doc Drive</span>
                       </a>
                     )}
                     {onOpenPhotoModal && (
                       <button
                         type="button"
-                        onClick={() => onOpenPhotoModal(student)}
-                        title="Enviar foto para a pasta do Google Drive"
-                        className="px-2 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-black flex items-center gap-1 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenPhotoModal(student);
+                        }}
+                        title={`Subir foto salva automaticamente na pasta nomeada (${OFFICIAL_FOLDER_NAME}/${cleanPhotoFileName})`}
+                        className="px-2 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-extrabold flex items-center gap-1 cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[15px]">
-                          cloud_upload
+                        <span className="material-symbols-outlined text-[14px]">
+                          add_a_photo
                         </span>
                         <span>Foto</span>
                       </button>
                     )}
-                    {onOpenStudentGrid && (
-                      <button
-                        type="button"
-                        onClick={() => onOpenStudentGrid(student)}
-                        className="px-2.5 py-1 rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-black flex items-center gap-1 cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">
-                          grid_on
-                        </span>
-                        <span>Dados</span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedStudentId(isExpanded ? null : student.id);
+                      }}
+                      title="Expandir prévia de dados ou abrir 48 campos"
+                      className={`px-2 py-1 rounded-lg font-extrabold flex items-center gap-0.5 cursor-pointer transition-colors ${
+                        isExpanded
+                          ? 'bg-[#005035] text-white'
+                          : 'bg-[#003440] hover:bg-[#1e4b58] text-white'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[14px]">
+                        {isExpanded ? 'unfold_less' : 'unfold_more'}
+                      </span>
+                      <span>Dados</span>
+                    </button>
                   </div>
                 </div>
               </div>

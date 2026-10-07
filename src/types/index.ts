@@ -62,6 +62,13 @@ export interface StudentSedData {
   sucessaoEscolar?: string;
 }
 
+export interface MonthlyAttendanceEntry {
+  diasLetivosRecorte: number;
+  faltas: number;
+  atestados: number;
+  observacao?: string;
+}
+
 export interface Student extends StudentSedData {
   id: string;
   number: number;
@@ -77,6 +84,7 @@ export interface Student extends StudentSedData {
   totalAbsencesMonth: number;
   justifiedAbsences?: number;
   diasLetivosRecorte?: number;
+  monthlyAttendanceByMonth?: Record<string, MonthlyAttendanceEntry>;
   notes?: string;
   guardianName?: string;
   guardianPhone?: string;
