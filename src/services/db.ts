@@ -177,13 +177,13 @@ export const getStoredAuthorizedUsers = (): AuthorizedUser[] => {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return classesOrUsersSanitize(parsed);
       }
     }
   } catch (err) {
     console.error('Erro ao ler usuários autorizados:', err);
   }
-  return INITIAL_AUTHORIZED_USERS;
+  return classesOrUsersSanitize(INITIAL_AUTHORIZED_USERS);
 };
 
 export const saveStoredAuthorizedUsers = (users: AuthorizedUser[]): void => {
@@ -198,7 +198,25 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
   const validClassMap = new Map(
     INITIAL_CLASSES.map((c) => [c.id.toLowerCase(), c])
   );
-  return users.map((u) => {
+  const seenEmails = new Set<string>();
+  const seenIds = new Set<string>();
+  const uniqueUsers: AuthorizedUser[] = [];
+
+  users.forEach((u, idx) => {
+    if (!u || typeof u.email !== 'string') return;
+    const cleanEmail = u.email.trim().toLowerCase();
+    if (!cleanEmail || seenEmails.has(cleanEmail)) return;
+    seenEmails.add(cleanEmail);
+
+    let cleanId = u.id || `usr-official-${idx}`;
+    if (seenIds.has(cleanId)) {
+      cleanId = `${cleanId}-${cleanEmail.split('@')[0]}`;
+    }
+    seenIds.add(cleanId);
+    uniqueUsers.push({ ...u, id: cleanId, email: cleanEmail });
+  });
+
+  return uniqueUsers.map((u) => {
     const cleanEmail = u.email.trim().toLowerCase();
     if (u.role === 'usuario') {
       // Preserve multi-class assignments (assignedClassIds) if present!

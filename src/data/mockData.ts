@@ -138,7 +138,9 @@ const DEFAULT_CLASS_ASSIGNMENTS: Array<{ id: string; name: string }> = [
   { id: '5e', name: '5º ANO E (Tarde)' },
 ];
 
-export const INITIAL_AUTHORIZED_USERS: AuthorizedUser[] = OFFICIAL_WHITELISTED_EMAILS.map(
+export const INITIAL_AUTHORIZED_USERS: AuthorizedUser[] = Array.from(
+  new Set(OFFICIAL_WHITELISTED_EMAILS.map((e) => e.trim().toLowerCase()))
+).map(
   (email, idx) => {
     const isAdminAccount = email.startsWith('emebjfreitas@');
     if (isAdminAccount) {
@@ -148,9 +150,26 @@ export const INITIAL_AUTHORIZED_USERS: AuthorizedUser[] = OFFICIAL_WHITELISTED_E
         name: formatDisplayNameFromEmail(email),
         role: 'admin',
         assignedClassId: 'all',
+        assignedClassIds: ['all'],
         assignedClassName: 'Todas as 40 Turmas (Acesso Pleno)',
+        assignedClassNames: ['Todas as 40 Turmas (Acesso Pleno)'],
         active: true,
         createdAt: '02/02/2027',
+      };
+    }
+
+    if (email === 'giulia.patez@educacao.jundiai.sp.gov.br') {
+      return {
+        id: `usr-official-${idx + 1}`,
+        email,
+        name: `Prof(a). ${formatDisplayNameFromEmail(email)}`,
+        role: 'usuario',
+        assignedClassId: 'g04c',
+        assignedClassIds: ['g04c'],
+        assignedClassName: 'GRUPO 04 C (Manhã)',
+        assignedClassNames: ['GRUPO 04 C (Manhã)'],
+        active: true,
+        createdAt: '03/02/2027',
       };
     }
 
@@ -163,7 +182,9 @@ export const INITIAL_AUTHORIZED_USERS: AuthorizedUser[] = OFFICIAL_WHITELISTED_E
         name: `Prof(a). ${formatDisplayNameFromEmail(email)}`,
         role: 'usuario',
         assignedClassId: assigned.id,
+        assignedClassIds: [assigned.id],
         assignedClassName: assigned.name,
+        assignedClassNames: [assigned.name],
         active: true,
         createdAt: '03/02/2027',
       };
@@ -175,7 +196,9 @@ export const INITIAL_AUTHORIZED_USERS: AuthorizedUser[] = OFFICIAL_WHITELISTED_E
       name: `Prof(a). ${formatDisplayNameFromEmail(email)}`,
       role: 'peb2',
       assignedClassId: 'all',
+      assignedClassIds: ['all'],
       assignedClassName: 'Todas as Turmas (Somente Visualização)',
+      assignedClassNames: ['Todas as Turmas (Somente Visualização)'],
       active: true,
       createdAt: '03/02/2027',
     };

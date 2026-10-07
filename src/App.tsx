@@ -403,16 +403,45 @@ export default function App() {
             result.updatedClasses || getStoredClasses()
           );
           if (isMounted && sheetUsers && sheetUsers.length > 0) {
-            setAuthorizedUsers(sheetUsers);
-            saveStoredAuthorizedUsers(sheetUsers);
+            const currentLocal = getStoredAuthorizedUsers();
+            const localByEmail = new Map(
+              currentLocal.map((u) => [u.email.trim().toLowerCase(), u])
+            );
+            const mergedWithLocal = sheetUsers.map((su) => {
+              const loc = localByEmail.get(su.email.trim().toLowerCase());
+              if (loc && (loc.updatedAtMs || 0) > 0) {
+                return {
+                  ...loc,
+                  totalAccessCount: Math.max(loc.totalAccessCount || 0, su.totalAccessCount || 0),
+                  totalDurationSeconds: Math.max(
+                    loc.totalDurationSeconds || 0,
+                    su.totalDurationSeconds || 0
+                  ),
+                };
+              }
+              return su;
+            });
+            setAuthorizedUsers(mergedWithLocal);
+            saveStoredAuthorizedUsers(mergedWithLocal);
           }
           const sheetLogs = await readSessionLogsFromGoogleSheet();
           if (isMounted && sheetLogs && sheetLogs.length > 0) {
             const localLogs = getStoredAccessSessionLogs();
-            if (localLogs.length === 0) {
-              setAccessSessionLogs(sheetLogs);
-              saveStoredAccessSessionLogs(sheetLogs);
-            }
+            const logMap = new Map<string, UserAccessSessionLog>();
+            sheetLogs.forEach((l) => {
+              if (l && l.id) logMap.set(l.id, l);
+            });
+            localLogs.forEach((l) => {
+              if (l && l.id) {
+                const prev = logMap.get(l.id);
+                if (!prev || (l.durationSeconds || 0) >= (prev.durationSeconds || 0)) {
+                  logMap.set(l.id, l);
+                }
+              }
+            });
+            const combinedLogs = Array.from(logMap.values()).slice(0, 500);
+            setAccessSessionLogs(combinedLogs);
+            saveStoredAccessSessionLogs(combinedLogs);
           }
         } else {
           // Sync photos from Drive folder + nominal PDFs from Fichas Informativas subfolders if available
@@ -644,6 +673,11 @@ export default function App() {
   };
 
   const handleLoginSuccess = (authUser: AuthorizedUser) => {
+    const latestFromList =
+      authorizedUsers.find(
+        (u) => u.email.trim().toLowerCase() === authUser.email.trim().toLowerCase()
+      ) || authUser;
+
     const now = new Date();
     const nowFormatted = now.toLocaleString('pt-BR');
     const nowISO = now.toISOString();
@@ -652,14 +686,14 @@ export default function App() {
 
     const newLog: UserAccessSessionLog = {
       id: sessionId,
-      email: authUser.email,
-      name: authUser.name,
-      role: authUser.role,
-      assignedClassName: authUser.assignedClassName,
+      email: latestFromList.email,
+      name: latestFromList.name,
+      role: latestFromList.role,
+      assignedClassName: latestFromList.assignedClassName,
       loginTimeISO: nowISO,
       lastHeartbeatISO: nowISO,
-      durationSeconds: 0,
-      lastScreen: 'Turmas',
+      durationSeconds: 1,
+      lastScreen: latestFromList.role === 'usuario' ? 'Detalhes da Turma' : '1. Turmas',
       isOnlineNow: true,
     };
 
@@ -668,16 +702,17 @@ export default function App() {
     saveStoredAccessSessionLogs(nextLogs);
 
     const nextUsers = authorizedUsers.map((u) => {
-      if (u.email.trim().toLowerCase() !== authUser.email.trim().toLowerCase()) {
+      if (u.email.trim().toLowerCase() !== latestFromList.email.trim().toLowerCase()) {
         return u;
       }
       return {
         ...u,
         totalAccessCount: (u.totalAccessCount || 0) + 1,
+        totalDurationSeconds: (u.totalDurationSeconds || 0) + 1,
         lastLoginAt: nowFormatted,
         lastActiveAt: nowFormatted,
-        lastSessionDurationSeconds: 0,
-        lastScreenVisited: 'Turmas',
+        lastSessionDurationSeconds: 1,
+        lastScreenVisited: latestFromList.role === 'usuario' ? 'Detalhes da Turma' : '1. Turmas',
       };
     });
     setAuthorizedUsers(nextUsers);
@@ -686,15 +721,15 @@ export default function App() {
     syncAuthorizedUsersToGoogleSheet(nextUsers, nextLogs);
 
     setSimulatedTeacherEmail(null);
-    setCurrentUserEmail(authUser.email);
-    setCurrentUserName(authUser.name);
-    setUserRole(authUser.role);
-    if (authUser.role === 'usuario') {
+    setCurrentUserEmail(latestFromList.email);
+    setCurrentUserName(latestFromList.name);
+    setUserRole(latestFromList.role);
+    if (latestFromList.role === 'usuario') {
       const nextIds =
-        authUser.assignedClassIds && authUser.assignedClassIds.length > 0
-          ? authUser.assignedClassIds.filter((id) => id !== 'all')
-          : authUser.assignedClassId && authUser.assignedClassId !== 'all'
-          ? [authUser.assignedClassId]
+        latestFromList.assignedClassIds && latestFromList.assignedClassIds.length > 0
+          ? latestFromList.assignedClassIds.filter((id) => id !== 'all')
+          : latestFromList.assignedClassId && latestFromList.assignedClassId !== 'all'
+          ? [latestFromList.assignedClassId]
           : [classes[0]?.id || 'g04a'];
       const targetId = nextIds[0] || classes[0]?.id || 'g04a';
       setAssignedClassIds(nextIds);
@@ -714,6 +749,8 @@ export default function App() {
   useEffect(() => {
     if (currentScreen === 'login') return;
 
+    const trackedEmail = (simulatedTeacherEmail || currentUserEmail).trim().toLowerCase();
+
     const screenLabelMap: Record<ScreenType, string> = {
       login: 'Login',
       turmas: '1. Turmas',
@@ -725,10 +762,13 @@ export default function App() {
       resumo: 'Fechamento Mensal',
     };
 
-    // If session was restored from F5 and activeSessionIdRef is missing or not in logs, bootstrap an active session log immediately
+    const currentLog = accessSessionLogs.find((l) => l.id === activeSessionIdRef.current);
+
+    // If session was restored from F5, or user switched to simulatedTeacherEmail, bootstrap an active session log immediately
     if (
       !activeSessionIdRef.current ||
-      !accessSessionLogs.some((l) => l.id === activeSessionIdRef.current)
+      !currentLog ||
+      currentLog.email.trim().toLowerCase() !== trackedEmail
     ) {
       const now = new Date();
       const nowISO = now.toISOString();
@@ -738,14 +778,14 @@ export default function App() {
 
       const currentScreenLabel = screenLabelMap[currentScreen] || '1. Turmas';
       const matchedUser = authorizedUsers.find(
-        (u) => u.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()
+        (u) => u.email.trim().toLowerCase() === trackedEmail
       );
 
       const newLog: UserAccessSessionLog = {
         id: newSessId,
-        email: currentUserEmail,
+        email: matchedUser?.email || trackedEmail,
         name: matchedUser?.name || currentUserName,
-        role: userRole,
+        role: matchedUser?.role || userRole,
         assignedClassName:
           matchedUser?.assignedClassName ||
           (userRole === 'admin'
@@ -764,7 +804,7 @@ export default function App() {
 
       setAuthorizedUsers((prevUsers) => {
         const nextUsers = prevUsers.map((u) => {
-          if (u.email.trim().toLowerCase() !== currentUserEmail.trim().toLowerCase()) {
+          if (u.email.trim().toLowerCase() !== trackedEmail) {
             return u;
           }
           return {
@@ -848,7 +888,7 @@ export default function App() {
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [currentScreen, currentUserEmail]);
+  }, [currentScreen, currentUserEmail, simulatedTeacherEmail]);
 
   const handleLogout = async () => {
     try {
@@ -926,8 +966,8 @@ export default function App() {
         }
         subtitle={
           currentScreen === 'frequencia_mensal'
-            ? `${selectedClass.shift} • ${currentUserEmail}`
-            : `${currentUserEmail} • ${
+            ? `${selectedClass.shift} • ${simulatedTeacherEmail || currentUserEmail}`
+            : `${simulatedTeacherEmail || currentUserEmail} • ${
                 userRole === 'admin'
                   ? 'ADMIN (Acesso Pleno)'
                   : userRole === 'usuario'
@@ -935,7 +975,7 @@ export default function App() {
                   : 'PEB II (Só Visualização)'
               }`
         }
-        userEmail={currentUserEmail}
+        userEmail={simulatedTeacherEmail || currentUserEmail}
         userName={currentUserName}
         userRole={userRole}
         onRestoreAdminRole={() => {

@@ -15,12 +15,51 @@ interface SharedSchoolState {
   updatedAtMs: number;
 }
 
+const deduplicateUsersByEmail = (users?: any[]): any[] | undefined => {
+  if (!Array.isArray(users)) return users;
+  const map = new Map<string, any>();
+  users.forEach((u, idx) => {
+    if (!u || typeof u.email !== 'string') return;
+    const email = u.email.trim().toLowerCase();
+    if (!email) return;
+    const existing = map.get(email);
+    if (!existing) {
+      map.set(email, { ...u, id: u.id || `usr-official-${idx}`, email });
+    } else {
+      const incTime = u.updatedAtMs || 0;
+      const extTime = existing.updatedAtMs || 0;
+      const winner = incTime >= extTime ? u : existing;
+      map.set(email, {
+        ...winner,
+        email,
+        updatedAtMs: Math.max(incTime, extTime),
+        totalAccessCount: Math.max(u.totalAccessCount || 0, existing.totalAccessCount || 0),
+        totalDurationSeconds: Math.max(
+          u.totalDurationSeconds || 0,
+          existing.totalDurationSeconds || 0
+        ),
+        lastSessionDurationSeconds: Math.max(
+          u.lastSessionDurationSeconds || 0,
+          existing.lastSessionDurationSeconds || 0
+        ),
+        lastLoginAt: u.lastLoginAt || existing.lastLoginAt,
+        lastActiveAt: u.lastActiveAt || existing.lastActiveAt,
+        lastScreenVisited: u.lastScreenVisited || existing.lastScreenVisited,
+      });
+    }
+  });
+  return Array.from(map.values());
+};
+
 const readSharedState = (): SharedSchoolState => {
   try {
     if (fs.existsSync(STATE_FILE_PATH)) {
       const raw = fs.readFileSync(STATE_FILE_PATH, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.authorizedUsers)) {
+          parsed.authorizedUsers = deduplicateUsersByEmail(parsed.authorizedUsers);
+        }
         return parsed;
       }
     }
@@ -35,6 +74,9 @@ const writeSharedState = (patch: Partial<SharedSchoolState>): SharedSchoolState 
   const next: SharedSchoolState = {
     ...current,
     ...patch,
+    ...(patch.authorizedUsers
+      ? { authorizedUsers: deduplicateUsersByEmail(patch.authorizedUsers) }
+      : {}),
     updatedAtMs: Date.now(),
   };
   try {
