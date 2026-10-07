@@ -715,16 +715,40 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             const isMaxFaltasReached = m.faltas >= m.maxFaltasPermitidas;
             const isMaxAtestadosReached = m.atestados >= m.maxAtestadosPermitidos;
 
+            const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+            const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+            const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+            const isOtherNonActive =
+              !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+
             return (
               <div
                 key={student.id}
                 className={`p-3 sm:px-5 flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
-                  m.isBelowLegalThreshold ? 'bg-[#fff8f7]' : 'hover:bg-[#f8faf9]'
+                  isTransferred
+                    ? 'bg-gradient-to-r from-[#fef3c7]/80 to-[#fffbeb] border-l-4 border-l-[#b45309]'
+                    : isRemanejado
+                    ? 'bg-gradient-to-r from-[#ede9fe]/80 to-[#f5f3ff] border-l-4 border-l-[#6d28d9]'
+                    : isOtherNonActive
+                    ? 'bg-[#e2e8f0]/75 border-l-4 border-l-[#475569]'
+                    : m.isBelowLegalThreshold
+                    ? 'bg-[#fff8f7]'
+                    : 'hover:bg-[#f8faf9]'
                 }`}
               >
                 {/* Identificação do Estudante */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <span className="w-8 h-8 rounded-xl bg-[#003440] text-white font-mono font-extrabold text-[0.76rem] flex items-center justify-center shrink-0 tabular-nums">
+                  <span
+                    className={`w-8 h-8 rounded-xl text-white font-mono font-extrabold text-[0.76rem] flex items-center justify-center shrink-0 tabular-nums ${
+                      isTransferred
+                        ? 'bg-[#b45309]'
+                        : isRemanejado
+                        ? 'bg-[#6d28d9]'
+                        : isOtherNonActive
+                        ? 'bg-[#475569]'
+                        : 'bg-[#003440]'
+                    }`}
+                  >
                     {student.number.toString().padStart(2, '0')}
                   </span>
 
@@ -755,8 +779,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         {student.name}
                       </a>
                       {student.ra && (
-                        <span className="font-mono text-[0.7rem] text-[#436370] bg-[#f2f4f3] px-1.5 py-0.5 rounded">
+                        <span className="font-mono text-[0.7rem] text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5">
                           RA {student.ra}-{student.digRa}
+                        </span>
+                      )}
+                      {isTransferred && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.64rem] font-black uppercase">
+                          NÃO ATIVO • TRANSFERIDO (BXTR)
+                        </span>
+                      )}
+                      {isRemanejado && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.64rem] font-black uppercase">
+                          NÃO ATIVO • REMANEJADO
                         </span>
                       )}
                     </div>
@@ -982,18 +1016,55 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           const hasAbsence = m.faltas > 0;
           const isMaxFaltasReached = m.faltas >= m.maxFaltasPermitidas;
           const isMaxAtestadosReached = m.atestados >= m.maxAtestadosPermitidos;
+          const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+          const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+          const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+          const isOtherNonActive =
+            !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+          const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
 
           return (
             <div
               key={student.id}
-              className={`card-welcoming bg-white rounded-2xl p-4 shadow-xs border ${
-                m.isBelowLegalThreshold
+              className={`card-welcoming rounded-2xl p-4 shadow-xs border ${
+                isTransferred
+                  ? 'bg-gradient-to-br from-[#fef3c7] via-[#fffbeb] to-[#fde68a]/65 border-2 border-[#d97706]/60'
+                  : isRemanejado
+                  ? 'bg-gradient-to-br from-[#ede9fe] via-[#f5f3ff] to-[#ddd6fe]/65 border-2 border-[#7c3aed]/55'
+                  : isOtherNonActive
+                  ? 'bg-gradient-to-br from-[#e2e8f0] via-[#f1f5f9] to-[#cbd5e1]/65 border-2 border-[#64748b]/55'
+                  : m.isBelowLegalThreshold
                   ? 'border-[#ba1a1a]/50 bg-[#fff8f7]'
                   : !m.isMesCheio
-                  ? 'border-[#003440]/35'
-                  : 'border-[#003440]/12'
+                  ? 'bg-white border-[#003440]/35'
+                  : 'bg-white border-[#003440]/12'
               }`}
             >
+              {isNonActive && (
+                <div
+                  className={`-mx-1 -mt-1 mb-2.5 px-3 py-1.5 rounded-xl text-[0.68rem] font-black uppercase tracking-wider flex items-center justify-between gap-2 ${
+                    isTransferred
+                      ? 'bg-[#b45309] text-white'
+                      : isRemanejado
+                      ? 'bg-[#6d28d9] text-white'
+                      : 'bg-[#475569] text-white'
+                  }`}
+                >
+                  <span>
+                    {isTransferred
+                      ? 'NÃO ATIVO • TRANSFERIDO (BXTR)'
+                      : isRemanejado
+                      ? 'NÃO ATIVO • REMANEJADO'
+                      : `NÃO ATIVO • ${sit}`}
+                  </span>
+                  {student.dataMovimentacao && (
+                    <span className="font-mono text-[0.64rem] bg-white/20 px-1.5 py-0.5 rounded">
+                      {student.dataMovimentacao}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Student Header: Photo expands on click + Name hyperlink opens scanned PDF in Drive */}
               <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#003440]/10">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1015,7 +1086,15 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         </span>
                       )}
                       {student.situacao && student.situacao !== 'ATIVO' && (
-                        <span className="text-[0.68rem] font-extrabold bg-[#ffdad6] text-[#ba1a1a] px-2 py-0.5 rounded-full">
+                        <span
+                          className={`text-[0.68rem] font-extrabold px-2 py-0.5 rounded-full text-white ${
+                            isTransferred
+                              ? 'bg-[#b45309]'
+                              : isRemanejado
+                              ? 'bg-[#6d28d9]'
+                              : 'bg-[#475569]'
+                          }`}
+                        >
                           {student.situacao}
                         </span>
                       )}

@@ -6,7 +6,7 @@ import { createServer as createViteServer } from 'vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const STATE_FILE_PATH = path.join(__dirname, 'shared_school_state_2027.json');
+const STATE_FILE_PATH = path.join(__dirname, 'shared_school_state_2027_v2.json');
 
 interface SharedSchoolState {
   authorizedUsers?: any[];

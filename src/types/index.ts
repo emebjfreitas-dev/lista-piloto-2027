@@ -110,9 +110,20 @@ export interface WeeklyData {
 export interface ClassGroup {
   id: string;
   name: string;
+  turmaAbrev?: string;
   grade: string;
   shift: string;
   room: string;
+  teacherName?: string;
+  teacherEmail?: string;
+  pronoun?: string;
+  teacherFirstName?: string;
+  sedClassName?: string;
+  sedExpectedStudents?: number;
+  classeSedCode?: string;
+  artTeacher?: string;
+  peTeacher?: string;
+  englishTeacher?: string;
   totalStudents: number;
   presenceRate: number;
   statusText: string;
@@ -220,6 +231,10 @@ export interface AuthorizedUser {
   assignedClassName: string;
   assignedClassIds?: string[];
   assignedClassNames?: string[];
+  teacherRoleType?: 'peb1' | 'peb2' | 'admin' | 'apoio';
+  pronoun?: string;
+  firstName?: string;
+  subjectName?: 'ARTE' | 'EDUCAÇÃO FÍSICA' | 'LÍNGUA INGLESA' | 'REGENTE PEB I' | 'GESTÃO / ADMIN';
   active: boolean;
   createdAt: string;
   updatedAtMs?: number;

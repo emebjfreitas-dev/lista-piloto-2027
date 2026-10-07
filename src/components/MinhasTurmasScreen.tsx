@@ -33,19 +33,29 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   onOpenConfigDaysModal,
   onNavigateToAcessos,
 }) => {
-  const [selectedShift, setSelectedShift] = useState<'Turno Manhã' | 'Turno Tarde'>('Turno Manhã');
+  const [selectedShift, setSelectedShift] = useState<'Todos' | 'Turno Manhã' | 'Turno Tarde'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
 
   const windowEval = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
   const isLaunchButtonOpen = windowEval.isAllowedToLaunch;
 
-  // Flexible search for senior teachers (supports G4, Grupo 04, 1A, 1º Ano A)
+  const manhaCount = useMemo(
+    () => classes.filter((c) => c.shift === 'Turno Manhã').length,
+    [classes]
+  );
+  const tardeCount = useMemo(
+    () => classes.filter((c) => c.shift === 'Turno Tarde').length,
+    [classes]
+  );
+
+  // Flexible search for senior teachers (supports G4, Grupo 04, 1A, 1º Ano A, Teacher name, SED code, Specialist)
   const cleanSearch = searchTerm.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const rawSearchLower = searchTerm.toLowerCase().trim();
 
   // Role-based class visibility:
-  // - ADMIN: all 40 classes (full access)
+  // - ADMIN: all 39 classes (full access)
   // - USUÁRIO (PEB I): ONLY their assigned class(es)
-  // - PEB II: all 40 classes (view-only)
+  // - PEB II: all 39 classes (view-only)
   const allowedClassIdsForUsuario = useMemo(() => {
     const valid = assignedClassIds.filter((id) => id && id !== 'all');
     if (valid.length > 0) return valid;
@@ -58,23 +68,36 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         return allowedClassIdsForUsuario.includes(c.id);
       }
 
-      const matchesShift = c.shift === selectedShift;
+      const matchesShift =
+        selectedShift === 'Todos' || c.shift === selectedShift;
       const cleanClassName = c.name.toLowerCase().replace(/[^a-z0-9]/g, '');
       const cleanRoom = c.room.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cleanAbrev = (c.turmaAbrev || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
       const matchesAlias =
         (cleanSearch.startsWith('g4') && cleanClassName.includes('grupo04')) ||
         (cleanSearch.startsWith('g5') && cleanClassName.includes('grupo05'));
 
+      const matchesTeacherOrSed =
+        rawSearchLower !== '' &&
+        ((c.teacherName || '').toLowerCase().includes(rawSearchLower) ||
+          (c.teacherFirstName || '').toLowerCase().includes(rawSearchLower) ||
+          (c.classeSedCode || '').toLowerCase().includes(rawSearchLower) ||
+          (c.artTeacher || '').toLowerCase().includes(rawSearchLower) ||
+          (c.peTeacher || '').toLowerCase().includes(rawSearchLower) ||
+          (c.englishTeacher || '').toLowerCase().includes(rawSearchLower));
+
       const matchesSearch =
         cleanSearch === '' ||
         cleanClassName.includes(cleanSearch) ||
         cleanRoom.includes(cleanSearch) ||
-        matchesAlias;
+        cleanAbrev.includes(cleanSearch) ||
+        matchesAlias ||
+        matchesTeacherOrSed;
 
       return matchesShift && matchesSearch;
     });
-  }, [classes, userRole, assignedClassId, selectedShift, cleanSearch]);
+  }, [classes, userRole, allowedClassIdsForUsuario, selectedShift, cleanSearch, rawSearchLower]);
 
   return (
     <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-5 pb-36 animate-gentle-fade">

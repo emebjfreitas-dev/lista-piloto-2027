@@ -15,8 +15,8 @@ import {
 } from '../data/mockData';
 import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils/attendanceRules';
 
-const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v5';
-const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v2';
+const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v6';
+const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v3';
 const ATTENDANCE_WINDOW_STORAGE_KEY = 'emeb_candelario_attendance_window_2027_v1';
 const ACCESS_LOGS_STORAGE_KEY = 'emeb_candelario_access_session_logs_2027_v1';
 
@@ -249,6 +249,9 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
   const validClassMap = new Map(
     INITIAL_CLASSES.map((c) => [c.id.toLowerCase(), c])
   );
+  const officialByEmail = new Map(
+    INITIAL_AUTHORIZED_USERS.map((u) => [u.email.trim().toLowerCase(), u])
+  );
   const seenEmails = new Set<string>();
   const seenIds = new Set<string>();
   const uniqueUsers: AuthorizedUser[] = [];
@@ -259,16 +262,27 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
     if (!cleanEmail || seenEmails.has(cleanEmail)) return;
     seenEmails.add(cleanEmail);
 
-    let cleanId = u.id || `usr-official-${idx}`;
+    const off = officialByEmail.get(cleanEmail);
+    let cleanId = u.id || off?.id || `usr-official-${idx}`;
     if (seenIds.has(cleanId)) {
       cleanId = `${cleanId}-${cleanEmail.split('@')[0]}`;
     }
     seenIds.add(cleanId);
-    uniqueUsers.push({ ...u, id: cleanId, email: cleanEmail });
+    uniqueUsers.push({
+      ...off,
+      ...u,
+      id: cleanId,
+      email: cleanEmail,
+      pronoun: u.pronoun || off?.pronoun,
+      firstName: u.firstName || off?.firstName,
+      teacherRoleType: u.teacherRoleType || off?.teacherRoleType,
+      subjectName: u.subjectName || off?.subjectName,
+    });
   });
 
   return uniqueUsers.map((u) => {
     const cleanEmail = u.email.trim().toLowerCase();
+    const off = officialByEmail.get(cleanEmail);
     if (u.role === 'usuario') {
       // Preserve multi-class assignments (assignedClassIds) if present!
       const rawIds: string[] =
@@ -276,7 +290,7 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
           ? u.assignedClassIds.filter((id) => id && id !== 'all')
           : u.assignedClassId && u.assignedClassId !== 'all'
           ? [u.assignedClassId]
-          : [];
+          : off?.assignedClassIds || [];
 
       const matchedClasses: ClassGroup[] = [];
       rawIds.forEach((id) => {
@@ -313,26 +327,53 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
       return {
         ...u,
         email: cleanEmail,
+        teacherRoleType: 'peb1',
         assignedClassId: finalIds[0],
         assignedClassName: finalNames.join(' + '),
         assignedClassIds: finalIds,
         assignedClassNames: finalNames,
       };
     }
+
+    if (u.role === 'peb2') {
+      const specIds =
+        Array.isArray(u.assignedClassIds) &&
+        u.assignedClassIds.length > 0 &&
+        u.assignedClassIds[0] !== 'all'
+          ? u.assignedClassIds
+          : off?.assignedClassIds || ['all'];
+      const specNames =
+        Array.isArray(u.assignedClassNames) &&
+        u.assignedClassNames.length > 0 &&
+        !u.assignedClassNames[0].startsWith('Todas as')
+          ? u.assignedClassNames
+          : off?.assignedClassNames || ['Todas as Turmas (Somente Visualização)'];
+      const subjectLabel = u.subjectName || off?.subjectName;
+
+      return {
+        ...u,
+        email: cleanEmail,
+        teacherRoleType: u.teacherRoleType || off?.teacherRoleType || 'arte',
+        subjectName: subjectLabel,
+        assignedClassId: 'all',
+        assignedClassIds: specIds,
+        assignedClassName:
+          off?.assignedClassName ||
+          (subjectLabel
+            ? `${subjectLabel} • ${specIds.filter((i) => i !== 'all').length || 39} Turmas (Visualização)`
+            : 'Todas as Turmas (Somente Visualização)'),
+        assignedClassNames: specNames,
+      };
+    }
+
     return {
       ...u,
       email: cleanEmail,
+      teacherRoleType: 'admin',
       assignedClassId: 'all',
       assignedClassIds: ['all'],
-      assignedClassName:
-        u.role === 'admin'
-          ? 'Todas as 40 Turmas (Acesso Pleno)'
-          : 'Todas as Turmas (Somente Visualização)',
-      assignedClassNames: [
-        u.role === 'admin'
-          ? 'Todas as 40 Turmas (Acesso Pleno)'
-          : 'Todas as Turmas (Somente Visualização)',
-      ],
+      assignedClassName: 'Todas as 39 Turmas (Acesso Pleno)',
+      assignedClassNames: ['Todas as 39 Turmas (Acesso Pleno)'],
     };
   });
 };
@@ -476,6 +517,34 @@ export const findAuthorizedUserByEmail = (
   return list.find((u) => u.email.trim().toLowerCase() === normalized);
 };
 
+const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] => {
+  const officialMap = new Map(INITIAL_CLASSES.map((c) => [c.id.toLowerCase(), c]));
+  return classes.map((cls) => {
+    const off = officialMap.get(cls.id.toLowerCase());
+    if (!off) return cls;
+    return {
+      ...off,
+      ...cls,
+      turmaAbrev: cls.turmaAbrev || off.turmaAbrev,
+      teacherName: cls.teacherName || off.teacherName,
+      teacherEmail: cls.teacherEmail || off.teacherEmail,
+      pronoun: cls.pronoun || off.pronoun,
+      teacherFirstName: cls.teacherFirstName || off.teacherFirstName,
+      sedClassName: cls.sedClassName || off.sedClassName,
+      sedExpectedStudents: cls.sedExpectedStudents ?? off.sedExpectedStudents,
+      classeSedCode: cls.classeSedCode || off.classeSedCode,
+      artTeacher: cls.artTeacher || off.artTeacher,
+      artTeacherEmail: cls.artTeacherEmail || off.artTeacherEmail,
+      peTeacher: cls.peTeacher || off.peTeacher,
+      peTeacherEmail: cls.peTeacherEmail || off.peTeacherEmail,
+      englishTeacher: cls.englishTeacher || off.englishTeacher,
+      englishTeacherEmail: cls.englishTeacherEmail || off.englishTeacherEmail,
+      room: cls.room || off.room,
+      shift: cls.shift || off.shift,
+    };
+  });
+};
+
 // Load classes from localStorage or fallback to defaults
 export const getStoredClasses = (): ClassGroup[] => {
   if (memoryCachedClasses && memoryCachedClasses.length > 0) {
@@ -486,8 +555,9 @@ export const getStoredClasses = (): ClassGroup[] => {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.name?.startsWith('GRUPO')) {
-        memoryCachedClasses = parsed;
-        return parsed;
+        const enriched = enrichClassesWithOfficialMatrix(parsed);
+        memoryCachedClasses = enriched;
+        return enriched;
       }
     }
   } catch {
@@ -499,15 +569,16 @@ export const getStoredClasses = (): ClassGroup[] => {
 
 // Save classes to localStorage safely without throwing QuotaExceededError
 export const saveStoredClasses = (classes: ClassGroup[]): void => {
-  memoryCachedClasses = classes;
+  const enriched = enrichClassesWithOfficialMatrix(classes);
+  memoryCachedClasses = enriched;
   try {
-    const serialized = JSON.stringify(classes);
+    const serialized = JSON.stringify(enriched);
     if (safeSetLocalStorage(STORAGE_KEY, serialized)) {
       return;
     }
 
     // If still exceeding quota (e.g., large base64 photos or strict 2.5MB iframe quota), strip heavy inline data URLs before persisting to localStorage
-    const compactClasses: ClassGroup[] = classes.map((cls) => ({
+    const compactClasses: ClassGroup[] = enriched.map((cls) => ({
       ...cls,
       students: cls.students.map((st) => ({
         ...st,
@@ -540,7 +611,125 @@ export const resetDatabase = (): ClassGroup[] => {
   } catch (e) {
     console.error(e);
   }
+  memoryCachedClasses = INITIAL_CLASSES;
   return INITIAL_CLASSES;
+};
+
+export const exportOfficialMatrixToXLS = (
+  classes: ClassGroup[],
+  authorizedUsers: AuthorizedUser[]
+): void => {
+  const wb = XLSX.utils.book_new();
+  const matrixRows = classes.map((cls) => {
+    const activeCount = cls.students.filter((s) => {
+      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+      return !sit.includes('BXTR') && !sit.includes('TRANSF') && !sit.includes('REMAN') && !sit.includes('RM');
+    }).length;
+    const transfCount = cls.students.filter((s) => {
+      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+      return sit.includes('BXTR') || sit.includes('TRANSF');
+    }).length;
+    const remanCount = cls.students.filter((s) => {
+      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+      return sit.includes('REMAN') || sit.includes('RM');
+    }).length;
+    const regenteUser = authorizedUsers.find(
+      (u) =>
+        u.role === 'usuario' &&
+        ((u.assignedClassIds && u.assignedClassIds.includes(cls.id)) ||
+          u.assignedClassId === cls.id)
+    );
+    const periodo = cls.shift.toUpperCase().includes('TARDE') ? 'TARDE' : 'MANHÃ';
+
+    return {
+      'TURMA ABREV': cls.turmaAbrev || cls.id.toUpperCase(),
+      'PROFESSOR(A)': regenteUser?.name || cls.teacherName || '',
+      'E-MAIL INSTITUCIONAL REGENTE': regenteUser?.email || cls.teacherEmail || '',
+      'TURMA': cls.name,
+      'SALA DE AULA': cls.room,
+      'PERÍODO': periodo,
+      'TURMA SED': cls.sedClassName || '',
+      'QTD SED': cls.sedExpectedStudents ?? cls.students.length,
+      'QTD ATIVOS REAIS': activeCount,
+      'TRANSFERIDOS (BXTR)': transfCount,
+      'REMANEJADOS': remanCount,
+      'CLASSE SED': cls.classeSedCode || '',
+      'PRONOME TRAT': regenteUser?.pronoun || cls.pronoun || 'PROFESSORA',
+      'PRINOME': regenteUser?.firstName || cls.teacherFirstName || '',
+      'ARTE': cls.artTeacher || '',
+      'E-MAIL ARTE': cls.artTeacherEmail || '',
+      'EDUCAÇÃO FÍSICA': cls.peTeacher || '',
+      'E-MAIL EDUCAÇÃO FÍSICA': cls.peTeacherEmail || '',
+      'LÍNGUA INGLESA': cls.englishTeacher || '',
+      'E-MAIL LÍNGUA INGLESA': cls.englishTeacherEmail || '',
+    };
+  });
+
+  const wsMatrix = XLSX.utils.json_to_sheet(matrixRows);
+  wsMatrix['!cols'] = [
+    { wch: 13 },
+    { wch: 36 },
+    { wch: 40 },
+    { wch: 15 },
+    { wch: 20 },
+    { wch: 11 },
+    { wch: 36 },
+    { wch: 10 },
+    { wch: 16 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 15 },
+    { wch: 18 },
+    { wch: 30 },
+    { wch: 38 },
+    { wch: 40 },
+    { wch: 38 },
+    { wch: 30 },
+    { wch: 38 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsMatrix, 'QUADRO TURMAS E PROFESSORES');
+
+  const accessRows = authorizedUsers.map((u, idx) => ({
+    'ORDEM': idx + 1,
+    'NOME DO(A) SERVIDOR(A)': u.name,
+    'PRONOME': u.pronoun || '',
+    'PRINOME': u.firstName || '',
+    'E-MAIL INSTITUCIONAL': u.email,
+    'PERFIL / FUNÇÃO':
+      u.role === 'admin'
+        ? 'ADMINISTRADOR (Acesso Pleno)'
+        : u.role === 'usuario'
+        ? 'PROFESSOR(A) REGENTE PEB I'
+        : `ESPECIALISTA PEB II (${u.subjectName || 'Arte / Ed. Física / Inglês'})`,
+    'TURMAS VINCULADAS':
+      u.assignedClassNames && u.assignedClassNames.length > 0
+        ? u.assignedClassNames.join(' + ')
+        : u.assignedClassName,
+    'STATUS': u.active ? 'ATIVO' : 'BLOQUEADO',
+    'ACESSOS TOTAIS': u.totalAccessCount || 0,
+    'TEMPO CONECTADO': formatDurationHuman(u.totalDurationSeconds || 0),
+    'ÚLTIMO ACESSO': u.lastLoginAt || 'Ainda não acessou',
+  }));
+  const wsAccess = XLSX.utils.json_to_sheet(accessRows);
+  wsAccess['!cols'] = [
+    { wch: 8 },
+    { wch: 38 },
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 42 },
+    { wch: 38 },
+    { wch: 48 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 18 },
+    { wch: 22 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsAccess, 'ACESSOS E EMAILS');
+
+  XLSX.writeFile(wb, 'Quadro_Oficial_Turmas_Professores_Acessos_EMEB_Candelario_2027.xls', {
+    bookType: 'biff8',
+  });
 };
 
 const isEducacaoInfantilClass = (cls: ClassGroup): boolean => {

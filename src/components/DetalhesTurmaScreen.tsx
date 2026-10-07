@@ -265,14 +265,24 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         </section>
       )}
 
-      {/* ALTA DA TURMA: Cabeçalho iOS Clean + Resumo Completo de Estudantes (Ativos, Feminino, Masculino, Transferidos, Remanejados, Presença e Falta Total) */}
+      {/* ALTA DA TURMA: Cabeçalho iOS Clean + Quadro Docente Oficial + Resumo Completo de Estudantes */}
       <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-6 border border-black/[0.06] space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
+              {classGroup.turmaAbrev && (
+                <span className="text-[0.74rem] font-black uppercase tracking-wider text-white bg-[#003440] px-2.5 py-0.5 rounded-lg font-mono">
+                  {classGroup.turmaAbrev}
+                </span>
+              )}
               <span className="text-[0.72rem] font-bold uppercase tracking-wider text-[#005035] bg-[#eaf6ef] px-2.5 py-0.5 rounded-full">
-                {classGroup.shift} · Ano Letivo 2027
+                {classGroup.shift} · {classGroup.room}
               </span>
+              {classGroup.classeSedCode && (
+                <span className="text-[0.72rem] font-mono font-bold text-[#004e64] bg-[#e6f4f8] px-2.5 py-0.5 rounded-full">
+                  CLASSE SED: {classGroup.classeSedCode}
+                </span>
+              )}
               <span className="text-[0.72rem] font-semibold text-[#5a676b] bg-[#f4f6f5] px-2.5 py-0.5 rounded-full">
                 Mínimo Legal: {minLegalPresence}% ({isInfantilClass ? 'Ed. Infantil' : 'Ens. Fundamental'})
               </span>
@@ -280,8 +290,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <h1 className="text-[1.75rem] sm:text-[2rem] font-extrabold text-[#003440] tracking-tight leading-tight mt-1">
               Turma {classGroup.name}
             </h1>
-            <p className="text-[0.88rem] text-[#5a676b] font-medium">
-              {classGroup.grade} · {classGroup.room} · {diasLetivosMes} dias letivos no mês
+            <p className="text-[0.84rem] text-[#5a676b] font-medium">
+              {classGroup.sedClassName
+                ? `${classGroup.sedClassName} · Qtd Prevista SED: ${classGroup.sedExpectedStudents ?? classSummary.totalMatriculados}`
+                : `${classGroup.grade} · ${classGroup.room}`}{' '}
+              · {diasLetivosMes} dias letivos no mês
             </p>
           </div>
 
@@ -317,11 +330,99 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#3c3c43] font-semibold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
               >
                 <span className="material-symbols-outlined text-[18px]">arrow_back_ios_new</span>
-                <span>40 Turmas</span>
+                <span>39 Turmas</span>
               </button>
             )}
           </div>
         </div>
+
+        {/* Quadro Docente Oficial da Turma: Professor(a) Regente PEB I + Especialistas PEB II (Arte, Educação Física e Língua Inglesa) */}
+        {(classGroup.teacherName || classGroup.artTeacher || classGroup.peTeacher || classGroup.englishTeacher) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-black/[0.06]">
+            <div className="rounded-2xl bg-[#eaf6ef]/70 border border-[#005035]/20 p-3 flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#005035] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[18px]">school</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[0.63rem] font-extrabold uppercase tracking-wider text-[#005035]">
+                    {classGroup.pronoun || 'PROFESSORA'} REGENTE (PEB I)
+                  </span>
+                  {classGroup.teacherFirstName && (
+                    <span className="px-1.5 py-0.2 rounded bg-[#005035]/15 text-[#005035] text-[0.62rem] font-black">
+                      {classGroup.teacherFirstName}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[0.8rem] font-extrabold text-[#003440] truncate mt-0.5">
+                  {classGroup.teacherName || 'Não atribuído'}
+                </p>
+                {classGroup.teacherEmail && (
+                  <p className="text-[0.66rem] font-mono text-[#436370] truncate">
+                    {classGroup.teacherEmail}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-[#fdf7fa] border border-[#8f2d56]/20 p-3 flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#8f2d56] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[18px]">palette</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[0.63rem] font-extrabold uppercase tracking-wider text-[#8f2d56] block">
+                  ARTE (ESPECIALISTA PEB II)
+                </span>
+                <p className="text-[0.8rem] font-extrabold text-[#1c1c1e] truncate mt-0.5">
+                  {classGroup.artTeacher || '—'}
+                </p>
+                {classGroup.artTeacherEmail && (
+                  <p className="text-[0.66rem] font-mono text-[#5a676b] truncate">
+                    {classGroup.artTeacherEmail}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-[#f4f9fc] border border-[#004e64]/20 p-3 flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#004e64] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[18px]">sports_soccer</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[0.63rem] font-extrabold uppercase tracking-wider text-[#004e64] block">
+                  EDUCAÇÃO FÍSICA (PEB II)
+                </span>
+                <p className="text-[0.8rem] font-extrabold text-[#1c1c1e] truncate mt-0.5">
+                  {classGroup.peTeacher || '—'}
+                </p>
+                {classGroup.peTeacherEmail && (
+                  <p className="text-[0.66rem] font-mono text-[#5a676b] truncate">
+                    {classGroup.peTeacherEmail}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-[#f5f3ff] border border-[#5b21b6]/20 p-3 flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#5b21b6] text-white flex items-center justify-center shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[18px]">translate</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[0.63rem] font-extrabold uppercase tracking-wider text-[#5b21b6] block">
+                  LÍNGUA INGLESA (PEB II)
+                </span>
+                <p className="text-[0.8rem] font-extrabold text-[#1c1c1e] truncate mt-0.5">
+                  {classGroup.englishTeacher || '—'}
+                </p>
+                {classGroup.englishTeacherEmail && (
+                  <p className="text-[0.66rem] font-mono text-[#5a676b] truncate">
+                    {classGroup.englishTeacherEmail}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Grade de Indicadores da Alta da Turma (iOS Health/Summary Cards) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5 pt-2 border-t border-black/[0.06]">
@@ -578,12 +679,33 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
             const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
             const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+            const isOtherNonActive =
+              !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+            const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
 
             const cleanPhotoFileName = `${student.name
               .normalize('NFD')
               .replace(/[\u0300-\u036f]/g, '')
               .toUpperCase()
               .trim()}.jpg`;
+
+            const cardColorClasses = isTransferred
+              ? 'bg-gradient-to-br from-[#fef3c7] via-[#fffbeb] to-[#fde68a]/65 border-2 border-[#d97706]/60 ring-1 ring-[#f59e0b]/25 shadow-xs'
+              : isRemanejado
+              ? 'bg-gradient-to-br from-[#ede9fe] via-[#f5f3ff] to-[#ddd6fe]/65 border-2 border-[#7c3aed]/55 ring-1 ring-[#8b5cf6]/25 shadow-xs'
+              : isOtherNonActive
+              ? 'bg-gradient-to-br from-[#e2e8f0] via-[#f1f5f9] to-[#cbd5e1]/65 border-2 border-[#64748b]/55 shadow-xs'
+              : m.isBelowLegalThreshold
+              ? 'bg-[#fff9f8] border-[#ba1a1a]/35'
+              : 'bg-white border-black/[0.06]';
+
+            const numberBadgeClasses = isTransferred
+              ? 'bg-[#b45309] text-white'
+              : isRemanejado
+              ? 'bg-[#6d28d9] text-white'
+              : isOtherNonActive
+              ? 'bg-[#475569] text-white'
+              : 'bg-[#003440] text-white';
 
             return (
               <div
@@ -592,14 +714,39 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   if (onOpenStudentGrid) onOpenStudentGrid(student);
                 }}
                 title="Toque no card para abrir todos os 48 campos SED da criança"
-                className={`card-welcoming rounded-3xl p-4 border flex flex-col justify-between gap-3 cursor-pointer select-none ${
-                  m.isBelowLegalThreshold
-                    ? 'bg-[#fff9f8] border-[#ba1a1a]/35'
-                    : isTransferred || isRemanejado
-                    ? 'bg-[#fcfcfa] border-[#d99b26]/35'
-                    : 'bg-white border-black/[0.06]'
-                }`}
+                className={`card-welcoming rounded-3xl p-4 flex flex-col justify-between gap-3 cursor-pointer select-none transition-all ${cardColorClasses}`}
               >
+                {/* Faixa Superior Destacada para Estudantes Não Ativos (Nova Coloração) */}
+                {isNonActive && (
+                  <div
+                    className={`-mx-1 -mt-1 px-3 py-1.5 rounded-2xl text-[0.68rem] font-black uppercase tracking-wider flex items-center justify-between gap-2 shadow-2xs ${
+                      isTransferred
+                        ? 'bg-[#b45309] text-white'
+                        : isRemanejado
+                        ? 'bg-[#6d28d9] text-white'
+                        : 'bg-[#475569] text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[15px]">
+                        {isTransferred ? 'transfer_within_a_station' : 'swap_horiz'}
+                      </span>
+                      <span>
+                        {isTransferred
+                          ? 'NÃO ATIVO • TRANSFERIDO (BXTR)'
+                          : isRemanejado
+                          ? 'NÃO ATIVO • REMANEJADO'
+                          : `NÃO ATIVO • ${sit}`}
+                      </span>
+                    </span>
+                    {student.dataMovimentacao && (
+                      <span className="font-mono text-[0.64rem] bg-white/20 px-1.5 py-0.5 rounded">
+                        {student.dataMovimentacao}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Topo do Card: Foto Expansível ao Clicar + Nº Ordem Numérica + RA + Hyperlink Doc Drive */}
                 <div className="flex items-start gap-3">
                   <StudentAvatar
@@ -614,23 +761,35 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-lg bg-[#003440] text-white font-mono font-extrabold text-[0.73rem] tabular-nums">
+                        <span
+                          className={`inline-flex items-center justify-center px-2 py-0.5 rounded-lg font-mono font-extrabold text-[0.73rem] tabular-nums ${numberBadgeClasses}`}
+                        >
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         {student.ra && (
-                          <span className="font-mono text-[0.71rem] font-bold text-[#436370] bg-[#f2f4f3] px-1.5 py-0.5 rounded-md tabular-nums">
+                          <span
+                            className={`font-mono text-[0.71rem] font-bold px-1.5 py-0.5 rounded-md tabular-nums ${
+                              isNonActive
+                                ? 'bg-white/80 text-[#1c1c1e] border border-black/10'
+                                : 'text-[#436370] bg-[#f2f4f3]'
+                            }`}
+                          >
                             RA {student.ra}-{student.digRa}
                           </span>
                         )}
                       </div>
 
                       {isTransferred ? (
-                        <span className="px-2 py-0.5 rounded-full bg-[#ffdad6] text-[#ba1a1a] text-[0.65rem] font-extrabold uppercase">
+                        <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.65rem] font-extrabold uppercase shadow-2xs">
                           Transferido
                         </span>
                       ) : isRemanejado ? (
-                        <span className="px-2 py-0.5 rounded-full bg-[#fff0c2] text-[#7a4100] text-[0.65rem] font-extrabold uppercase">
+                        <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.65rem] font-extrabold uppercase shadow-2xs">
                           Remanejado
+                        </span>
+                      ) : isOtherNonActive ? (
+                        <span className="px-2 py-0.5 rounded-full bg-[#475569] text-white text-[0.65rem] font-extrabold uppercase shadow-2xs">
+                          {sit}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] text-[0.65rem] font-bold">
@@ -657,7 +816,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         }
                       }}
                       title={`Abrir Documento Escaneado (${student.name}.pdf) no Google Drive`}
-                      className="doc-hyperlink text-[0.95rem] font-extrabold leading-snug line-clamp-2 mt-1 block cursor-pointer"
+                      className={`doc-hyperlink text-[0.95rem] font-extrabold leading-snug line-clamp-2 mt-1 block cursor-pointer ${
+                        isTransferred
+                          ? '!text-[#78350f]'
+                          : isRemanejado
+                          ? '!text-[#4c1d95]'
+                          : ''
+                      }`}
                     >
                       {student.name}
                     </a>
@@ -666,7 +831,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
                 {/* Indicadores de Presença Total (% e Qtd) e Falta Total (% e Qtd) no Card */}
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-2xl bg-[#eaf6ef]/70 border border-[#005035]/15 px-3 py-2 flex items-center justify-between">
+                  <div
+                    className={`rounded-2xl px-3 py-2 border flex items-center justify-between ${
+                      isNonActive
+                        ? 'bg-white/85 border-black/[0.08]'
+                        : 'bg-[#eaf6ef]/70 border-[#005035]/15'
+                    }`}
+                  >
                     <div>
                       <span className="text-[0.64rem] font-bold uppercase tracking-wider text-[#005035] block">
                         Presença Total
@@ -688,6 +859,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     className={`rounded-2xl px-3 py-2 border flex items-center justify-between ${
                       m.faltas > 0
                         ? 'bg-[#fff8f7] border-[#ba1a1a]/20'
+                        : isNonActive
+                        ? 'bg-white/85 border-black/[0.08]'
                         : 'bg-[#f6f8f7] border-black/[0.05]'
                     }`}
                   >
@@ -715,7 +888,15 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 </div>
 
                 {/* Bloco Filiação (Nome da Mãe e Nome do Pai), Telefones e E-mail Institucional */}
-                <div className="rounded-2xl bg-[#f7f9f8] border border-black/[0.04] p-2.5 space-y-1.5 text-[0.73rem]">
+                <div
+                  className={`rounded-2xl border p-2.5 space-y-1.5 text-[0.73rem] ${
+                    isTransferred
+                      ? 'bg-white/85 border-[#d97706]/25'
+                      : isRemanejado
+                      ? 'bg-white/85 border-[#7c3aed]/25'
+                      : 'bg-[#f7f9f8] border-black/[0.04]'
+                  }`}
+                >
                   <div className="flex items-start gap-1.5">
                     <span className="text-[#5a676b] font-bold shrink-0 w-10">Mãe:</span>
                     <span className="font-semibold text-[#0f1715] truncate block flex-1">
@@ -760,7 +941,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 {/* Rodapé Minimalista do Card: Doc Escaneado Drive + Foto + Ver Tudo (48 Campos) */}
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="pt-2 border-t border-black/[0.05] flex items-center justify-between gap-1.5 text-[0.72rem]"
+                  className="pt-2 border-t border-black/[0.06] flex items-center justify-between gap-1.5 text-[0.72rem]"
                 >
                   <div className="flex items-center gap-1">
                     {onOpenStudentPdf && (
@@ -777,7 +958,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           onOpenStudentPdf(student);
                         }}
                         title="Abrir Documento PDF Escaneado no Google Drive"
-                        className="px-2.5 py-1 rounded-xl bg-[#f2f4f3] hover:bg-[#003440] text-[#003440] hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                        className="px-2.5 py-1 rounded-xl bg-white/90 hover:bg-[#003440] text-[#003440] hover:text-white border border-black/[0.06] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                       >
                         <span className="material-symbols-outlined text-[14px]">
                           document_scanner
@@ -810,7 +991,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       e.stopPropagation();
                       if (onOpenStudentGrid) onOpenStudentGrid(student);
                     }}
-                    className="px-2.5 py-1 rounded-xl bg-[#003440]/8 hover:bg-[#003440] text-[#003440] hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                    className="px-2.5 py-1 rounded-xl bg-[#003440]/10 hover:bg-[#003440] text-[#003440] hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <span>Ver Dados</span>
                     <span className="material-symbols-outlined text-[14px]">
@@ -837,16 +1018,40 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               m.diasLetivosMatriculados > 0
                 ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
                 : 0;
+            const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+            const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+            const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+            const isOtherNonActive =
+              !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+
             return (
               <div
                 key={student.id}
                 onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
-                className={`p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#f7f9f8] cursor-pointer transition-colors ${
-                  m.isBelowLegalThreshold ? 'bg-[#fff9f8]' : ''
+                className={`p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-colors ${
+                  isTransferred
+                    ? 'bg-gradient-to-r from-[#fef3c7]/80 to-[#fffbeb] border-l-4 border-l-[#b45309] hover:from-[#fde68a]/70'
+                    : isRemanejado
+                    ? 'bg-gradient-to-r from-[#ede9fe]/80 to-[#f5f3ff] border-l-4 border-l-[#6d28d9] hover:from-[#ddd6fe]/70'
+                    : isOtherNonActive
+                    ? 'bg-[#e2e8f0]/75 border-l-4 border-l-[#475569]'
+                    : m.isBelowLegalThreshold
+                    ? 'bg-[#fff9f8] hover:bg-[#fff0ee]'
+                    : 'hover:bg-[#f7f9f8]'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <span className="w-8 h-8 rounded-xl bg-[#003440] text-white font-mono font-extrabold text-[0.76rem] flex items-center justify-center shrink-0 tabular-nums">
+                  <span
+                    className={`w-8 h-8 rounded-xl text-white font-mono font-extrabold text-[0.76rem] flex items-center justify-center shrink-0 tabular-nums ${
+                      isTransferred
+                        ? 'bg-[#b45309]'
+                        : isRemanejado
+                        ? 'bg-[#6d28d9]'
+                        : isOtherNonActive
+                        ? 'bg-[#475569]'
+                        : 'bg-[#003440]'
+                    }`}
+                  >
                     {student.number.toString().padStart(2, '0')}
                   </span>
 
@@ -877,9 +1082,19 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       >
                         {student.name}
                       </a>
-                      <span className="font-mono text-[0.72rem] text-[#436370] bg-[#f2f4f3] px-1.5 py-0.5 rounded">
+                      <span className="font-mono text-[0.72rem] text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5">
                         RA {student.ra}-{student.digRa}
                       </span>
+                      {isTransferred && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.64rem] font-black uppercase">
+                          NÃO ATIVO • TRANSFERIDO (BXTR)
+                        </span>
+                      )}
+                      {isRemanejado && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.64rem] font-black uppercase">
+                          NÃO ATIVO • REMANEJADO
+                        </span>
+                      )}
                     </div>
                     <div className="text-[0.74rem] text-[#5a676b] truncate mt-0.5">
                       <strong>Mãe:</strong> {student.filiacao1 || '—'} ·{' '}
@@ -944,12 +1159,26 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   m.diasLetivosMatriculados > 0
                     ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
                     : 0;
+                const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+                const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+                const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+                const isOtherNonActive =
+                  !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+
                 return (
                   <tr
                     key={student.id}
                     onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
-                    className={`hover:bg-[#f4f8f6] cursor-pointer transition-colors ${
-                      m.isBelowLegalThreshold ? 'bg-[#fff9f8]' : ''
+                    className={`cursor-pointer transition-colors ${
+                      isTransferred
+                        ? 'bg-[#fef3c7]/75 hover:bg-[#fde68a]/75'
+                        : isRemanejado
+                        ? 'bg-[#ede9fe]/75 hover:bg-[#ddd6fe]/75'
+                        : isOtherNonActive
+                        ? 'bg-[#e2e8f0]/75'
+                        : m.isBelowLegalThreshold
+                        ? 'bg-[#fff9f8] hover:bg-[#fff0ee]'
+                        : 'hover:bg-[#f4f8f6]'
                     }`}
                   >
                     <td className="py-2.5 px-3 text-center font-mono font-extrabold text-[#003440]">
@@ -1001,8 +1230,22 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       {m.faltas} ({pctFalta}%)
                     </td>
                     <td className="py-2.5 px-2.5 text-center">
-                      <span className="px-2 py-0.5 rounded-full text-[0.68rem] font-bold bg-[#f2f4f3] text-[#003440]">
-                        {student.situacao || 'ATIVO'}
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[0.68rem] font-extrabold uppercase ${
+                          isTransferred
+                            ? 'bg-[#b45309] text-white'
+                            : isRemanejado
+                            ? 'bg-[#6d28d9] text-white'
+                            : isOtherNonActive
+                            ? 'bg-[#475569] text-white'
+                            : 'bg-[#eaf6ef] text-[#005035]'
+                        }`}
+                      >
+                        {isTransferred
+                          ? 'TRANSFERIDO (BXTR)'
+                          : isRemanejado
+                          ? 'REMANEJADO'
+                          : student.situacao || 'ATIVO'}
                       </span>
                     </td>
                   </tr>
