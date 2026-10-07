@@ -10,6 +10,7 @@ interface HeaderProps {
   userEmail?: string;
   userName?: string;
   userRole?: UserRole;
+  onRestoreAdminRole?: () => void;
   onBack?: () => void;
   onChangeScreen?: (screen: ScreenType) => void;
   onNavigatePlanilha: () => void;
@@ -23,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   userEmail,
   userName,
   userRole = 'admin',
+  onRestoreAdminRole,
   onBack,
   onChangeScreen,
   onNavigatePlanilha,
@@ -176,6 +178,24 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right slot */}
         <div className="flex items-center gap-1.5 flex-shrink-0 relative">
+          {!isAdmin &&
+            onRestoreAdminRole &&
+            userEmail?.trim().toLowerCase().startsWith('emebjfreitas@') && (
+              <button
+                type="button"
+                onClick={onRestoreAdminRole}
+                title="Sair da simulação e voltar ao painel completo do Administrador"
+                className="min-h-[42px] px-3 rounded-xl bg-[#003440] hover:bg-[#004c5c] text-white flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 shadow-2xs"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  admin_panel_settings
+                </span>
+                <span className="text-[0.76rem] font-extrabold">
+                  Voltar p/ ADMIN
+                </span>
+              </button>
+            )}
+
           {isAdmin && (
             <button
               onClick={onNavigatePlanilha}

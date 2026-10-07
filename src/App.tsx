@@ -830,6 +830,11 @@ export default function App() {
         userEmail={currentUserEmail}
         userName={currentUserName}
         userRole={userRole}
+        onRestoreAdminRole={() => {
+          setUserRole('admin');
+          setCurrentScreen('usuarios_acesso');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
         onBack={handleBack}
         onChangeScreen={(screen) => {
           if (

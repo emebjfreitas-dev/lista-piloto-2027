@@ -127,7 +127,9 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               >
                 <span className="material-symbols-outlined text-[22px]">person</span>
                 <span>PEB I</span>
-                <span className="text-[0.65rem] font-semibold opacity-80">Simular Turma</span>
+                <span className="text-[0.65rem] font-semibold opacity-80 truncate max-w-full">
+                  {classes.find((c) => c.id === assignedClassId)?.name || 'Simular Turma'}
+                </span>
               </button>
 
               <button
@@ -139,6 +141,24 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                 <span>PEB II</span>
                 <span className="text-[0.65rem] font-semibold opacity-80">Simular Leitura</span>
               </button>
+            </div>
+
+            {/* Seletor rápido da Turma para quando o Admin clicar em "PEB I" */}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#edeeec]">
+              <span className="text-[0.72rem] font-bold text-[#41484b]">
+                Turma ao testar PEB I:
+              </span>
+              <select
+                value={assignedClassId}
+                onChange={(e) => onChangeAssignedClassId(e.target.value)}
+                className="px-2.5 py-1 rounded-lg bg-[#f3f4f2] border border-[#c0c8cb] text-[#003440] font-extrabold text-[0.76rem] cursor-pointer"
+              >
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.shift.replace('Turno ', '')})
+                  </option>
+                ))}
+              </select>
             </div>
           </section>
         )}

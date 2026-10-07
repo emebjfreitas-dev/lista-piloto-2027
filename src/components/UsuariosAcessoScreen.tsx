@@ -68,12 +68,42 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     }
   });
   const [copiedDeployKey, setCopiedDeployKey] = useState<string | null>(null);
+  const [draftEdits, setDraftEdits] = useState<
+    Record<
+      string,
+      {
+        role: UserRole;
+        assignedClassId: string;
+        assignedClassName: string;
+      }
+    >
+  >({});
+  const [recentlySavedUserIds, setRecentlySavedUserIds] = useState<Record<string, boolean>>({});
 
   const canManage = userRole === 'admin';
 
   const triggerFeedback = (type: 'success' | 'error', text: string) => {
     setFeedbackMsg({ type, text });
-    window.setTimeout(() => setFeedbackMsg(null), 4500);
+    window.setTimeout(() => setFeedbackMsg(null), 5000);
+  };
+
+  const markUserSavedFlash = (userIds: string[]) => {
+    setRecentlySavedUserIds((prev) => {
+      const next = { ...prev };
+      userIds.forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+    window.setTimeout(() => {
+      setRecentlySavedUserIds((prev) => {
+        const next = { ...prev };
+        userIds.forEach((id) => {
+          delete next[id];
+        });
+        return next;
+      });
+    }, 4000);
   };
 
   const handleAddUser = (e: React.FormEvent) => {
@@ -146,42 +176,76 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
   const handleChangeUserRole = (userId: string, newRole: UserRole) => {
     if (!canManage) return;
-    const nowMs = Date.now();
-    const next = authorizedUsers.map((u) => {
-      if (u.id !== userId) return u;
-      const defaultClass = classes.find((c) => c.id === (u.assignedClassId !== 'all' ? u.assignedClassId : classes[0]?.id)) || classes[0];
-      const nextAssignedClassId = newRole === 'usuario' ? (defaultClass?.id || 'g04a') : 'all';
-      const nextAssignedClassName =
-        newRole === 'admin'
-          ? 'Todas as 40 Turmas (Acesso Pleno)'
-          : newRole === 'peb2'
-          ? 'Todas as Turmas (Somente Visualização)'
-          : defaultClass
-          ? `${defaultClass.name} (${defaultClass.shift.replace('Turno ', '')})`
-          : 'GRUPO 04 A (Manhã)';
-      return {
-        ...u,
+    const origUser = authorizedUsers.find((u) => u.id === userId);
+    if (!origUser) return;
+    const currentDraft = draftEdits[userId];
+    const currentClassId = currentDraft ? currentDraft.assignedClassId : origUser.assignedClassId;
+
+    const defaultClass =
+      classes.find((c) => c.id === (currentClassId !== 'all' ? currentClassId : classes[0]?.id)) ||
+      classes[0];
+    const nextAssignedClassId = newRole === 'usuario' ? defaultClass?.id || 'g04a' : 'all';
+    const nextAssignedClassName =
+      newRole === 'admin'
+        ? 'Todas as 40 Turmas (Acesso Pleno)'
+        : newRole === 'peb2'
+        ? 'Todas as Turmas (Somente Visualização)'
+        : defaultClass
+        ? `${defaultClass.name} (${defaultClass.shift.replace('Turno ', '')})`
+        : 'GRUPO 04 A (Manhã)';
+
+    // Update draft so Admin sees the pending change and can click "Salvar Alteração" (and also auto-persist immediately so nothing is lost)
+    setDraftEdits((prev) => ({
+      ...prev,
+      [userId]: {
         role: newRole,
         assignedClassId: nextAssignedClassId,
         assignedClassName: nextAssignedClassName,
-        updatedAtMs: nowMs,
-      };
-    });
-    onSaveAuthorizedUsers(next);
-    triggerFeedback('success', 'Nível de permissão atualizado instantaneamente.');
-  };
+      },
+    }));
 
-  const handleChangeUserClass = (userId: string, newClassId: string) => {
-    if (!canManage) return;
-    const targetClass = classes.find((c) => c.id === newClassId);
-    if (!targetClass) return;
     const nowMs = Date.now();
     const next = authorizedUsers.map((u) =>
       u.id === userId
         ? {
             ...u,
+            role: newRole,
+            assignedClassId: nextAssignedClassId,
+            assignedClassName: nextAssignedClassName,
+            updatedAtMs: nowMs,
+          }
+        : u
+    );
+    onSaveAuthorizedUsers(next);
+  };
+
+  const handleChangeUserClass = (userId: string, newClassId: string) => {
+    if (!canManage) return;
+    const origUser = authorizedUsers.find((u) => u.id === userId);
+    const targetClass = classes.find((c) => c.id === newClassId);
+    if (!origUser || !targetClass) return;
+
+    const currentDraft = draftEdits[userId];
+    const effectiveRole = currentDraft ? currentDraft.role : origUser.role;
+    const nextClassName = `${targetClass.name} (${targetClass.shift.replace('Turno ', '')})`;
+
+    setDraftEdits((prev) => ({
+      ...prev,
+      [userId]: {
+        role: effectiveRole,
+        assignedClassId: targetClass.id,
+        assignedClassName: nextClassName,
+      },
+    }));
+
+    const nowMs = Date.now();
+    const next = authorizedUsers.map((u) =>
+      u.id === userId
+        ? {
+            ...u,
+            role: effectiveRole,
             assignedClassId: targetClass.id,
-            assignedClassName: `${targetClass.name} (${targetClass.shift.replace('Turno ', '')})`,
+            assignedClassName: nextClassName,
             updatedAtMs: nowMs,
           }
         : u
@@ -190,9 +254,78 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     if (onSelectPreviewClassId) {
       onSelectPreviewClassId(targetClass.id);
     }
+  };
+
+  const handleConfirmSaveRow = (userId: string) => {
+    if (!canManage) return;
+    const origUser = authorizedUsers.find((u) => u.id === userId);
+    if (!origUser) return;
+    const draft = draftEdits[userId];
+    const nowMs = Date.now();
+
+    const finalRole = draft ? draft.role : origUser.role;
+    const finalClassId = draft ? draft.assignedClassId : origUser.assignedClassId;
+    const finalClassName = draft ? draft.assignedClassName : origUser.assignedClassName;
+
+    const next = authorizedUsers.map((u) =>
+      u.id === userId
+        ? {
+            ...u,
+            role: finalRole,
+            assignedClassId: finalClassId,
+            assignedClassName: finalClassName,
+            updatedAtMs: nowMs,
+          }
+        : u
+    );
+    onSaveAuthorizedUsers(next);
+    if (finalRole === 'usuario' && finalClassId !== 'all' && onSelectPreviewClassId) {
+      onSelectPreviewClassId(finalClassId);
+    }
+
+    setDraftEdits((prev) => {
+      const copy = { ...prev };
+      delete copy[userId];
+      return copy;
+    });
+    markUserSavedFlash([userId]);
     triggerFeedback(
       'success',
-      `Turma vinculada alterada para ${targetClass.name} (${targetClass.shift.replace('Turno ', '')}) e atualizada no perfil da professora!`
+      `Alteração salva com sucesso para ${origUser.name}: ${finalClassName}!`
+    );
+  };
+
+  const handleConfirmSaveAllDrafts = () => {
+    if (!canManage) return;
+    const dirtyIds = Object.keys(draftEdits);
+    if (dirtyIds.length === 0) return;
+    const nowMs = Date.now();
+
+    let lastPreviewClassId: string | null = null;
+    const next = authorizedUsers.map((u) => {
+      const d = draftEdits[u.id];
+      if (!d) return u;
+      if (d.role === 'usuario' && d.assignedClassId !== 'all') {
+        lastPreviewClassId = d.assignedClassId;
+      }
+      return {
+        ...u,
+        role: d.role,
+        assignedClassId: d.assignedClassId,
+        assignedClassName: d.assignedClassName,
+        updatedAtMs: nowMs,
+      };
+    });
+
+    onSaveAuthorizedUsers(next);
+    if (lastPreviewClassId && onSelectPreviewClassId) {
+      onSelectPreviewClassId(lastPreviewClassId);
+    }
+    setDraftEdits({});
+    markUserSavedFlash(dirtyIds);
+    triggerFeedback(
+      'success',
+      `Todas as ${dirtyIds.length} alterações de turma/permissão foram salvas e sincronizadas na Planilha Google!`
     );
   };
 
@@ -774,17 +907,31 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             </p>
           </div>
 
-          <div className="relative w-full sm:w-80">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#71787b] text-[20px]">
-              search
-            </span>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar e-mail, docente ou turma..."
-              className="w-full min-h-[42px] pl-10 pr-3 rounded-xl bg-[#f3f4f2] border border-[#c0c8cb] text-[0.85rem] font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
-            />
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+            {canManage && Object.keys(draftEdits).length > 0 && (
+              <button
+                type="button"
+                onClick={handleConfirmSaveAllDrafts}
+                className="min-h-[42px] px-4 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.82rem] flex items-center gap-1.5 shadow-sm cursor-pointer animate-pulse"
+              >
+                <span className="material-symbols-outlined text-[19px]">save</span>
+                <span>
+                  Salvar Alterações ({Object.keys(draftEdits).length})
+                </span>
+              </button>
+            )}
+            <div className="relative flex-1 sm:w-80">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#71787b] text-[20px]">
+                search
+              </span>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar e-mail, docente ou turma..."
+                className="w-full min-h-[42px] pl-10 pr-3 rounded-xl bg-[#f3f4f2] border border-[#c0c8cb] text-[0.85rem] font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
+              />
+            </div>
           </div>
         </div>
 
@@ -804,11 +951,27 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#edeeec] text-[0.82rem]">
-              {filteredUsers.map((u) => (
+              {filteredUsers.map((u) => {
+                const rowDraft = draftEdits[u.id];
+                const effectiveRole = rowDraft ? rowDraft.role : u.role;
+                const effectiveClassId = rowDraft ? rowDraft.assignedClassId : u.assignedClassId;
+                const effectiveClassName = rowDraft
+                  ? rowDraft.assignedClassName
+                  : u.assignedClassName;
+                const hasPendingSave = Boolean(rowDraft);
+                const wasRecentlySaved = Boolean(recentlySavedUserIds[u.id]);
+
+                return (
                 <tr
                   key={u.id}
                   className={`transition-colors ${
-                    !u.active ? 'bg-[#ffdad6]/20 opacity-70' : 'hover:bg-[#f3f4f2]/70'
+                    !u.active
+                      ? 'bg-[#ffdad6]/20 opacity-70'
+                      : hasPendingSave
+                      ? 'bg-[#fff8e6]'
+                      : wasRecentlySaved
+                      ? 'bg-[#e8f8ef]'
+                      : 'hover:bg-[#f3f4f2]/70'
                   }`}
                 >
                   <td className="py-3 px-3">
@@ -841,14 +1004,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   <td className="py-3 px-3">
                     {canManage ? (
                       <select
-                        value={u.role}
+                        value={effectiveRole}
                         onChange={(e) =>
                           handleChangeUserRole(u.id, e.target.value as UserRole)
                         }
                         className={`px-2.5 py-1.5 rounded-lg font-extrabold text-[0.76rem] border cursor-pointer ${
-                          u.role === 'admin'
+                          effectiveRole === 'admin'
                             ? 'bg-[#003440] text-white border-[#003440]'
-                            : u.role === 'usuario'
+                            : effectiveRole === 'usuario'
                             ? 'bg-[#e8f8ef] text-[#005035] border-[#005035]'
                             : 'bg-[#fff4e5] text-[#7a4100] border-[#7a4100]'
                         }`}
@@ -859,9 +1022,9 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                       </select>
                     ) : (
                       <span className="font-extrabold text-[#003440]">
-                        {u.role === 'admin'
+                        {effectiveRole === 'admin'
                           ? 'ADMIN (Acesso Pleno)'
-                          : u.role === 'usuario'
+                          : effectiveRole === 'usuario'
                           ? 'PEB I (Limitado à Turma)'
                           : 'PEB II (Só Visualização)'}
                       </span>
@@ -869,22 +1032,62 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   </td>
 
                   <td className="py-3 px-3">
-                    {canManage && u.role === 'usuario' ? (
-                      <select
-                        value={u.assignedClassId}
-                        onChange={(e) => handleChangeUserClass(u.id, e.target.value)}
-                        className="px-2.5 py-1.5 rounded-lg bg-[#f3f4f2] border border-[#c0c8cb] text-[#003440] font-extrabold text-[0.78rem] cursor-pointer"
-                      >
-                        {classes.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name} ({c.shift.replace('Turno ', '')})
-                          </option>
-                        ))}
-                      </select>
+                    {canManage && effectiveRole === 'usuario' ? (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={effectiveClassId}
+                          onChange={(e) => handleChangeUserClass(u.id, e.target.value)}
+                          className={`px-2.5 py-1.5 rounded-lg border font-extrabold text-[0.78rem] cursor-pointer ${
+                            hasPendingSave
+                              ? 'bg-[#fff3cd] border-[#7a4100] text-[#7a4100]'
+                              : 'bg-[#f3f4f2] border-[#c0c8cb] text-[#003440]'
+                          }`}
+                        >
+                          {classes.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} ({c.shift.replace('Turno ', '')})
+                            </option>
+                          ))}
+                        </select>
+                        {hasPendingSave && (
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmSaveRow(u.id)}
+                            className="px-2.5 py-1.5 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.72rem] inline-flex items-center gap-1 shadow-2xs cursor-pointer shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">
+                              check_circle
+                            </span>
+                            <span>Salvar</span>
+                          </button>
+                        )}
+                        {!hasPendingSave && wasRecentlySaved && (
+                          <span className="px-2 py-1 rounded-lg bg-[#a4f3ca] text-[#003723] font-black text-[0.7rem] inline-flex items-center gap-1 shrink-0">
+                            <span className="material-symbols-outlined text-[14px]">
+                              verified
+                            </span>
+                            <span>Salvo!</span>
+                          </span>
+                        )}
+                      </div>
                     ) : (
-                      <span className="font-bold text-[#41484b]">
-                        {u.assignedClassName}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-[#41484b]">
+                          {effectiveClassName}
+                        </span>
+                        {hasPendingSave && (
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmSaveRow(u.id)}
+                            className="px-2.5 py-1.5 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.72rem] inline-flex items-center gap-1 shadow-2xs cursor-pointer shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">
+                              check_circle
+                            </span>
+                            <span>Salvar</span>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
 
@@ -933,17 +1136,40 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   <td className="py-3 px-3 text-center">
                     {canManage && (
                       <div className="flex items-center justify-center gap-1.5">
+                        {hasPendingSave && (
+                          <button
+                            type="button"
+                            onClick={() => handleConfirmSaveRow(u.id)}
+                            title="Confirmar e salvar alteração de turma/permissão"
+                            className="px-2.5 py-1 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.74rem] inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">
+                              save
+                            </span>
+                            <span>Salvar</span>
+                          </button>
+                        )}
                         {onSimulateTeacherProfile && (
                           <button
                             type="button"
-                            onClick={() => onSimulateTeacherProfile(u)}
-                            title={`Abrir visão exata de ${u.name} (${u.assignedClassName})`}
+                            onClick={() => {
+                              if (hasPendingSave) {
+                                handleConfirmSaveRow(u.id);
+                              }
+                              onSimulateTeacherProfile({
+                                ...u,
+                                role: effectiveRole,
+                                assignedClassId: effectiveClassId,
+                                assignedClassName: effectiveClassName,
+                              });
+                            }}
+                            title={`Abrir visão exata de ${u.name} (${effectiveClassName})`}
                             className="px-2.5 py-1 rounded-lg bg-[#e8f8ef] hover:bg-[#005035] text-[#005035] hover:text-white font-extrabold text-[0.74rem] inline-flex items-center gap-1 transition-colors cursor-pointer border border-[#005035]/30"
                           >
                             <span className="material-symbols-outlined text-[15px]">
                               visibility
                             </span>
-                            <span>Abrir Visão</span>
+                            <span>Abrir Turma</span>
                           </button>
                         )}
                         <button
@@ -961,7 +1187,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
