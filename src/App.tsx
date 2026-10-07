@@ -25,6 +25,7 @@ import {
   getAccessToken,
   getSavedSpreadsheetInfo,
   readClassesFromGoogleSheet,
+  readAuthorizedUsersFromGoogleSheet,
   syncPhotosFromDriveFolder,
   syncNominalPdfsFromDriveSubfolders,
   writeAttendanceOnlyToGoogleSheet,
@@ -78,17 +79,38 @@ const getSavedActiveAuthSession = (): PersistedAuthSession | null => {
 
 export default function App() {
   const initialClasses = getStoredClasses();
+  const initialAuthorizedUsers = getStoredAuthorizedUsers();
   const initialSavedSession = getSavedActiveAuthSession();
 
+  // Always resolve the latest role & assignedClassId from the master authorizedUsers list so any Admin change in '5. Acessos' immediately takes effect!
+  const matchedInitialUser = initialSavedSession
+    ? initialAuthorizedUsers.find(
+        (u) =>
+          u.email.trim().toLowerCase() ===
+          initialSavedSession.email.trim().toLowerCase()
+      )
+    : undefined;
+
+  const effectiveInitialRole: UserRole =
+    matchedInitialUser?.role || initialSavedSession?.role || 'admin';
+  const effectiveInitialAssignedClassId: string =
+    matchedInitialUser &&
+    matchedInitialUser.role === 'usuario' &&
+    matchedInitialUser.assignedClassId !== 'all'
+      ? matchedInitialUser.assignedClassId
+      : initialSavedSession?.assignedClassId || initialClasses[0]?.id || 'g04a';
+
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
-    if (!initialSavedSession) return 'login';
+    if (!initialSavedSession || (matchedInitialUser && !matchedInitialUser.active)) {
+      return 'login';
+    }
     const savedScreen = initialSavedSession.screen;
-    if (initialSavedSession.role === 'usuario') {
+    if (effectiveInitialRole === 'usuario') {
       return savedScreen === 'frequencia_mensal' || savedScreen === 'resumo'
         ? savedScreen
         : 'detalhes';
     }
-    if (initialSavedSession.role === 'peb2') {
+    if (effectiveInitialRole === 'peb2') {
       if (
         savedScreen === 'planilha' ||
         savedScreen === 'dias_letivos' ||
@@ -105,8 +127,8 @@ export default function App() {
   const [classes, setClasses] = useState<ClassGroup[]>(() => initialClasses);
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(() => {
     const targetId =
-      initialSavedSession?.role === 'usuario'
-        ? initialSavedSession.assignedClassId
+      effectiveInitialRole === 'usuario'
+        ? effectiveInitialAssignedClassId
         : initialSavedSession?.selectedClassId;
     if (targetId) {
       const found = initialClasses.find((c) => c.id === targetId);
@@ -119,7 +141,7 @@ export default function App() {
 
   // Role-Based Access Control (ADMIN, USUÁRIO - Sua Turma, PEB II - Só Visualização) & Registered Institutional Users (@educacao.jundiai.sp.gov.br)
   const [authorizedUsers, setAuthorizedUsers] = useState<AuthorizedUser[]>(() =>
-    getStoredAuthorizedUsers()
+    initialAuthorizedUsers
   );
   const [accessSessionLogs, setAccessSessionLogs] = useState<UserAccessSessionLog[]>(() =>
     getStoredAccessSessionLogs()
@@ -131,14 +153,13 @@ export default function App() {
     initialSavedSession?.email || 'emebjfreitas@jundiai.sp.gov.br'
   );
   const [currentUserName, setCurrentUserName] = useState<string>(
-    initialSavedSession?.name ||
+    matchedInitialUser?.name ||
+      initialSavedSession?.name ||
       'EMEB Professor Joaquim Candelário de Freitas (Direção / Admin)'
   );
-  const [userRole, setUserRole] = useState<UserRole>(
-    initialSavedSession?.role || 'admin'
-  );
+  const [userRole, setUserRole] = useState<UserRole>(effectiveInitialRole);
   const [assignedClassId, setAssignedClassId] = useState<string>(
-    () => initialSavedSession?.assignedClassId || initialClasses[0]?.id || 'g04a'
+    effectiveInitialAssignedClassId
   );
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
@@ -178,7 +199,7 @@ export default function App() {
     setAuthorizedUsers(updatedUsers);
     saveStoredAuthorizedUsers(updatedUsers);
     syncAuthorizedUsersToGoogleSheet(updatedUsers);
-    // Keep current logged user role & class in sync if their own entry was modified
+    // Keep current logged user role & class in sync if their own entry was modified, or if Admin is previewing a class
     const currentMatched = updatedUsers.find(
       (u) => u.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()
     );
@@ -187,9 +208,69 @@ export default function App() {
       setCurrentUserName(currentMatched.name);
       if (currentMatched.role === 'usuario' && currentMatched.assignedClassId !== 'all') {
         setAssignedClassId(currentMatched.assignedClassId);
+        const targetCls = classes.find((c) => c.id === currentMatched.assignedClassId);
+        if (targetCls) setSelectedClass(targetCls);
       }
     }
   };
+
+  // Real-time synchronization of the logged-in teacher's profile whenever authorizedUsers changes (including cross-tab storage events)
+  useEffect(() => {
+    if (currentScreen === 'login') return;
+    const matched = authorizedUsers.find(
+      (u) => u.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()
+    );
+    if (!matched) return;
+    if (!matched.active) {
+      setCurrentScreen('login');
+      return;
+    }
+
+    // Only auto-override role if the logged-in user is NOT the main admin simulating PEB I/PEB II, OR if their assignedClassId changed
+    const isMainAdminAccount =
+      currentUserEmail.trim().toLowerCase().startsWith('emebjfreitas@');
+
+    if (!isMainAdminAccount && matched.role !== userRole) {
+      setUserRole(matched.role);
+      if (matched.role === 'usuario') {
+        setCurrentScreen('detalhes');
+      }
+    }
+
+    if (matched.name && matched.name !== currentUserName) {
+      setCurrentUserName(matched.name);
+    }
+
+    if (
+      matched.role === 'usuario' &&
+      matched.assignedClassId &&
+      matched.assignedClassId !== 'all' &&
+      matched.assignedClassId !== assignedClassId
+    ) {
+      setAssignedClassId(matched.assignedClassId);
+      const targetCls = classes.find((c) => c.id === matched.assignedClassId);
+      if (targetCls) {
+        setSelectedClass(targetCls);
+      }
+    }
+  }, [authorizedUsers, currentUserEmail, classes]);
+
+  // Listen to localStorage changes from other browser tabs so when Admin edits a teacher's class in Tab 1, Tab 2 updates in 0ms!
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'emeb_candelario_authorized_users_2027_v2') {
+        const freshUsers = getStoredAuthorizedUsers();
+        setAuthorizedUsers(freshUsers);
+      } else if (e.key === 'emeb_candelario_sed_classes_2027_v4') {
+        const freshClasses = getStoredClasses();
+        setClasses(freshClasses);
+      } else if (e.key === 'emeb_candelario_attendance_window_2027_v1') {
+        setAttendanceWindowConfig(getStoredAttendanceWindowConfig());
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Debounced persist classes to local database for instant UI responsiveness (0ms lag on + / - clicks)
   useEffect(() => {
@@ -221,6 +302,15 @@ export default function App() {
               const found = result.updatedClasses.find((c) => c.id === prev.id);
               return found || prev;
             });
+          }
+          // Also pull latest authorizedUsers (roles & assigned classes) from Google Sheet so teachers on other devices get updated class assignments automatically!
+          const sheetUsers = await readAuthorizedUsersFromGoogleSheet(
+            getStoredAuthorizedUsers(),
+            result.updatedClasses || getStoredClasses()
+          );
+          if (isMounted && sheetUsers && sheetUsers.length > 0) {
+            setAuthorizedUsers(sheetUsers);
+            saveStoredAuthorizedUsers(sheetUsers);
           }
         } else {
           // Sync photos from Drive folder + nominal PDFs from Fichas Informativas subfolders if available
@@ -710,6 +800,11 @@ export default function App() {
             attendanceWindowConfig={attendanceWindowConfig}
             onUpdateAttendanceWindowConfig={handleUpdateAttendanceWindowConfig}
             onSaveAuthorizedUsers={handleSaveAuthorizedUsers}
+            onSelectPreviewClassId={(classId) => {
+              setAssignedClassId(classId);
+              const found = classes.find((c) => c.id === classId);
+              if (found) setSelectedClass(found);
+            }}
             onNavigateToDatabaseEmailsTab={() => setCurrentScreen('planilha')}
             onBack={() => setCurrentScreen('turmas')}
           />

@@ -24,6 +24,7 @@ interface UsuariosAcessoScreenProps {
   attendanceWindowConfig: AttendanceWindowConfig;
   onUpdateAttendanceWindowConfig: (nextConfig: AttendanceWindowConfig) => void;
   onSaveAuthorizedUsers: (updatedUsers: AuthorizedUser[]) => void;
+  onSelectPreviewClassId?: (classId: string) => void;
   onNavigateToDatabaseEmailsTab?: () => void;
   onBack: () => void;
 }
@@ -38,6 +39,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   attendanceWindowConfig,
   onUpdateAttendanceWindowConfig,
   onSaveAuthorizedUsers,
+  onSelectPreviewClassId,
   onNavigateToDatabaseEmailsTab,
   onBack,
 }) => {
@@ -179,7 +181,13 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         : u
     );
     onSaveAuthorizedUsers(next);
-    triggerFeedback('success', `Turma vinculada alterada para ${targetClass.name}.`);
+    if (onSelectPreviewClassId) {
+      onSelectPreviewClassId(targetClass.id);
+    }
+    triggerFeedback(
+      'success',
+      `Turma vinculada alterada para ${targetClass.name} (${targetClass.shift.replace('Turno ', '')}) e atualizada no perfil da professora!`
+    );
   };
 
   const handleToggleActive = (userId: string) => {

@@ -868,6 +868,113 @@ export const syncAuthorizedUsersToGoogleSheet = async (
   }
 };
 
+export const readAuthorizedUsersFromGoogleSheet = async (
+  currentUsers: AuthorizedUser[],
+  classes: ClassGroup[]
+): Promise<AuthorizedUser[] | null> => {
+  const token = await getAccessToken();
+  const { spreadsheetId } = getSavedSpreadsheetInfo();
+  if (!token || !spreadsheetId) return null;
+
+  try {
+    const meta = await fetchSpreadsheetMetadata(spreadsheetId);
+    if (!meta.sheetTitles.includes('Emails_Permitidos_2027')) return null;
+
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}/values/${encodeURIComponent('Emails_Permitidos_2027!A2:M500')}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rows: any[][] = data.values || [];
+    if (rows.length === 0) return null;
+
+    const existingMap = new Map<string, AuthorizedUser>();
+    currentUsers.forEach((u) => {
+      existingMap.set(u.email.trim().toLowerCase(), u);
+    });
+
+    const parsedUsers: AuthorizedUser[] = [];
+    rows.forEach((r, idx) => {
+      const email = String(r[1] || '')
+        .trim()
+        .toLowerCase();
+      if (!email || !email.includes('@')) return;
+
+      const name = String(r[2] || '').trim() || email.split('@')[0];
+      const roleStr = String(r[3] || '')
+        .trim()
+        .toUpperCase();
+      const turmaStr = String(r[4] || '').trim();
+      const statusStr = String(r[5] || '')
+        .trim()
+        .toUpperCase();
+      const createdAt = String(r[6] || '03/02/2027').trim();
+
+      const role: UserRole = roleStr.includes('ADMIN')
+        ? 'admin'
+        : roleStr.includes('PEB II') || roleStr.includes('VISUALIZA')
+        ? 'peb2'
+        : 'usuario';
+
+      const prev = existingMap.get(email);
+      let assignedClassId = prev?.assignedClassId || 'g04a';
+      let assignedClassName =
+        turmaStr || prev?.assignedClassName || 'GRUPO 04 A (Manhã)';
+
+      if (role === 'usuario') {
+        // Match class by exact name or prefix inside turmaStr (e.g., "4º ANO D (Manhã)" -> class "4º ANO D")
+        const matchedClass = classes.find((c) => {
+          const cleanTurma = turmaStr.toUpperCase();
+          const cleanName = c.name.toUpperCase();
+          return (
+            cleanTurma.startsWith(cleanName) ||
+            cleanTurma === cleanName ||
+            c.id.toLowerCase() === turmaStr.toLowerCase()
+          );
+        });
+        if (matchedClass) {
+          assignedClassId = matchedClass.id;
+          assignedClassName = `${matchedClass.name} (${matchedClass.shift.replace(
+            'Turno ',
+            ''
+          )})`;
+        }
+      } else {
+        assignedClassId = 'all';
+        assignedClassName =
+          role === 'admin'
+            ? 'Todas as 40 Turmas (Acesso Pleno)'
+            : 'Todas as Turmas (Somente Visualização)';
+      }
+
+      parsedUsers.push({
+        id: prev?.id || `usr-sheet-${idx + 1}`,
+        email,
+        name,
+        role,
+        assignedClassId,
+        assignedClassName,
+        active: !statusStr.includes('BLOQUEADO'),
+        createdAt,
+        totalAccessCount: parseInt(String(r[7] || ''), 10) || prev?.totalAccessCount || 0,
+        totalDurationSeconds: prev?.totalDurationSeconds || 0,
+        lastSessionDurationSeconds: prev?.lastSessionDurationSeconds || 0,
+        lastLoginAt: String(r[10] || '').trim() || prev?.lastLoginAt,
+        lastActiveAt: String(r[11] || '').trim() || prev?.lastActiveAt,
+        lastScreenVisited: String(r[12] || '').trim() || prev?.lastScreenVisited,
+      });
+    });
+
+    return parsedUsers.length > 0 ? parsedUsers : null;
+  } catch (e) {
+    console.warn('Aviso ao ler Emails_Permitidos_2027:', e);
+    return null;
+  }
+};
+
 /**
  * Ensures a SINGLE UNIQUE Folder in Google Drive (`application/vnd.google-apps.folder`).
  */
