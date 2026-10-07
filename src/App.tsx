@@ -6,6 +6,7 @@ import {
   UserRole,
   AuthorizedUser,
   AttendanceWindowConfig,
+  UserAccessSessionLog,
 } from './types';
 import {
   getStoredClasses,
@@ -15,6 +16,8 @@ import {
   getStoredAttendanceWindowConfig,
   saveStoredAttendanceWindowConfig,
   evaluateAttendanceLaunchWindow,
+  getStoredAccessSessionLogs,
+  saveStoredAccessSessionLogs,
 } from './services/db';
 import { OFFICIAL_OCTOBER_DAYS } from './data/mockData';
 import { getClassAttendanceMetrics } from './utils/attendanceRules';
@@ -58,6 +61,10 @@ export default function App() {
   const [authorizedUsers, setAuthorizedUsers] = useState<AuthorizedUser[]>(() =>
     getStoredAuthorizedUsers()
   );
+  const [accessSessionLogs, setAccessSessionLogs] = useState<UserAccessSessionLog[]>(() =>
+    getStoredAccessSessionLogs()
+  );
+  const activeSessionIdRef = React.useRef<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>(
     'emebjfreitas@jundiai.sp.gov.br'
   );
@@ -339,6 +346,46 @@ export default function App() {
   };
 
   const handleLoginSuccess = (authUser: AuthorizedUser) => {
+    const now = new Date();
+    const nowFormatted = now.toLocaleString('pt-BR');
+    const nowISO = now.toISOString();
+    const sessionId = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    activeSessionIdRef.current = sessionId;
+
+    const newLog: UserAccessSessionLog = {
+      id: sessionId,
+      email: authUser.email,
+      name: authUser.name,
+      role: authUser.role,
+      assignedClassName: authUser.assignedClassName,
+      loginTimeISO: nowISO,
+      lastHeartbeatISO: nowISO,
+      durationSeconds: 0,
+      lastScreen: 'Turmas',
+      isOnlineNow: true,
+    };
+
+    const nextLogs = [newLog, ...getStoredAccessSessionLogs()].slice(0, 500);
+    setAccessSessionLogs(nextLogs);
+    saveStoredAccessSessionLogs(nextLogs);
+
+    const nextUsers = authorizedUsers.map((u) => {
+      if (u.email.trim().toLowerCase() !== authUser.email.trim().toLowerCase()) {
+        return u;
+      }
+      return {
+        ...u,
+        totalAccessCount: (u.totalAccessCount || 0) + 1,
+        lastLoginAt: nowFormatted,
+        lastActiveAt: nowFormatted,
+        lastSessionDurationSeconds: 0,
+        lastScreenVisited: 'Turmas',
+      };
+    });
+    setAuthorizedUsers(nextUsers);
+    saveStoredAuthorizedUsers(nextUsers);
+    syncAuthorizedUsersToGoogleSheet(nextUsers, nextLogs);
+
     setCurrentUserEmail(authUser.email);
     setCurrentUserName(authUser.name);
     setUserRole(authUser.role);
@@ -351,7 +398,114 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Real-time session duration tracker (ticks every 5 seconds while logged in)
+  useEffect(() => {
+    if (currentScreen === 'login' || !activeSessionIdRef.current) return;
+
+    const screenLabelMap: Record<ScreenType, string> = {
+      login: 'Login',
+      turmas: '1. Turmas',
+      detalhes: 'Detalhes da Turma',
+      frequencia_mensal: '2. Lançar Faltas',
+      planilha: '3. Planilha & Fotos',
+      dias_letivos: '4. 200 Dias',
+      usuarios_acesso: '5. Acessos',
+      resumo: 'Fechamento Mensal',
+    };
+
+    const intervalId = window.setInterval(() => {
+      const sessId = activeSessionIdRef.current;
+      if (!sessId) return;
+
+      const now = new Date();
+      const nowISO = now.toISOString();
+      const nowFormatted = now.toLocaleString('pt-BR');
+      const currentScreenLabel = screenLabelMap[currentScreen] || 'Turmas';
+
+      setAccessSessionLogs((prevLogs) => {
+        const targetLog = prevLogs.find((l) => l.id === sessId);
+        if (!targetLog) return prevLogs;
+
+        const elapsedSecs = Math.max(
+          1,
+          Math.round((now.getTime() - new Date(targetLog.loginTimeISO).getTime()) / 1000)
+        );
+        const deltaSecs = Math.max(0, elapsedSecs - (targetLog.durationSeconds || 0));
+
+        const updatedLogs = prevLogs.map((l) =>
+          l.id === sessId
+            ? {
+                ...l,
+                lastHeartbeatISO: nowISO,
+                durationSeconds: elapsedSecs,
+                lastScreen: currentScreenLabel,
+                isOnlineNow: true,
+              }
+            : l
+        );
+        saveStoredAccessSessionLogs(updatedLogs);
+
+        if (deltaSecs > 0) {
+          setAuthorizedUsers((prevUsers) => {
+            const updatedUsers = prevUsers.map((u) => {
+              if (u.email.trim().toLowerCase() !== targetLog.email.trim().toLowerCase()) {
+                return u;
+              }
+              return {
+                ...u,
+                totalDurationSeconds: (u.totalDurationSeconds || 0) + deltaSecs,
+                lastSessionDurationSeconds: elapsedSecs,
+                lastActiveAt: nowFormatted,
+                lastScreenVisited: currentScreenLabel,
+              };
+            });
+            saveStoredAuthorizedUsers(updatedUsers);
+            return updatedUsers;
+          });
+        }
+
+        return updatedLogs;
+      });
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [currentScreen]);
+
   const handleLogout = async () => {
+    const sessId = activeSessionIdRef.current;
+    if (sessId) {
+      const now = new Date();
+      const nowISO = now.toISOString();
+      const nowFormatted = now.toLocaleString('pt-BR');
+
+      const nextLogs = accessSessionLogs.map((l) => {
+        if (l.id !== sessId) return l;
+        const finalSecs = Math.max(
+          l.durationSeconds,
+          Math.round((now.getTime() - new Date(l.loginTimeISO).getTime()) / 1000)
+        );
+        return {
+          ...l,
+          lastHeartbeatISO: nowISO,
+          logoutTimeISO: nowISO,
+          durationSeconds: finalSecs,
+          isOnlineNow: false,
+        };
+      });
+      setAccessSessionLogs(nextLogs);
+      saveStoredAccessSessionLogs(nextLogs);
+
+      const nextUsers = authorizedUsers.map((u) =>
+        u.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase()
+          ? { ...u, lastActiveAt: nowFormatted }
+          : u
+      );
+      setAuthorizedUsers(nextUsers);
+      saveStoredAuthorizedUsers(nextUsers);
+      syncAuthorizedUsersToGoogleSheet(nextUsers, nextLogs);
+      activeSessionIdRef.current = null;
+    }
+
     try {
       await logoutGoogle();
     } catch {
@@ -431,6 +585,11 @@ export default function App() {
         {currentScreen === 'usuarios_acesso' && (
           <UsuariosAcessoScreen
             authorizedUsers={authorizedUsers}
+            accessSessionLogs={accessSessionLogs}
+            onClearAccessLogs={() => {
+              setAccessSessionLogs([]);
+              saveStoredAccessSessionLogs([]);
+            }}
             classes={classes}
             currentUserEmail={currentUserEmail}
             userRole={userRole}

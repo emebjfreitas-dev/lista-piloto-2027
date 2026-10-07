@@ -185,6 +185,20 @@ export interface SheetRowData {
   telefone: string;
 }
 
+export interface UserAccessSessionLog {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  assignedClassName: string;
+  loginTimeISO: string;
+  lastHeartbeatISO: string;
+  logoutTimeISO?: string;
+  durationSeconds: number;
+  lastScreen?: string;
+  isOnlineNow: boolean;
+}
+
 export interface AuthorizedUser {
   id: string;
   email: string;
@@ -194,6 +208,12 @@ export interface AuthorizedUser {
   assignedClassName: string;
   active: boolean;
   createdAt: string;
+  totalAccessCount?: number;
+  totalDurationSeconds?: number;
+  lastLoginAt?: string;
+  lastActiveAt?: string;
+  lastSessionDurationSeconds?: number;
+  lastScreenVisited?: string;
 }
 
 export interface AttendanceWindowConfig {

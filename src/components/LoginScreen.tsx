@@ -120,34 +120,69 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7f5] text-[#0f1614] flex items-center justify-center p-4 animate-gentle-fade">
-      <main className="w-full max-w-[400px] bg-white rounded-3xl shadow-sm border border-[#d5dddf] px-7 py-9 flex flex-col items-center text-center space-y-6">
-        {/* Brasão / Identidade Visual Oficial EMEB Joaquim Candelário de Freitas */}
-        <div className="w-28 h-24 rounded-2xl overflow-hidden border border-[#d5dddf] shadow-xs flex items-center justify-center bg-[#f4f7f5]">
+    <div className="relative min-h-screen bg-[#f4f7f5] text-[#0f1614] flex items-center justify-center p-4 overflow-hidden animate-gentle-fade">
+      {/* Marca d'água de fundo em tela cheia com o Brasão Oficial */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none select-none fixed inset-0 flex items-center justify-center overflow-hidden z-0"
+      >
+        <img
+          src={APP_LOGO_URL}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = APP_LOGO_FALLBACK_URL;
+          }}
+          className="w-[540px] sm:w-[720px] lg:w-[900px] max-w-none aspect-square object-contain opacity-[0.075] scale-110 blur-[0.5px] mix-blend-multiply"
+        />
+      </div>
+
+      <main className="relative z-10 w-full max-w-[400px] bg-white/92 backdrop-blur-md rounded-3xl shadow-sm border border-[#d5dddf] px-7 py-9 flex flex-col items-center text-center space-y-6 overflow-hidden">
+        {/* Marca d'água sutil interna no cartão */}
+        <img
+          src={APP_LOGO_URL}
+          alt=""
+          aria-hidden="true"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = APP_LOGO_FALLBACK_URL;
+          }}
+          className="pointer-events-none select-none absolute -bottom-16 -right-16 w-64 h-64 object-contain opacity-[0.045] mix-blend-multiply"
+        />
+
+        {/* Brasão Oficial de Jundiaí */}
+        <div className="relative z-10 w-24 h-24 rounded-2xl overflow-hidden border border-[#d5dddf] shadow-xs flex items-center justify-center bg-white p-2">
           <img
             src={APP_LOGO_URL}
-            alt="EMEB Joaquim Candelário de Freitas - PMJ/SME"
+            alt="Prefeitura Municipal de Jundiaí - Secretaria Municipal de Educação"
             referrerPolicy="no-referrer"
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = APP_LOGO_FALLBACK_URL;
             }}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         </div>
 
         {/* Tipografia Minimalista */}
-        <div className="space-y-1.5">
+        <div className="relative z-10 space-y-1">
           <h1 className="text-[1.35rem] font-extrabold text-[#003440] leading-tight">
             Lista Piloto 2027
           </h1>
           <p className="text-[0.96rem] font-bold text-[#005035] leading-snug">
             EMEB Joaquim Candelário de Freitas
           </p>
-          <p className="text-[0.78rem] font-extrabold uppercase tracking-widest text-[#2c373a]">
-            PMJ/SME
-          </p>
-          <p className="text-[0.72rem] font-semibold text-[#566366] uppercase tracking-wider pt-0.5">
+          <div className="pt-1 space-y-0.5">
+            <p className="text-[0.76rem] font-extrabold uppercase tracking-wide text-[#003440]">
+              Prefeitura Municipal de Jundiaí
+            </p>
+            <p className="text-[0.73rem] font-bold uppercase tracking-wide text-[#2c373a]">
+              Secretaria Municipal de Educação
+            </p>
+          </div>
+          <p className="text-[0.72rem] font-semibold text-[#566366] uppercase tracking-wider pt-1">
             Uso Exclusivo de Professores
           </p>
         </div>

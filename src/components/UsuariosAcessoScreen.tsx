@@ -1,11 +1,23 @@
 import React, { useState } from 'react';
-import { AuthorizedUser, ClassGroup, UserRole, AttendanceWindowConfig } from '../types';
+import {
+  AuthorizedUser,
+  ClassGroup,
+  UserRole,
+  AttendanceWindowConfig,
+  UserAccessSessionLog,
+} from '../types';
 import { INSTITUTIONAL_EMAIL_DOMAIN } from '../data/mockData';
-import { isValidInstitutionalEmail, evaluateAttendanceLaunchWindow } from '../services/db';
+import {
+  isValidInstitutionalEmail,
+  evaluateAttendanceLaunchWindow,
+  formatDurationHuman,
+} from '../services/db';
 import { StudentAvatar } from './StudentAvatar';
 
 interface UsuariosAcessoScreenProps {
   authorizedUsers: AuthorizedUser[];
+  accessSessionLogs?: UserAccessSessionLog[];
+  onClearAccessLogs?: () => void;
   classes: ClassGroup[];
   currentUserEmail: string;
   userRole: UserRole;
@@ -18,6 +30,8 @@ interface UsuariosAcessoScreenProps {
 
 export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   authorizedUsers,
+  accessSessionLogs = [],
+  onClearAccessLogs,
   classes,
   currentUserEmail,
   userRole,
@@ -32,6 +46,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   const [role, setRole] = useState<UserRole>('usuario');
   const [assignedClassId, setAssignedClassId] = useState<string>(classes[0]?.id || 'g04a');
   const [searchTerm, setSearchTerm] = useState('');
+  const [logSearchTerm, setLogSearchTerm] = useState('');
+  const [onlyAccessedFilter, setOnlyAccessedFilter] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [customDomain, setCustomDomain] = useState<string>(() => {
     try {
@@ -186,12 +202,42 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     triggerFeedback('success', `Acesso de ${user.email} revogado.`);
   };
 
-  const filteredUsers = authorizedUsers.filter(
-    (u) =>
+  const filteredUsers = authorizedUsers.filter((u) => {
+    const matchesText =
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.assignedClassName.toLowerCase().includes(searchTerm.toLowerCase())
+      u.assignedClassName.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesText) return false;
+    if (onlyAccessedFilter) {
+      return (u.totalAccessCount || 0) > 0;
+    }
+    return true;
+  });
+
+  const filteredLogs = accessSessionLogs.filter(
+    (l) =>
+      l.email.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
+      l.name.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
+      l.assignedClassName.toLowerCase().includes(logSearchTerm.toLowerCase())
   );
+
+  // KPIs de Monitoramento de Acessos e Tempo de Uso
+  const totalUsersWhoAccessed = authorizedUsers.filter(
+    (u) => (u.totalAccessCount || 0) > 0
+  ).length;
+  const totalAccessesCount = authorizedUsers.reduce(
+    (acc, u) => acc + (u.totalAccessCount || 0),
+    0
+  );
+  const totalPlatformDurationSeconds = authorizedUsers.reduce(
+    (acc, u) => acc + (u.totalDurationSeconds || 0),
+    0
+  );
+  const activeNowSessionsCount = accessSessionLogs.filter((l) => {
+    if (l.logoutTimeISO) return false;
+    const diffMs = Date.now() - new Date(l.lastHeartbeatISO).getTime();
+    return diffMs < 120000; // heartbeat nos últimos 2 minutos
+  }).length;
 
   const windowEval = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
 
@@ -492,6 +538,216 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         </div>
       )}
 
+      {/* Painel de Monitoramento de Acessos e Tempo Conectado por Usuário */}
+      <section className="bg-white rounded-2xl p-5 shadow-xs border-2 border-[#005035]/25 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#edeeec]">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#005035] text-white font-black text-[0.72rem] uppercase inline-flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#a4f3ca] animate-pulse" />
+                <span>Telemetria em Tempo Real (Acesso & Tempo de Uso)</span>
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#003440] font-bold text-[0.72rem]">
+                Sincronizado na aba Monitoramento_Acessos_2027 da Planilha
+              </span>
+            </div>
+            <h2 className="text-[1.15rem] font-extrabold text-[#003440] mt-1">
+              Monitoramento de Acessos e Tempo Conectado de Cada Professor(a)
+            </h2>
+            <p className="text-[0.82rem] text-[#2c373a] font-medium">
+              Acompanhe quantas vezes cada educador entrou na Lista Piloto 2027, o horário exato de entrada/saída, a tela visitada e a duração de cada sessão.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setOnlyAccessedFilter(!onlyAccessedFilter)}
+              className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.78rem] flex items-center gap-1.5 cursor-pointer border transition-all ${
+                onlyAccessedFilter
+                  ? 'bg-[#003440] text-white border-[#003440]'
+                  : 'bg-[#f4f7f5] text-[#003440] border-[#a8b5b9] hover:bg-[#e7ece9]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">filter_alt</span>
+              <span>
+                {onlyAccessedFilter
+                  ? 'Mostrando Só Quem Já Acessou'
+                  : 'Filtrar Quem Já Acessou'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Cards de Resumo de Telemetria */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-[#f4f7f5] p-3.5 rounded-xl border border-[#d5dddf]">
+            <span className="text-[0.7rem] font-extrabold uppercase text-[#566366] block">
+              Online Agora (Sessão Ativa)
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-[1.45rem] font-black text-[#005035] tabular-nums">
+                {activeNowSessionsCount}
+              </span>
+              <span className="text-[0.75rem] font-bold text-[#005035]">
+                conectado(s)
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-[#f4f7f5] p-3.5 rounded-xl border border-[#d5dddf]">
+            <span className="text-[0.7rem] font-extrabold uppercase text-[#566366] block">
+              Professores que Acessaram
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-[1.45rem] font-black text-[#003440] tabular-nums">
+                {totalUsersWhoAccessed}
+              </span>
+              <span className="text-[0.75rem] font-bold text-[#566366]">
+                de {authorizedUsers.length} cadastrados
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-[#f4f7f5] p-3.5 rounded-xl border border-[#d5dddf]">
+            <span className="text-[0.7rem] font-extrabold uppercase text-[#566366] block">
+              Total de Logins Realizados
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-[1.45rem] font-black text-[#003440] tabular-nums">
+                {totalAccessesCount}
+              </span>
+              <span className="text-[0.75rem] font-bold text-[#566366]">
+                acessos registrados
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-[#f4f7f5] p-3.5 rounded-xl border border-[#d5dddf]">
+            <span className="text-[0.7rem] font-extrabold uppercase text-[#566366] block">
+              Tempo Total de Uso Acumulado
+            </span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-[1.45rem] font-black text-[#005035] tabular-nums">
+                {formatDurationHuman(totalPlatformDurationSeconds)}
+              </span>
+              <span className="text-[0.75rem] font-bold text-[#566366]">
+                em todas as sessões
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Histórico Cronológico de Sessões (Entrada, Saída e Tempo de Cada Acesso) */}
+        <div className="space-y-2.5 pt-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h3 className="text-[0.95rem] font-extrabold text-[#003440] flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[20px] text-[#005035]">
+                history
+              </span>
+              <span>
+                Histórico Detalhado de Sessões ({filteredLogs.length})
+              </span>
+            </h3>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={logSearchTerm}
+                onChange={(e) => setLogSearchTerm(e.target.value)}
+                placeholder="Filtrar histórico por professor ou turma..."
+                className="min-h-[38px] px-3 rounded-xl bg-[#f4f7f5] border border-[#c0c8cb] text-[0.78rem] font-semibold text-[#003440] w-full sm:w-64"
+              />
+              {canManage && accessSessionLogs.length > 0 && onClearAccessLogs && (
+                <button
+                  type="button"
+                  onClick={onClearAccessLogs}
+                  className="min-h-[38px] px-3 rounded-xl bg-[#ffdad6]/60 hover:bg-[#ba1a1a] text-[#ba1a1a] hover:text-white font-bold text-[0.74rem] shrink-0 cursor-pointer transition-colors"
+                >
+                  Limpar Histórico
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filteredLogs.length === 0 ? (
+            <div className="p-4 rounded-xl bg-[#f4f7f5] border border-[#d5dddf] text-[0.82rem] text-[#566366] font-semibold text-center">
+              Nenhuma sessão registrada ainda neste navegador/planilha. Assim que os professores entrarem pelo login Google Workspace, cada acesso e o tempo conectado aparecerão aqui em tempo real.
+            </div>
+          ) : (
+            <div className="border border-[#c0c8cb] rounded-xl overflow-x-auto max-h-72 overflow-y-auto">
+              <table className="w-full text-left border-collapse min-w-[780px]">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-[#003440] text-white text-[0.7rem] uppercase tracking-wider">
+                    <th className="py-2.5 px-3 font-extrabold">Status</th>
+                    <th className="py-2.5 px-3 font-extrabold">Educador(a) / E-mail</th>
+                    <th className="py-2.5 px-3 font-extrabold">Turma / Perfil</th>
+                    <th className="py-2.5 px-3 font-extrabold">Entrada (Login)</th>
+                    <th className="py-2.5 px-3 font-extrabold">Último Pulso / Saída</th>
+                    <th className="py-2.5 px-3 font-extrabold">Tempo Conectado</th>
+                    <th className="py-2.5 px-3 font-extrabold">Tela Visitada</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#edeeec] text-[0.78rem]">
+                  {filteredLogs.slice(0, 80).map((log) => {
+                    const isOnline =
+                      !log.logoutTimeISO &&
+                      Date.now() - new Date(log.lastHeartbeatISO).getTime() < 120000;
+                    return (
+                      <tr key={log.id} className="hover:bg-[#f4f7f5]">
+                        <td className="py-2.5 px-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-black text-[0.68rem] inline-flex items-center gap-1 ${
+                              isOnline
+                                ? 'bg-[#a4f3ca] text-[#003723]'
+                                : 'bg-[#edeeec] text-[#41484b]'
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                isOnline ? 'bg-[#005035] animate-ping' : 'bg-[#71787b]'
+                              }`}
+                            />
+                            {isOnline ? 'ONLINE' : 'ENCERRADA'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <p className="font-bold text-[#003440] leading-tight">
+                            {log.name}
+                          </p>
+                          <p className="font-mono text-[0.7rem] text-[#566366]">
+                            {log.email}
+                          </p>
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-[#2c373a]">
+                          {log.assignedClassName}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[0.74rem] text-[#003440] font-bold">
+                          {new Date(log.loginTimeISO).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[0.74rem] text-[#41484b]">
+                          {new Date(
+                            log.logoutTimeISO || log.lastHeartbeatISO
+                          ).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-2.5 py-1 rounded-lg bg-[#e8f8ef] text-[#005035] font-mono font-black text-[0.76rem] tabular-nums">
+                            {formatDurationHuman(log.durationSeconds)}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 font-bold text-[#003440]">
+                          {log.lastScreen || '1. Turmas'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Tabela Nominal de E-mails Autorizados */}
       <section className="bg-white rounded-2xl p-5 shadow-xs border border-[#e1e3e1] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -519,7 +775,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         </div>
 
         <div className="border border-[#c0c8cb] rounded-xl overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[820px]">
+          <table className="w-full text-left border-collapse min-w-[1040px]">
             <thead>
               <tr className="bg-[#003440] text-white text-[0.72rem] uppercase tracking-wider">
                 <th className="py-3 px-3 font-extrabold">Status</th>
@@ -527,6 +783,9 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 <th className="py-3 px-3 font-extrabold">Servidor(a) / Docente</th>
                 <th className="py-3 px-3 font-extrabold">Nível de Acesso Concedido</th>
                 <th className="py-3 px-3 font-extrabold">Turma Liberada (Limite)</th>
+                <th className="py-3 px-3 font-extrabold text-center">Acessos</th>
+                <th className="py-3 px-3 font-extrabold">Tempo Conectado</th>
+                <th className="py-3 px-3 font-extrabold">Último Acesso</th>
                 <th className="py-3 px-3 font-extrabold text-center">Ações</th>
               </tr>
             </thead>
@@ -611,6 +870,48 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     ) : (
                       <span className="font-bold text-[#41484b]">
                         {u.assignedClassName}
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="py-3 px-3 text-center">
+                    <span
+                      className={`px-2.5 py-1 rounded-lg font-mono font-black text-[0.76rem] tabular-nums ${
+                        (u.totalAccessCount || 0) > 0
+                          ? 'bg-[#c3e5f4] text-[#001f29]'
+                          : 'bg-[#f3f4f2] text-[#71787b]'
+                      }`}
+                    >
+                      {u.totalAccessCount || 0}x
+                    </span>
+                  </td>
+
+                  <td className="py-3 px-3">
+                    <div className="flex flex-col">
+                      <span className="font-mono font-black text-[0.78rem] text-[#005035] tabular-nums">
+                        Total: {formatDurationHuman(u.totalDurationSeconds)}
+                      </span>
+                      <span className="font-mono text-[0.68rem] text-[#566366] tabular-nums">
+                        Última: {formatDurationHuman(u.lastSessionDurationSeconds)}
+                      </span>
+                    </div>
+                  </td>
+
+                  <td className="py-3 px-3">
+                    {u.lastLoginAt ? (
+                      <div className="flex flex-col">
+                        <span className="font-mono font-bold text-[0.74rem] text-[#003440]">
+                          {u.lastLoginAt}
+                        </span>
+                        {u.lastScreenVisited && (
+                          <span className="text-[0.68rem] text-[#005035] font-semibold">
+                            Tela: {u.lastScreenVisited}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[0.74rem] text-[#71787b] font-semibold">
+                        Nunca acessou
                       </span>
                     )}
                   </td>

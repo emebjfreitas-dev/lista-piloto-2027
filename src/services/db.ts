@@ -1,5 +1,11 @@
 import * as XLSX from 'xlsx';
-import { ClassGroup, SchoolDay, AuthorizedUser, AttendanceWindowConfig } from '../types';
+import {
+  ClassGroup,
+  SchoolDay,
+  AuthorizedUser,
+  AttendanceWindowConfig,
+  UserAccessSessionLog,
+} from '../types';
 import {
   INITIAL_CLASSES,
   OFFICIAL_OCTOBER_DAYS,
@@ -12,6 +18,45 @@ import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils
 const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v4';
 const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v2';
 const ATTENDANCE_WINDOW_STORAGE_KEY = 'emeb_candelario_attendance_window_2027_v1';
+const ACCESS_LOGS_STORAGE_KEY = 'emeb_candelario_access_session_logs_2027_v1';
+
+export const formatDurationHuman = (seconds?: number): string => {
+  const s = Math.max(0, Math.round(seconds || 0));
+  if (s === 0) return '0s';
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const secs = s % 60;
+  if (hrs > 0) {
+    return `${hrs}h ${String(mins).padStart(2, '0')}m`;
+  }
+  if (mins > 0) {
+    return `${mins}m ${String(secs).padStart(2, '0')}s`;
+  }
+  return `${secs}s`;
+};
+
+export const getStoredAccessSessionLogs = (): UserAccessSessionLog[] => {
+  try {
+    const raw = localStorage.getItem(ACCESS_LOGS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao ler histórico de sessões de acesso:', err);
+  }
+  return [];
+};
+
+export const saveStoredAccessSessionLogs = (logs: UserAccessSessionLog[]): void => {
+  try {
+    localStorage.setItem(ACCESS_LOGS_STORAGE_KEY, JSON.stringify(logs.slice(0, 500)));
+  } catch (err) {
+    console.error('Erro ao salvar histórico de sessões de acesso:', err);
+  }
+};
 
 export const getStoredAttendanceWindowConfig = (): AttendanceWindowConfig => {
   try {
@@ -529,9 +574,41 @@ export const downloadSpreadsheetXLSX = (
     'TURMA VINCULADA': u.assignedClassName,
     'STATUS DO ACESSO': u.active ? 'ATIVO / LIBERADO' : 'BLOQUEADO / SUSPENSO',
     'DATA DE CADASTRO': u.createdAt,
+    'TOTAL DE ACESSOS': u.totalAccessCount || 0,
+    'TEMPO TOTAL CONECTADO': formatDurationHuman(u.totalDurationSeconds),
+    'TEMPO ÚLTIMA SESSÃO': formatDurationHuman(u.lastSessionDurationSeconds),
+    'ÚLTIMO LOGIN': u.lastLoginAt || 'Nunca acessou',
+    'ÚLTIMA ATIVIDADE': u.lastActiveAt || '—',
   }));
   const wsUsuarios = XLSX.utils.json_to_sheet(rowsUsuarios);
   XLSX.utils.book_append_sheet(wb, wsUsuarios, 'Usuarios_Autorizados_2027');
+
+  // ABA 7: HISTÓRICO DE ACESSOS E TEMPO CONECTADO POR SESSÃO
+  const sessionLogs = getStoredAccessSessionLogs();
+  const rowsLogs = sessionLogs.map((log, idx) => ({
+    'Nº SESSÃO': idx + 1,
+    'E-MAIL INSTITUCIONAL': log.email,
+    'NOME DO EDUCADOR / SERVIDOR': log.name,
+    'PERFIL':
+      log.role === 'admin'
+        ? 'ADMIN'
+        : log.role === 'usuario'
+        ? 'PEB I'
+        : 'PEB II',
+    'TURMA VINCULADA': log.assignedClassName,
+    'ENTRADA (DATA / HORA)': new Date(log.loginTimeISO).toLocaleString('pt-BR'),
+    'ÚLTIMO PULSO / SAÍDA': new Date(
+      log.logoutTimeISO || log.lastHeartbeatISO
+    ).toLocaleString('pt-BR'),
+    'TEMPO DE ACESSO (FORMATADO)': formatDurationHuman(log.durationSeconds),
+    'TEMPO DE ACESSO (SEGUNDOS)': log.durationSeconds,
+    'TELA VISITADA': log.lastScreen || 'Turmas',
+    'STATUS SESSÃO': log.logoutTimeISO ? 'Encerrada' : 'Ativa / Recente',
+  }));
+  if (rowsLogs.length > 0) {
+    const wsLogs = XLSX.utils.json_to_sheet(rowsLogs);
+    XLSX.utils.book_append_sheet(wb, wsLogs, 'Monitoramento_Acessos_2027');
+  }
 
   // Generate binary and trigger download
   XLSX.writeFile(wb, 'Planilha_Oficial_SED_EMEB_Candelario_Freitas_2027.xlsx');

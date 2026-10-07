@@ -9,13 +9,25 @@ import {
   User,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { ClassGroup, SchoolDay, Student, UserRole, AuthorizedUser, DriveNominalPdfFile } from '../types';
+import {
+  ClassGroup,
+  SchoolDay,
+  Student,
+  UserRole,
+  AuthorizedUser,
+  DriveNominalPdfFile,
+  UserAccessSessionLog,
+} from '../types';
 import {
   OFFICIAL_OCTOBER_DAYS,
   MONTHLY_SCHOOL_DAYS_2027,
   getDefaultMonthlySchoolDaysMap,
 } from '../data/mockData';
-import { getStoredAuthorizedUsers } from './db';
+import {
+  getStoredAuthorizedUsers,
+  getStoredAccessSessionLogs,
+  formatDurationHuman,
+} from './db';
 import {
   getStudentAttendanceMetrics,
   getClassAttendanceMetrics,
@@ -718,6 +730,12 @@ const buildEmailsPermitidosValues = (
     'TURMA VINCULADA (LIMITE)',
     'STATUS DA CONTA',
     'DATA DE CADASTRO',
+    'TOTAL DE ACESSOS',
+    'TEMPO TOTAL DE USO',
+    'TEMPO ÚLTIMA SESSÃO',
+    'ÚLTIMO ACESSO (LOGIN)',
+    'ÚLTIMA ATIVIDADE / PULSO',
+    'ÚLTIMA TELA VISITADA',
   ];
   const rows: any[][] = [headers];
   list.forEach((u, idx) => {
@@ -733,13 +751,56 @@ const buildEmailsPermitidosValues = (
       u.assignedClassName,
       u.active ? 'AUTORIZADO' : 'BLOQUEADO',
       u.createdAt,
+      u.totalAccessCount || 0,
+      formatDurationHuman(u.totalDurationSeconds),
+      formatDurationHuman(u.lastSessionDurationSeconds),
+      u.lastLoginAt || 'Nunca acessou',
+      u.lastActiveAt || '—',
+      u.lastScreenVisited || '—',
+    ]);
+  });
+  return rows;
+};
+
+const buildMonitoramentoAcessosValues = (
+  logs?: UserAccessSessionLog[]
+): any[][] => {
+  const list = logs || getStoredAccessSessionLogs();
+  const headers = [
+    'Nº SESSÃO',
+    'E-MAIL INSTITUCIONAL',
+    'NOME DO SERVIDOR / EDUCADOR',
+    'PERFIL',
+    'TURMA VINCULADA',
+    'DATA / HORA DE ENTRADA (LOGIN)',
+    'ÚLTIMO PULSO / SAÍDA',
+    'TEMPO DE ACESSO (FORMATADO)',
+    'TEMPO DE ACESSO (SEGUNDOS)',
+    'ÚLTIMA TELA',
+    'STATUS DA SESSÃO',
+  ];
+  const rows: any[][] = [headers];
+  list.forEach((l, idx) => {
+    rows.push([
+      idx + 1,
+      l.email,
+      l.name,
+      l.role === 'admin' ? 'ADMIN' : l.role === 'usuario' ? 'PEB I' : 'PEB II',
+      l.assignedClassName,
+      new Date(l.loginTimeISO).toLocaleString('pt-BR'),
+      new Date(l.logoutTimeISO || l.lastHeartbeatISO).toLocaleString('pt-BR'),
+      formatDurationHuman(l.durationSeconds),
+      l.durationSeconds,
+      l.lastScreen || 'Turmas',
+      l.logoutTimeISO ? 'Encerrada' : 'Ativa / Recente',
     ]);
   });
   return rows;
 };
 
 export const syncAuthorizedUsersToGoogleSheet = async (
-  users?: AuthorizedUser[]
+  users?: AuthorizedUser[],
+  sessionLogs?: UserAccessSessionLog[]
 ): Promise<void> => {
   const token = await getAccessToken();
   const { spreadsheetId } = getSavedSpreadsheetInfo();
@@ -747,7 +808,21 @@ export const syncAuthorizedUsersToGoogleSheet = async (
 
   try {
     const meta = await fetchSpreadsheetMetadata(spreadsheetId);
-    if (!meta.sheetTitles.includes('Emails_Permitidos_2027')) {
+    const missingTabs: any[] = [];
+    ['Emails_Permitidos_2027', 'Monitoramento_Acessos_2027'].forEach((tName) => {
+      if (!meta.sheetTitles.includes(tName)) {
+        missingTabs.push({
+          addSheet: {
+            properties: {
+              title: tName,
+              gridProperties: { frozenRowCount: 1 },
+            },
+          },
+        });
+      }
+    });
+
+    if (missingTabs.length > 0) {
       await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
           spreadsheetId
@@ -758,18 +833,7 @@ export const syncAuthorizedUsersToGoogleSheet = async (
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            requests: [
-              {
-                addSheet: {
-                  properties: {
-                    title: 'Emails_Permitidos_2027',
-                    gridProperties: { frozenRowCount: 1 },
-                  },
-                },
-              },
-            ],
-          }),
+          body: JSON.stringify({ requests: missingTabs }),
         }
       );
     }
@@ -791,12 +855,16 @@ export const syncAuthorizedUsersToGoogleSheet = async (
               range: 'Emails_Permitidos_2027!A1',
               values: buildEmailsPermitidosValues(users),
             },
+            {
+              range: 'Monitoramento_Acessos_2027!A1',
+              values: buildMonitoramentoAcessosValues(sessionLogs),
+            },
           ],
         }),
       }
     );
   } catch (e) {
-    console.warn('Aviso ao sincronizar aba Emails_Permitidos_2027:', e);
+    console.warn('Aviso ao sincronizar abas de acessos e monitoramento:', e);
   }
 };
 

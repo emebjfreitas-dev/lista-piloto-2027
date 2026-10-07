@@ -1,7 +1,7 @@
 import { ClassGroup, Student, GoogleSheetConfig, SheetRowData, SchoolDay, AuthorizedUser } from '../types';
 import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils/attendanceRules';
 
-export const CITY_NAME = 'PMJ / SME';
+export const CITY_NAME = 'Prefeitura Municipal de Jundiaí';
 export const SECRETARY_NAME = 'Secretaria Municipal de Educação';
 export const SCHOOL_NAME = 'EMEB Joaquim Candelário de Freitas';
 export const INSTITUTIONAL_EMAIL_DOMAIN = '@educacao.jundiai.sp.gov.br';
@@ -183,7 +183,7 @@ export const INITIAL_AUTHORIZED_USERS: AuthorizedUser[] = OFFICIAL_WHITELISTED_E
 );
 
 export const APP_LOGO_URL =
-  'https://live.staticflickr.com/65535/51747624614_48845297df_b.jpg';
+  'https://jundiai.sp.gov.br/a-cidade/wp-content/uploads/sites/31/2024/11/brasao_tradicional_jundiai_v1656_solitario_2024-1.png';
 export const APP_LOGO_FALLBACK_URL =
   'https://jundiai.sp.gov.br/a-cidade/wp-content/uploads/sites/31/2024/11/brasao_tradicional_jundiai_v1656_solitario_2024-1.png';
 
