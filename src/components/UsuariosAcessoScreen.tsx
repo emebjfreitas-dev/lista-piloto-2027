@@ -1,5 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+} from 'recharts';
+import {
   AuthorizedUser,
   ClassGroup,
   UserRole,
@@ -655,6 +662,57 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     0
   );
 
+  // Dados para o Gráfico de Rosca (Donut Chart) de Distribuição de Acessos (PEB I, PEB II e Admin)
+  const roleDistributionData = useMemo(() => {
+    const peb1Users = authorizedUsers.filter((u) => u.role === 'usuario');
+    const peb2Users = authorizedUsers.filter((u) => u.role === 'peb2');
+    const adminUsers = authorizedUsers.filter((u) => u.role === 'admin');
+    const total = Math.max(authorizedUsers.length, 1);
+
+    const peb1Logins = peb1Users.reduce((acc, u) => acc + (u.totalAccessCount || 0), 0);
+    const peb2Logins = peb2Users.reduce((acc, u) => acc + (u.totalAccessCount || 0), 0);
+    const adminLogins = adminUsers.reduce((acc, u) => acc + (u.totalAccessCount || 0), 0);
+
+    return [
+      {
+        id: 'usuario' as const,
+        name: 'PEB I (Regentes)',
+        shortName: 'PEB I',
+        value: peb1Users.length,
+        activeCount: peb1Users.filter((u) => u.active).length,
+        accessedCount: peb1Users.filter((u) => (u.totalAccessCount || 0) > 0).length,
+        loginsCount: peb1Logins,
+        percentage: Math.round((peb1Users.length / total) * 100),
+        color: '#0071e3', // Apple Blue
+        description: 'Acesso direto à sua turma e lançamento de faltas',
+      },
+      {
+        id: 'peb2' as const,
+        name: 'PEB II (Especialistas)',
+        shortName: 'PEB II',
+        value: peb2Users.length,
+        activeCount: peb2Users.filter((u) => u.active).length,
+        accessedCount: peb2Users.filter((u) => (u.totalAccessCount || 0) > 0).length,
+        loginsCount: peb2Logins,
+        percentage: Math.round((peb2Users.length / total) * 100),
+        color: '#ff9500', // Apple Amber
+        description: 'Arte, Ed. Física e Inglês (Visualização das turmas)',
+      },
+      {
+        id: 'admin' as const,
+        name: 'Admin / Gestão',
+        shortName: 'Admin',
+        value: adminUsers.length,
+        activeCount: adminUsers.filter((u) => u.active).length,
+        accessedCount: adminUsers.filter((u) => (u.totalAccessCount || 0) > 0).length,
+        loginsCount: adminLogins,
+        percentage: Math.round((adminUsers.length / total) * 100),
+        color: '#1d1d1f', // Apple Carbon Black
+        description: 'Direção, Coordenação e Secretaria (Acesso Pleno)',
+      },
+    ];
+  }, [authorizedUsers]);
+
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto pb-12 space-y-4 animate-gentle-fade">
       {/* Feedback Toast */}
@@ -815,6 +873,169 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             <span className="text-[0.68rem] font-semibold text-[#005035] block">
               Monitorado a cada 5s
             </span>
+          </div>
+        </div>
+
+        {/* Gráfico de Rosca (Donut Chart Recharts): Distribuição Visual de Acessos (PEB I, PEB II e Admin) */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-[#f5f5f7] flex flex-col lg:flex-row items-center justify-between gap-5">
+          {/* Lado Esquerdo: Donut Chart com Total Central */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full lg:w-auto">
+            <div className="relative w-[176px] h-[176px] shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={roleDistributionData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={54}
+                    outerRadius={78}
+                    paddingAngle={4}
+                    dataKey="value"
+                    stroke="none"
+                    isAnimationActive={true}
+                  >
+                    {roleDistributionData.map((entry) => (
+                      <Cell
+                        key={entry.id}
+                        fill={entry.color}
+                        className="cursor-pointer transition-opacity hover:opacity-85"
+                        onClick={() => {
+                          setActiveSubTab('contas_acesso');
+                          setRoleFilter((prev) => (prev === entry.id ? 'all' : entry.id));
+                        }}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any, _name: any, props: any) => {
+                      const payload = props?.payload;
+                      return [
+                        `${value} contas (${payload?.percentage || 0}%) • ${payload?.loginsCount || 0} logins`,
+                        payload?.name || '',
+                      ];
+                    }}
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.96)',
+                      borderRadius: '16px',
+                      border: 'none',
+                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.12)',
+                      fontSize: '0.76rem',
+                      fontWeight: 600,
+                      color: '#1d1d1f',
+                      padding: '8px 12px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+
+              {/* Centro da Rosca */}
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-[1.45rem] font-extrabold text-[#1d1d1f] tabular-nums leading-none">
+                  {authorizedUsers.length}
+                </span>
+                <span className="text-[0.64rem] font-bold uppercase tracking-wider text-[#6e6e73] mt-1">
+                  Contas Ativas
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 text-center sm:text-left">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white text-[#1d1d1f] text-[0.68rem] font-bold shadow-2xs">
+                <span className="material-symbols-outlined text-[14px] text-[#0071e3]">
+                  donut_large
+                </span>
+                Distribuição de Perfis de Acesso
+              </span>
+              <h2 className="text-[1.05rem] sm:text-[1.15rem] font-bold text-[#1d1d1f] tracking-tight">
+                Proporção entre PEB I, PEB II e Admin
+              </h2>
+              <p className="text-[0.76rem] text-[#6e6e73] max-w-sm leading-relaxed">
+                Clique em qualquer fatia ou cartão ao lado para filtrar rapidamente a lista de e-mails e permissões por perfil.
+              </p>
+              {roleFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter('all')}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1d1d1f] text-white text-[0.7rem] font-semibold cursor-pointer mt-1"
+                >
+                  <span>Filtro ativo: {roleFilter === 'usuario' ? 'PEB I' : roleFilter === 'peb2' ? 'PEB II' : 'Admin'}</span>
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Lado Direito: Cartões Interativos da Legenda (PEB I, PEB II, Admin) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full lg:flex-1">
+            {roleDistributionData.map((item) => {
+              const isSelected = roleFilter === item.id && activeSubTab === 'contas_acesso';
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveSubTab('contas_acesso');
+                    setRoleFilter((prev) => (prev === item.id ? 'all' : item.id));
+                  }}
+                  className={`text-left p-3.5 rounded-2xl transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+                    isSelected
+                      ? 'bg-[#1d1d1f] text-white shadow-sm scale-[1.01]'
+                      : 'bg-white hover:bg-white/80 text-[#1d1d1f] shadow-2xs'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-[0.78rem] font-bold truncate">
+                        {item.name}
+                      </span>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[0.68rem] font-extrabold tabular-nums ${
+                        isSelected
+                          ? 'bg-white/15 text-white'
+                          : 'bg-[#f5f5f7] text-[#1d1d1f]'
+                      }`}
+                    >
+                      {item.percentage}%
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between gap-2 pt-0.5">
+                    <div>
+                      <span className="text-[1.45rem] font-extrabold tabular-nums leading-none">
+                        {item.value}
+                      </span>
+                      <span
+                        className={`text-[0.7rem] font-medium ml-1 ${
+                          isSelected ? 'text-white/80' : 'text-[#6e6e73]'
+                        }`}
+                      >
+                        contas
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[0.68rem] font-semibold tabular-nums ${
+                        isSelected ? 'text-white/90' : 'text-[#0066cc]'
+                      }`}
+                    >
+                      {item.accessedCount}/{item.value} acessaram ({item.loginsCount} logins)
+                    </span>
+                  </div>
+
+                  <p
+                    className={`text-[0.68rem] leading-snug ${
+                      isSelected ? 'text-white/75' : 'text-[#86868b]'
+                    }`}
+                  >
+                    {item.description}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </div>
 
