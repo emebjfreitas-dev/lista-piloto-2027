@@ -258,6 +258,8 @@ export type ScreenType =
   | 'turmas'
   | 'detalhes'
   | 'frequencia_mensal'
+  | 'bolsa_familia'
+  | 'onibus_fretado'
   | 'dias_letivos'
   | 'resumo'
   | 'planilha'

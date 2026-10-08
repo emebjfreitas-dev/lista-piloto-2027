@@ -40,6 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   const showBackButton =
     currentScreen === 'frequencia_mensal' ||
     (currentScreen === 'detalhes' && userRole !== 'usuario') ||
+    currentScreen === 'bolsa_familia' ||
+    currentScreen === 'onibus_fretado' ||
     currentScreen === 'dias_letivos' ||
     currentScreen === 'planilha' ||
     currentScreen === 'usuarios_acesso';
@@ -48,6 +50,8 @@ export const Header: React.FC<HeaderProps> = ({
     if (title) return title;
     if (currentScreen === 'frequencia_mensal') return 'Frequência Mensal';
     if (currentScreen === 'detalhes') return 'Caderneta da Turma';
+    if (currentScreen === 'bolsa_familia') return 'Bolsa Família (Lista Nominal)';
+    if (currentScreen === 'onibus_fretado') return 'Ônibus Fretado (Lista Nominal)';
     if (currentScreen === 'dias_letivos') return 'Dias Letivos SME';
     if (currentScreen === 'resumo') return 'Fechamento Mensal';
     if (currentScreen === 'planilha') return 'Planilha Google';
@@ -121,14 +125,42 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => onChangeScreen('frequencia_mensal')}
-              className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-2 transition-all cursor-pointer ${
+              className={`min-h-[42px] px-3 rounded-xl font-extrabold text-[0.82rem] flex items-center gap-1.5 transition-all cursor-pointer ${
                 currentScreen === 'frequencia_mensal'
                   ? 'bg-[#005035] text-white shadow-xs'
                   : 'text-[#003440] hover:bg-white/80'
               }`}
             >
-              <span className="material-symbols-outlined text-[20px]">edit_calendar</span>
+              <span className="material-symbols-outlined text-[19px]">edit_calendar</span>
               <span>{userRole === 'peb2' ? '2. Frequência' : '2. Lançar Faltas'}</span>
+            </button>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => onChangeScreen('bolsa_familia')}
+                className={`min-h-[42px] px-3 rounded-xl font-extrabold text-[0.82rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentScreen === 'bolsa_familia'
+                    ? 'bg-[#b45309] text-white shadow-xs'
+                    : 'text-[#92400e] hover:bg-white/80'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[19px]">family_restroom</span>
+                <span>Bolsa Família</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onChangeScreen('onibus_fretado')}
+              className={`min-h-[42px] px-3 rounded-xl font-extrabold text-[0.82rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                currentScreen === 'onibus_fretado'
+                  ? 'bg-[#0369a1] text-white shadow-xs'
+                  : 'text-[#0c4a6e] hover:bg-white/80'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[19px]">directions_bus</span>
+              <span>Ônibus Fretado</span>
             </button>
 
             {isAdmin && (
@@ -136,40 +168,40 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => onChangeScreen('planilha')}
-                  className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-2 transition-all cursor-pointer ${
+                  className={`min-h-[42px] px-3 rounded-xl font-extrabold text-[0.82rem] flex items-center gap-1.5 transition-all cursor-pointer ${
                     currentScreen === 'planilha'
                       ? 'bg-[#003440] text-white shadow-xs'
                       : 'text-[#003440] hover:bg-white/80'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[20px]">table_chart</span>
-                  <span>3. Planilha & Fotos</span>
+                  <span className="material-symbols-outlined text-[19px]">table_chart</span>
+                  <span>Planilha</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => onChangeScreen('dias_letivos')}
-                  className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[42px] px-3 rounded-xl font-extrabold text-[0.82rem] flex items-center gap-1.5 transition-all cursor-pointer ${
                     currentScreen === 'dias_letivos'
                       ? 'bg-[#003440] text-white shadow-xs'
                       : 'text-[#003440] hover:bg-white/80'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[19px]">calendar_month</span>
-                  <span>4. 200 Dias</span>
+                  <span>200 Dias</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => onChangeScreen('usuarios_acesso')}
-                  className={`min-h-[42px] px-3.5 rounded-xl font-extrabold text-[0.84rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[42px] px-3 rounded-xl font-extrabold text-[0.82rem] flex items-center gap-1.5 transition-all cursor-pointer ${
                     currentScreen === 'usuarios_acesso'
                       ? 'bg-[#005035] text-white shadow-xs'
                       : 'text-[#003440] hover:bg-white/80'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[19px]">manage_accounts</span>
-                  <span>5. Prof. &amp; Acessos</span>
+                  <span>Prof. &amp; Acessos</span>
                 </button>
               </>
             )}

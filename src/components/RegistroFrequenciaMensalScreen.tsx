@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ClassGroup, Student, UserRole } from '../types';
-import { downloadClassCSV } from '../services/db';
 import {
   MONTHLY_SCHOOL_DAYS_2027,
   OFFICIAL_OCTOBER_DAYS,
@@ -12,7 +11,7 @@ import {
 } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
 
-const CURRENT_ACTIVE_MONTH_NUMBER = 10; // Outubro é o mês ativo de referência; meses anteriores (Fev..Set) são meses passados
+const CURRENT_ACTIVE_MONTH_NUMBER = 10;
 
 interface RegistroFrequenciaMensalScreenProps {
   classGroup: ClassGroup;
@@ -34,25 +33,16 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   instantSyncStatus = 'synced',
   onSaveMonthlyAttendance,
   onOpenPhotoModal,
-  onOpenStudentGrid,
   onOpenStudentPdf,
-  onNavigateToSheet,
-  onBack,
 }) => {
   const [selectedMonthName, setSelectedMonthName] = useState<string>('Outubro');
   const [diasLetivosMes, setDiasLetivosMes] = useState<number>(classGroup.classesHeld || 20);
   const [students, setStudents] = useState<Student[]>(classGroup.students);
-  const [undoSnapshot, setUndoSnapshot] = useState<{
-    students: Student[];
-    description: string;
-  } | null>(null);
-  const [showSavedToast, setShowSavedToast] = useState(false);
   const [ruleAlertMessage, setRuleAlertMessage] = useState<string | null>(null);
   const [searchName, setSearchName] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'faltas' | 'atestados'>('all');
-  const [attendanceViewMode, setAttendanceViewMode] = useState<'cards' | 'compact' | 'table'>('compact');
+  const [attendanceViewMode, setAttendanceViewMode] = useState<'compact' | 'cards'>('compact');
 
-  // Check if selectedMonthName is a past month (Meses passados: usuários comuns não podem alterar, apenas ADMIN)
   const selectedMonthMeta = useMemo(
     () => MONTHLY_SCHOOL_DAYS_2027.find((m) => m.month === selectedMonthName),
     [selectedMonthName]
@@ -63,42 +53,22 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   const isLockedBecausePastMonth = isPastMonth && userRole !== 'admin';
   const effectiveCanEdit = canEdit && !isLockedBecausePastMonth;
 
-  // Sync students when classGroup updates (e.g. from interactive grid modal)
   useEffect(() => {
     setStudents(classGroup.students);
   }, [classGroup.students]);
 
-  // Modal for Atestado Notes
-  const [justifyingStudent, setJustifyingStudent] = useState<Student | null>(null);
-  const [noteInput, setNoteInput] = useState('');
-
-  // Modal for Student Enrollment Window ("Recorte da Matrícula no Mês")
-  const [recorteStudent, setRecorteStudent] = useState<Student | null>(null);
-  const [recorteDaysInput, setRecorteDaysInput] = useState<number>(20);
-  const [entryDateInput, setEntryDateInput] = useState<string>('');
-  const [exitDateInput, setExitDateInput] = useState<string>('');
-  const [situacaoInput, setSituacaoInput] = useState<string>('ATIVO');
-
   const triggerRuleAlert = (msg: string) => {
     setRuleAlertMessage(msg);
-    setTimeout(() => {
+    window.setTimeout(() => {
       setRuleAlertMessage(null);
-    }, 3200);
+    }, 3000);
   };
 
-  // Helper that immediately propagates updated students to App state + Nominal Tabs + Google Sheets (0ms wait for PEB I / Usuário)
   const commitInstantUpdate = (
     nextStudents: Student[],
     customMonthDays: number = diasLetivosMes,
-    customMonthName: string = selectedMonthName,
-    actionDescription?: string
+    customMonthName: string = selectedMonthName
   ) => {
-    if (actionDescription) {
-      setUndoSnapshot({
-        students: [...students],
-        description: actionDescription,
-      });
-    }
     setStudents(nextStudents);
     if (!effectiveCanEdit) return;
 
@@ -114,26 +84,17 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       presenceRate: classMetrics.presenceRate,
       monthlyAbsences: classMetrics.totalFaltasTurma,
       isPending: false,
-      statusText: `Fechamento de ${customMonthName}: Sincronizado Instantaneamente (${classMetrics.presenceRate}% de presença no recorte)`,
+      statusText: `Fechamento de ${customMonthName}: Sincronizado (${classMetrics.presenceRate}% de presença)`,
     };
     onSaveMonthlyAttendance(updatedClass);
   };
 
-  const handleUndoLastAction = () => {
-    if (!undoSnapshot || !effectiveCanEdit) return;
-    const restored = undoSnapshot.students;
-    setUndoSnapshot(null);
-    commitInstantUpdate(restored, diasLetivosMes, selectedMonthName);
-  };
-
-  // Switch month and load/adjust school days and attendance for that specific month (Fev./27 to Dez./27)
   const handleMonthChange = (monthName: string) => {
     const newMonthDays = getClassSchoolDaysForMonth(classGroup, monthName);
     setSelectedMonthName(monthName);
     setDiasLetivosMes(newMonthDays);
 
     const nextStudents = students.map((s) => {
-      // Save current month entry first into map
       const prevMap = { ...(s.monthlyAttendanceByMonth || {}) };
       prevMap[selectedMonthName] = {
         diasLetivosRecorte: s.diasLetivosRecorte || diasLetivosMes,
@@ -142,10 +103,12 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         observacao: s.notes,
       };
 
-      // Load target month entry if already recorded, otherwise clamp proportionally
       const savedTarget = prevMap[monthName];
       if (savedTarget) {
-        const nextRecorte = Math.max(1, Math.min(newMonthDays, savedTarget.diasLetivosRecorte || newMonthDays));
+        const nextRecorte = Math.max(
+          1,
+          Math.min(newMonthDays, savedTarget.diasLetivosRecorte || newMonthDays)
+        );
         const nextFaltas = Math.max(0, Math.min(nextRecorte, savedTarget.faltas || 0));
         const nextAtestados = Math.max(0, Math.min(nextFaltas, savedTarget.atestados || 0));
         return {
@@ -157,7 +120,11 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         };
       }
 
-      const currentMetrics = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+      const currentMetrics = getStudentAttendanceMetrics(
+        s,
+        diasLetivosMes,
+        OFFICIAL_OCTOBER_DAYS
+      );
       const nextRecorte = currentMetrics.isMesCheio
         ? newMonthDays
         : Math.min(newMonthDays, currentMetrics.diasLetivosMatriculados);
@@ -179,22 +146,17 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     commitInstantUpdate(nextStudents, newMonthDays, monthName);
   };
 
-  // Change absences (+1 or -1) enforcing:
-  // 1) 0 <= faltas <= diasLetivosMatriculados (recorte da matrícula no mês)
-  // 2) atestados <= faltas (se diminuir faltas, atestados acompanha)
-  // 3) Instantaneous update to the Nominal Sheet Tab & Google Sheets on every click
+  // Contador 1: Faltas do Mês (+1 ou -1)
   const handleDeltaAbsence = (studentId: string, delta: number) => {
     if (!effectiveCanEdit) return;
     let blocked = false;
-    let studentLabel = '';
     const nextStudents: Student[] = students.map((s) => {
       if (s.id !== studentId) return s;
-      studentLabel = s.name.split(' ')[0];
       const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
 
       if (delta > 0 && m.faltas >= m.diasLetivosMatriculados) {
         triggerRuleAlert(
-          `Limite atingido: ${s.name} possui ${m.diasLetivosMatriculados} dias letivos no recorte da matrícula neste mês.`
+          `Limite atingido: ${s.name} possui ${m.diasLetivosMatriculados} dias letivos no mês.`
         );
         blocked = true;
         return s;
@@ -226,36 +188,27 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         monthlyAttendanceByMonth: nextMonthMap,
         status: nextFaltas > 0 ? 'absent' : 'present',
         alert: isBelowLegal
-          ? `Alerta Bolsa Família / LDB: Presença (${nextFreqPct}%) abaixo de ${m.minLegalPresencePercent}%`
+          ? `Presença (${nextFreqPct}%) abaixo de ${m.minLegalPresencePercent}%`
           : undefined,
       };
     });
 
     if (!blocked) {
-      commitInstantUpdate(
-        nextStudents,
-        diasLetivosMes,
-        selectedMonthName,
-        `Falta de ${studentLabel}`
-      );
+      commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName);
     }
   };
 
-  // Change quantity of medical certificates/atestados presented (+1 or -1) enforcing:
-  // 0 <= atestados <= faltas
-  // Instantaneous update to the Nominal Sheet Tab & Google Sheets on every click
+  // Contador 2: Atestados (+1 ou -1)
   const handleDeltaAtestado = (studentId: string, delta: number) => {
     if (!effectiveCanEdit) return;
     let blocked = false;
-    let studentLabel = '';
     const nextStudents: Student[] = students.map((s) => {
       if (s.id !== studentId) return s;
-      studentLabel = s.name.split(' ')[0];
       const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
 
       if (delta > 0 && m.faltas === 0) {
         triggerRuleAlert(
-          `Não é possível adicionar atestado para ${s.name} pois o(a) estudante tem 0 faltas.`
+          `Para registrar atestado, lance primeiro a falta correspondente de ${s.name}.`
         );
         blocked = true;
         return s;
@@ -263,7 +216,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
       if (delta > 0 && m.atestados >= m.faltas) {
         triggerRuleAlert(
-          `A quantidade de atestados (${m.atestados}) não pode ser maior que o total de faltas (${m.faltas}).`
+          `O número de atestados (${m.atestados}) não pode ultrapassar o total de faltas (${m.faltas}).`
         );
         blocked = true;
         return s;
@@ -287,89 +240,11 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     });
 
     if (!blocked) {
-      commitInstantUpdate(
-        nextStudents,
-        diasLetivosMes,
-        selectedMonthName,
-        `Atestado de ${studentLabel}`
-      );
+      commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName);
     }
   };
 
-  // Open Recorte da Matrícula modal for a student
-  const handleOpenRecorteModal = (student: Student) => {
-    if (!effectiveCanEdit) return;
-    const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
-    setRecorteStudent(student);
-    setRecorteDaysInput(m.diasLetivosMatriculados);
-    setEntryDateInput(student.dataMatriculaSed || '03/02/2027');
-    setExitDateInput(student.dataMovimentacao || '');
-    setSituacaoInput(student.situacao || 'ATIVO');
-  };
-
-  // Save Recorte da Matrícula and automatically clamp Faltas and Atestados
-  const handleSaveRecorteModal = () => {
-    if (!recorteStudent || !effectiveCanEdit) return;
-    const validDays = Math.max(1, Math.min(diasLetivosMes, recorteDaysInput));
-
-    const nextStudents: Student[] = students.map((s) => {
-      if (s.id !== recorteStudent.id) return s;
-      const clampedFaltas = Math.min(validDays, s.totalAbsencesMonth);
-      const clampedAtestados = Math.min(clampedFaltas, s.justifiedAbsences || 0);
-      return {
-        ...s,
-        diasLetivosRecorte: validDays,
-        dataMatriculaSed: entryDateInput.trim() || '03/02/2027',
-        dataMovimentacao: exitDateInput.trim() || undefined,
-        situacao: situacaoInput,
-        totalAbsencesMonth: clampedFaltas,
-        justifiedAbsences: clampedAtestados,
-        status: clampedFaltas > 0 ? 'absent' : 'present',
-      };
-    });
-    commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName, `Recorte de ${recorteStudent.name.split(' ')[0]}`);
-    setRecorteStudent(null);
-  };
-
-  // Save changes to database calculating class rate over the enrollment window
-  const handleSave = () => {
-    if (!effectiveCanEdit) return;
-    commitInstantUpdate(students);
-    setShowSavedToast(true);
-    setTimeout(() => {
-      setShowSavedToast(false);
-    }, 3500);
-  };
-
-  const handleOpenJustifyModal = (student: Student) => {
-    if (!effectiveCanEdit) return;
-    setJustifyingStudent(student);
-    setNoteInput(student.notes || '');
-  };
-
-  const handleSaveNote = () => {
-    if (!justifyingStudent || !effectiveCanEdit) return;
-    const nextStudents = students.map((s) =>
-      s.id === justifyingStudent.id ? { ...s, notes: noteInput } : s
-    );
-    commitInstantUpdate(nextStudents);
-    setJustifyingStudent(null);
-  };
-
-  // 1-Click Helper for Lay Users: Mark all students as 0 absences (100% presence)
-  const handleMarkAllZeroAbsences = () => {
-    if (!effectiveCanEdit) return;
-    const nextStudents: Student[] = students.map((s) => ({
-      ...s,
-      totalAbsencesMonth: 0,
-      justifiedAbsences: 0,
-      status: 'present',
-      alert: undefined,
-    }));
-    commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName, 'Zerar faltas da turma');
-  };
-
-  // Memoized live class metrics based on current students state (0ms lag)
+  // Indicativos e Contadores Consolidados da Turma no Mês
   const liveClassMetrics = useMemo(
     () =>
       getClassAttendanceMetrics(
@@ -379,16 +254,53 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     [classGroup, diasLetivosMes, students]
   );
 
-  const countWithFaltas = useMemo(
-    () => students.filter((s) => (s.totalAbsencesMonth || 0) > 0).length,
-    [students]
-  );
-  const countWithAtestados = useMemo(
-    () => students.filter((s) => (s.justifiedAbsences || 0) > 0).length,
-    [students]
-  );
+  const detailedIndicators = useMemo(() => {
+    let countWithFaltas = 0;
+    let countZeroFaltas = 0;
+    let countWithAtestados = 0;
+    let countBelowLegal = 0;
+    let ativosCount = 0;
 
-  // Memoized filter for students in strict numerical order (Nº 01, 02, 03...)
+    students.forEach((s) => {
+      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+      const isMov =
+        sit.includes('BXTR') ||
+        sit.includes('TRANSF') ||
+        sit.includes('REMAN') ||
+        sit.includes('RM');
+      if (!isMov) ativosCount++;
+
+      const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+      if (m.faltas > 0) countWithFaltas++;
+      else countZeroFaltas++;
+      if (m.atestados > 0) countWithAtestados++;
+      if (m.isBelowLegalThreshold) countBelowLegal++;
+    });
+
+    const pctFaltaTurma = Math.max(0, 100 - liveClassMetrics.presenceRate);
+    const pctAtestadosSobreFaltas =
+      liveClassMetrics.totalFaltasTurma > 0
+        ? Math.round(
+            (liveClassMetrics.totalAtestadosTurma / liveClassMetrics.totalFaltasTurma) * 100
+          )
+        : 0;
+    const faltasSemAtestadoTurma = Math.max(
+      0,
+      liveClassMetrics.totalFaltasTurma - liveClassMetrics.totalAtestadosTurma
+    );
+
+    return {
+      ativosCount,
+      countWithFaltas,
+      countZeroFaltas,
+      countWithAtestados,
+      countBelowLegal,
+      pctFaltaTurma,
+      pctAtestadosSobreFaltas,
+      faltasSemAtestadoTurma,
+    };
+  }, [students, diasLetivosMes, liveClassMetrics]);
+
   const displayedStudents = useMemo(() => {
     const q = searchName.toLowerCase().trim();
     return [...students]
@@ -406,306 +318,291 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       });
   }, [students, searchName, quickFilter]);
 
-  return (
-    <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-4 pb-48">
-      {/* Toast Feedback */}
-      {showSavedToast && (
-        <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-200">
-          <div className="bg-[#003723] text-white p-4 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-[#a4f3ca]">
-            <span className="material-symbols-outlined text-[36px] text-[#a4f3ca]">check_circle</span>
-            <div>
-              <p className="font-extrabold text-[1.125rem]">Tudo Salvo na Planilha!</p>
-              <p className="text-[0.875rem] text-[#a4f3ca]">
-                Frequência da turma ({liveClassMetrics.presenceRate}%) calculada pelo recorte de matrícula de cada estudante.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+  const isInfantilClass =
+    classGroup.name.toUpperCase().startsWith('GRUPO') ||
+    classGroup.grade.toUpperCase().includes('INFANTIL');
+  const minLegalPresence = isInfantilClass ? 60 : 75;
 
-      {/* Rule Alert Toast */}
+  return (
+    <div className="flex flex-col w-full max-w-[1680px] mx-auto space-y-4 pb-36 animate-gentle-fade">
+      {/* Alerta de regra caso tente ultrapassar limite de dias ou atestados */}
       {ruleAlertMessage && (
         <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-200">
-          <div className="bg-[#ba1a1a] text-white p-4 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-[#ffdad6]">
-            <span className="material-symbols-outlined text-[32px] text-[#ffdad6]">warning</span>
-            <p className="font-bold text-[0.95rem] leading-snug">{ruleAlertMessage}</p>
+          <div className="bg-[#be123c] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/20">
+            <span className="material-symbols-outlined text-[24px]">warning</span>
+            <p className="font-bold text-[0.86rem] leading-snug">{ruleAlertMessage}</p>
           </div>
         </div>
       )}
 
-      {/* Past Month Lock Banner for Non-Admin Users */}
-      {isLockedBecausePastMonth && (
-        <div className="bg-[#fff4e5] border-2 border-[#7a4100]/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[#7a4100] animate-gentle-fade">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[30px] shrink-0">history_toggle_off</span>
-            <div>
-              <p className="font-black text-[1rem]">
-                Mês Passado ({selectedMonthName}) — Fechado para Alterações de Usuários
-              </p>
-              <p className="text-[0.85rem] font-semibold">
-                Meses já encerrados só podem ser alterados por perfil <strong>ADMIN</strong>. Para lançar faltas, selecione o mês ativo (<strong>Outubro</strong>).
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleMonthChange('Outubro')}
-            className="min-h-[42px] px-4 rounded-xl bg-[#003440] text-white font-black text-[0.82rem] shrink-0 cursor-pointer"
-          >
-            Voltar para Outubro (Mês Ativo)
-          </button>
-        </div>
-      )}
-
-      {/* Read-Only Banner for PEB II or Closed Launch Window */}
-      {!canEdit && !isLockedBecausePastMonth && (
-        <div className="bg-[#fff4e5] border-2 border-[#ffd89e] rounded-2xl p-4 flex items-center gap-3 text-[#7a4100] animate-gentle-fade">
-          <span className="material-symbols-outlined text-[30px] shrink-0">visibility</span>
-          <div>
-            <p className="font-black text-[1rem]">
-              Modo Consulta — Somente Visualização
-            </p>
-            <p className="text-[0.85rem] font-medium">
-              Você pode consultar qualquer estudante e tocar no cartão para abrir a <strong>Grade de Dados Interativa</strong>. O lançamento de faltas está bloqueado neste momento.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Senior-Friendly Header Box */}
-      <section className="card-welcoming bg-white rounded-2xl p-5 border border-[#003440]/12 space-y-4 animate-gentle-fade">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1 text-[0.76rem] font-extrabold uppercase tracking-wider text-[#005035]">
-              <span>{classGroup.shift} · Ano Letivo 2027</span>
-              {effectiveCanEdit && (
-                <>
-                  <span aria-hidden="true" className="text-[#a8b5b9]">·</span>
-                  <span className="inline-flex items-center gap-1.5 text-[#005035] normal-case tracking-normal font-bold">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        instantSyncStatus === 'syncing'
-                          ? 'bg-[#e5b324] animate-ping'
-                          : 'bg-[#005035]'
-                      }`}
-                    ></span>
-                    <span>
-                      {instantSyncStatus === 'syncing'
-                        ? 'Salvando automaticamente na Planilha...'
-                        : 'Salvo automaticamente na Planilha da Escola'}
-                    </span>
-                  </span>
-                </>
-              )}
-              {isPastMonth && userRole === 'admin' && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#003440] text-white font-bold text-[0.72rem] normal-case tracking-normal">
-                  <span className="material-symbols-outlined text-[14px]">admin_panel_settings</span>
-                  <span>Admin · Mês Passado ({selectedMonthName}) Liberado</span>
+      {/* CABEÇALHO ENXUTO E COERENTE DA TURMA + CONTADORES E INDICATIVOS MELHORADOS */}
+      <section className="bg-white rounded-3xl p-4 sm:p-6 border border-black/[0.07] shadow-xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {classGroup.turmaAbrev && (
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#0b3b49] text-white font-mono text-[0.74rem] font-extrabold">
+                  {classGroup.turmaAbrev}
                 </span>
               )}
+              <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#006644] text-[0.72rem] font-extrabold uppercase tracking-wider">
+                {classGroup.shift} • {classGroup.room}
+              </span>
+              {classGroup.classeSedCode && (
+                <span className="px-2.5 py-0.5 rounded-full bg-[#f1f5f9] text-[#334155] font-mono text-[0.72rem] font-bold">
+                  Classe SED: {classGroup.classeSedCode}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f8fafc] border border-black/[0.06] text-[0.72rem] font-bold text-[#006644]">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    instantSyncStatus === 'syncing'
+                      ? 'bg-[#f59e0b] animate-ping'
+                      : 'bg-[#006644]'
+                  }`}
+                />
+                <span>
+                  {instantSyncStatus === 'syncing'
+                    ? 'Sincronizando na Planilha...'
+                    : 'Sincronização Automática em Tempo Real'}
+                </span>
+              </span>
             </div>
-            <h1 className="text-[1.55rem] font-extrabold text-[#003440] leading-tight">
-              {classGroup.name}
-            </h1>
-            <p className="text-[0.88rem] text-[#374346] font-medium">
-              Toque em <strong>+</strong> ou <strong>—</strong> para registrar faltas e atestados: o sistema grava automaticamente na Planilha Google.
-            </p>
+
+            <div className="flex flex-wrap items-baseline gap-3">
+              <h1 className="text-[1.45rem] sm:text-[1.7rem] font-extrabold text-[#0f172a] tracking-tight">
+                Lançamento de Faltas • Turma {classGroup.name}
+              </h1>
+              <span className="text-[0.82rem] font-semibold text-[#475569]">
+                {classGroup.pronoun || 'PROFESSORA'} {classGroup.teacherName || 'Regente'} • {detailedIndicators.ativosCount} ativos ({students.length} na base)
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {effectiveCanEdit && undoSnapshot && (
-              <button
-                onClick={handleUndoLastAction}
-                type="button"
-                title={`Desfazer última alteração: ${undoSnapshot.description}`}
-                className="px-3.5 min-h-[44px] bg-[#fff4e5] hover:bg-[#ffe4bd] text-[#7a4100] rounded-xl font-black text-[0.84rem] flex items-center gap-1.5 border-2 border-[#7a4100]/30 cursor-pointer transition-all"
+          {/* Seletor de Mês Enxuto */}
+          <div className="flex items-center gap-2.5 bg-[#f8fafc] px-3.5 py-2 rounded-2xl border border-black/[0.07] shrink-0">
+            <span className="material-symbols-outlined text-[20px] text-[#0b3b49]">
+              calendar_month
+            </span>
+            <div>
+              <label className="block text-[0.64rem] font-extrabold uppercase tracking-wider text-[#64748b]">
+                Mês de Referência (2027)
+              </label>
+              <select
+                value={selectedMonthName}
+                onChange={(e) => handleMonthChange(e.target.value)}
+                className="bg-transparent text-[#0f172a] font-extrabold text-[0.9rem] focus:outline-none cursor-pointer pr-2"
               >
-                <span className="material-symbols-outlined text-[20px]">undo</span>
-                <span>Desfazer ({undoSnapshot.description})</span>
-              </button>
-            )}
-
-            {effectiveCanEdit && (
-              <button
-                onClick={handleMarkAllZeroAbsences}
-                type="button"
-                title="Marcar todos os estudantes com 0 faltas neste mês"
-                className="px-3.5 min-h-[44px] bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#003723] rounded-xl font-extrabold text-[0.85rem] flex items-center gap-1.5 border-2 border-[#005035]/30 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">done_all</span>
-                <span>Zerar Faltas (100% Presença)</span>
-              </button>
-            )}
-
-            {userRole === 'admin' && (
-              <button
-                onClick={onNavigateToSheet}
-                type="button"
-                title="Ver Tabulação Nominal de Faltas e Atestados na Planilha Banco de Dados"
-                className="px-3.5 min-h-[44px] bg-[#003440] hover:bg-[#1e4b58] text-white rounded-xl font-extrabold text-[0.85rem] flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">table_chart</span>
-                <span>Ver Aba Nominal na Planilha</span>
-              </button>
-            )}
-
-            <button
-              onClick={() =>
-                downloadClassCSV({
-                  ...classGroup,
-                  classesHeld: diasLetivosMes,
-                  students,
-                })
-              }
-              type="button"
-              title="Baixar planilha desta turma"
-              className="px-3.5 min-h-[44px] bg-[#f3f4f2] hover:bg-[#e7e8e6] text-[#005035] rounded-xl font-bold text-[0.85rem] flex items-center gap-1.5 border-2 border-[#a4f3ca] cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">download</span>
-              <span>Baixar Turma</span>
-            </button>
+                {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
+                  const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
+                  return (
+                    <option key={m.month} value={m.month}>
+                      {m.month} ({daysForClass} dias letivos)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Month & Official School Days Selector */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#f3f4f2] p-3.5 rounded-2xl border-2 border-[#b4c0c4]/80">
-          <div>
-            <label className="block text-[0.8rem] font-extrabold text-[#003440] uppercase mb-1">
-              Mês de Referência (2027) — Meses Passados Somente Admin:
-            </label>
-            <select
-              value={selectedMonthName}
-              onChange={(e) => handleMonthChange(e.target.value)}
-              className="w-full min-h-[46px] px-3 bg-white text-[#003440] font-extrabold text-[0.96rem] rounded-xl border-2 border-[#b4c0c4] cursor-pointer"
-            >
-              {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
-                const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
-                const isPast = m.monthNumber < CURRENT_ACTIVE_MONTH_NUMBER;
-                const isCurrent = m.monthNumber === CURRENT_ACTIVE_MONTH_NUMBER;
-                return (
-                  <option key={m.month} value={m.month}>
-                    {m.month} ({daysForClass} dias letivos)
-                    {isCurrent
-                      ? ' • [MÊS ATUAL ABERTO]'
-                      : isPast
-                      ? userRole === 'admin'
-                        ? ' • [Mês Passado - Liberado p/ Admin]'
-                        : ' • [Mês Passado - Somente Leitura]'
-                      : ''}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          <div className="flex flex-col justify-center bg-white rounded-xl p-3 border border-[#e1e3e1]">
+        {/* PAINEL DE CONTADORES E INDICATIVOS DA TURMA (VISUAL CLARO E PRECISO) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+          {/* Indicativo 1: Taxa de Presença da Turma */}
+          <div className="rounded-2xl bg-[#eaf6ef]/75 border border-[#006644]/20 p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[0.8rem] font-bold text-[#71787b]">Dias Letivos no Mês:</span>
-              <span className="text-[1.1rem] font-black text-[#003440]">{diasLetivosMes} dias</span>
+              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#006644]">
+                Presença Geral no Mês
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-[#006644] text-white font-mono text-[0.68rem] font-bold">
+                {diasLetivosMes} dias letivos
+              </span>
             </div>
-            <div className="flex items-center justify-between mt-1 pt-1 border-t border-[#edeeec]">
-              <span className="text-[0.8rem] font-bold text-[#005035]">Frequência da Turma:</span>
-              <span className="text-[1.15rem] font-black text-[#005035]">
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[1.75rem] font-black text-[#006644] tabular-nums leading-none">
                 {liveClassMetrics.presenceRate}%
               </span>
+              <span className="text-[0.76rem] font-bold text-[#005035] tabular-nums">
+                {liveClassMetrics.totalPresencasTurma}/{liveClassMetrics.totalDiasMatriculadosTurma} presenças
+              </span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-[#006644]/15 overflow-hidden mt-2">
+              <div
+                className="h-full bg-[#006644] rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(100, liveClassMetrics.presenceRate)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Indicativo 2: Total de Faltas no Mês */}
+          <div className="rounded-2xl bg-[#fff1f2]/85 border border-[#e11d48]/20 p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#be123c]">
+                Faltas Registradas ({selectedMonthName})
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-[#ffe4e6] text-[#be123c] font-mono text-[0.68rem] font-extrabold">
+                {detailedIndicators.pctFaltaTurma}% ausência
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[1.75rem] font-black text-[#be123c] tabular-nums leading-none">
+                {liveClassMetrics.totalFaltasTurma}
+              </span>
+              <span className="text-[0.75rem] font-bold text-[#9f1239] tabular-nums">
+                {detailedIndicators.countWithFaltas} aluno(s) c/ falta
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[0.7rem] font-semibold text-[#9f1239] mt-2 pt-1.5 border-t border-[#e11d48]/15">
+              <span>Sem atestado: {detailedIndicators.faltasSemAtestadoTurma}</span>
+              <span>Com atestado: {liveClassMetrics.totalAtestadosTurma}</span>
+            </div>
+          </div>
+
+          {/* Indicativo 3: Atestados Médicos no Mês */}
+          <div className="rounded-2xl bg-[#f0f9ff]/90 border border-[#0284c7]/20 p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#0369a1]">
+                Atestados Apresentados
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-[#e0f2fe] text-[#0369a1] font-mono text-[0.68rem] font-extrabold">
+                {detailedIndicators.pctAtestadosSobreFaltas}% das faltas
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <span className="text-[1.75rem] font-black text-[#0c4a6e] tabular-nums leading-none">
+                {liveClassMetrics.totalAtestadosTurma}
+              </span>
+              <span className="text-[0.75rem] font-bold text-[#0369a1] tabular-nums">
+                {detailedIndicators.countWithAtestados} aluno(s) c/ atestado
+              </span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-[#0284c7]/15 overflow-hidden mt-2">
+              <div
+                className="h-full bg-[#0284c7] rounded-full transition-all duration-300"
+                style={{ width: `${Math.min(100, detailedIndicators.pctAtestadosSobreFaltas)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Indicativo 4: Assiduidade Plena vs Atenção de Frequência */}
+          <div className="rounded-2xl bg-[#f8fafc] border border-black/[0.07] p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#475569]">
+                Resumo de Assiduidade
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-[#f1f5f9] text-[#0b3b49] font-mono text-[0.68rem] font-bold">
+                Mín. ≥{minLegalPresence}%
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1.5">
+              <div>
+                <span className="text-[1.5rem] font-black text-[#006644] tabular-nums leading-none">
+                  {detailedIndicators.countZeroFaltas}
+                </span>
+                <span className="text-[0.72rem] font-bold text-[#475569] ml-1">
+                  com 100% presença
+                </span>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded-lg font-mono text-[0.74rem] font-extrabold ${
+                  detailedIndicators.countBelowLegal > 0
+                    ? 'bg-[#ffe4e6] text-[#be123c]'
+                    : 'bg-[#eaf6ef] text-[#006644]'
+                }`}
+              >
+                {detailedIndicators.countBelowLegal} &lt;{minLegalPresence}%
+              </span>
+            </div>
+            <div className="text-[0.7rem] font-semibold text-[#64748b] mt-2 pt-1.5 border-t border-black/[0.05]">
+              Use apenas os botões <strong>—</strong> e <strong>+</strong> de Faltas e Atestados
+            </div>
+          </div>
+        </div>
+
+        {/* Barra Minimalista: Busca + Filtro Rápido + 2 Modos Limpos (Lista Rápida / Cards) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-black/[0.06]">
+          <div className="relative flex-1">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748b] text-[19px]">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              placeholder="Buscar por Nº da chamada ou nome do estudante..."
+              className="w-full min-h-[40px] pl-10 pr-8 bg-[#f1f5f9] text-[#0f172a] text-[0.86rem] rounded-xl border border-transparent focus:border-[#006644]/40 focus:bg-white focus:outline-none font-medium placeholder:text-[#64748b]"
+            />
+            {searchName && (
+              <button
+                type="button"
+                onClick={() => setSearchName('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a] cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">cancel</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2">
+            <div className="ios-segmented">
+              <button
+                type="button"
+                onClick={() => setQuickFilter('all')}
+                className={`ios-segmented-item ${
+                  quickFilter === 'all' ? 'ios-segmented-item-active' : ''
+                }`}
+              >
+                Todos ({students.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickFilter('faltas')}
+                className={`ios-segmented-item ${
+                  quickFilter === 'faltas' ? 'ios-segmented-item-active text-[#be123c]' : ''
+                }`}
+              >
+                Com Faltas ({detailedIndicators.countWithFaltas})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickFilter('atestados')}
+                className={`ios-segmented-item ${
+                  quickFilter === 'atestados' ? 'ios-segmented-item-active text-[#0369a1]' : ''
+                }`}
+              >
+                Com Atestados ({detailedIndicators.countWithAtestados})
+              </button>
+            </div>
+
+            <div className="ios-segmented">
+              <button
+                type="button"
+                onClick={() => setAttendanceViewMode('compact')}
+                className={`ios-segmented-item flex items-center gap-1 ${
+                  attendanceViewMode === 'compact' ? 'ios-segmented-item-active' : ''
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">view_list</span>
+                <span>Lista</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAttendanceViewMode('cards')}
+                className={`ios-segmented-item flex items-center gap-1 ${
+                  attendanceViewMode === 'cards' ? 'ios-segmented-item-active' : ''
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">grid_view</span>
+                <span>Cards</span>
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Search, Quick Filter & Multiple View Options Bar (iOS Style) */}
-      <div className="bg-white/90 backdrop-blur-md rounded-2xl p-3.5 border border-black/[0.06] flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-2xs">
-        <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8e8e93] text-[20px]">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            placeholder="Buscar por Nº da chamada ou nome do estudante..."
-            className="w-full min-h-[42px] pl-10 pr-9 bg-[#767680]/[0.09] text-[#1c1c1e] text-[0.9rem] rounded-xl border border-transparent focus:border-[#005035]/40 focus:bg-white focus:outline-none font-medium placeholder:text-[#8e8e93]"
-          />
-          {searchName && (
-            <button
-              onClick={() => setSearchName('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8e8e93] hover:text-[#191c1b] cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">cancel</span>
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2">
-          <div className="ios-segmented">
-            <button
-              type="button"
-              onClick={() => setQuickFilter('all')}
-              className={`ios-segmented-item ${
-                quickFilter === 'all' ? 'ios-segmented-item-active' : ''
-              }`}
-            >
-              Todos ({students.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setQuickFilter('faltas')}
-              className={`ios-segmented-item ${
-                quickFilter === 'faltas' ? 'ios-segmented-item-active text-[#ba1a1a]' : ''
-              }`}
-            >
-              Com Faltas ({countWithFaltas})
-            </button>
-            <button
-              type="button"
-              onClick={() => setQuickFilter('atestados')}
-              className={`ios-segmented-item ${
-                quickFilter === 'atestados' ? 'ios-segmented-item-active text-[#005035]' : ''
-              }`}
-            >
-              Atestados ({countWithAtestados})
-            </button>
-          </div>
-
-          {/* Múltiplas Escolhas de Visualização no Lançamento de Faltas */}
-          <div className="ios-segmented" role="group" aria-label="Visualização de lançamento">
-            <button
-              type="button"
-              onClick={() => setAttendanceViewMode('compact')}
-              className={`ios-segmented-item flex items-center gap-1 ${
-                attendanceViewMode === 'compact' ? 'ios-segmented-item-active' : ''
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">view_list</span>
-              <span>Lista Rápida</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setAttendanceViewMode('cards')}
-              className={`ios-segmented-item flex items-center gap-1 ${
-                attendanceViewMode === 'cards' ? 'ios-segmented-item-active' : ''
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">grid_view</span>
-              <span>Cards</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setAttendanceViewMode('table')}
-              className={`ios-segmented-item flex items-center gap-1 ${
-                attendanceViewMode === 'table' ? 'ios-segmented-item-active' : ''
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">table_rows</span>
-              <span>Planilha</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* VISUALIZAÇÃO 1: LISTA RÁPIDA MINIMALISTA iOS (1 linha por estudante com + / - instantâneo) */}
+      {/* VISUALIZAÇÃO 1: LISTA LIMPA E DIRETA (SOMENTE CONTADORES DE FALTAS DO MÊS E ATESTADOS) */}
       {attendanceViewMode === 'compact' && (
-        <div className="bg-white rounded-3xl border border-black/[0.06] divide-y divide-black/[0.05] overflow-hidden shadow-2xs">
+        <div className="bg-white rounded-3xl border border-black/[0.07] divide-y divide-black/[0.05] overflow-hidden shadow-xs">
           {displayedStudents.map((student) => {
             const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
             const pctFalta =
@@ -724,7 +621,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             return (
               <div
                 key={student.id}
-                className={`p-3 sm:px-5 flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
+                className={`p-3.5 sm:px-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 transition-colors ${
                   isTransferred
                     ? 'bg-gradient-to-r from-[#fef3c7]/80 to-[#fffbeb] border-l-4 border-l-[#b45309]'
                     : isRemanejado
@@ -732,11 +629,11 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     : isOtherNonActive
                     ? 'bg-[#e2e8f0]/75 border-l-4 border-l-[#475569]'
                     : m.isBelowLegalThreshold
-                    ? 'bg-[#fff8f7]'
-                    : 'hover:bg-[#f8faf9]'
+                    ? 'bg-[#fff1f2]/60'
+                    : 'hover:bg-[#f8fafc]'
                 }`}
               >
-                {/* Identificação do Estudante */}
+                {/* Identificação Enxuta do Estudante + Indicativo Visual */}
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <span
                     className={`w-8 h-8 rounded-xl text-white font-mono font-extrabold text-[0.76rem] flex items-center justify-center shrink-0 tabular-nums ${
@@ -746,7 +643,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         ? 'bg-[#6d28d9]'
                         : isOtherNonActive
                         ? 'bg-[#475569]'
-                        : 'bg-[#003440]'
+                        : 'bg-[#0b3b49]'
                     }`}
                   >
                     {student.number.toString().padStart(2, '0')}
@@ -760,16 +657,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   />
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span
-                        onClick={() => onOpenStudentGrid(student)}
-                        className="font-extrabold text-[0.94rem] text-[#003440] hover:underline truncate cursor-pointer"
-                      >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-extrabold text-[0.95rem] text-[#0f172a] truncate">
                         {student.name}
                       </span>
-                      {student.ra && (
-                        <span className="font-mono text-[0.7rem] text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5">
-                          RA {student.ra}-{student.digRa}
+                      {isTransferred && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.63rem] font-extrabold uppercase">
+                          Transferido
+                        </span>
+                      )}
+                      {isRemanejado && (
+                        <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.63rem] font-extrabold uppercase">
+                          Remanejado
                         </span>
                       )}
                       {onOpenStudentPdf && (
@@ -786,112 +685,140 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                             onOpenStudentPdf(student);
                           }}
                           title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                          className="doc-hyperlink px-2 py-0.5 rounded-lg bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold text-[0.68rem] flex items-center gap-1 cursor-pointer transition-colors"
+                          className="doc-hyperlink px-2 py-0.5 rounded-lg bg-white hover:bg-[#0b3b49] text-[#0b3b49] hover:!text-white border border-black/[0.08] font-bold text-[0.68rem] flex items-center gap-1 cursor-pointer transition-colors"
                         >
                           <span className="material-symbols-outlined text-[13px]">
                             document_scanner
                           </span>
-                          <span>Ficha Informativa (Drive)</span>
+                          <span>Ficha (Drive)</span>
                         </a>
                       )}
-                      {isTransferred && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.64rem] font-black uppercase">
-                          NÃO ATIVO • TRANSFERIDO (BXTR)
-                        </span>
-                      )}
-                      {isRemanejado && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.64rem] font-black uppercase">
-                          NÃO ATIVO • REMANEJADO
-                        </span>
-                      )}
                     </div>
-                    <div className="text-[0.72rem] text-[#5a676b] flex flex-wrap items-center gap-2 mt-0.5">
-                      <span>
-                        Presença: <strong className="text-[#005035]">{m.presencas}/{m.diasLetivosMatriculados}d ({m.frequenciaPercent}%)</strong>
+
+                    {/* Indicadores Claros de Presença e Falta do Estudante */}
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[0.72rem] font-extrabold tabular-nums ${
+                          m.isBelowLegalThreshold
+                            ? 'bg-[#ffe4e6] text-[#be123c]'
+                            : 'bg-[#eaf6ef] text-[#006644]'
+                        }`}
+                      >
+                        <span>Presença: {m.frequenciaPercent}%</span>
+                        <span className="opacity-75">({m.presencas}/{m.diasLetivosMatriculados}d)</span>
                       </span>
-                      <span>·</span>
-                      <span>
-                        Falta Total: <strong className={m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#5a676b]'}>{m.faltas} ({pctFalta}%)</strong>
+
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[0.72rem] font-extrabold tabular-nums ${
+                          m.faltas > 0
+                            ? 'bg-[#fff1f2] text-[#be123c] border border-[#e11d48]/20'
+                            : 'bg-[#f1f5f9] text-[#64748b]'
+                        }`}
+                      >
+                        <span>Falta: {pctFalta}%</span>
+                        <span>({m.faltas}F · {m.atestados}A)</span>
                       </span>
-                      {!m.isMesCheio && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRecorteModal(student)}
-                          className="text-[#003440] underline font-bold cursor-pointer"
-                        >
-                          Recorte: {m.diasLetivosMatriculados}d
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Controles Rápidos Estilo Stepper iOS: Faltas + Atestados */}
-                <div className="flex flex-wrap items-center justify-between md:justify-end gap-2.5 shrink-0">
-                  {/* Stepper Faltas */}
-                  <div className="flex items-center gap-1.5 bg-[#f4f6f5] px-2.5 py-1.5 rounded-2xl border border-black/[0.06]">
-                    <span className="text-[0.72rem] font-extrabold text-[#ba1a1a] mr-1">
-                      Faltas
-                    </span>
+                {/* APENAS OS 2 CONTADORES INTERATIVOS: 1) FALTAS DO MÊS e 2) ATESTADOS */}
+                <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 shrink-0">
+                  {/* Contador 1: Faltas do Mês */}
+                  <div
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl border transition-colors ${
+                      m.faltas > 0
+                        ? 'bg-[#fff1f2] border-[#e11d48]/30'
+                        : 'bg-[#f8fafc] border-black/[0.08]'
+                    }`}
+                  >
+                    <div className="pr-1">
+                      <span className="text-[0.65rem] font-extrabold uppercase tracking-wider text-[#be123c] block leading-none">
+                        Faltas do Mês
+                      </span>
+                      <span className="text-[0.65rem] font-mono font-semibold text-[#64748b] tabular-nums">
+                        máx. {m.diasLetivosMatriculados}d
+                      </span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => handleDeltaAbsence(student.id, -1)}
                       disabled={!effectiveCanEdit || m.faltas === 0}
-                      className="w-8 h-8 rounded-xl bg-white text-[#003440] font-black text-[1.1rem] flex items-center justify-center shadow-2xs border border-black/[0.08] disabled:opacity-30 cursor-pointer active:scale-90"
+                      aria-label={`Diminuir falta de ${student.name}`}
+                      className="w-9 h-9 rounded-xl bg-white hover:bg-[#f1f5f9] text-[#0f172a] font-black text-[1.15rem] flex items-center justify-center shadow-2xs border border-black/[0.1] disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
                     >
                       —
                     </button>
-                    <span
-                      className={`w-8 text-center font-mono font-black text-[1.05rem] tabular-nums ${
-                        m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'
-                      }`}
-                    >
-                      {m.faltas}
-                    </span>
+
+                    <div className="w-10 text-center">
+                      <span
+                        className={`font-mono font-black text-[1.2rem] tabular-nums block leading-none ${
+                          m.faltas > 0 ? 'text-[#be123c]' : 'text-[#006644]'
+                        }`}
+                      >
+                        {m.faltas}
+                      </span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => handleDeltaAbsence(student.id, 1)}
                       disabled={!effectiveCanEdit || isMaxFaltasReached}
-                      className="w-8 h-8 rounded-xl bg-[#003440] text-white font-black text-[1.1rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                      aria-label={`Adicionar falta para ${student.name}`}
+                      className="w-9 h-9 rounded-xl bg-[#0b3b49] hover:bg-[#164e63] text-white font-black text-[1.15rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
                     >
                       +
                     </button>
                   </div>
 
-                  {/* Stepper Atestados */}
-                  <div className="flex items-center gap-1.5 bg-[#eaf6ef]/80 px-2.5 py-1.5 rounded-2xl border border-[#005035]/15">
-                    <span className="text-[0.72rem] font-extrabold text-[#005035] mr-1">
-                      Atest.
-                    </span>
+                  {/* Contador 2: Atestados */}
+                  <div
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl border transition-colors ${
+                      m.atestados > 0
+                        ? 'bg-[#f0f9ff] border-[#0284c7]/35'
+                        : 'bg-[#f8fafc] border-black/[0.08]'
+                    }`}
+                  >
+                    <div className="pr-1">
+                      <span className="text-[0.65rem] font-extrabold uppercase tracking-wider text-[#0369a1] block leading-none">
+                        Atestados
+                      </span>
+                      <span className="text-[0.65rem] font-mono font-semibold text-[#64748b] tabular-nums">
+                        {m.faltas === 0 ? '0 faltas' : `de ${m.faltas} falta(s)`}
+                      </span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => handleDeltaAtestado(student.id, -1)}
                       disabled={!effectiveCanEdit || m.atestados === 0}
-                      className="w-8 h-8 rounded-xl bg-white text-[#005035] font-black text-[1.1rem] flex items-center justify-center shadow-2xs border border-[#005035]/20 disabled:opacity-30 cursor-pointer active:scale-90"
+                      aria-label={`Diminuir atestado de ${student.name}`}
+                      className="w-9 h-9 rounded-xl bg-white hover:bg-[#f1f5f9] text-[#0369a1] font-black text-[1.15rem] flex items-center justify-center shadow-2xs border border-[#0284c7]/25 disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
                     >
                       —
                     </button>
-                    <span className="w-7 text-center font-mono font-black text-[1.05rem] text-[#005035] tabular-nums">
-                      {m.atestados}
-                    </span>
+
+                    <div className="w-9 text-center">
+                      <span
+                        className={`font-mono font-black text-[1.2rem] tabular-nums block leading-none ${
+                          m.atestados > 0 ? 'text-[#0369a1]' : 'text-[#64748b]'
+                        }`}
+                      >
+                        {m.atestados}
+                      </span>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => handleDeltaAtestado(student.id, 1)}
-                      disabled={!effectiveCanEdit || isMaxAtestadosReached}
-                      className="w-8 h-8 rounded-xl bg-[#005035] text-white font-black text-[1.1rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                      disabled={!effectiveCanEdit || m.faltas === 0 || isMaxAtestadosReached}
+                      aria-label={`Adicionar atestado para ${student.name}`}
+                      className="w-9 h-9 rounded-xl bg-[#0369a1] hover:bg-[#075985] text-white font-black text-[1.15rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
                     >
                       +
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onOpenStudentGrid(student)}
-                    title="Abrir todos os dados da criança"
-                    className="w-9 h-9 rounded-xl bg-[#f2f4f3] hover:bg-[#003440] text-[#003440] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">grid_on</span>
-                  </button>
                 </div>
               </div>
             );
@@ -899,697 +826,219 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </div>
       )}
 
-      {/* VISUALIZAÇÃO 3: TABELA ESTILO PLANILHA COM EDIÇÃO EM TEMPO REAL */}
-      {attendanceViewMode === 'table' && (
-        <div className="bg-white rounded-3xl border border-black/[0.06] overflow-x-auto shadow-2xs">
-          <table className="w-full text-left text-[0.8rem] border-collapse min-w-[920px]">
-            <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-extrabold uppercase text-[0.68rem]">
-              <tr>
-                <th className="py-3 px-3 text-center">Nº</th>
-                <th className="py-3 px-3">Estudante</th>
-                <th className="py-3 px-2.5 text-center">Recorte</th>
-                <th className="py-3 px-3 text-center">Lançar Faltas</th>
-                <th className="py-3 px-3 text-center">Lançar Atestados</th>
-                <th className="py-3 px-2.5 text-center">Presença Total</th>
-                <th className="py-3 px-2.5 text-center">Falta Total</th>
-                <th className="py-3 px-2.5 text-center">Dados</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/[0.05]">
-              {displayedStudents.map((student) => {
-                const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
-                const pctFalta =
-                  m.diasLetivosMatriculados > 0
-                    ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
-                    : 0;
-                return (
-                  <tr
-                    key={student.id}
-                    className={m.isBelowLegalThreshold ? 'bg-[#fff8f7]' : 'hover:bg-[#f8faf9]'}
-                  >
-                    <td className="py-2.5 px-3 text-center font-mono font-extrabold text-[#003440]">
-                      {student.number.toString().padStart(2, '0')}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="flex items-center gap-2.5">
-                        <StudentAvatar student={student} size="sm" expandableOnClick={true} />
-                        <div>
-                          <span className="font-bold text-[#003440] block">{student.name}</span>
-                          <span className="font-mono text-[0.68rem] text-[#5a676b]">
-                            RA {student.ra}-{student.digRa}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-2.5 text-center font-mono">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenRecorteModal(student)}
-                        className="px-2 py-0.5 rounded-lg bg-[#f2f4f3] text-[#003440] font-bold text-[0.74rem] cursor-pointer"
-                      >
-                        {m.diasLetivosMatriculados}/{m.diasLetivosMes}d
-                      </button>
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      <div className="inline-flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleDeltaAbsence(student.id, -1)}
-                          disabled={!effectiveCanEdit || m.faltas === 0}
-                          className="w-7 h-7 rounded-lg bg-[#f2f4f3] font-black disabled:opacity-30 cursor-pointer"
-                        >
-                          —
-                        </button>
-                        <span className="w-7 text-center font-mono font-black text-[0.95rem] text-[#ba1a1a]">
-                          {m.faltas}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeltaAbsence(student.id, 1)}
-                          disabled={!effectiveCanEdit || m.faltas >= m.maxFaltasPermitidas}
-                          className="w-7 h-7 rounded-lg bg-[#003440] text-white font-black disabled:opacity-30 cursor-pointer"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      <div className="inline-flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleDeltaAtestado(student.id, -1)}
-                          disabled={!effectiveCanEdit || m.atestados === 0}
-                          className="w-7 h-7 rounded-lg bg-[#eaf6ef] text-[#005035] font-black disabled:opacity-30 cursor-pointer"
-                        >
-                          —
-                        </button>
-                        <span className="w-7 text-center font-mono font-black text-[0.95rem] text-[#005035]">
-                          {m.atestados}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeltaAtestado(student.id, 1)}
-                          disabled={!effectiveCanEdit || m.atestados >= m.maxAtestadosPermitidos}
-                          className="w-7 h-7 rounded-lg bg-[#005035] text-white font-black disabled:opacity-30 cursor-pointer"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#005035]">
-                      {m.presencas}d ({m.frequenciaPercent}%)
-                    </td>
-                    <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#ba1a1a]">
-                      {m.faltas} ({pctFalta}%)
-                    </td>
-                    <td className="py-2.5 px-2.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => onOpenStudentGrid(student)}
-                        className="px-2.5 py-1 rounded-lg bg-[#f2f4f3] hover:bg-[#003440] text-[#003440] hover:text-white font-bold text-[0.72rem] cursor-pointer"
-                      >
-                        48 Campos
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* VISUALIZAÇÃO 2: CARDS DETALHADOS: 1 col Mobile, 2 cols Tablet/Laptop, 3 cols Full HD 1920x1080 21" */}
+      {/* VISUALIZAÇÃO 2: CARDS ENXUTOS (SOMENTE CONTADORES DE FALTAS DO MÊS E ATESTADOS) */}
       {attendanceViewMode === 'cards' && (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {displayedStudents.map((student) => {
-          const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
-          const hasAbsence = m.faltas > 0;
-          const isMaxFaltasReached = m.faltas >= m.maxFaltasPermitidas;
-          const isMaxAtestadosReached = m.atestados >= m.maxAtestadosPermitidos;
-          const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
-          const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
-          const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
-          const isOtherNonActive =
-            !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
-          const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {displayedStudents.map((student) => {
+            const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+            const pctFalta =
+              m.diasLetivosMatriculados > 0
+                ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
+                : 0;
+            const isMaxFaltasReached = m.faltas >= m.maxFaltasPermitidas;
+            const isMaxAtestadosReached = m.atestados >= m.maxAtestadosPermitidos;
 
-          return (
-            <div
-              key={student.id}
-              className={`card-welcoming rounded-2xl p-4 shadow-xs border ${
-                isTransferred
-                  ? 'bg-gradient-to-br from-[#fef3c7] via-[#fffbeb] to-[#fde68a]/65 border-2 border-[#d97706]/60'
-                  : isRemanejado
-                  ? 'bg-gradient-to-br from-[#ede9fe] via-[#f5f3ff] to-[#ddd6fe]/65 border-2 border-[#7c3aed]/55'
-                  : isOtherNonActive
-                  ? 'bg-gradient-to-br from-[#e2e8f0] via-[#f1f5f9] to-[#cbd5e1]/65 border-2 border-[#64748b]/55'
-                  : m.isBelowLegalThreshold
-                  ? 'border-[#ba1a1a]/50 bg-[#fff8f7]'
-                  : !m.isMesCheio
-                  ? 'bg-white border-[#003440]/35'
-                  : 'bg-white border-[#003440]/12'
-              }`}
-            >
-              {isNonActive && (
-                <div
-                  className={`-mx-1 -mt-1 mb-2.5 px-3 py-1.5 rounded-xl text-[0.68rem] font-black uppercase tracking-wider flex items-center justify-between gap-2 ${
-                    isTransferred
-                      ? 'bg-[#b45309] text-white'
-                      : isRemanejado
-                      ? 'bg-[#6d28d9] text-white'
-                      : 'bg-[#475569] text-white'
-                  }`}
-                >
-                  <span>
-                    {isTransferred
-                      ? 'NÃO ATIVO • TRANSFERIDO (BXTR)'
-                      : isRemanejado
-                      ? 'NÃO ATIVO • REMANEJADO'
-                      : `NÃO ATIVO • ${sit}`}
-                  </span>
-                  {student.dataMovimentacao && (
-                    <span className="font-mono text-[0.64rem] bg-white/20 px-1.5 py-0.5 rounded">
-                      {student.dataMovimentacao}
-                    </span>
-                  )}
-                </div>
-              )}
+            const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+            const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+            const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+            const isOtherNonActive =
+              !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
 
-              {/* Student Header: Photo expands on click + Name hyperlink opens scanned PDF in Drive */}
-              <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#003440]/10">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <StudentAvatar
-                    student={student}
-                    size="lg"
-                    expandableOnClick={true}
-                    onUploadPhotoClick={() => onOpenPhotoModal(student)}
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[0.76rem] font-extrabold text-[#003440]">
-                        Nº {student.number.toString().padStart(2, '0')}
-                      </span>
-                      {student.ra && (
-                        <span className="text-[0.7rem] bg-[#f1f4f3] px-1.5 py-0.5 rounded font-mono text-[#003440]">
-                          RA {student.ra}-{student.digRa}
+            return (
+              <div
+                key={student.id}
+                className={`card-welcoming rounded-3xl p-4 border space-y-3 ${
+                  isTransferred
+                    ? 'bg-gradient-to-br from-[#fef3c7] via-[#fffbeb] to-[#fde68a]/60 border-2 border-[#d97706]/55'
+                    : isRemanejado
+                    ? 'bg-gradient-to-br from-[#ede9fe] via-[#f5f3ff] to-[#ddd6fe]/60 border-2 border-[#7c3aed]/50'
+                    : isOtherNonActive
+                    ? 'bg-[#e2e8f0] border-[#64748b]/50'
+                    : m.isBelowLegalThreshold
+                    ? 'bg-[#fff9f9] border-[#e11d48]/40'
+                    : 'bg-white border-black/[0.07]'
+                }`}
+              >
+                {/* Topo do Card: Foto (upload apenas ao clicar na foto) + Nome + Indicativo de % */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <StudentAvatar
+                      student={student}
+                      size="lg"
+                      expandableOnClick={true}
+                      onUploadPhotoClick={() => onOpenPhotoModal(student)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-lg bg-[#0b3b49] text-white font-mono text-[0.72rem] font-extrabold tabular-nums">
+                          Nº {student.number.toString().padStart(2, '0')}
                         </span>
-                      )}
-                      {student.situacao && student.situacao !== 'ATIVO' && (
-                        <span
-                          className={`text-[0.68rem] font-extrabold px-2 py-0.5 rounded-full text-white ${
-                            isTransferred
-                              ? 'bg-[#b45309]'
-                              : isRemanejado
-                              ? 'bg-[#6d28d9]'
-                              : 'bg-[#475569]'
-                          }`}
+                        {isTransferred && (
+                          <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.64rem] font-extrabold uppercase">
+                            Transferido
+                          </span>
+                        )}
+                        {isRemanejado && (
+                          <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.64rem] font-extrabold uppercase">
+                            Remanejado
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-[0.96rem] font-extrabold text-[#0f172a] leading-snug truncate mt-1">
+                        {student.name}
+                      </h3>
+                      {onOpenStudentPdf && (
+                        <a
+                          href={
+                            student.fichaPdfDriveUrl ||
+                            (student.fichaPdfDriveId
+                              ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
+                              : `#doc-${student.id}`)
+                          }
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onOpenStudentPdf(student);
+                          }}
+                          className="doc-hyperlink inline-flex items-center gap-1 text-[0.7rem] font-bold text-[#0b3b49] hover:underline mt-0.5"
                         >
-                          {student.situacao}
-                        </span>
-                      )}
-                      {student.deficiencia && (
-                        <span className="text-[0.68rem] font-extrabold bg-[#a4f3ca] text-[#003723] px-2 py-0.5 rounded-full">
-                          {student.deficiencia}
-                        </span>
+                          <span className="material-symbols-outlined text-[13px]">
+                            document_scanner
+                          </span>
+                          <span>Ficha Informativa (Drive)</span>
+                        </a>
                       )}
                     </div>
-                    <h3
-                      onClick={() => onOpenStudentGrid(student)}
-                      className="text-[1.02rem] font-extrabold text-[#003440] hover:underline leading-snug truncate mt-0.5 block cursor-pointer"
+                  </div>
+
+                  {/* Indicativo de Presença & Falta */}
+                  <div className="text-right shrink-0">
+                    <span
+                      className={`px-2.5 py-1 rounded-xl font-mono font-black text-[1.05rem] tabular-nums inline-block ${
+                        m.isBelowLegalThreshold
+                          ? 'bg-[#ffe4e6] text-[#be123c]'
+                          : 'bg-[#eaf6ef] text-[#006644]'
+                      }`}
                     >
-                      {student.name}
-                    </h3>
-                    {m.isBelowLegalThreshold ? (
-                      <span className="text-[0.72rem] font-extrabold text-[#ba1a1a] flex items-center gap-1 mt-0.5">
-                        <span className="material-symbols-outlined text-[14px]">warning</span>
-                        <span>
-                          Abaixo de {m.minLegalPresencePercent}% ({m.isEducacaoInfantil ? 'Ed. Infantil' : 'Ens. Fund.'} · Bolsa Família)
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-[0.72rem] font-medium text-[#5a676b] block truncate mt-0.5">
-                        {student.filiacao1 || student.guardianName || 'Responsável cadastrado'}
-                      </span>
-                    )}
+                      {m.frequenciaPercent}%
+                    </span>
+                    <span className="block font-mono text-[0.68rem] font-bold text-[#475569] mt-0.5 tabular-nums">
+                      {m.presencas}/{m.diasLetivosMatriculados}d • {pctFalta}% falta
+                    </span>
                   </div>
                 </div>
 
-                {/* Live Student Attendance Percentage Pill */}
-                <div
-                  onClick={() => onOpenStudentGrid(student)}
-                  title={`Mínimo legal exigido: ${m.minLegalPresencePercent}%`}
-                  className={`text-right shrink-0 px-3 py-1.5 rounded-xl border cursor-pointer ${
-                    m.isBelowLegalThreshold
-                      ? 'bg-[#ffdad6] border-[#ba1a1a]/40 text-[#ba1a1a]'
-                      : 'bg-[#f5f7f6] hover:bg-[#e7e8e6] border-[#003440]/12'
-                  }`}
-                >
-                  <span
-                    className={`text-[1.2rem] font-black block leading-none tabular-nums ${
-                      m.isBelowLegalThreshold
-                        ? 'text-[#ba1a1a]'
-                        : m.frequenciaPercent < 85
-                        ? 'text-[#8c5000]'
-                        : 'text-[#005035]'
+                {/* Barra de Progresso de Presença do Estudante */}
+                <div className="w-full h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      m.isBelowLegalThreshold ? 'bg-[#be123c]' : 'bg-[#006644]'
+                    }`}
+                    style={{ width: `${Math.min(100, m.frequenciaPercent)}%` }}
+                  />
+                </div>
+
+                {/* APENAS OS 2 CONTADORES: FALTAS DO MÊS E ATESTADOS */}
+                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                  {/* 1. Contador Faltas do Mês */}
+                  <div
+                    className={`p-2.5 rounded-2xl border flex flex-col justify-between ${
+                      m.faltas > 0
+                        ? 'bg-[#fff1f2] border-[#e11d48]/30'
+                        : 'bg-[#f8fafc] border-black/[0.07]'
                     }`}
                   >
-                    {m.frequenciaPercent}%
-                  </span>
-                  <span className="text-[0.68rem] font-bold text-[#41484b] block mt-0.5 tabular-nums">
-                    {m.presencas}/{m.diasLetivosMatriculados}d
-                  </span>
-                </div>
-              </div>
-
-              {/* Enrollment Window Bar (Recorte da Matrícula no Mês) */}
-              <div
-                className={`mt-2.5 px-3 py-2 rounded-xl flex flex-wrap items-center justify-between gap-2 text-[0.82rem] ${
-                  m.isMesCheio
-                    ? 'bg-[#f8faf9] text-[#41484b] border border-[#edeeec]'
-                    : 'bg-[#c3e5f4]/50 text-[#001f29] border border-[#003440]/20 font-semibold'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-[#003440]">
-                    date_range
-                  </span>
-                  <span>
-                    <strong>Recorte no Mês:</strong> {m.recorteLabel}
-                  </span>
-                </div>
-
-                {effectiveCanEdit && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenRecorteModal(student)}
-                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#e7e8e6] text-[#003440] font-extrabold text-[0.78rem] border border-[#c0c8cb] shadow-2xs cursor-pointer flex items-center gap-1"
-                  >
-                    <span className="material-symbols-outlined text-[15px]">edit_calendar</span>
-                    <span>Alterar Entrada/Saída</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Dual Counters: Faltas e Atestados */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
-                {/* 1. Botão de Faltas no Mês (Máx = diasLetivosMatriculados) */}
-                <div className="bg-[#f3f4f2] p-3 rounded-2xl border-2 border-[#b4c0c4]/80 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[0.85rem] font-extrabold text-[#003440] flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[18px] text-[#ba1a1a]">
-                        event_busy
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[0.7rem] font-extrabold uppercase text-[#be123c]">
+                        Faltas Mês
                       </span>
-                      <span>Faltas no Mês:</span>
-                    </span>
-                    <span className="text-[0.72rem] font-bold text-[#647073]">
-                      Máx: {m.maxFaltasPermitidas}d
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDeltaAbsence(student.id, -1)}
-                      disabled={!effectiveCanEdit || m.faltas === 0}
-                      className="w-12 h-12 rounded-xl bg-white hover:bg-[#e7e8e6] text-[#003440] font-black text-[1.5rem] flex items-center justify-center cursor-pointer transition-transform active:scale-90 disabled:opacity-30 disabled:pointer-events-none border-2 border-[#b4c0c4] shadow-xs"
-                      aria-label={`Diminuir falta de ${student.name}`}
-                    >
-                      —
-                    </button>
-
-                    <div className="text-center min-w-[70px]">
-                      <span
-                        className={`text-[1.5rem] font-black block leading-none ${
-                          hasAbsence ? 'text-[#ba1a1a]' : 'text-[#005035]'
-                        }`}
-                      >
-                        {m.faltas}
-                      </span>
-                      <span className="text-[0.75rem] font-bold text-[#647073]">
-                        de {m.diasLetivosMatriculados} dias
+                      <span className="font-mono text-[0.66rem] font-bold text-[#64748b]">
+                        máx {m.diasLetivosMatriculados}d
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeltaAbsence(student.id, 1)}
-                      disabled={!effectiveCanEdit || isMaxFaltasReached}
-                      className="w-12 h-12 rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-black text-[1.5rem] flex items-center justify-center cursor-pointer transition-transform active:scale-90 disabled:opacity-30 disabled:pointer-events-none shadow-sm"
-                      aria-label={`Adicionar falta para ${student.name}`}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. Botão de Quantidade de Atestados Apresentados (Máx = Faltas do Estudante) */}
-                <div className="bg-[#eaf6ef] p-3 rounded-2xl border-2 border-[#005035]/30 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[0.85rem] font-extrabold text-[#005035] flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[18px] text-[#005035]">
-                        medical_services
-                      </span>
-                      <span>Qtd. de Atestados:</span>
-                    </span>
-                    <span className="text-[0.72rem] font-bold text-[#005035]">
-                      {m.faltas === 0 ? 'Sem faltas' : `Máx: ${m.maxAtestadosPermitidos}`}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDeltaAtestado(student.id, -1)}
-                      disabled={!effectiveCanEdit || m.atestados === 0}
-                      className="w-12 h-12 rounded-xl bg-white hover:bg-[#e7e8e6] text-[#005035] font-black text-[1.5rem] flex items-center justify-center cursor-pointer transition-transform active:scale-90 disabled:opacity-30 disabled:pointer-events-none border-2 border-[#005035]/30 shadow-xs"
-                      aria-label={`Diminuir atestado de ${student.name}`}
-                    >
-                      —
-                    </button>
-
-                    <div className="text-center min-w-[70px]">
-                      <span
-                        className={`text-[1.5rem] font-black block leading-none ${
-                          m.atestados > 0 ? 'text-[#005035]' : 'text-[#647073]'
-                        }`}
+                    <div className="flex items-center justify-between gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleDeltaAbsence(student.id, -1)}
+                        disabled={!effectiveCanEdit || m.faltas === 0}
+                        className="w-10 h-10 rounded-xl bg-white text-[#0f172a] font-black text-[1.25rem] flex items-center justify-center border border-black/[0.1] shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
                       >
-                        {m.atestados}
+                        —
+                      </button>
+
+                      <div className="text-center">
+                        <span
+                          className={`font-mono text-[1.35rem] font-black tabular-nums leading-none block ${
+                            m.faltas > 0 ? 'text-[#be123c]' : 'text-[#006644]'
+                          }`}
+                        >
+                          {m.faltas}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeltaAbsence(student.id, 1)}
+                        disabled={!effectiveCanEdit || isMaxFaltasReached}
+                        className="w-10 h-10 rounded-xl bg-[#0b3b49] text-white font-black text-[1.25rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. Contador Atestados */}
+                  <div
+                    className={`p-2.5 rounded-2xl border flex flex-col justify-between ${
+                      m.atestados > 0
+                        ? 'bg-[#f0f9ff] border-[#0284c7]/30'
+                        : 'bg-[#f8fafc] border-black/[0.07]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[0.7rem] font-extrabold uppercase text-[#0369a1]">
+                        Atestados
                       </span>
-                      <span className="text-[0.75rem] font-bold text-[#005035]">
-                        {m.atestados === 1 ? 'atestado' : 'atestados'}
+                      <span className="font-mono text-[0.66rem] font-bold text-[#64748b]">
+                        {m.faltas === 0 ? '0 faltas' : `máx ${m.faltas}`}
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeltaAtestado(student.id, 1)}
-                      disabled={!effectiveCanEdit || isMaxAtestadosReached}
-                      className="w-12 h-12 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[1.5rem] flex items-center justify-center cursor-pointer transition-transform active:scale-90 disabled:opacity-30 disabled:pointer-events-none shadow-sm"
-                      aria-label={`Adicionar atestado para ${student.name}`}
-                    >
-                      +
-                    </button>
+                    <div className="flex items-center justify-between gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleDeltaAtestado(student.id, -1)}
+                        disabled={!effectiveCanEdit || m.atestados === 0}
+                        className="w-10 h-10 rounded-xl bg-white text-[#0369a1] font-black text-[1.25rem] flex items-center justify-center border border-[#0284c7]/25 shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                      >
+                        —
+                      </button>
+
+                      <div className="text-center">
+                        <span
+                          className={`font-mono text-[1.35rem] font-black tabular-nums leading-none block ${
+                            m.atestados > 0 ? 'text-[#0369a1]' : 'text-[#64748b]'
+                          }`}
+                        >
+                          {m.atestados}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeltaAtestado(student.id, 1)}
+                        disabled={!effectiveCanEdit || m.faltas === 0 || isMaxAtestadosReached}
+                        className="w-10 h-10 rounded-xl bg-[#0369a1] text-white font-black text-[1.25rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Action Bar: Grade de Dados Interativa + PDF Nominal + Detalhe Atestado + Foto */}
-              <div className="mt-3 pt-2.5 border-t border-[#edeeec] flex flex-wrap items-center justify-between gap-2 text-[0.8rem]">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => onOpenStudentGrid(student)}
-                    className="px-2.5 py-1.5 rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-extrabold flex items-center gap-1 cursor-pointer shadow-2xs"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">grid_on</span>
-                    <span>Ficha (48 Campos)</span>
-                  </button>
-
-                  {onOpenStudentPdf && (
-                    <a
-                      href={
-                        student.fichaPdfDriveUrl ||
-                        (student.fichaPdfDriveId
-                          ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                          : `#doc-${student.id}`)
-                      }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onOpenStudentPdf(student);
-                      }}
-                      className="doc-hyperlink px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold flex items-center gap-1 cursor-pointer shadow-2xs transition-colors"
-                      title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">
-                        document_scanner
-                      </span>
-                      <span>Ficha Informativa (Drive)</span>
-                    </a>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  {effectiveCanEdit && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenJustifyModal(student)}
-                      className="text-[#005035] hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">description</span>
-                      <span>{student.notes ? 'Obs.' : '+ Obs.'}</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => onOpenPhotoModal(student)}
-                    className="text-[#003440] hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">add_a_photo</span>
-                    <span>Foto</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      )}
-
-      {/* Quick Summary / Conclude Bar (Above Interactive Bottom Nav) */}
-      <div className="bg-white rounded-2xl p-4 border-2 border-[#b4c0c4]/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 text-center sm:text-left">
-          <span className="material-symbols-outlined text-[26px] text-[#005035]">
-            cloud_done
-          </span>
-          <div>
-            <p className="font-black text-[0.95rem] text-[#003440]">
-              Salvamento Automático Ativo ({liveClassMetrics.presenceRate}% de presença da turma)
-            </p>
-            <p className="text-[0.8rem] text-[#374144] font-semibold">
-              Todas as alterações feitas acima já estão gravadas na Planilha da Escola.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex-1 sm:flex-initial min-h-[48px] px-4 bg-[#edeeec] hover:bg-[#e1e3e1] text-[#003440] font-black text-[0.9rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-            <span>Voltar às Turmas</span>
-          </button>
-
-          {effectiveCanEdit && (
-            <button
-              type="button"
-              onClick={handleSave}
-              className="flex-1 sm:flex-initial min-h-[48px] px-5 bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.9rem] rounded-xl flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">verified</span>
-              <span>Concluir Chamada do Mês</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Modal: Recorte da Matrícula no Mês (Entrada Depois / Saída Antes) */}
-      {recorteStudent && canEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl border border-[#edeeec] space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#edeeec]">
-              <h3 className="text-[1.15rem] font-black text-[#003440]">
-                Recorte da Matrícula no Mês
-              </h3>
-              <button
-                onClick={() => setRecorteStudent(null)}
-                className="w-9 h-9 rounded-xl bg-[#f3f4f2] text-[#41484b] flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div>
-              <p className="text-[1rem] font-extrabold text-[#003440]">
-                {recorteStudent.name}
-              </p>
-              <p className="text-[0.85rem] text-[#41484b] mt-0.5">
-                Mês de <strong>{selectedMonthName}</strong> possui <strong>{diasLetivosMes} dias letivos</strong> no total.
-                Se o(a) estudante entrou depois ou saiu antes, ajuste abaixo quantos dias letivos valem para a matrícula dele(a):
-              </p>
-            </div>
-
-            {/* Quick Presets */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setRecorteDaysInput(diasLetivosMes);
-                  setExitDateInput('');
-                  setSituacaoInput('ATIVO');
-                }}
-                className={`p-2.5 rounded-xl font-bold text-[0.85rem] border cursor-pointer ${
-                  recorteDaysInput === diasLetivosMes
-                    ? 'bg-[#003440] text-white border-[#003440]'
-                    : 'bg-[#f3f4f2] text-[#003440] border-[#c0c8cb]'
-                }`}
-              >
-                Mês Cheio ({diasLetivosMes} dias)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setRecorteDaysInput(Math.max(1, Math.round(diasLetivosMes / 2)));
-                }}
-                className={`p-2.5 rounded-xl font-bold text-[0.85rem] border cursor-pointer ${
-                  recorteDaysInput < diasLetivosMes
-                    ? 'bg-[#003440] text-white border-[#003440]'
-                    : 'bg-[#f3f4f2] text-[#003440] border-[#c0c8cb]'
-                }`}
-              >
-                Meio Mês ({Math.round(diasLetivosMes / 2)} dias)
-              </button>
-            </div>
-
-            {/* Big Counter for Student's Enrolled School Days */}
-            <div className="bg-[#f3f4f2] p-4 rounded-2xl border border-[#c0c8cb] flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setRecorteDaysInput((prev) => Math.max(1, prev - 1))}
-                disabled={recorteDaysInput <= 1}
-                className="w-12 h-12 rounded-xl bg-white text-[#003440] font-black text-[1.5rem] border border-[#c0c8cb] disabled:opacity-30 cursor-pointer"
-              >
-                —
-              </button>
-
-              <div className="text-center">
-                <span className="text-[1.75rem] font-black text-[#003440] block leading-none">
-                  {recorteDaysInput}
-                </span>
-                <span className="text-[0.8rem] font-bold text-[#41484b]">
-                  de {diasLetivosMes} dias letivos no mês
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setRecorteDaysInput((prev) => Math.min(diasLetivosMes, prev + 1))}
-                disabled={recorteDaysInput >= diasLetivosMes}
-                className="w-12 h-12 rounded-xl bg-[#003440] text-white font-black text-[1.5rem] disabled:opacity-30 cursor-pointer"
-              >
-                +
-              </button>
-            </div>
-
-            {/* Optional Entry / Exit Dates */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[0.78rem] font-bold text-[#41484b] mb-1">
-                  Data de Matrícula (Entrada):
-                </label>
-                <input
-                  type="text"
-                  value={entryDateInput}
-                  onChange={(e) => setEntryDateInput(e.target.value)}
-                  placeholder="Ex: 14/10/2027"
-                  className="w-full p-2.5 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] text-[0.9rem] font-semibold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[0.78rem] font-bold text-[#41484b] mb-1">
-                  Data de Saída (Se saiu):
-                </label>
-                <input
-                  type="text"
-                  value={exitDateInput}
-                  onChange={(e) => {
-                    setExitDateInput(e.target.value);
-                    if (e.target.value.trim()) {
-                      setSituacaoInput('BXTR');
-                    }
-                  }}
-                  placeholder="Ex: 19/10/2027"
-                  className="w-full p-2.5 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] text-[0.9rem] font-semibold"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setRecorteStudent(null)}
-                className="flex-1 py-3 bg-[#edeeec] text-[#41484b] font-bold rounded-xl cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveRecorteModal}
-                className="flex-1 py-3 bg-[#005035] hover:bg-[#003723] text-white font-bold rounded-xl shadow-xs cursor-pointer"
-              >
-                Aplicar Recorte
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Justify / Atestado Notes Modal */}
-      {justifyingStudent && canEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl border border-[#edeeec] space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#edeeec]">
-              <h3 className="text-[1.15rem] font-bold text-[#003440]">
-                Detalhes do Atestado Médico
-              </h3>
-              <button
-                onClick={() => setJustifyingStudent(null)}
-                className="w-9 h-9 rounded-xl bg-[#f3f4f2] text-[#41484b] flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-[0.95rem] text-[#191c1b]">
-              Estudante: <strong>{justifyingStudent.name}</strong> (Nº {justifyingStudent.number})
-            </p>
-
-            <div>
-              <label className="block text-[0.85rem] font-bold text-[#41484b] mb-1">
-                Anotação / CID / Data de Emissão:
-              </label>
-              <textarea
-                value={noteInput}
-                onChange={(e) => setNoteInput(e.target.value)}
-                placeholder="Ex: Atestado entregue em 15/10 (Dr. Carlos - CRM 12345, 2 dias de repouso)..."
-                rows={3}
-                className="w-full p-3 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] text-[0.95rem] focus:bg-white focus:outline-none"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setJustifyingStudent(null)}
-                className="flex-1 py-3 bg-[#edeeec] text-[#41484b] font-bold rounded-xl cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveNote}
-                className="flex-1 py-3 bg-[#005035] hover:bg-[#003723] text-white font-bold rounded-xl shadow-xs cursor-pointer"
-              >
-                Salvar Detalhes
-              </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -16,7 +16,7 @@ import { StudentAvatar } from './StudentAvatar';
 import { OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 
 type ViewMode = 'grid' | 'compact' | 'table';
-type StatusFilter = 'all' | 'ativos' | 'movimentados' | 'alerta';
+type StatusFilter = 'all' | 'ativos' | 'movimentados' | 'onibus_fretado' | 'bolsa_familia' | 'alerta';
 
 interface DetalhesTurmaScreenProps {
   classGroup: ClassGroup;
@@ -35,6 +35,8 @@ interface DetalhesTurmaScreenProps {
   onOpenStudentPdf?: (student: Student) => void;
   onNavigateToSheet: () => void;
   onBackToClasses: () => void;
+  onOpenBolsaFamiliaTab?: () => void;
+  onOpenOnibusFretadoTab?: () => void;
 }
 
 export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
@@ -47,6 +49,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   onOpenPhotoModal,
   onOpenStudentPdf,
   onBackToClasses,
+  onOpenBolsaFamiliaTab,
+  onOpenOnibusFretadoTab,
 }) => {
   const [searchStudent, setSearchStudent] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -146,6 +150,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     let remanejados = 0;
     let pcdCount = 0;
     let alertaLegalCount = 0;
+    let bolsaFamiliaCount = 0;
+    let onibusFretadoCount = 0;
     let somaDiasMatriculados = 0;
     let somaPresencas = 0;
     let somaFaltas = 0;
@@ -166,6 +172,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       else if (gen.startsWith('M')) masculino++;
 
       if (s.deficiencia && s.deficiencia.trim().length > 0) pcdCount++;
+      if (s.nis && s.nis.trim().length > 0) bolsaFamiliaCount++;
+      if (s.rotaOnibus && s.rotaOnibus.trim().length > 0) onibusFretadoCount++;
 
       const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
       if (m.isBelowLegalThreshold) alertaLegalCount++;
@@ -194,6 +202,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       remanejados,
       pcdCount,
       alertaLegalCount,
+      bolsaFamiliaCount,
+      onibusFretadoCount,
       somaDiasMatriculados,
       somaPresencas,
       somaFaltas,
@@ -211,6 +221,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         s.name.toLowerCase().includes(q) ||
         s.number.toString().padStart(2, '0').includes(q) ||
         (s.ra && s.ra.toLowerCase().includes(q)) ||
+        (s.nis && s.nis.toLowerCase().includes(q)) ||
+        (s.rotaOnibus && s.rotaOnibus.toLowerCase().includes(q)) ||
         (s.filiacao1 && s.filiacao1.toLowerCase().includes(q)) ||
         (s.filiacao2 && s.filiacao2.toLowerCase().includes(q));
       if (!matchesQuery) return false;
@@ -224,13 +236,19 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
       if (statusFilter === 'ativos') return !isMov;
       if (statusFilter === 'movimentados') return isMov;
+      if (statusFilter === 'onibus_fretado') {
+        return Boolean(s.rotaOnibus && s.rotaOnibus.trim().length > 0);
+      }
+      if (statusFilter === 'bolsa_familia' && userRole === 'admin') {
+        return Boolean(s.nis && s.nis.trim().length > 0);
+      }
       if (statusFilter === 'alerta') {
         const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
         return m.isBelowLegalThreshold;
       }
       return true;
     });
-  }, [orderedStudents, searchStudent, statusFilter, diasLetivosMes]);
+  }, [orderedStudents, searchStudent, statusFilter, diasLetivosMes, userRole]);
 
   return (
     <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-4 pb-28 animate-gentle-fade">
@@ -298,18 +316,42 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             </p>
           </div>
 
-          {/* Botões superiores discretos estilo iOS (Sem botão redundante de preencher faltas, que já fica no rodapé) */}
+          {/* Botões superiores discretos estilo iOS */}
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onGoToMonthlySummary}
-              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#003440] font-semibold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
-            >
-              <span className="material-symbols-outlined text-[18px] text-[#005035]">
-                assessment
-              </span>
-              <span>Relatório Bimestral / Bolsa Família</span>
-            </button>
+            {onOpenOnibusFretadoTab && (
+              <button
+                type="button"
+                onClick={onOpenOnibusFretadoTab}
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f0f9ff] hover:bg-[#e0f2fe] text-[#0369a1] border border-[#0284c7]/20 font-bold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
+              >
+                <span className="material-symbols-outlined text-[18px]">directions_bus</span>
+                <span>Aba Ônibus Fretado</span>
+              </button>
+            )}
+
+            {userRole === 'admin' && onOpenBolsaFamiliaTab && (
+              <button
+                type="button"
+                onClick={onOpenBolsaFamiliaTab}
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e] border border-[#f59e0b]/30 font-bold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
+              >
+                <span className="material-symbols-outlined text-[18px]">family_restroom</span>
+                <span>Aba Bolsa Família (Admin)</span>
+              </button>
+            )}
+
+            {userRole === 'admin' && (
+              <button
+                type="button"
+                onClick={onGoToMonthlySummary}
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#003440] font-semibold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
+              >
+                <span className="material-symbols-outlined text-[18px] text-[#005035]">
+                  assessment
+                </span>
+                <span>Relatório Bolsa Família</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -579,7 +621,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
         {/* Filtro Rápido de Situação */}
         <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
-          <div className="ios-segmented">
+          <div className="ios-segmented flex-wrap">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
@@ -598,6 +640,30 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             >
               Ativos ({classSummary.ativos})
             </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('onibus_fretado')}
+              className={`ios-segmented-item ${
+                statusFilter === 'onibus_fretado'
+                  ? 'ios-segmented-item-active text-[#0369a1]'
+                  : ''
+              }`}
+            >
+              Ônibus Fretado ({classSummary.onibusFretadoCount})
+            </button>
+            {userRole === 'admin' && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter('bolsa_familia')}
+                className={`ios-segmented-item ${
+                  statusFilter === 'bolsa_familia'
+                    ? 'ios-segmented-item-active text-[#006644]'
+                    : ''
+                }`}
+              >
+                Bolsa Família ({classSummary.bolsaFamiliaCount})
+              </button>
+            )}
             {(classSummary.transferidos + classSummary.remanejados > 0) && (
               <button
                 type="button"
@@ -609,7 +675,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 Transf./Reman. ({classSummary.transferidos + classSummary.remanejados})
               </button>
             )}
-            {classSummary.alertaLegalCount > 0 && (
+            {userRole === 'admin' && classSummary.alertaLegalCount > 0 && (
               <button
                 type="button"
                 onClick={() => setStatusFilter('alerta')}
@@ -910,19 +976,21 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   )}
                 </div>
 
-                {/* Alerta Legal se <60% Infantil ou <75% Fundamental */}
+                {/* Alerta Legal se <60% Infantil ou <75% Fundamental (Bolsa Família apenas p/ Admin) */}
                 {m.isBelowLegalThreshold && (
                   <div className="px-2.5 py-1.5 rounded-xl bg-[#ffdad6]/85 border border-[#ba1a1a]/30 text-[#93000a] text-[0.7rem] font-bold flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[14px] shrink-0">
                       warning
                     </span>
                     <span className="leading-tight">
-                      Abaixo de {m.minLegalPresencePercent}% (Alerta Busca Ativa / Bolsa Família)
+                      {userRole === 'admin'
+                        ? `Abaixo de ${m.minLegalPresencePercent}% (Alerta Busca Ativa / Bolsa Família)`
+                        : `Atenção de Frequência: Abaixo de ${m.minLegalPresencePercent}% no mês`}
                     </span>
                   </div>
                 )}
 
-                {/* Rodapé Minimalista do Card: Único Link = Ficha Informativa Escaneada no Drive + Foto */}
+                {/* Rodapé Minimalista do Card: Único Hyperlink = Ficha Informativa Escaneada em PDF do Drive (Upload de foto ocorre apenas ao clicar na foto) */}
                 <div
                   onClick={(e) => e.stopPropagation()}
                   className="pt-2 border-t border-black/[0.06] flex items-center justify-between gap-1.5 text-[0.72rem]"
@@ -946,27 +1014,16 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       <span className="material-symbols-outlined text-[15px]">
                         document_scanner
                       </span>
-                      <span>Ficha Informativa (Drive)</span>
+                      <span>Ficha Informativa Escaneada (Drive)</span>
                     </a>
                   ) : (
                     <span />
                   )}
 
-                  {onOpenPhotoModal && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenPhotoModal(student);
-                      }}
-                      title={`Subir foto para ${OFFICIAL_FOLDER_NAME}/${cleanPhotoFileName}`}
-                      className="px-2.5 py-1 rounded-xl bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">
-                        add_a_photo
-                      </span>
-                      <span>Foto</span>
-                    </button>
+                  {student.rotaOnibus && (
+                    <span className="px-2 py-0.5 rounded-lg bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.66rem] truncate max-w-[140px]">
+                      🚌 {student.rotaOnibus.split('-')[0].trim()}
+                    </span>
                   )}
                 </div>
               </div>

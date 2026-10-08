@@ -39,6 +39,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       icon: 'edit_calendar',
     },
     {
+      id: 'bolsa_familia',
+      label: 'Bolsa Família',
+      icon: 'family_restroom',
+      adminOnly: true,
+    },
+    {
+      id: 'onibus_fretado',
+      label: 'Ônibus Fretado',
+      icon: 'directions_bus',
+    },
+    {
       id: 'planilha',
       label: 'Planilha',
       icon: 'table_chart',

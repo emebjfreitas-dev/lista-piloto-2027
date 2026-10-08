@@ -201,20 +201,13 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         {/* Top Modal Header */}
         <div className="bg-[#003440] text-white p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3.5 min-w-0">
-            <div
-              onClick={() => onOpenPhotoModal && onOpenPhotoModal(draft)}
-              title="Clique para enviar foto para a pasta do Google Drive"
-              className="relative shrink-0 cursor-pointer group"
-            >
-              <StudentAvatar
-                student={draft}
-                size="lg"
-                className="w-16 h-16 ring-2 ring-[#a4f3ca] group-hover:scale-105"
-              />
-              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#005035] text-white flex items-center justify-center shadow-xs border border-white">
-                <span className="material-symbols-outlined text-[14px]">cloud_upload</span>
-              </span>
-            </div>
+            <StudentAvatar
+              student={draft}
+              size="lg"
+              expandableOnClick={true}
+              onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(draft) : undefined}
+              className="w-16 h-16 ring-2 ring-[#a4f3ca]"
+            />
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -257,17 +250,6 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 <span className="material-symbols-outlined text-[18px]">document_scanner</span>
                 <span>Ficha Informativa Escaneada (Drive)</span>
               </a>
-            )}
-            {onOpenPhotoModal && (
-              <button
-                type="button"
-                onClick={() => onOpenPhotoModal(draft)}
-                className="min-h-[42px] px-3.5 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.8rem] flex items-center gap-1.5 border border-[#a4f3ca]/50 cursor-pointer shadow-xs"
-              >
-                <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
-                <span className="hidden sm:inline">Upload Foto (Pasta Drive)</span>
-                <span className="sm:hidden">Foto Drive</span>
-              </button>
             )}
             <button
               onClick={onClose}

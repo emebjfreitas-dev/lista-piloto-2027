@@ -1,227 +1,169 @@
 @import "tailwindcss";
 
-@theme {
-  --color-primary: #003440;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #1e4b58;
-  --color-on-primary-container: #8fbac9;
-  --color-primary-fixed: #bdeafa;
-  --color-primary-fixed-dim: #a2cddd;
-  --color-on-primary-fixed: #001f27;
-  --color-on-primary-fixed-variant: #204c59;
-
-  --color-secondary: #436370;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #c3e5f4;
-  --color-on-secondary-container: #476774;
-  --color-secondary-fixed: #c6e8f7;
-  --color-secondary-fixed-dim: #aaccda;
-  --color-on-secondary-fixed: #001f29;
-  --color-on-secondary-fixed-variant: #2b4b57;
-
-  --color-tertiary: #003723;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #005035;
-  --color-on-tertiary-container: #75c39c;
-  --color-tertiary-fixed: #a4f3ca;
-  --color-tertiary-fixed-dim: #88d6af;
-  --color-on-tertiary-fixed: #002113;
-  --color-on-tertiary-fixed-variant: #005236;
-
-  --color-surface: #f5f7f6;
-  --color-surface-dim: #d9dad8;
-  --color-surface-bright: #ffffff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f1f4f3;
-  --color-surface-container: #eaeeed;
-  --color-surface-container-high: #e3e8e6;
-  --color-surface-container-highest: #dce2e0;
-
-  --color-on-surface: #0f1715;
-  --color-on-surface-variant: #374346;
-  --color-outline: #5a676b;
-  --color-outline-variant: #d4dcde;
-
-  --color-error: #ba1a1a;
-  --color-on-error: #ffffff;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
-
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Lexend', 'Plus Jakarta Sans', sans-serif;
-  --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
-}
-
 @layer base {
+  :root {
+    --ios-bg: #f2f5f8;
+    --ios-card: #ffffff;
+    --ios-border: rgba(15, 23, 42, 0.08);
+    --ios-primary: #0b3b49;
+    --ios-accent: #006644;
+    --ios-blue: #0066cc;
+    --ios-text: #0f172a;
+    --ios-subtext: #475569;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-display: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
   html {
-    scroll-behavior: smooth;
-    -webkit-tap-highlight-color: transparent;
-    text-rendering: optimizeLegibility;
+    font-family: var(--font-sans);
+    background-color: var(--ios-bg);
+    color: var(--ios-text);
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: -0.014em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
 
   body {
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f5f7f6;
-    background-image: radial-gradient(circle at 50% 0%, rgba(195, 229, 244, 0.22) 0%, rgba(245, 247, 246, 0) 65%);
+    background-color: var(--ios-bg);
+    background-image:
+      radial-gradient(at 0% 0%, rgba(11, 59, 73, 0.04) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(0, 102, 68, 0.04) 0px, transparent 50%);
     background-attachment: fixed;
-    color: #0f1715;
-    line-height: 1.5;
-    letter-spacing: -0.011em;
+    color: var(--ios-text);
+    overflow-x: hidden;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.026em;
+  }
+
+  .font-mono, .tabular-nums {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
-  h1, h2, h3, h4 {
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Plus Jakarta Sans', sans-serif;
-    letter-spacing: -0.024em;
-    line-height: 1.22;
-    text-wrap: balance;
-  }
-
-  code, pre, .font-mono {
-    font-family: 'SF Mono', ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, Monaco, monospace;
-    font-variant-numeric: tabular-nums;
-  }
-
-  button, select, input, a {
-    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
+  /* Focus ring for keyboard & mouse clarity */
   button:focus-visible,
-  select:focus-visible,
   input:focus-visible,
-  a:focus-visible {
-    outline: 2px solid #005035;
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2.5px solid #006644;
     outline-offset: 2px;
   }
 }
 
-/* Scrollbar elegante e discreta para tabelas e listas */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 550, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
 }
 
-::-webkit-scrollbar-track {
-  background: #eff2f1;
-  border-radius: 9999px;
+.material-symbols-filled {
+  font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #b8c5c8;
-  border-radius: 9999px;
+/* iOS Apple Translucent Glass */
+.glass-header {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #003440;
+.glass-nav {
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: saturate(190%) blur(24px);
+  -webkit-backdrop-filter: saturate(190%) blur(24px);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-/* Estilo de Hyperlink de Documento PDF Nominal */
-.doc-hyperlink {
-  color: #003440;
-  text-decoration: underline;
-  text-decoration-color: rgba(0, 80, 53, 0.35);
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1.5px;
-  transition: color 160ms cubic-bezier(0.16, 1, 0.3, 1),
-              text-decoration-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.doc-hyperlink:hover {
-  color: #005035;
-  text-decoration-color: #005035;
-}
-
-/* Animação levíssima e acolhedora para transições de tela e cartões */
-@keyframes gentleFadeUp {
-  0% {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-gentle-fade {
-  animation: gentleFadeUp 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Superfície institucional coesa e refinada padrão Apple iOS 18 */
-.card-welcoming {
-  border-color: rgba(0, 52, 64, 0.08);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 8px 24px -6px rgba(0, 31, 39, 0.045);
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
-              background-color 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.card-welcoming:hover {
-  transform: translateY(-1px);
-  border-color: rgba(0, 52, 64, 0.18);
-  box-shadow: 0 14px 32px -10px rgba(0, 52, 64, 0.09), 0 2px 6px -1px rgba(0, 52, 64, 0.04);
-}
-
-/* Segmented Control Nativo Apple iOS */
+/* iOS Segmented Control */
 .ios-segmented {
-  background-color: rgba(118, 118, 128, 0.11);
+  background: rgba(118, 118, 128, 0.11);
   padding: 3px;
-  border-radius: 12px;
+  border-radius: 13px;
   display: inline-flex;
   align-items: center;
   gap: 2px;
 }
 
 .ios-segmented-item {
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 6px 12px;
   font-size: 0.78rem;
-  font-weight: 600;
-  color: #3c3c43;
-  transition: all 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  color: #475569;
   cursor: pointer;
-  user-select: none;
+}
+
+.ios-segmented-item:hover {
+  color: #0f172a;
 }
 
 .ios-segmented-item-active {
-  background-color: #ffffff;
-  color: #003440;
-  font-weight: 700;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
+  background: #ffffff;
+  color: #0b3b49;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
-/* Superfície Translúcida Vibrante iOS */
-.ios-glass {
-  background: rgba(255, 255, 255, 0.84);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+/* iOS Card Surface */
+.card-welcoming {
+  border-radius: 22px;
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    0 6px 18px -4px rgba(15, 23, 42, 0.05);
 }
 
-.pb-safe {
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
-}
-.pt-safe {
-  padding-top: max(env(safe-area-inset-top, 0px), 12px);
-}
-
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-smoothing: antialiased;
+.card-welcoming:hover {
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.06),
+    0 14px 28px -6px rgba(15, 23, 42, 0.08);
 }
 
+/* Hyperlink style for student scanned PDF document in Google Drive */
+.doc-hyperlink {
+  color: #0b3b49;
+  text-decoration: none;
+  transition: all 0.16s ease;
+}
+
+.doc-hyperlink:hover {
+  color: #006644;
+}
+
+/* Smooth fade-in for screen transitions */
+@keyframes gentleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-gentle-fade {
+  animation: gentleFadeIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+  }
+}

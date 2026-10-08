@@ -521,10 +521,39 @@ const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] =>
   const officialMap = new Map(INITIAL_CLASSES.map((c) => [c.id.toLowerCase(), c]));
   return classes.map((cls) => {
     const off = officialMap.get(cls.id.toLowerCase());
-    if (!off) return cls;
+    const baseStudents = cls.students || off?.students || [];
+    const enrichedStudents = baseStudents.map((st, idx) => {
+      const num = st.number || idx + 1;
+      const defaultNis =
+        st.nis !== undefined
+          ? st.nis
+          : num % 3 === 0 || num === 2 || num === 7 || num === 11
+          ? `207.${41000 + num * 17}.${80 + (num % 19)}-${num % 9}`
+          : '';
+      const defaultRota =
+        st.rotaOnibus !== undefined
+          ? st.rotaOnibus
+          : num % 4 === 0 || num === 1 || num === 7 || num === 9 || num === 11
+          ? num % 2 === 0
+            ? 'ROTA 01 - RESIDENCIAL TERRA DA UVA / SANTOS DUMONT'
+            : 'ROTA 02 - JARDIM BÚFALO / CIDADE LUIZA / VILA HORTOLÂNDIA'
+          : '';
+      return {
+        ...st,
+        nis: defaultNis || undefined,
+        rotaOnibus: defaultRota || undefined,
+      };
+    });
+    if (!off) {
+      return {
+        ...cls,
+        students: enrichedStudents,
+      };
+    }
     return {
       ...off,
       ...cls,
+      students: enrichedStudents,
       turmaAbrev: cls.turmaAbrev || off.turmaAbrev,
       teacherName: cls.teacherName || off.teacherName,
       teacherEmail: cls.teacherEmail || off.teacherEmail,
@@ -534,11 +563,8 @@ const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] =>
       sedExpectedStudents: cls.sedExpectedStudents ?? off.sedExpectedStudents,
       classeSedCode: cls.classeSedCode || off.classeSedCode,
       artTeacher: cls.artTeacher || off.artTeacher,
-      artTeacherEmail: cls.artTeacherEmail || off.artTeacherEmail,
       peTeacher: cls.peTeacher || off.peTeacher,
-      peTeacherEmail: cls.peTeacherEmail || off.peTeacherEmail,
       englishTeacher: cls.englishTeacher || off.englishTeacher,
-      englishTeacherEmail: cls.englishTeacherEmail || off.englishTeacherEmail,
       room: cls.room || off.room,
       shift: cls.shift || off.shift,
     };

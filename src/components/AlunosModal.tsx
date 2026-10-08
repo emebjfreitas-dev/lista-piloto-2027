@@ -180,7 +180,12 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
                 {/* Avatar + Name + Ficha Informativa Escaneada (Drive) */}
                 <div className="flex items-center gap-3.5 bg-white p-3.5 rounded-2xl border border-[#b4c0c4]">
-                  <StudentAvatar student={selectedStudent} size="lg" />
+                  <StudentAvatar
+                    student={selectedStudent}
+                    size="lg"
+                    expandableOnClick={true}
+                    onUploadPhotoClick={() => onOpenPhotoModal(selectedStudent)}
+                  />
                   <div className="min-w-0 flex-1">
                     <h4 className="text-[1.12rem] font-extrabold text-[#003440] leading-tight block">
                       {selectedStudent.name}
@@ -209,15 +214,6 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                           <span>Ficha Informativa Escaneada (Drive)</span>
                         </a>
                       )}
-
-                      <button
-                        type="button"
-                        onClick={() => onOpenPhotoModal(selectedStudent)}
-                        className="px-3 py-1.5 bg-[#005035] hover:bg-[#003723] text-white rounded-xl text-[0.75rem] font-black flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
-                        <span>Upload Foto (Pasta Drive)</span>
-                      </button>
 
                       {onOpenStudentGrid && (
                         <button

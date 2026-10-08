@@ -48,6 +48,7 @@ import { DiasLetivosScreen } from './components/DiasLetivosScreen';
 import { ResumoMensalScreen } from './components/ResumoMensalScreen';
 import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
 import { UsuariosAcessoScreen } from './components/UsuariosAcessoScreen';
+import { ListasNominaisScreen } from './components/ListasNominaisScreen';
 import { NovaTurmaModal } from './components/NovaTurmaModal';
 import { AlunosModal } from './components/AlunosModal';
 import { RelatorioImpressaoModal } from './components/RelatorioImpressaoModal';
@@ -664,6 +665,8 @@ export default function App() {
     if (
       currentScreen === 'frequencia_mensal' ||
       currentScreen === 'detalhes' ||
+      currentScreen === 'bolsa_familia' ||
+      currentScreen === 'onibus_fretado' ||
       currentScreen === 'dias_letivos' ||
       currentScreen === 'planilha' ||
       currentScreen === 'usuarios_acesso'
@@ -756,6 +759,8 @@ export default function App() {
       turmas: '1. Turmas',
       detalhes: 'Detalhes da Turma',
       frequencia_mensal: '2. Lançar Faltas',
+      bolsa_familia: 'Bolsa Família (Nominal)',
+      onibus_fretado: 'Ônibus Fretado (Nominal)',
       planilha: '3. Planilha & Fotos',
       dias_letivos: '4. 200 Dias',
       usuarios_acesso: '5. Acessos',
@@ -954,6 +959,10 @@ export default function App() {
             ? `${selectedClass.name}`
             : currentScreen === 'detalhes'
             ? `Turma ${selectedClass.name}`
+            : currentScreen === 'bolsa_familia'
+            ? 'Relatório Nominal • Bolsa Família'
+            : currentScreen === 'onibus_fretado'
+            ? 'Lista Nominal • Ônibus Fretado'
             : currentScreen === 'dias_letivos'
             ? 'Dias Letivos SME'
             : currentScreen === 'resumo'
@@ -988,7 +997,10 @@ export default function App() {
         onChangeScreen={(screen) => {
           if (
             userRole !== 'admin' &&
-            (screen === 'planilha' || screen === 'dias_letivos' || screen === 'usuarios_acesso')
+            (screen === 'bolsa_familia' ||
+              screen === 'planilha' ||
+              screen === 'dias_letivos' ||
+              screen === 'usuarios_acesso')
           ) {
             return;
           }
@@ -1142,10 +1154,52 @@ export default function App() {
                 diasLetivosMes: selectedClass.classesHeld || 20,
               })
             }
+            onNavigateToBolsaFamilia={() => {
+              if (userRole === 'admin') {
+                setCurrentScreen('bolsa_familia');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            onNavigateToOnibusFretado={() => {
+              setCurrentScreen('onibus_fretado');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             onNavigateToSheet={() => setCurrentScreen('planilha')}
             onBackToClasses={() => {
               if (userRole === 'usuario') return;
               setCurrentScreen('turmas');
+            }}
+          />
+        )}
+
+        {(currentScreen === 'bolsa_familia' || currentScreen === 'onibus_fretado') && (
+          <ListasNominaisScreen
+            mode={currentScreen === 'bolsa_familia' ? 'bolsa_familia' : 'onibus_fretado'}
+            classes={userRole === 'admin' ? classes : visibleClasses}
+            userRole={userRole}
+            onSwitchMode={(newMode) => {
+              if (newMode === 'bolsa_familia' && userRole !== 'admin') return;
+              setCurrentScreen(newMode);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onOpenStudentPdf={(student, className) =>
+              setPdfModalData({ student, className })
+            }
+            onOpenStudentGrid={(student, classId, className, diasLetivosMes) =>
+              setGridModalData({
+                student,
+                classId,
+                className,
+                diasLetivosMes,
+              })
+            }
+            onOpenPhotoModal={(student, classId) => {
+              const targetClass = classes.find((c) => c.id === classId);
+              if (targetClass) setSelectedClass(targetClass);
+              setPhotoModalStudent(student);
+            }}
+            onUpdateStudentInClass={(classId, updatedStudent) => {
+              handleSaveSingleStudent(classId, updatedStudent);
             }}
           />
         )}

@@ -353,23 +353,23 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             Dados de {months[currentMonthIndex]} registrados e sincronizados na Planilha Google!
           </span>
           <span className="text-[0.8rem] text-[#436370] block">
-            Atualizado às {lastSavedTime} por Profª Maria Helena
+            Turma {currentClass.name} ({currentClass.room} • Classe SED {currentClass.classeSedCode || '—'}) • Regente: {currentClass.pronoun || 'PROFESSORA'} {currentClass.teacherName || 'Docente Regente'} ({lastSavedTime})
           </span>
         </div>
       </div>
 
-      {/* Action Buttons: PDF & Google Sheet */}
-      <div className="space-y-2.5 pt-1">
-        <button
-          onClick={onOpenReportPrint}
-          type="button"
-          className="w-full min-h-[56px] px-6 rounded-xl bg-[#e7e8e6] hover:bg-[#c3e5f4] text-[#003440] font-bold text-[0.95rem] flex items-center justify-center gap-2.5 shadow-sm transition-transform active:scale-[0.98] cursor-pointer border border-[#c0c8cb]/60"
-        >
-          <span className="material-symbols-outlined text-[26px] text-[#003440]">picture_as_pdf</span>
-          <span>Baixar Relatório do Mês em PDF grande para imprimir</span>
-        </button>
+      {/* Action Buttons: Relatório Bolsa Família & Planilha Google (Exclusivo Admin) */}
+      {userRole === 'admin' && (
+        <div className="space-y-2.5 pt-1">
+          <button
+            onClick={onOpenReportPrint}
+            type="button"
+            className="w-full min-h-[56px] px-6 rounded-xl bg-[#e7e8e6] hover:bg-[#c3e5f4] text-[#003440] font-bold text-[0.95rem] flex items-center justify-center gap-2.5 shadow-sm transition-transform active:scale-[0.98] cursor-pointer border border-[#c0c8cb]/60"
+          >
+            <span className="material-symbols-outlined text-[26px] text-[#003440]">assessment</span>
+            <span>Abrir Relatório Oficial do Bolsa Família / Fechamento (Exclusivo Admin)</span>
+          </button>
 
-        {userRole === 'admin' && (
           <button
             onClick={onNavigateToSheet}
             type="button"
@@ -378,8 +378,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <span className="material-symbols-outlined text-[24px]">table_chart</span>
             <span>Conferir Dados no Banco da Planilha Google</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

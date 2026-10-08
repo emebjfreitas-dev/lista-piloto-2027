@@ -65,12 +65,25 @@ const DRIVE_FICHAS_PDF_ID_KEY = 'emeb_candelario_drive_fichas_pdf_folder_id_2027
 
 export const OFFICIAL_FOLDER_NAME =
   'Fotos_Alunos_EMEB_Joaquim_Candelario_Freitas_2027';
+export const OFFICIAL_FICHAS_PDF_FOLDER_NAME = 'Fichas Informativas';
 export const OFFICIAL_FICHAS_PDF_FOLDER_ID =
   '1GDEdQuNfhc0vps4mZXv4LLv4kDLZnauJ';
 export const OFFICIAL_FICHAS_PDF_FOLDER_URL =
   `https://drive.google.com/drive/folders/${OFFICIAL_FICHAS_PDF_FOLDER_ID}`;
 export const OFFICIAL_SPREADSHEET_TITLE =
   'BD_Oficial_SED_EMEB_Joaquim_Candelario_2027';
+
+export const extractDriveFileOrFolderId = (input: string): string => {
+  if (!input) return '';
+  const trimmed = input.trim();
+  const fileMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+  if (fileMatch && fileMatch[1]) return fileMatch[1];
+  const folderMatch = trimmed.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+  if (folderMatch && folderMatch[1]) return folderMatch[1];
+  const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+  if (idMatch && idMatch[1]) return idMatch[1];
+  return trimmed;
+};
 
 export const DEFAULT_DRIVE_PHOTOS_FOLDER_URL =
   'https://drive.google.com/drive/my-drive';
