@@ -16,7 +16,14 @@ import { StudentAvatar } from './StudentAvatar';
 import { OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 
 type ViewMode = 'grid' | 'compact' | 'table';
-type StatusFilter = 'all' | 'ativos' | 'movimentados' | 'onibus_fretado' | 'bolsa_familia' | 'alerta';
+type StatusFilter =
+  | 'all'
+  | 'ativos'
+  | 'sem_ficha_pdf'
+  | 'movimentados'
+  | 'onibus_fretado'
+  | 'bolsa_familia'
+  | 'alerta';
 
 interface DetalhesTurmaScreenProps {
   classGroup: ClassGroup;
@@ -33,10 +40,10 @@ interface DetalhesTurmaScreenProps {
   onOpenStudentGrid?: (student: Student) => void;
   onOpenPhotoModal?: (student: Student) => void;
   onOpenStudentPdf?: (student: Student) => void;
+  onNavigateToBolsaFamilia?: () => void;
+  onNavigateToOnibusFretado?: () => void;
   onNavigateToSheet: () => void;
   onBackToClasses: () => void;
-  onOpenBolsaFamiliaTab?: () => void;
-  onOpenOnibusFretadoTab?: () => void;
 }
 
 export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
@@ -48,9 +55,9 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   onOpenStudentGrid,
   onOpenPhotoModal,
   onOpenStudentPdf,
+  onNavigateToBolsaFamilia,
+  onNavigateToOnibusFretado,
   onBackToClasses,
-  onOpenBolsaFamiliaTab,
-  onOpenOnibusFretadoTab,
 }) => {
   const [searchStudent, setSearchStudent] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -152,6 +159,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     let alertaLegalCount = 0;
     let bolsaFamiliaCount = 0;
     let onibusFretadoCount = 0;
+    let semFichaEscaneadaCount = 0;
+    let comFichaEscaneadaCount = 0;
     let somaDiasMatriculados = 0;
     let somaPresencas = 0;
     let somaFaltas = 0;
@@ -174,6 +183,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       if (s.deficiencia && s.deficiencia.trim().length > 0) pcdCount++;
       if (s.nis && s.nis.trim().length > 0) bolsaFamiliaCount++;
       if (s.rotaOnibus && s.rotaOnibus.trim().length > 0) onibusFretadoCount++;
+
+      const hasScannedPdf = Boolean(
+        (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
+          (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
+      );
+      if (hasScannedPdf) comFichaEscaneadaCount++;
+      else semFichaEscaneadaCount++;
 
       const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
       if (m.isBelowLegalThreshold) alertaLegalCount++;
@@ -204,6 +220,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       alertaLegalCount,
       bolsaFamiliaCount,
       onibusFretadoCount,
+      semFichaEscaneadaCount,
+      comFichaEscaneadaCount,
       somaDiasMatriculados,
       somaPresencas,
       somaFaltas,
@@ -234,7 +252,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         sit.includes('REMAN') ||
         sit.includes('RM');
 
+      const hasScannedPdf = Boolean(
+        (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
+          (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
+      );
+
       if (statusFilter === 'ativos') return !isMov;
+      if (statusFilter === 'sem_ficha_pdf') return !hasScannedPdf;
       if (statusFilter === 'movimentados') return isMov;
       if (statusFilter === 'onibus_fretado') {
         return Boolean(s.rotaOnibus && s.rotaOnibus.trim().length > 0);
@@ -318,10 +342,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
           {/* Botões superiores discretos estilo iOS */}
           <div className="flex flex-wrap items-center gap-2">
-            {onOpenOnibusFretadoTab && (
+            {onNavigateToOnibusFretado && (
               <button
                 type="button"
-                onClick={onOpenOnibusFretadoTab}
+                onClick={onNavigateToOnibusFretado}
                 className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f0f9ff] hover:bg-[#e0f2fe] text-[#0369a1] border border-[#0284c7]/20 font-bold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
               >
                 <span className="material-symbols-outlined text-[18px]">directions_bus</span>
@@ -329,10 +353,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               </button>
             )}
 
-            {userRole === 'admin' && onOpenBolsaFamiliaTab && (
+            {userRole === 'admin' && onNavigateToBolsaFamilia && (
               <button
                 type="button"
-                onClick={onOpenBolsaFamiliaTab}
+                onClick={onNavigateToBolsaFamilia}
                 className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e] border border-[#f59e0b]/30 font-bold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
               >
                 <span className="material-symbols-outlined text-[18px]">family_restroom</span>
@@ -577,21 +601,73 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             </div>
           </div>
 
-          {/* 8. Atestados & Educação Especial */}
-          <div className="bg-[#f4f7f6] rounded-2xl p-3 border border-black/[0.05]">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#436370] block">
-              Atestados · AEE
+          {/* 8. Fichas Escaneadas & AEE */}
+          <div
+            onClick={() =>
+              classSummary.semFichaEscaneadaCount > 0 && setStatusFilter('sem_ficha_pdf')
+            }
+            className={`rounded-2xl p-3 border transition-colors ${
+              classSummary.semFichaEscaneadaCount > 0
+                ? 'bg-[#fff1f2] border-[#e11d48]/35 cursor-pointer hover:bg-[#ffe4e6]'
+                : 'bg-[#f4f7f6] border-black/[0.05]'
+            }`}
+          >
+            <span
+              className={`text-[0.66rem] font-bold uppercase tracking-wider block ${
+                classSummary.semFichaEscaneadaCount > 0 ? 'text-[#be123c]' : 'text-[#436370]'
+              }`}
+            >
+              {classSummary.semFichaEscaneadaCount > 0
+                ? '⚠️ Sem Ficha PDF'
+                : 'Fichas PDF OK'}
             </span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[1.35rem] font-extrabold text-[#003440] tabular-nums">
-                {classSummary.somaAtestados}
+              <span
+                className={`text-[1.35rem] font-extrabold tabular-nums ${
+                  classSummary.semFichaEscaneadaCount > 0 ? 'text-[#be123c]' : 'text-[#005035]'
+                }`}
+              >
+                {classSummary.semFichaEscaneadaCount}
               </span>
-              <span className="text-[0.7rem] font-semibold text-[#005035]">
-                at. · {classSummary.pcdCount} AEE
+              <span className="text-[0.7rem] font-semibold text-[#5a676b]">
+                pend. · {classSummary.comFichaEscaneadaCount} ok
               </span>
             </div>
           </div>
         </div>
+
+        {/* Banner de Alerta Nominal: Estudantes sem Ficha Informativa Escaneada (PDF no Drive) */}
+        {classSummary.semFichaEscaneadaCount > 0 && (
+          <div className="mt-2 rounded-2xl bg-[#fff1f2] border-2 border-[#e11d48]/40 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-[22px] text-[#be123c] animate-pulse shrink-0">
+                notification_important
+              </span>
+              <p className="text-[0.82rem] font-bold text-[#881337] leading-snug">
+                <strong>ALERTA DE DOCUMENTAÇÃO:</strong> Esta turma possui{' '}
+                <strong className="underline">
+                  {classSummary.semFichaEscaneadaCount} estudante(s)
+                </strong>{' '}
+                sem a <strong>Ficha Informativa Escaneada (PDF)</strong> vinculada no Google
+                Drive. Clique no alerta de cada card para vincular o documento.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')
+              }
+              className="px-3 py-1.5 rounded-xl bg-[#be123c] hover:bg-[#9f1239] text-white font-extrabold text-[0.75rem] flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">filter_alt</span>
+              <span>
+                {statusFilter === 'sem_ficha_pdf'
+                  ? 'Mostrar Todos da Turma'
+                  : `Filtrar Sem Ficha (${classSummary.semFichaEscaneadaCount})`}
+              </span>
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Barra de Controles iOS: Busca + Filtros de Situação + Múltiplas Opções de Visualização */}
@@ -640,6 +716,20 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             >
               Ativos ({classSummary.ativos})
             </button>
+            {classSummary.semFichaEscaneadaCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter('sem_ficha_pdf')}
+                className={`ios-segmented-item flex items-center gap-1 ${
+                  statusFilter === 'sem_ficha_pdf'
+                    ? 'bg-[#be123c] text-white font-extrabold shadow-xs'
+                    : 'text-[#be123c] font-extrabold'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[14px]">warning</span>
+                <span>Sem Ficha PDF ({classSummary.semFichaEscaneadaCount})</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setStatusFilter('onibus_fretado')}
@@ -990,6 +1080,31 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 )}
 
+                {/* Alerta de Notificação se NÃO tiver Ficha Informativa Escaneada no Drive */}
+                {!(
+                  (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+                  (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+                ) && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onOpenStudentPdf) onOpenStudentPdf(student);
+                    }}
+                    title="Clique para vincular a Ficha Informativa Escaneada em PDF no Google Drive"
+                    className="px-2.5 py-1.5 rounded-xl bg-[#fff1f2] border border-[#e11d48]/45 text-[#be123c] text-[0.7rem] font-extrabold flex items-center justify-between gap-1.5 shadow-2xs hover:bg-[#ffe4e6] transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5 leading-tight">
+                      <span className="material-symbols-outlined text-[15px] shrink-0 animate-pulse">
+                        notification_important
+                      </span>
+                      <span>ALERTA: Sem Ficha Informativa Escaneada</span>
+                    </span>
+                    <span className="text-[0.63rem] uppercase bg-[#be123c] text-white px-1.5 py-0.5 rounded font-black shrink-0">
+                      Vincular
+                    </span>
+                  </div>
+                )}
+
                 {/* Rodapé Minimalista do Card: Único Hyperlink = Ficha Informativa Escaneada em PDF do Drive (Upload de foto ocorre apenas ao clicar na foto) */}
                 <div
                   onClick={(e) => e.stopPropagation()}
@@ -1009,12 +1124,31 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         onOpenStudentPdf(student);
                       }}
                       title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                      className="doc-hyperlink px-2.5 py-1 rounded-xl bg-white/95 hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      className={`doc-hyperlink px-2.5 py-1 rounded-xl font-extrabold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                        (student.fichaPdfDriveUrl &&
+                          student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId &&
+                          student.fichaPdfDriveId.trim().length > 0)
+                          ? 'bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white border border-[#005035]/25'
+                          : 'bg-[#fff1f2] hover:bg-[#be123c] text-[#be123c] hover:!text-white border border-[#e11d48]/40'
+                      }`}
                     >
                       <span className="material-symbols-outlined text-[15px]">
-                        document_scanner
+                        {(student.fichaPdfDriveUrl &&
+                          student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId &&
+                          student.fichaPdfDriveId.trim().length > 0)
+                          ? 'document_scanner'
+                          : 'warning'}
                       </span>
-                      <span>Ficha Informativa Escaneada (Drive)</span>
+                      <span>
+                        {(student.fichaPdfDriveUrl &&
+                          student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId &&
+                          student.fichaPdfDriveId.trim().length > 0)
+                          ? 'Ficha Informativa Escaneada (Drive)'
+                          : '⚠️ Sem Ficha Escaneada (Vincular PDF)'}
+                      </span>
                     </a>
                   ) : (
                     <span />
@@ -1135,12 +1269,31 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         onOpenStudentPdf(student);
                       }}
                       title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                      className="doc-hyperlink px-2.5 py-1 rounded-xl bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold text-[0.72rem] flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                      className={`doc-hyperlink px-2.5 py-1 rounded-xl font-extrabold text-[0.72rem] flex items-center gap-1 cursor-pointer transition-colors shrink-0 ${
+                        (student.fichaPdfDriveUrl &&
+                          student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId &&
+                          student.fichaPdfDriveId.trim().length > 0)
+                          ? 'bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white border border-[#005035]/25'
+                          : 'bg-[#fff1f2] hover:bg-[#be123c] text-[#be123c] hover:!text-white border border-[#e11d48]/40'
+                      }`}
                     >
                       <span className="material-symbols-outlined text-[14px]">
-                        document_scanner
+                        {(student.fichaPdfDriveUrl &&
+                          student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId &&
+                          student.fichaPdfDriveId.trim().length > 0)
+                          ? 'document_scanner'
+                          : 'notification_important'}
                       </span>
-                      <span>Ficha Informativa (Drive)</span>
+                      <span>
+                        {(student.fichaPdfDriveUrl &&
+                          student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId &&
+                          student.fichaPdfDriveId.trim().length > 0)
+                          ? 'Ficha Informativa (Drive)'
+                          : '⚠️ ALERTA: Sem Ficha PDF'}
+                      </span>
                     </a>
                   )}
                   <div className="flex items-center gap-2 font-mono text-[0.76rem] tabular-nums">

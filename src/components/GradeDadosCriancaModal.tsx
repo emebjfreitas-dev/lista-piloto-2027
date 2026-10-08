@@ -245,10 +245,25 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   e.preventDefault();
                   onOpenStudentPdf(draft);
                 }}
-                className="min-h-[42px] px-3.5 rounded-xl bg-[#a4f3ca] hover:bg-[#8be8b8] text-[#003440] font-black text-[0.82rem] flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className={`min-h-[42px] px-3.5 rounded-xl font-black text-[0.82rem] flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                  (draft.fichaPdfDriveUrl && draft.fichaPdfDriveUrl.trim().length > 0) ||
+                  (draft.fichaPdfDriveId && draft.fichaPdfDriveId.trim().length > 0)
+                    ? 'bg-[#a4f3ca] hover:bg-[#8be8b8] text-[#003440]'
+                    : 'bg-[#ffe4e6] hover:bg-[#fecdd3] text-[#be123c] border border-[#e11d48]/50'
+                }`}
               >
-                <span className="material-symbols-outlined text-[18px]">document_scanner</span>
-                <span>Ficha Informativa Escaneada (Drive)</span>
+                <span className="material-symbols-outlined text-[18px]">
+                  {(draft.fichaPdfDriveUrl && draft.fichaPdfDriveUrl.trim().length > 0) ||
+                  (draft.fichaPdfDriveId && draft.fichaPdfDriveId.trim().length > 0)
+                    ? 'document_scanner'
+                    : 'notification_important'}
+                </span>
+                <span>
+                  {(draft.fichaPdfDriveUrl && draft.fichaPdfDriveUrl.trim().length > 0) ||
+                  (draft.fichaPdfDriveId && draft.fichaPdfDriveId.trim().length > 0)
+                    ? 'Ficha Informativa Escaneada (Drive)'
+                    : '⚠️ ALERTA: Sem Ficha Escaneada (Vincular PDF)'}
+                </span>
               </a>
             )}
             <button

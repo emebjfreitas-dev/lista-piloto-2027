@@ -60,8 +60,8 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="fixed top-0 w-full z-50 pt-safe bg-white/92 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,31,39,0.05),0_8px_24px_-6px_rgba(0,52,64,0.06)] border-b border-[#003440]/10">
-      <div className="h-[76px] px-3.5 sm:px-5 lg:px-8 xl:px-10 max-w-2xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto flex items-center justify-between gap-3">
+    <header className="fixed top-0 w-full z-50 pt-safe ios-glass-top">
+      <div className="h-[74px] px-3.5 sm:px-5 lg:px-8 xl:px-10 max-w-2xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto flex items-center justify-between gap-3">
         {/* Left slot: Official Brasão de Jundiaí always visible */}
         <div className="flex items-center gap-2.5 min-w-0">
           {showBackButton && (

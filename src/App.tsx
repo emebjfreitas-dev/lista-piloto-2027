@@ -950,7 +950,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] text-[#191c1b] flex flex-col font-sans selection:bg-[#c3e5f4] selection:text-[#001f29]">
+    <div className="min-h-screen bg-[#f0f2f5] text-[#111b21] flex flex-col font-sans selection:bg-[#d1f4e0] selection:text-[#003440]">
       {/* Top Minimalist Header */}
       <Header
         currentScreen={currentScreen}

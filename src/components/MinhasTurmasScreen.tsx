@@ -48,6 +48,32 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
     [classes]
   );
 
+  // Alerta Geral: Estudantes sem Ficha Informativa Escaneada (PDF no Drive)
+  const missingScannedFichasSummary = useMemo(() => {
+    let totalMissing = 0;
+    let totalStudentsCount = 0;
+    let classesWithMissing = 0;
+    classes.forEach((cls) => {
+      if (userRole === 'usuario' && !assignedClassIds.includes(cls.id) && cls.id !== assignedClassId) {
+        return;
+      }
+      let classMissing = 0;
+      cls.students.forEach((s) => {
+        totalStudentsCount++;
+        const hasPdf = Boolean(
+          (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
+            (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
+        );
+        if (!hasPdf) {
+          totalMissing++;
+          classMissing++;
+        }
+      });
+      if (classMissing > 0) classesWithMissing++;
+    });
+    return { totalMissing, totalStudentsCount, classesWithMissing };
+  }, [classes, userRole, assignedClassIds, assignedClassId]);
+
   // Flexible search for senior teachers (supports G4, Grupo 04, 1A, 1º Ano A, Teacher name, SED code, Specialist)
   const cleanSearch = searchTerm.toLowerCase().replace(/[^a-z0-9]/g, '');
   const rawSearchLower = searchTerm.toLowerCase().trim();
@@ -267,6 +293,32 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         )}
       </div>
 
+      {/* Alerta Geral de Fichas Informativas Escaneadas Pendentes */}
+      {missingScannedFichasSummary.totalMissing > 0 && (
+        <div className="rounded-2xl p-4 bg-[#fff1f2] border-2 border-[#e11d48]/40 text-[#9f1239] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#be123c] text-white flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[22px] animate-pulse">
+                notification_important
+              </span>
+            </div>
+            <div>
+              <p className="font-black text-[0.94rem] text-[#881337] flex items-center gap-1.5">
+                <span>ALERTA DE DOCUMENTAÇÃO: Estudantes sem Ficha Informativa Escaneada</span>
+              </p>
+              <p className="text-[0.8rem] font-semibold text-[#9f1239] mt-0.5">
+                Existem <strong>{missingScannedFichasSummary.totalMissing}</strong> estudante(s) em{' '}
+                <strong>{missingScannedFichasSummary.classesWithMissing}</strong> turma(s) sem o PDF
+                escaneado vinculado no Google Drive. Acesse a turma para conferir os alertas nominais.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1.5 rounded-xl bg-[#be123c] text-white font-mono font-extrabold text-[0.78rem] shrink-0 self-start sm:self-center">
+            ⚠️ {missingScannedFichasSummary.totalMissing} Sem Ficha Escaneada
+          </span>
+        </div>
+      )}
+
       {/* Big Shift Selector & Search: Stacked on Mobile, Side-by-Side on PC 1920x1080 */}
       {userRole !== 'usuario' && (
         <div className="space-y-3 xl:space-y-0 xl:grid xl:grid-cols-12 xl:gap-4 xl:items-center">
@@ -396,12 +448,30 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                         {cls.teacherPronoun || 'PROFESSORA'}: {cls.teacherName}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 mt-1 text-[0.76rem] font-bold text-[#374346] tabular-nums">
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[0.76rem] font-bold text-[#374346] tabular-nums">
                       <span>{cls.totalStudents} estudantes</span>
                       <span aria-hidden="true" className="text-[#a8b5b9]">·</span>
                       <span className={cls.monthlyAbsences > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}>
                         {cls.monthlyAbsences} faltas no mês
                       </span>
+                      {(() => {
+                        const missingCount = cls.students.filter(
+                          (s) =>
+                            !(
+                              (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
+                              (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
+                            )
+                        ).length;
+                        if (missingCount === 0) return null;
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#fff1f2] border border-[#e11d48]/40 text-[#be123c] text-[0.68rem] font-extrabold">
+                            <span className="material-symbols-outlined text-[13px]">
+                              notification_important
+                            </span>
+                            <span>{missingCount} sem ficha PDF</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

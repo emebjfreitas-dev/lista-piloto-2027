@@ -685,12 +685,31 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                             onOpenStudentPdf(student);
                           }}
                           title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                          className="doc-hyperlink px-2 py-0.5 rounded-lg bg-white hover:bg-[#0b3b49] text-[#0b3b49] hover:!text-white border border-black/[0.08] font-bold text-[0.68rem] flex items-center gap-1 cursor-pointer transition-colors"
+                          className={`doc-hyperlink px-2 py-0.5 rounded-lg font-bold text-[0.68rem] flex items-center gap-1 cursor-pointer transition-colors ${
+                            (student.fichaPdfDriveUrl &&
+                              student.fichaPdfDriveUrl.trim().length > 0) ||
+                            (student.fichaPdfDriveId &&
+                              student.fichaPdfDriveId.trim().length > 0)
+                              ? 'bg-[#eaf6ef] hover:bg-[#006644] text-[#006644] hover:!text-white border border-[#006644]/25'
+                              : 'bg-[#fff1f2] hover:bg-[#be123c] text-[#be123c] hover:!text-white border border-[#e11d48]/40'
+                          }`}
                         >
                           <span className="material-symbols-outlined text-[13px]">
-                            document_scanner
+                            {(student.fichaPdfDriveUrl &&
+                              student.fichaPdfDriveUrl.trim().length > 0) ||
+                            (student.fichaPdfDriveId &&
+                              student.fichaPdfDriveId.trim().length > 0)
+                              ? 'document_scanner'
+                              : 'notification_important'}
                           </span>
-                          <span>Ficha (Drive)</span>
+                          <span>
+                            {(student.fichaPdfDriveUrl &&
+                              student.fichaPdfDriveUrl.trim().length > 0) ||
+                            (student.fichaPdfDriveId &&
+                              student.fichaPdfDriveId.trim().length > 0)
+                              ? 'Ficha (Drive)'
+                              : '⚠️ Sem Ficha PDF'}
+                          </span>
                         </a>
                       )}
                     </div>

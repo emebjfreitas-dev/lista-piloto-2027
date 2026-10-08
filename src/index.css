@@ -2,26 +2,40 @@
 
 @layer base {
   :root {
-    --ios-bg: #f2f5f8;
-    --ios-card: #ffffff;
-    --ios-border: rgba(15, 23, 42, 0.08);
-    --ios-primary: #0b3b49;
-    --ios-accent: #006644;
-    --ios-blue: #0066cc;
-    --ios-text: #0f172a;
-    --ios-subtext: #475569;
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Plus Jakarta Sans', system-ui, sans-serif;
-    --font-display: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    /* Apple iOS 18 + WhatsApp Desktop Hybrid Design Tokens */
+    --ios-bg: #f0f2f5;
+    --ios-surface: #ffffff;
+    --ios-grouped-bg: #f7f8fa;
+    --ios-border: rgba(17, 27, 33, 0.08);
+    --ios-divider: rgba(134, 150, 160, 0.16);
+    --wa-header: #003440;
+    --wa-green: #008069;
+    --wa-green-bright: #00a884;
+    --wa-teal-soft: #e7f8f0;
+    --ios-blue: #007aff;
+    --ios-danger: #e11d48;
+    --ios-warning: #d97706;
+    --ios-text-primary: #111b21;
+    --ios-text-secondary: #54656f;
+    --ios-text-muted: #667781;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', 'Plus Jakarta Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Plus Jakarta Sans', 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
 
   html {
     font-family: var(--font-sans);
     background-color: var(--ios-bg);
-    color: var(--ios-text);
+    color: var(--ios-text-primary);
     font-size: 16px;
-    line-height: 1.5;
-    letter-spacing: -0.014em;
+    line-height: 1.48;
+    letter-spacing: -0.012em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -29,125 +43,189 @@
   }
 
   body {
+    font-family: var(--font-sans);
     background-color: var(--ios-bg);
     background-image:
-      radial-gradient(at 0% 0%, rgba(11, 59, 73, 0.04) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(0, 102, 68, 0.04) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, rgba(0, 128, 105, 0.045) 0px, transparent 48%),
+      radial-gradient(at 100% 0%, rgba(0, 52, 64, 0.05) 0px, transparent 52%);
     background-attachment: fixed;
-    color: var(--ios-text);
+    color: var(--ios-text-primary);
     overflow-x: hidden;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  h1, h2, h3, h4, .font-display {
+  /* Standardized Typographic Hierarchy (Apple HIG / WhatsApp Desktop) */
+  h1, h2, h3, h4, h5, h6, .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.026em;
+    letter-spacing: -0.022em;
+    color: var(--ios-text-primary);
   }
 
-  .font-mono, .tabular-nums {
-    font-family: var(--font-mono);
+  p, span, label, input, select, textarea, button, td, th {
+    font-family: var(--font-sans);
+  }
+
+  .font-mono,
+  .tabular-nums,
+  code,
+  pre {
+    font-family: var(--font-mono) !important;
     font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
   }
 
-  /* Focus ring for keyboard & mouse clarity */
+  /* Refined Apple/WhatsApp Scrollbars */
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(134, 150, 160, 0.35);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(84, 101, 111, 0.55);
+  }
+
+  /* Accessible Focus Ring (Apple iOS Focus Style) */
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
-  textarea:focus-visible {
-    outline: 2.5px solid #006644;
+  textarea:focus-visible,
+  a:focus-visible {
+    outline: 2.5px solid var(--wa-green-bright);
     outline-offset: 2px;
+  }
+
+  /* Standardized Inputs & Selects */
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="search"],
+  select,
+  textarea {
+    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  button {
+    transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.16s ease,
+      color 0.16s ease,
+      border-color 0.16s ease,
+      box-shadow 0.16s ease;
   }
 }
 
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 550, 'GRAD' 0, 'opsz' 24;
   user-select: none;
+  line-height: 1;
 }
 
 .material-symbols-filled {
   font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
   user-select: none;
+  line-height: 1;
 }
 
-/* iOS Apple Translucent Glass */
-.glass-header {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: saturate(180%) blur(22px);
-  -webkit-backdrop-filter: saturate(180%) blur(22px);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-}
-
-.glass-nav {
-  background: rgba(255, 255, 255, 0.90);
+/* Apple iOS / macOS Vibrancy Translucent Surfaces */
+.glass-header,
+.ios-glass-top {
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: saturate(190%) blur(24px);
   -webkit-backdrop-filter: saturate(190%) blur(24px);
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  border-bottom: 1px solid rgba(17, 27, 33, 0.08);
+  box-shadow: 0 1px 2px rgba(17, 27, 33, 0.04), 0 8px 24px -8px rgba(0, 52, 64, 0.06);
 }
 
-/* iOS Segmented Control */
+.glass-nav,
+.ios-glass {
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: saturate(195%) blur(26px);
+  -webkit-backdrop-filter: saturate(195%) blur(26px);
+  border-top: 1px solid rgba(17, 27, 33, 0.08);
+}
+
+/* iOS 18 Segmented Pill Control */
 .ios-segmented {
-  background: rgba(118, 118, 128, 0.11);
-  padding: 3px;
-  border-radius: 13px;
+  background: rgba(118, 118, 128, 0.12);
+  padding: 3.5px;
+  border-radius: 14px;
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  border: 1px solid rgba(17, 27, 33, 0.04);
 }
 
 .ios-segmented-item {
-  border-radius: 10px;
+  border-radius: 10.5px;
   padding: 6px 12px;
-  font-size: 0.78rem;
+  font-size: 0.775rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
   transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-  color: #475569;
+  color: #54656f;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .ios-segmented-item:hover {
-  color: #0f172a;
+  color: #111b21;
 }
 
 .ios-segmented-item-active {
   background: #ffffff;
-  color: #0b3b49;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.06);
+  color: #003440;
+  font-weight: 800;
+  box-shadow:
+    0 2px 6px rgba(17, 27, 33, 0.10),
+    0 1px 2px rgba(17, 27, 33, 0.06);
 }
 
-/* iOS Card Surface */
+/* Apple iOS / WhatsApp Professional Card Finish */
 .card-welcoming {
   border-radius: 22px;
+  background-clip: padding-box;
   transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.2s ease;
   box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    0 6px 18px -4px rgba(15, 23, 42, 0.05);
+    0 1px 2px rgba(17, 27, 33, 0.05),
+    0 6px 20px -4px rgba(17, 27, 33, 0.06);
 }
 
 .card-welcoming:hover {
   box-shadow:
-    0 4px 12px rgba(15, 23, 42, 0.06),
-    0 14px 28px -6px rgba(15, 23, 42, 0.08);
+    0 4px 12px rgba(17, 27, 33, 0.07),
+    0 14px 28px -6px rgba(0, 52, 64, 0.09);
+}
+
+/* WhatsApp / iOS List Row Hover & Divider Finish */
+.wa-list-row {
+  transition: background-color 0.15s ease;
+}
+
+.wa-list-row:hover {
+  background-color: #f5f6f6;
 }
 
 /* Hyperlink style for student scanned PDF document in Google Drive */
 .doc-hyperlink {
-  color: #0b3b49;
   text-decoration: none;
-  transition: all 0.16s ease;
-}
-
-.doc-hyperlink:hover {
-  color: #006644;
+  transition: all 0.16s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Smooth fade-in for screen transitions */
 @keyframes gentleFadeIn {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -156,7 +234,7 @@
 }
 
 .animate-gentle-fade {
-  animation: gentleFadeIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: gentleFadeIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @media print {
