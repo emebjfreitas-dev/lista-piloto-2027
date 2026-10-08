@@ -3,6 +3,7 @@ import { Student, UserRole } from '../types';
 import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
 import { getStudentAttendanceMetrics } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
+import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 
 interface GradeDadosCriancaModalProps {
   isOpen: boolean;
@@ -195,85 +196,92 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     return matchesCat && matchesSearch;
   });
 
+  const whatsappLinks = buildWhatsAppLinksFromPhoneString(
+    draft.telefones || draft.guardianPhone,
+    draft.name
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 lg:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-xl md:max-w-4xl lg:max-w-6xl xl:max-w-[1520px] rounded-2xl shadow-2xl border-2 border-[#003440]/25 overflow-hidden flex flex-col max-h-[94vh]">
-        {/* Top Modal Header */}
-        <div className="bg-[#003440] text-white p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3.5 min-w-0">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 lg:p-6 bg-black/60 backdrop-blur-sm animate-gentle-fade"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white w-full max-w-xl md:max-w-4xl lg:max-w-6xl xl:max-w-[1440px] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh]"
+      >
+        {/* Top Modal Header — Minimalist with Direct WhatsApp Link & Prominent Close Button */}
+        <div className="bg-white text-[#1d1d1f] px-4 sm:px-6 py-4 border-b border-black/[0.06] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <StudentAvatar
               student={draft}
               size="lg"
               expandableOnClick={true}
               onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(draft) : undefined}
-              className="w-16 h-16 ring-2 ring-[#a4f3ca]"
+              className="w-14 h-14 sm:w-16 sm:h-16 shrink-0"
             />
 
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-[#c3e5f4] text-[#001f29] font-black text-[0.75rem]">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] font-bold text-[0.72rem]">
                   {className} • Nº {draft.number.toString().padStart(2, '0')}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-white font-mono text-[0.75rem]">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#f5f5f7] text-[#6e6e73] font-mono text-[0.72rem]">
                   RA: {draft.ra}-{draft.digRa}/{draft.ufRa || 'SP'}
                 </span>
-                {draft.deficiencia && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#a4f3ca] text-[#003723] font-black text-[0.75rem]">
-                    {draft.deficiencia}
-                  </span>
-                )}
               </div>
-              <h2 className="text-[1.28rem] sm:text-[1.45rem] font-extrabold leading-tight truncate mt-1">
+              <h2 className="text-[1.15rem] sm:text-[1.35rem] font-bold text-[#1d1d1f] leading-tight truncate mt-1">
                 {draft.name}
               </h2>
-              <p className="text-[0.84rem] text-[#c3e5f4] font-semibold truncate">
-                Grade Interativa de Dados do(a) Estudante (48 Campos SED)
-              </p>
+
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                {whatsappLinks.length > 0 ? (
+                  whatsappLinks.map((ph, idx) => (
+                    <a
+                      key={idx}
+                      href={ph.waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#25D366]/12 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-mono font-semibold text-[0.75rem] transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">chat</span>
+                      <span>WhatsApp: {ph.display}</span>
+                    </a>
+                  ))
+                ) : (
+                  <span className="text-[0.74rem] text-[#86868b]">Sem telefone cadastrado</span>
+                )}
+
+                {onOpenStudentPdf && (
+                  <a
+                    href={
+                      draft.fichaPdfDriveUrl ||
+                      (draft.fichaPdfDriveId
+                        ? `https://drive.google.com/file/d/${draft.fichaPdfDriveId}/view`
+                        : `#doc-${draft.id}`)
+                    }
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onOpenStudentPdf(draft);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#0071e3]/10 hover:bg-[#0071e3] text-[#0066cc] hover:text-white font-semibold text-[0.74rem] transition-colors cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">document_scanner</span>
+                    <span>Ver Ficha PDF</span>
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {onOpenStudentPdf && (
-              <a
-                href={
-                  draft.fichaPdfDriveUrl ||
-                  (draft.fichaPdfDriveId
-                    ? `https://drive.google.com/file/d/${draft.fichaPdfDriveId}/view`
-                    : `#doc-${draft.id}`)
-                }
-                onClick={(e) => {
-                  e.preventDefault();
-                  onOpenStudentPdf(draft);
-                }}
-                className={`min-h-[42px] px-3.5 rounded-xl font-black text-[0.82rem] flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                  (draft.fichaPdfDriveUrl && draft.fichaPdfDriveUrl.trim().length > 0) ||
-                  (draft.fichaPdfDriveId && draft.fichaPdfDriveId.trim().length > 0)
-                    ? 'bg-[#a4f3ca] hover:bg-[#8be8b8] text-[#003440]'
-                    : 'bg-[#ffe4e6] hover:bg-[#fecdd3] text-[#be123c] border border-[#e11d48]/50'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  {(draft.fichaPdfDriveUrl && draft.fichaPdfDriveUrl.trim().length > 0) ||
-                  (draft.fichaPdfDriveId && draft.fichaPdfDriveId.trim().length > 0)
-                    ? 'document_scanner'
-                    : 'notification_important'}
-                </span>
-                <span>
-                  {(draft.fichaPdfDriveUrl && draft.fichaPdfDriveUrl.trim().length > 0) ||
-                  (draft.fichaPdfDriveId && draft.fichaPdfDriveId.trim().length > 0)
-                    ? 'Ficha Informativa Escaneada (Drive)'
-                    : '⚠️ ALERTA: Sem Ficha Escaneada (Vincular PDF)'}
-                </span>
-              </a>
-            )}
-            <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer shrink-0"
-              aria-label="Fechar grade de dados"
-            >
-              <span className="material-symbols-outlined text-[24px]">close</span>
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="min-h-[42px] px-4 sm:px-5 rounded-full bg-[#1d1d1f] hover:bg-[#ff3b30] text-white font-semibold text-[0.84rem] flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+            aria-label="Fechar grade de dados"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span>Fechar</span>
+          </button>
         </div>
 
         {/* Role Permission Banner */}

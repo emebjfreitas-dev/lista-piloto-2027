@@ -69,6 +69,15 @@ export interface MonthlyAttendanceEntry {
   observacao?: string;
 }
 
+export interface ConsecutiveAbsenceAlert {
+  selectedDates: string[];
+  reportedAt: string;
+  reportedByTeacher?: string;
+  familyFeedback?: string;
+  feedbackUpdatedAt?: string;
+  active: boolean;
+}
+
 export interface Student extends StudentSedData {
   id: string;
   number: number;
@@ -85,6 +94,7 @@ export interface Student extends StudentSedData {
   justifiedAbsences?: number;
   diasLetivosRecorte?: number;
   monthlyAttendanceByMonth?: Record<string, MonthlyAttendanceEntry>;
+  consecutiveAbsenceAlert?: ConsecutiveAbsenceAlert;
   notes?: string;
   guardianName?: string;
   guardianPhone?: string;
@@ -258,6 +268,7 @@ export type ScreenType =
   | 'turmas'
   | 'detalhes'
   | 'frequencia_mensal'
+  | 'faltas_consecutivas'
   | 'bolsa_familia'
   | 'onibus_fretado'
   | 'dias_letivos'

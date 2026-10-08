@@ -276,36 +276,36 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full max-w-[1780px] mx-auto space-y-4 pb-32 animate-gentle-fade">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
       {toastMsg && (
         <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-200">
-          <div className="bg-[#0b3b49] text-white px-4 py-3.5 rounded-2xl shadow-2xl border border-white/15 flex items-center gap-3">
-            <span className="material-symbols-outlined text-[22px] text-[#a4f3ca]">check_circle</span>
-            <p className="text-[0.82rem] font-bold leading-snug">{toastMsg}</p>
+          <div className="bg-[#1d1d1f] text-white px-4 py-3.5 rounded-2xl shadow-2xl border border-white/15 flex items-center gap-3">
+            <span className="material-symbols-outlined text-[20px] text-[#28cd41]">check_circle</span>
+            <p className="text-[0.82rem] font-semibold leading-snug">{toastMsg}</p>
           </div>
         </div>
       )}
 
       {/* Cabeçalho com Alternador entre as Duas Abas Nominais */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 border border-black/[0.07] shadow-xs space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-lg bg-[#0b3b49] text-white text-[0.7rem] font-extrabold uppercase tracking-wider">
-                Listagens Nominais Oficiais • {SCHOOL_NAME}
+      <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-3.5 sm:space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="px-2.5 py-0.5 rounded-lg bg-[#1d1d1f] text-white text-[0.68rem] font-bold uppercase tracking-wider">
+                Listagens Nominais • {SCHOOL_NAME}
               </span>
               {effectiveTab === 'bolsa_familia' && (
-                <span className="px-2.5 py-0.5 rounded-lg bg-[#fef3c7] text-[#92400e] border border-[#f59e0b]/30 text-[0.7rem] font-extrabold uppercase">
-                  Acesso Exclusivo Perfil Admin
+                <span className="px-2.5 py-0.5 rounded-full bg-[#ff9500]/15 text-[#92400e] text-[0.68rem] font-semibold uppercase">
+                  Exclusivo Admin
                 </span>
               )}
             </div>
-            <h1 className="text-[1.4rem] sm:text-[1.65rem] font-extrabold text-[#0f172a] tracking-tight">
+            <h1 className="text-[1.25rem] sm:text-[1.55rem] font-bold text-[#1d1d1f] tracking-tight leading-tight">
               {effectiveTab === 'bolsa_familia'
-                ? 'Aba Nominal — Beneficiários do Bolsa Família (MEC / Presença)'
-                : 'Aba Nominal — Estudantes do Ônibus Fretado (Transporte Escolar)'}
+                ? 'Aba Nominal — Beneficiários do Bolsa Família'
+                : 'Aba Nominal — Estudantes do Ônibus Fretado'}
             </h1>
-            <p className="text-[0.84rem] text-[#475569] font-medium">
+            <p className="text-[0.78rem] sm:text-[0.84rem] text-[#6e6e73] font-normal">
               {effectiveTab === 'bolsa_familia'
                 ? 'Relatório nominal exclusivo da Direção/Admin com acompanhamento de NIS, frequência mensal/bimestral e mínimo legal (≥60% Ed. Infantil e ≥75% Fundamental).'
                 : 'Relação nominal completa dos estudantes que utilizam o transporte escolar / ônibus fretado por rota, turma, turno, endereço e contatos.'}
@@ -319,11 +319,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => onSwitchTab('bolsa_familia')}
-                  className={`ios-segmented-item flex items-center gap-1.5 px-3.5 py-2 text-[0.82rem] ${
+                  className={`ios-segmented-item flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] sm:text-[0.8rem] ${
                     effectiveTab === 'bolsa_familia' ? 'ios-segmented-item-active' : ''
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px] text-[#006644]">
+                  <span className="material-symbols-outlined text-[17px]">
                     family_restroom
                   </span>
                   <span>Bolsa Família ({stats.totalBolsa})</span>
@@ -332,11 +332,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               <button
                 type="button"
                 onClick={() => onSwitchTab('onibus_fretado')}
-                className={`ios-segmented-item flex items-center gap-1.5 px-3.5 py-2 text-[0.82rem] ${
+                className={`ios-segmented-item flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] sm:text-[0.8rem] ${
                   effectiveTab === 'onibus_fretado' ? 'ios-segmented-item-active' : ''
                 }`}
               >
-                <span className="material-symbols-outlined text-[18px] text-[#0b3b49]">
+                <span className="material-symbols-outlined text-[17px]">
                   directions_bus
                 </span>
                 <span>Ônibus Fretado ({stats.totalOnibus})</span>
@@ -347,19 +347,19 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               <button
                 type="button"
                 onClick={handleExportBolsaFamiliaXLS}
-                className="px-4 py-2.5 rounded-2xl bg-[#006644] hover:bg-[#005035] text-white font-extrabold text-[0.8rem] flex items-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-95"
+                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-[0.78rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">download</span>
-                <span>Baixar Bolsa Família (.XLS)</span>
+                <span className="material-symbols-outlined text-[17px]">download</span>
+                <span>Baixar .XLS</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleExportOnibusFretadoXLS}
-                className="px-4 py-2.5 rounded-2xl bg-[#0b3b49] hover:bg-[#164e63] text-white font-extrabold text-[0.8rem] flex items-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-95"
+                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-[0.78rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
               >
-                <span className="material-symbols-outlined text-[18px]">download</span>
-                <span>Baixar Ônibus Fretado (.XLS)</span>
+                <span className="material-symbols-outlined text-[17px]">download</span>
+                <span>Baixar .XLS</span>
               </button>
             )}
           </div>

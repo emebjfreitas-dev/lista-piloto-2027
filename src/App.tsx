@@ -44,6 +44,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { MinhasTurmasScreen } from './components/MinhasTurmasScreen';
 import { DetalhesTurmaScreen } from './components/DetalhesTurmaScreen';
 import { RegistroFrequenciaMensalScreen } from './components/RegistroFrequenciaMensalScreen';
+import { FaltasConsecutivasScreen } from './components/FaltasConsecutivasScreen';
 import { DiasLetivosScreen } from './components/DiasLetivosScreen';
 import { ResumoMensalScreen } from './components/ResumoMensalScreen';
 import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
@@ -57,6 +58,11 @@ import { UploadFotoModal } from './components/UploadFotoModal';
 import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
 import { ConfigurarDiasLetivosTurmasModal } from './components/ConfigurarDiasLetivosTurmasModal';
+import {
+  AppFontId,
+  getSavedAppFont,
+  applyAppFont,
+} from './utils/fontTheme';
 
 const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
 
@@ -125,7 +131,9 @@ export default function App() {
     }
     const savedScreen = initialSavedSession.screen;
     if (effectiveInitialRole === 'usuario') {
-      return savedScreen === 'frequencia_mensal' || savedScreen === 'resumo'
+      return savedScreen === 'frequencia_mensal' ||
+        savedScreen === 'faltas_consecutivas' ||
+        savedScreen === 'resumo'
         ? savedScreen
         : 'detalhes';
     }
@@ -188,6 +196,11 @@ export default function App() {
   );
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
+  const [activeFontId, setActiveFontId] = useState<AppFontId>(() => getSavedAppFont());
+
+  useEffect(() => {
+    applyAppFont(activeFontId);
+  }, [activeFontId]);
 
   // Automatically save current screen, selected class, and user session while logged in so page refresh returns to the exact coherent page
   useEffect(() => {
@@ -986,7 +999,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] text-[#111b21] flex flex-col font-sans selection:bg-[#d1f4e0] selection:text-[#003440]">
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col font-sans selection:bg-[#0071e3]/15 selection:text-[#0066cc]">
       {/* Top Minimalist Header */}
       <Header
         currentScreen={currentScreen}
@@ -1023,6 +1036,8 @@ export default function App() {
         userEmail={simulatedTeacherEmail || currentUserEmail}
         userName={currentUserName}
         userRole={userRole}
+        activeFontId={activeFontId}
+        onSelectFont={(fontId) => setActiveFontId(fontId)}
         onRestoreAdminRole={() => {
           setSimulatedTeacherEmail(null);
           setUserRole('admin');
@@ -1055,15 +1070,17 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main Content Area: Mobile intact + Full HD 1920x1080 21" Landscape Widescreen */}
+      {/* Main Content Area: Responsive Proportions for Mobile, Tablet, Laptop & Full HD Desktop */}
       <main
-        className={`flex-1 w-full max-w-2xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto px-3.5 sm:px-5 lg:px-8 xl:px-10 ${
-          currentScreen === 'login' ? 'p-0 max-w-none' : 'pt-24'
+        className={`flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 ${
+          currentScreen === 'login' ? 'p-0 max-w-none' : 'pt-[68px] sm:pt-[76px] pb-24 lg:pb-12'
         }`}
       >
         {currentScreen === 'login' && (
           <LoginScreen
             authorizedUsers={authorizedUsers}
+            activeFontId={activeFontId}
+            onSelectFont={(fontId) => setActiveFontId(fontId)}
             onLoginSuccess={handleLoginSuccess}
           />
         )}
@@ -1266,6 +1283,20 @@ export default function App() {
             onBack={() =>
               setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas')
             }
+          />
+        )}
+
+        {currentScreen === 'faltas_consecutivas' && userRole === 'usuario' && (
+          <FaltasConsecutivasScreen
+            classGroup={selectedClass}
+            availableClasses={visibleClasses}
+            onSelectClass={(cls) => {
+              setAssignedClassId(cls.id);
+              setSelectedClass(cls);
+            }}
+            onUpdateStudent={(classId, updatedStudent) => {
+              handleSaveSingleStudent(classId, updatedStudent);
+            }}
           />
         )}
 

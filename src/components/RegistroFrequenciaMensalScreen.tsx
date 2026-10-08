@@ -324,74 +324,74 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   const minLegalPresence = isInfantilClass ? 60 : 75;
 
   return (
-    <div className="flex flex-col w-full max-w-[1680px] mx-auto space-y-4 pb-36 animate-gentle-fade">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
       {/* Alerta de regra caso tente ultrapassar limite de dias ou atestados */}
       {ruleAlertMessage && (
         <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-200">
-          <div className="bg-[#be123c] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/20">
-            <span className="material-symbols-outlined text-[24px]">warning</span>
-            <p className="font-bold text-[0.86rem] leading-snug">{ruleAlertMessage}</p>
+          <div className="bg-[#ff3b30] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/20">
+            <span className="material-symbols-outlined text-[22px]">warning</span>
+            <p className="font-semibold text-[0.84rem] leading-snug">{ruleAlertMessage}</p>
           </div>
         </div>
       )}
 
       {/* CABEÇALHO ENXUTO E COERENTE DA TURMA + CONTADORES E INDICATIVOS MELHORADOS */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 border border-black/[0.07] shadow-xs space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
+      <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-3.5 sm:space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {classGroup.turmaAbrev && (
-                <span className="px-2.5 py-0.5 rounded-lg bg-[#0b3b49] text-white font-mono text-[0.74rem] font-extrabold">
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#1d1d1f] text-white font-mono text-[0.72rem] font-bold">
                   {classGroup.turmaAbrev}
                 </span>
               )}
-              <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#006644] text-[0.72rem] font-extrabold uppercase tracking-wider">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#0071e3]/10 text-[#0066cc] text-[0.7rem] font-semibold uppercase tracking-wider">
                 {classGroup.shift} • {classGroup.room}
               </span>
               {classGroup.classeSedCode && (
-                <span className="px-2.5 py-0.5 rounded-full bg-[#f1f5f9] text-[#334155] font-mono text-[0.72rem] font-bold">
-                  Classe SED: {classGroup.classeSedCode}
+                <span className="px-2.5 py-0.5 rounded-full bg-[#f5f5f7] text-[#6e6e73] font-mono text-[0.7rem] font-semibold">
+                  SED: {classGroup.classeSedCode}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f8fafc] border border-black/[0.06] text-[0.72rem] font-bold text-[#006644]">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f5f5f7] border border-black/[0.06] text-[0.7rem] font-semibold text-[#1d8338]">
                 <span
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-1.5 h-1.5 rounded-full ${
                     instantSyncStatus === 'syncing'
-                      ? 'bg-[#f59e0b] animate-ping'
-                      : 'bg-[#006644]'
+                      ? 'bg-[#ff9500] animate-ping'
+                      : 'bg-[#28cd41]'
                   }`}
                 />
                 <span>
                   {instantSyncStatus === 'syncing'
-                    ? 'Sincronizando na Planilha...'
-                    : 'Sincronização Automática em Tempo Real'}
+                    ? 'Sincronizando...'
+                    : 'Auto-Sync Instantâneo'}
                 </span>
               </span>
             </div>
 
-            <div className="flex flex-wrap items-baseline gap-3">
-              <h1 className="text-[1.45rem] sm:text-[1.7rem] font-extrabold text-[#0f172a] tracking-tight">
+            <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
+              <h1 className="text-[1.3rem] sm:text-[1.6rem] font-bold text-[#1d1d1f] tracking-tight">
                 Lançamento de Faltas • Turma {classGroup.name}
               </h1>
-              <span className="text-[0.82rem] font-semibold text-[#475569]">
-                {classGroup.pronoun || 'PROFESSORA'} {classGroup.teacherName || 'Regente'} • {detailedIndicators.ativosCount} ativos ({students.length} na base)
+              <span className="text-[0.78rem] sm:text-[0.82rem] font-medium text-[#6e6e73]">
+                {classGroup.pronoun || 'PROF.'} {classGroup.teacherName || 'Regente'} • {detailedIndicators.ativosCount} ativos ({students.length} na base)
               </span>
             </div>
           </div>
 
           {/* Seletor de Mês Enxuto */}
-          <div className="flex items-center gap-2.5 bg-[#f8fafc] px-3.5 py-2 rounded-2xl border border-black/[0.07] shrink-0">
-            <span className="material-symbols-outlined text-[20px] text-[#0b3b49]">
+          <div className="flex items-center gap-2.5 bg-[#f5f5f7] px-3.5 py-2 rounded-2xl border border-black/[0.06] shrink-0 self-start lg:self-auto">
+            <span className="material-symbols-outlined text-[20px] text-[#0071e3]">
               calendar_month
             </span>
             <div>
-              <label className="block text-[0.64rem] font-extrabold uppercase tracking-wider text-[#64748b]">
+              <label className="block text-[0.62rem] font-bold uppercase tracking-wider text-[#86868b]">
                 Mês de Referência (2027)
               </label>
               <select
                 value={selectedMonthName}
                 onChange={(e) => handleMonthChange(e.target.value)}
-                className="bg-transparent text-[#0f172a] font-extrabold text-[0.9rem] focus:outline-none cursor-pointer pr-2"
+                className="bg-transparent text-[#1d1d1f] font-bold text-[0.86rem] sm:text-[0.9rem] focus:outline-none cursor-pointer pr-2"
               >
                 {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
                   const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
@@ -406,115 +406,115 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           </div>
         </div>
 
-        {/* PAINEL DE CONTADORES E INDICATIVOS DA TURMA (VISUAL CLARO E PRECISO) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+        {/* PAINEL DE CONTADORES E INDICATIVOS DA TURMA (2 COLUNAS NO MOBILE, 4 NO DESKTOP) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
           {/* Indicativo 1: Taxa de Presença da Turma */}
-          <div className="rounded-2xl bg-[#eaf6ef]/75 border border-[#006644]/20 p-3.5 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#006644]">
-                Presença Geral no Mês
+          <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#1d8338] truncate">
+                Presença Mês
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-[#006644] text-white font-mono text-[0.68rem] font-bold">
-                {diasLetivosMes} dias letivos
+              <span className="px-1.5 py-0.5 rounded-md bg-[#1d8338] text-white font-mono text-[0.64rem] font-semibold shrink-0">
+                {diasLetivosMes}d
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-[1.75rem] font-black text-[#006644] tabular-nums leading-none">
+              <span className="text-[1.45rem] sm:text-[1.7rem] font-bold text-[#1d1d1f] tabular-nums leading-none">
                 {liveClassMetrics.presenceRate}%
               </span>
-              <span className="text-[0.76rem] font-bold text-[#005035] tabular-nums">
-                {liveClassMetrics.totalPresencasTurma}/{liveClassMetrics.totalDiasMatriculadosTurma} presenças
+              <span className="text-[0.68rem] sm:text-[0.74rem] font-semibold text-[#6e6e73] tabular-nums truncate ml-1">
+                {liveClassMetrics.totalPresencasTurma}/{liveClassMetrics.totalDiasMatriculadosTurma}
               </span>
             </div>
-            <div className="w-full h-2 rounded-full bg-[#006644]/15 overflow-hidden mt-2">
+            <div className="w-full h-1.5 rounded-full bg-black/[0.08] overflow-hidden mt-2">
               <div
-                className="h-full bg-[#006644] rounded-full transition-all duration-300"
+                className="h-full bg-[#28cd41] rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(100, liveClassMetrics.presenceRate)}%` }}
               />
             </div>
           </div>
 
           {/* Indicativo 2: Total de Faltas no Mês */}
-          <div className="rounded-2xl bg-[#fff1f2]/85 border border-[#e11d48]/20 p-3.5 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#be123c]">
-                Faltas Registradas ({selectedMonthName})
+          <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#ff3b30] truncate">
+                Faltas ({selectedMonthName.slice(0, 3)})
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-[#ffe4e6] text-[#be123c] font-mono text-[0.68rem] font-extrabold">
-                {detailedIndicators.pctFaltaTurma}% ausência
+              <span className="px-1.5 py-0.5 rounded-md bg-[#ff3b30]/12 text-[#ff3b30] font-mono text-[0.64rem] font-semibold shrink-0">
+                {detailedIndicators.pctFaltaTurma}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-[1.75rem] font-black text-[#be123c] tabular-nums leading-none">
+              <span className="text-[1.45rem] sm:text-[1.7rem] font-bold text-[#ff3b30] tabular-nums leading-none">
                 {liveClassMetrics.totalFaltasTurma}
               </span>
-              <span className="text-[0.75rem] font-bold text-[#9f1239] tabular-nums">
-                {detailedIndicators.countWithFaltas} aluno(s) c/ falta
+              <span className="text-[0.68rem] sm:text-[0.74rem] font-semibold text-[#6e6e73] tabular-nums truncate ml-1">
+                {detailedIndicators.countWithFaltas} aluno(s)
               </span>
             </div>
-            <div className="flex items-center justify-between text-[0.7rem] font-semibold text-[#9f1239] mt-2 pt-1.5 border-t border-[#e11d48]/15">
-              <span>Sem atestado: {detailedIndicators.faltasSemAtestadoTurma}</span>
-              <span>Com atestado: {liveClassMetrics.totalAtestadosTurma}</span>
+            <div className="flex items-center justify-between text-[0.65rem] sm:text-[0.7rem] font-medium text-[#6e6e73] mt-2 pt-1.5 border-t border-black/[0.06]">
+              <span>S/ atest: {detailedIndicators.faltasSemAtestadoTurma}</span>
+              <span>C/ atest: {liveClassMetrics.totalAtestadosTurma}</span>
             </div>
           </div>
 
           {/* Indicativo 3: Atestados Médicos no Mês */}
-          <div className="rounded-2xl bg-[#f0f9ff]/90 border border-[#0284c7]/20 p-3.5 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#0369a1]">
-                Atestados Apresentados
+          <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#0066cc] truncate">
+                Atestados
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-[#e0f2fe] text-[#0369a1] font-mono text-[0.68rem] font-extrabold">
-                {detailedIndicators.pctAtestadosSobreFaltas}% das faltas
+              <span className="px-1.5 py-0.5 rounded-md bg-[#0071e3]/12 text-[#0066cc] font-mono text-[0.64rem] font-semibold shrink-0">
+                {detailedIndicators.pctAtestadosSobreFaltas}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-[1.75rem] font-black text-[#0c4a6e] tabular-nums leading-none">
+              <span className="text-[1.45rem] sm:text-[1.7rem] font-bold text-[#0066cc] tabular-nums leading-none">
                 {liveClassMetrics.totalAtestadosTurma}
               </span>
-              <span className="text-[0.75rem] font-bold text-[#0369a1] tabular-nums">
-                {detailedIndicators.countWithAtestados} aluno(s) c/ atestado
+              <span className="text-[0.68rem] sm:text-[0.74rem] font-semibold text-[#6e6e73] tabular-nums truncate ml-1">
+                {detailedIndicators.countWithAtestados} aluno(s)
               </span>
             </div>
-            <div className="w-full h-2 rounded-full bg-[#0284c7]/15 overflow-hidden mt-2">
+            <div className="w-full h-1.5 rounded-full bg-black/[0.08] overflow-hidden mt-2">
               <div
-                className="h-full bg-[#0284c7] rounded-full transition-all duration-300"
+                className="h-full bg-[#0071e3] rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(100, detailedIndicators.pctAtestadosSobreFaltas)}%` }}
               />
             </div>
           </div>
 
           {/* Indicativo 4: Assiduidade Plena vs Atenção de Frequência */}
-          <div className="rounded-2xl bg-[#f8fafc] border border-black/[0.07] p-3.5 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#475569]">
-                Resumo de Assiduidade
+          <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#6e6e73] truncate">
+                Assiduidade
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-[#f1f5f9] text-[#0b3b49] font-mono text-[0.68rem] font-bold">
-                Mín. ≥{minLegalPresence}%
+              <span className="px-1.5 py-0.5 rounded-md bg-black/[0.06] text-[#1d1d1f] font-mono text-[0.64rem] font-semibold shrink-0">
+                ≥{minLegalPresence}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
               <div>
-                <span className="text-[1.5rem] font-black text-[#006644] tabular-nums leading-none">
+                <span className="text-[1.45rem] sm:text-[1.6rem] font-bold text-[#1d8338] tabular-nums leading-none">
                   {detailedIndicators.countZeroFaltas}
                 </span>
-                <span className="text-[0.72rem] font-bold text-[#475569] ml-1">
-                  com 100% presença
+                <span className="text-[0.68rem] font-medium text-[#6e6e73] ml-1">
+                  100% pres.
                 </span>
               </div>
               <span
-                className={`px-2 py-0.5 rounded-lg font-mono text-[0.74rem] font-extrabold ${
+                className={`px-1.5 py-0.5 rounded-md font-mono text-[0.68rem] font-bold ${
                   detailedIndicators.countBelowLegal > 0
-                    ? 'bg-[#ffe4e6] text-[#be123c]'
-                    : 'bg-[#eaf6ef] text-[#006644]'
+                    ? 'bg-[#ff3b30]/12 text-[#ff3b30]'
+                    : 'bg-[#28cd41]/15 text-[#1d8338]'
                 }`}
               >
                 {detailedIndicators.countBelowLegal} &lt;{minLegalPresence}%
               </span>
             </div>
-            <div className="text-[0.7rem] font-semibold text-[#64748b] mt-2 pt-1.5 border-t border-black/[0.05]">
-              Use apenas os botões <strong>—</strong> e <strong>+</strong> de Faltas e Atestados
+            <div className="text-[0.65rem] sm:text-[0.68rem] font-medium text-[#86868b] mt-2 pt-1.5 border-t border-black/[0.06] truncate">
+              Use <strong>—</strong> e <strong>+</strong> em Faltas e Atestados
             </div>
           </div>
         </div>
@@ -671,47 +671,6 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                           Remanejado
                         </span>
                       )}
-                      {onOpenStudentPdf && (
-                        <a
-                          href={
-                            student.fichaPdfDriveUrl ||
-                            (student.fichaPdfDriveId
-                              ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                              : `#doc-${student.id}`)
-                          }
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onOpenStudentPdf(student);
-                          }}
-                          title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                          className={`doc-hyperlink px-2 py-0.5 rounded-lg font-bold text-[0.68rem] flex items-center gap-1 cursor-pointer transition-colors ${
-                            (student.fichaPdfDriveUrl &&
-                              student.fichaPdfDriveUrl.trim().length > 0) ||
-                            (student.fichaPdfDriveId &&
-                              student.fichaPdfDriveId.trim().length > 0)
-                              ? 'bg-[#eaf6ef] hover:bg-[#006644] text-[#006644] hover:!text-white border border-[#006644]/25'
-                              : 'bg-[#fff1f2] hover:bg-[#be123c] text-[#be123c] hover:!text-white border border-[#e11d48]/40'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[13px]">
-                            {(student.fichaPdfDriveUrl &&
-                              student.fichaPdfDriveUrl.trim().length > 0) ||
-                            (student.fichaPdfDriveId &&
-                              student.fichaPdfDriveId.trim().length > 0)
-                              ? 'document_scanner'
-                              : 'notification_important'}
-                          </span>
-                          <span>
-                            {(student.fichaPdfDriveUrl &&
-                              student.fichaPdfDriveUrl.trim().length > 0) ||
-                            (student.fichaPdfDriveId &&
-                              student.fichaPdfDriveId.trim().length > 0)
-                              ? 'Ficha (Drive)'
-                              : '⚠️ Sem Ficha PDF'}
-                          </span>
-                        </a>
-                      )}
                     </div>
 
                     {/* Indicadores Claros de Presença e Falta do Estudante */}
@@ -742,101 +701,105 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 </div>
 
                 {/* APENAS OS 2 CONTADORES INTERATIVOS: 1) FALTAS DO MÊS e 2) ATESTADOS */}
-                <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 shrink-0">
+                <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 sm:gap-3 shrink-0 w-full lg:w-auto pt-2 lg:pt-0 border-t lg:border-t-0 border-black/[0.04]">
                   {/* Contador 1: Faltas do Mês */}
                   <div
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl border transition-colors ${
+                    className={`flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-2xl border transition-colors ${
                       m.faltas > 0
-                        ? 'bg-[#fff1f2] border-[#e11d48]/30'
-                        : 'bg-[#f8fafc] border-black/[0.08]'
+                        ? 'bg-[#fff2f2] border-[#ff3b30]/30'
+                        : 'bg-[#f5f5f7] border-black/[0.08]'
                     }`}
                   >
-                    <div className="pr-1">
-                      <span className="text-[0.65rem] font-extrabold uppercase tracking-wider text-[#be123c] block leading-none">
-                        Faltas do Mês
+                    <div className="pr-0.5 sm:pr-1 min-w-0">
+                      <span className="text-[0.6rem] sm:text-[0.65rem] font-bold uppercase tracking-wider text-[#ff3b30] block leading-none truncate">
+                        Faltas
                       </span>
-                      <span className="text-[0.65rem] font-mono font-semibold text-[#64748b] tabular-nums">
-                        máx. {m.diasLetivosMatriculados}d
+                      <span className="text-[0.6rem] sm:text-[0.65rem] font-mono font-medium text-[#86868b] tabular-nums block truncate">
+                        máx {m.diasLetivosMatriculados}d
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeltaAbsence(student.id, -1)}
-                      disabled={!effectiveCanEdit || m.faltas === 0}
-                      aria-label={`Diminuir falta de ${student.name}`}
-                      className="w-9 h-9 rounded-xl bg-white hover:bg-[#f1f5f9] text-[#0f172a] font-black text-[1.15rem] flex items-center justify-center shadow-2xs border border-black/[0.1] disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
-                    >
-                      —
-                    </button>
-
-                    <div className="w-10 text-center">
-                      <span
-                        className={`font-mono font-black text-[1.2rem] tabular-nums block leading-none ${
-                          m.faltas > 0 ? 'text-[#be123c]' : 'text-[#006644]'
-                        }`}
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleDeltaAbsence(student.id, -1)}
+                        disabled={!effectiveCanEdit || m.faltas === 0}
+                        aria-label={`Diminuir falta de ${student.name}`}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] font-bold text-[1.05rem] flex items-center justify-center shadow-2xs border border-black/[0.1] disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
                       >
-                        {m.faltas}
-                      </span>
-                    </div>
+                        —
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeltaAbsence(student.id, 1)}
-                      disabled={!effectiveCanEdit || isMaxFaltasReached}
-                      aria-label={`Adicionar falta para ${student.name}`}
-                      className="w-9 h-9 rounded-xl bg-[#0b3b49] hover:bg-[#164e63] text-white font-black text-[1.15rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
-                    >
-                      +
-                    </button>
+                      <div className="w-7 sm:w-9 text-center">
+                        <span
+                          className={`font-mono font-bold text-[1.05rem] sm:text-[1.18rem] tabular-nums block leading-none ${
+                            m.faltas > 0 ? 'text-[#ff3b30]' : 'text-[#1d8338]'
+                          }`}
+                        >
+                          {m.faltas}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeltaAbsence(student.id, 1)}
+                        disabled={!effectiveCanEdit || isMaxFaltasReached}
+                        aria-label={`Adicionar falta para ${student.name}`}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-bold text-[1.05rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
                   {/* Contador 2: Atestados */}
                   <div
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl border transition-colors ${
+                    className={`flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-2xl border transition-colors ${
                       m.atestados > 0
-                        ? 'bg-[#f0f9ff] border-[#0284c7]/35'
-                        : 'bg-[#f8fafc] border-black/[0.08]'
+                        ? 'bg-[#0071e3]/10 border-[#0071e3]/30'
+                        : 'bg-[#f5f5f7] border-black/[0.08]'
                     }`}
                   >
-                    <div className="pr-1">
-                      <span className="text-[0.65rem] font-extrabold uppercase tracking-wider text-[#0369a1] block leading-none">
+                    <div className="pr-0.5 sm:pr-1 min-w-0">
+                      <span className="text-[0.6rem] sm:text-[0.65rem] font-bold uppercase tracking-wider text-[#0066cc] block leading-none truncate">
                         Atestados
                       </span>
-                      <span className="text-[0.65rem] font-mono font-semibold text-[#64748b] tabular-nums">
-                        {m.faltas === 0 ? '0 faltas' : `de ${m.faltas} falta(s)`}
+                      <span className="text-[0.6rem] sm:text-[0.65rem] font-mono font-medium text-[#86868b] tabular-nums block truncate">
+                        {m.faltas === 0 ? '0 faltas' : `de ${m.faltas}F`}
                       </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeltaAtestado(student.id, -1)}
-                      disabled={!effectiveCanEdit || m.atestados === 0}
-                      aria-label={`Diminuir atestado de ${student.name}`}
-                      className="w-9 h-9 rounded-xl bg-white hover:bg-[#f1f5f9] text-[#0369a1] font-black text-[1.15rem] flex items-center justify-center shadow-2xs border border-[#0284c7]/25 disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
-                    >
-                      —
-                    </button>
-
-                    <div className="w-9 text-center">
-                      <span
-                        className={`font-mono font-black text-[1.2rem] tabular-nums block leading-none ${
-                          m.atestados > 0 ? 'text-[#0369a1]' : 'text-[#64748b]'
-                        }`}
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleDeltaAtestado(student.id, -1)}
+                        disabled={!effectiveCanEdit || m.atestados === 0}
+                        aria-label={`Diminuir atestado de ${student.name}`}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white hover:bg-[#f5f5f7] text-[#0066cc] font-bold text-[1.05rem] flex items-center justify-center shadow-2xs border border-[#0071e3]/25 disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
                       >
-                        {m.atestados}
-                      </span>
-                    </div>
+                        —
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeltaAtestado(student.id, 1)}
-                      disabled={!effectiveCanEdit || m.faltas === 0 || isMaxAtestadosReached}
-                      aria-label={`Adicionar atestado para ${student.name}`}
-                      className="w-9 h-9 rounded-xl bg-[#0369a1] hover:bg-[#075985] text-white font-black text-[1.15rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
-                    >
-                      +
-                    </button>
+                      <div className="w-7 sm:w-9 text-center">
+                        <span
+                          className={`font-mono font-bold text-[1.05rem] sm:text-[1.18rem] tabular-nums block leading-none ${
+                            m.atestados > 0 ? 'text-[#0066cc]' : 'text-[#86868b]'
+                          }`}
+                        >
+                          {m.atestados}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeltaAtestado(student.id, 1)}
+                        disabled={!effectiveCanEdit || m.faltas === 0 || isMaxAtestadosReached}
+                        aria-label={`Adicionar atestado para ${student.name}`}
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-[1.05rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -906,27 +869,6 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                       <h3 className="text-[0.96rem] font-extrabold text-[#0f172a] leading-snug truncate mt-1">
                         {student.name}
                       </h3>
-                      {onOpenStudentPdf && (
-                        <a
-                          href={
-                            student.fichaPdfDriveUrl ||
-                            (student.fichaPdfDriveId
-                              ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                              : `#doc-${student.id}`)
-                          }
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onOpenStudentPdf(student);
-                          }}
-                          className="doc-hyperlink inline-flex items-center gap-1 text-[0.7rem] font-bold text-[#0b3b49] hover:underline mt-0.5"
-                        >
-                          <span className="material-symbols-outlined text-[13px]">
-                            document_scanner
-                          </span>
-                          <span>Ficha Informativa (Drive)</span>
-                        </a>
-                      )}
                     </div>
                   </div>
 

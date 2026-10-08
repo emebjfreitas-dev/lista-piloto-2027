@@ -753,6 +753,60 @@ const buildCalendario200DiasValues = (
   return rows;
 };
 
+const buildFaltasConsecutivasSheetValues = (
+  classes: ClassGroup[]
+): any[][] => {
+  const headers = [
+    'TURMA',
+    'PERÍODO',
+    'PROFESSOR(A) PEB I',
+    'Nº CHAMADA',
+    'ESTUDANTE',
+    'RA',
+    'DIAS DE FALTA CONSECUTIVA (ATÉ 4 DIAS ANTERIORES)',
+    'QTD DIAS SEGUIDOS',
+    'DATA DO AVISO PELO PEB I',
+    'RESPONSÁVEL (MÃE / PAI)',
+    'TELEFONE / WHATSAPP',
+    'DEVOLUTIVA DA SECRETARIA / FEEDBACK DA FAMÍLIA',
+    'DATA DA DEVOLUTIVA',
+    'ID_TURMA',
+    'ID_ESTUDANTE',
+  ];
+
+  const rows: any[][] = [headers];
+
+  classes.forEach((cls) => {
+    const periodo = cls.shift.replace('Turno ', '').toUpperCase();
+    cls.students.forEach((s) => {
+      const alert = s.consecutiveAbsenceAlert;
+      if (!alert || (!alert.active && !alert.familyFeedback)) return;
+      const datesList = alert.selectedDates || [];
+      if (datesList.length === 0 && !alert.familyFeedback) return;
+
+      rows.push([
+        cls.name,
+        periodo,
+        cls.teacherName || 'PEB I',
+        s.number,
+        s.name,
+        s.ra ? `${s.ra}-${s.digRa || ''}` : '',
+        datesList.join(', '),
+        datesList.length,
+        alert.reportedAt || '',
+        s.filiacao1 || s.guardianName || '',
+        s.telefones || s.guardianPhone || '',
+        alert.familyFeedback || '',
+        alert.feedbackUpdatedAt || '',
+        cls.id,
+        s.id,
+      ]);
+    });
+  });
+
+  return rows;
+};
+
 const buildEmailsPermitidosValues = (
   users?: AuthorizedUser[]
 ): any[][] => {
@@ -2151,9 +2205,13 @@ export const writeAttendanceOnlyToGoogleSheet = async (
     }
   }
 
-  // Ensure nominal stage tabs exist and update them as well
+  // Ensure nominal stage tabs and consecutive absence tab exist and update them as well
   const missingNominalTabs: any[] = [];
-  ['Faltas_Atestados_Infantil', 'Faltas_Atestados_Fundamental'].forEach((tName) => {
+  [
+    'Faltas_Atestados_Infantil',
+    'Faltas_Atestados_Fundamental',
+    'Busca_Ativa_Faltas_Consecutivas_2027',
+  ].forEach((tName) => {
     if (!meta.sheetTitles.includes(tName)) {
       missingNominalTabs.push({
         addSheet: {
@@ -2182,7 +2240,7 @@ export const writeAttendanceOnlyToGoogleSheet = async (
     ).catch(() => {});
   }
 
-  // Update Nominal Tabs separated by Educação Infantil and Ensino Fundamental
+  // Update Nominal Tabs separated by Educação Infantil and Ensino Fundamental + Busca Ativa Faltas Consecutivas
   dataUpdates.push({
     range: 'Faltas_Atestados_Infantil!A1',
     values: buildNominalStageSheetValues(allClasses, 'EDUCACAO INFANTIL', calendar),
@@ -2190,6 +2248,10 @@ export const writeAttendanceOnlyToGoogleSheet = async (
   dataUpdates.push({
     range: 'Faltas_Atestados_Fundamental!A1',
     values: buildNominalStageSheetValues(allClasses, 'ENSINO FUNDAMENTAL', calendar),
+  });
+  dataUpdates.push({
+    range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1',
+    values: buildFaltasConsecutivasSheetValues(allClasses),
   });
 
   // Also update Turmas_Salas_2027 summary tab
@@ -2242,6 +2304,7 @@ export const syncClassesToGoogleSheet = async (
   const requiredTabs = [
     'Faltas_Atestados_Infantil',
     'Faltas_Atestados_Fundamental',
+    'Busca_Ativa_Faltas_Consecutivas_2027',
     'SED_Matriculas_e_Frequencia',
     'Dias_Letivos_SME_2027',
     'Turmas_Salas_2027',
@@ -2288,6 +2351,7 @@ export const syncClassesToGoogleSheet = async (
   const calendarioValues = buildCalendario200DiasValues(calendar);
   const turmasValues = buildTurmasSheetValues(classes, calendar);
   const emailsPermitidosValues = buildEmailsPermitidosValues();
+  const faltasConsecutivasValues = buildFaltasConsecutivasSheetValues(classes);
 
   const batchRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
@@ -2309,6 +2373,10 @@ export const syncClassesToGoogleSheet = async (
           {
             range: 'Faltas_Atestados_Fundamental!A1',
             values: nominalFundamentalValues,
+          },
+          {
+            range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1',
+            values: faltasConsecutivasValues,
           },
           {
             range: 'SED_Matriculas_e_Frequencia!A1',
@@ -2628,6 +2696,8 @@ export const readClassesFromGoogleSheet = async (
       fichaPdfDriveId?: string;
       fichaPdfDriveUrl?: string;
       fichaPdfSubfolder?: string;
+      consecutiveAbsenceAlert?: Student['consecutiveAbsenceAlert'];
+      monthlyAttendanceByMonth?: Student['monthlyAttendanceByMonth'];
     }
   >();
   currentClasses.forEach((c) =>
@@ -2638,9 +2708,53 @@ export const readClassesFromGoogleSheet = async (
         fichaPdfDriveId: s.fichaPdfDriveId,
         fichaPdfDriveUrl: s.fichaPdfDriveUrl,
         fichaPdfSubfolder: s.fichaPdfSubfolder,
+        consecutiveAbsenceAlert: s.consecutiveAbsenceAlert,
+        monthlyAttendanceByMonth: s.monthlyAttendanceByMonth,
       });
     })
   );
+
+  // Also read Busca_Ativa_Faltas_Consecutivas_2027 if present so feedback typed in Google Sheets updates the App
+  if (meta.sheetTitles.includes('Busca_Ativa_Faltas_Consecutivas_2027')) {
+    try {
+      const conRes = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+          spreadsheetId
+        )}/values/${encodeURIComponent('Busca_Ativa_Faltas_Consecutivas_2027!A2:O500')}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (conRes.ok) {
+        const conData = await conRes.json();
+        const conRows: any[][] = conData.values || [];
+        conRows.forEach((r) => {
+          const stName = normalizeStudentNameForPhoto(String(r[4] || ''));
+          if (!stName) return;
+          const datesStr = String(r[6] || '').trim();
+          const reportedAt = String(r[8] || '').trim();
+          const feedbackStr = String(r[11] || '').trim();
+          const feedbackAt = String(r[12] || '').trim();
+          const prevEntry = existingPhotoByStudentName.get(stName) || {};
+          const prevAlert = prevEntry.consecutiveAbsenceAlert;
+          const parsedDates = datesStr
+            ? datesStr.split(',').map((d) => d.trim()).filter(Boolean)
+            : prevAlert?.selectedDates || [];
+          existingPhotoByStudentName.set(stName, {
+            ...prevEntry,
+            consecutiveAbsenceAlert: {
+              selectedDates: parsedDates,
+              reportedAt: reportedAt || prevAlert?.reportedAt || '',
+              reportedByTeacher: prevAlert?.reportedByTeacher,
+              familyFeedback: feedbackStr || prevAlert?.familyFeedback || '',
+              feedbackUpdatedAt: feedbackAt || prevAlert?.feedbackUpdatedAt,
+              active: parsedDates.length > 0,
+            },
+          });
+        });
+      }
+    } catch (e) {
+      console.warn('Aviso ao ler Busca_Ativa_Faltas_Consecutivas_2027:', e);
+    }
+  }
 
   const groupedFromSheet = new Map<string, Student[]>();
 
@@ -2737,6 +2851,8 @@ export const readClassesFromGoogleSheet = async (
       fichaPdfDriveId: prevPhoto?.fichaPdfDriveId,
       fichaPdfDriveUrl: prevPhoto?.fichaPdfDriveUrl,
       fichaPdfSubfolder: prevPhoto?.fichaPdfSubfolder,
+      consecutiveAbsenceAlert: prevPhoto?.consecutiveAbsenceAlert,
+      monthlyAttendanceByMonth: prevPhoto?.monthlyAttendanceByMonth,
       status: validFaltas > 0 ? 'absent' : 'present',
       totalAbsencesMonth: validFaltas,
       justifiedAbsences: validAtestados,

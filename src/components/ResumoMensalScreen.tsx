@@ -60,22 +60,22 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full max-w-xl md:max-w-4xl lg:max-w-6xl mx-auto space-y-4 pb-32">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
       {/* Month & Class Navigator */}
-      <div className="bg-[#edeeec] rounded-2xl p-4 shadow-sm border border-[#e1e3e1]">
+      <div className="card-welcoming bg-white p-4 border border-black/[0.06]">
         <div className="flex items-center justify-between gap-2">
           <button
             onClick={handlePrevMonth}
             aria-label="Mês anterior"
-            className="min-h-[52px] min-w-[52px] rounded-xl bg-white hover:bg-[#e7e8e6] text-[#003440] flex items-center justify-center transition-transform active:scale-95 shadow-xs cursor-pointer"
+            className="min-h-[44px] min-w-[44px] rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
             type="button"
           >
-            <span className="material-symbols-outlined text-[32px]">chevron_left</span>
+            <span className="material-symbols-outlined text-[24px]">chevron_left</span>
           </button>
 
-          <div className="text-center flex-1">
-            <span className="inline-flex items-center justify-center gap-1.5 text-[1.375rem] font-bold text-[#003440]">
-              <span className="material-symbols-outlined text-[24px] text-[#436370]">calendar_today</span>
+          <div className="text-center flex-1 min-w-0">
+            <span className="inline-flex items-center justify-center gap-1.5 text-[1.15rem] sm:text-[1.35rem] font-bold text-[#1d1d1f]">
+              <span className="material-symbols-outlined text-[20px] text-[#0071e3]">calendar_today</span>
               {months[currentMonthIndex]} de 2027
             </span>
             <div className="mt-1">
@@ -85,7 +85,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   const target = allClasses.find((c) => c.id === e.target.value);
                   if (target) onSelectClass(target);
                 }}
-                className="px-3 py-1 bg-white text-[#003440] text-[0.875rem] font-bold rounded-full border border-[#c0c8cb]/60 cursor-pointer shadow-xs max-w-xs truncate"
+                className="px-3 py-1 bg-[#f5f5f7] text-[#1d1d1f] text-[0.8rem] sm:text-[0.85rem] font-semibold rounded-full border border-black/[0.08] cursor-pointer max-w-[260px] sm:max-w-sm truncate"
               >
                 <optgroup label="☀️ Turno Manhã (G4, G5, 1º ao 5º)">
                   {allClasses

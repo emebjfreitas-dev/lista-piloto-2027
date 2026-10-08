@@ -19,14 +19,19 @@ import {
   checkGoogleRedirectResult,
   readAuthorizedUsersFromGoogleSheet,
 } from '../services/googleSheetsApi';
+import { APP_FONT_OPTIONS, AppFontId } from '../utils/fontTheme';
 
 interface LoginScreenProps {
   authorizedUsers: AuthorizedUser[];
+  activeFontId?: AppFontId;
+  onSelectFont?: (fontId: AppFontId) => void;
   onLoginSuccess: (authorizedUser: AuthorizedUser) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   authorizedUsers,
+  activeFontId = 'inter',
+  onSelectFont,
   onLoginSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
@@ -341,6 +346,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </form>
           )}
         </div>
+
+        {/* Seletor Minimalista para testar as 5 Fontes na Tela Inicial */}
+        {onSelectFont && (
+          <div className="w-full pt-3 border-t border-black/[0.05] space-y-2">
+            <p className="text-[0.68rem] font-semibold text-[#86868b]">
+              Tipografia ativa:{' '}
+              <span className="text-[#1d1d1f] font-bold">
+                {APP_FONT_OPTIONS.find((f) => f.id === activeFontId)?.name || 'Inter'}
+              </span>
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-1">
+              {APP_FONT_OPTIONS.map((font) => {
+                const isSelected = font.id === activeFontId;
+                return (
+                  <button
+                    key={font.id}
+                    type="button"
+                    onClick={() => onSelectFont(font.id)}
+                    style={{ fontFamily: font.cssFamily }}
+                    title={font.description}
+                    className={`px-2.5 py-1 rounded-full text-[0.68rem] font-semibold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#1d1d1f] text-white shadow-2xs'
+                        : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#6e6e73]'
+                    }`}
+                  >
+                    {font.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

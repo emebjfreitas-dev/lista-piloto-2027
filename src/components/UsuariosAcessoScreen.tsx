@@ -656,7 +656,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   );
 
   return (
-    <div className="pb-28 space-y-5 animate-gentle-fade">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto pb-12 space-y-4 animate-gentle-fade">
       {/* Feedback Toast */}
       {feedbackMsg && (
         <div

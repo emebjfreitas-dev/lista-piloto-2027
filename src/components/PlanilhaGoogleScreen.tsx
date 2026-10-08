@@ -9,6 +9,7 @@ import {
 } from '../data/mockData';
 import { downloadSpreadsheetXLSX, getStoredAuthorizedUsers } from '../services/db';
 import { StudentAvatar } from './StudentAvatar';
+import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import {
   getStudentBimesterReport,
   OFFICIAL_BIMESTERS_2027,
@@ -27,6 +28,7 @@ import {
   createSchoolDatabaseSpreadsheet,
   createRealPhotosFolderInDrive,
   syncClassesToGoogleSheet,
+  writeAttendanceOnlyToGoogleSheet,
   readClassesFromGoogleSheet,
   syncPhotosFromDriveFolder,
   syncNominalPdfsFromDriveSubfolders,
@@ -62,6 +64,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   onBack,
 }) => {
   const [activeTab, setActiveTab] = useState<
+    | 'faltas_consecutivas'
     | 'nominal_infantil'
     | 'nominal_fundamental'
     | 'bimestral_bolsa'
@@ -69,7 +72,8 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     | 'dias_letivos'
     | 'turmas'
     | 'emails_permitidos'
-  >('nominal_infantil');
+  >('faltas_consecutivas');
+  const [consecShowAllStudents, setConsecShowAllStudents] = useState(false);
   const [selectedBimesterId, setSelectedBimesterId] = useState<
     '1bim' | '2bim' | '3bim' | '4bim' | 'anual'
   >('1bim');
@@ -152,6 +156,92 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   );
   const calendarRows = OFFICIAL_OCTOBER_DAYS;
   const classesToSync = allClasses && allClasses.length > 0 ? allClasses : classes;
+
+  const consecutiveAbsenceRows = useMemo(() => {
+    const list: Array<{
+      cls: ClassGroup;
+      student: ClassGroup['students'][number];
+      selectedDates: string[];
+      familyFeedback: string;
+      reportedAt: string;
+    }> = [];
+    const q = searchQuery.toLowerCase().trim();
+
+    classesToSync.forEach((cls) => {
+      if (filterTurma !== 'all' && cls.name !== filterTurma) return;
+      cls.students.forEach((st) => {
+        const alert = st.consecutiveAbsenceAlert;
+        const dates = alert?.selectedDates || [];
+        const hasAlert = Boolean(alert?.active && dates.length > 0);
+        const hasFeedback = Boolean(alert?.familyFeedback && alert.familyFeedback.trim());
+
+        if (!consecShowAllStudents && !hasAlert && !hasFeedback) return;
+        if (
+          q &&
+          !st.name.toLowerCase().includes(q) &&
+          !cls.name.toLowerCase().includes(q)
+        ) {
+          return;
+        }
+
+        list.push({
+          cls,
+          student: st,
+          selectedDates: dates,
+          familyFeedback: alert?.familyFeedback || '',
+          reportedAt: alert?.reportedAt || '',
+        });
+      });
+    });
+
+    return list;
+  }, [classesToSync, filterTurma, searchQuery, consecShowAllStudents]);
+
+  const handleUpdateSecretariaFeedback = (
+    classId: string,
+    studentId: string,
+    newFeedback: string
+  ) => {
+    if (!onUpdateAllClasses) return;
+    const nowStr = new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    let targetUpdatedClass: ClassGroup | null = null;
+    const nextClasses = classesToSync.map((cls) => {
+      if (cls.id !== classId) return cls;
+      const updatedCls: ClassGroup = {
+        ...cls,
+        students: cls.students.map((st) => {
+          if (st.id !== studentId) return st;
+          const prevAlert = st.consecutiveAbsenceAlert;
+          return {
+            ...st,
+            consecutiveAbsenceAlert: {
+              selectedDates: prevAlert?.selectedDates || [],
+              reportedAt: prevAlert?.reportedAt || nowStr,
+              reportedByTeacher: prevAlert?.reportedByTeacher || cls.teacherName || 'PEB I',
+              familyFeedback: newFeedback,
+              feedbackUpdatedAt: nowStr,
+              active:
+                prevAlert?.active ??
+                Boolean((prevAlert?.selectedDates?.length || 0) > 0),
+            },
+          };
+        }),
+      };
+      targetUpdatedClass = updatedCls;
+      return updatedCls;
+    });
+
+    onUpdateAllClasses(nextClasses);
+    if (targetUpdatedClass) {
+      writeAttendanceOnlyToGoogleSheet(targetUpdatedClass, nextClasses).catch(() => {});
+    }
+  };
 
   const showToast = (type: 'success' | 'error' | 'info', text: string) => {
     setStatusMessage({ type, text });
@@ -832,7 +922,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-4 pb-36">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
       {/* Status Toast */}
       {statusMessage && (
         <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-200">
@@ -1239,6 +1329,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       <div className="bg-[#e6ebea]/90 backdrop-blur-md p-1.5 rounded-2xl border border-[#003440]/10 flex items-center gap-1 overflow-x-auto">
         {[
           {
+            id: 'faltas_consecutivas',
+            label: `Faltas Seguidas • Contato Família (${consecutiveAbsenceRows.length})`,
+            icon: 'event_busy',
+          },
+          {
             id: 'nominal_infantil',
             label: 'Ed. Infantil (<60%)',
             icon: 'child_care',
@@ -1301,6 +1396,168 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           );
         })}
       </div>
+
+      {/* NOVA ABA: FALTAS CONSECUTIVAS (ENVIADAS PELO PEB I) + DEVOLUTIVA DA SECRETARIA NA COLUNA DA FRENTE */}
+      {activeTab === 'faltas_consecutivas' && (
+        <section className="card-welcoming bg-white rounded-3xl p-5 space-y-4 animate-gentle-fade">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-[0.7rem] font-bold uppercase tracking-wider text-[#ff3b30] block">
+                Aba Oficial: Busca_Ativa_Faltas_Consecutivas_2027
+              </span>
+              <h2 className="text-[1.25rem] sm:text-[1.45rem] font-bold text-[#1d1d1f]">
+                Faltas Consecutivas (PEB I) &amp; Devolutiva da Família
+              </h2>
+              <p className="text-[0.82rem] text-[#6e6e73]">
+                Estudantes sinalizados pelo(a) professor(a) PEB I com faltas seguidas. Clique no WhatsApp para falar com a família e registre a devolutiva na coluna da frente.
+              </p>
+            </div>
+
+            <div className="ios-segmented shrink-0 self-start sm:self-center">
+              <button
+                type="button"
+                onClick={() => setConsecShowAllStudents(false)}
+                className={`ios-segmented-item px-3.5 py-1.5 text-[0.78rem] ${
+                  !consecShowAllStudents ? 'ios-segmented-item-active' : ''
+                }`}
+              >
+                Com Aviso ({consecutiveAbsenceRows.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setConsecShowAllStudents(true)}
+                className={`ios-segmented-item px-3.5 py-1.5 text-[0.78rem] ${
+                  consecShowAllStudents ? 'ios-segmented-item-active' : ''
+                }`}
+              >
+                Todos os Alunos
+              </button>
+            </div>
+          </div>
+
+          {consecutiveAbsenceRows.length === 0 ? (
+            <div className="bg-[#f5f5f7] rounded-2xl p-8 text-center space-y-2">
+              <span className="material-symbols-outlined text-[32px] text-[#28cd41]">
+                verified
+              </span>
+              <h3 className="text-[1rem] font-bold text-[#1d1d1f]">
+                Nenhum estudante com aviso de faltas consecutivas no momento
+              </h3>
+              <p className="text-[0.82rem] text-[#6e6e73] max-w-md mx-auto">
+                Assim que o(a) professor(a) PEB I selecionar os dias de falta seguida de um aluno na tela "Faltas Seguidas", ele aparecerá aqui instantaneamente para contato da secretaria.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[0.82rem] border-collapse min-w-[880px]">
+                <thead className="bg-[#f5f5f7] text-[#6e6e73] font-bold uppercase tracking-wider text-[0.68rem]">
+                  <tr>
+                    <th className="py-3 px-4 rounded-l-xl">Turma &amp; Professor(a) PEB I</th>
+                    <th className="py-3 px-4">Estudante</th>
+                    <th className="py-3 px-4">Dias Faltosos (Até 4 Anteriores)</th>
+                    <th className="py-3 px-4">Contato Família (WhatsApp)</th>
+                    <th className="py-3 px-4 rounded-r-xl w-[36%]">
+                      Devolutiva da Secretaria (Feedback da Família)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/[0.04]">
+                  {consecutiveAbsenceRows.map(({ cls, student, selectedDates, familyFeedback }) => {
+                    const waLinks = buildWhatsAppLinksFromPhoneString(
+                      student.telefones || student.guardianPhone,
+                      student.name,
+                      `Olá, família de ${student.name}! Aqui é da secretaria da EMEB Prof. Joaquim Candelário de Freitas. O(A) professor(a) informou que a criança faltou nos dias ${
+                        selectedDates.join(', ') || 'recentes'
+                      }. Está tudo bem com o(a) estudante?`
+                    );
+
+                    return (
+                      <tr key={`${cls.id}-${student.id}`} className="hover:bg-[#fbfbfd]">
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-[#1d1d1f] block">
+                            {cls.name} ({cls.shift.replace('Turno ', '')})
+                          </span>
+                          <span className="text-[0.74rem] text-[#6e6e73]">
+                            Prof(a): {cls.teacherFirstName || cls.teacherName || 'PEB I'}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <StudentAvatar student={student} size="sm" />
+                            <div>
+                              <span className="font-bold text-[#1d1d1f] block">
+                                Nº {student.number.toString().padStart(2, '0')} • {student.name}
+                              </span>
+                              <span className="text-[0.73rem] text-[#6e6e73]">
+                                Mãe: {student.filiacao1 || student.guardianName || '—'}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {selectedDates.length > 0 ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff3b30]/12 text-[#ff3b30] font-semibold text-[0.78rem]">
+                              <span className="material-symbols-outlined text-[15px]">
+                                event_busy
+                              </span>
+                              <span>
+                                {selectedDates.join(', ')} ({selectedDates.length}{' '}
+                                {selectedDates.length === 1 ? 'dia' : 'dias'})
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-[0.75rem] text-[#86868b]">Sem dias marcados</span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {waLinks.length > 0 ? (
+                            <div className="flex flex-col items-start gap-1">
+                              {waLinks.map((ph, idx) => (
+                                <a
+                                  key={idx}
+                                  href={ph.waUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#25D366]/14 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-mono font-semibold text-[0.76rem] transition-colors cursor-pointer"
+                                >
+                                  <span className="material-symbols-outlined text-[15px]">chat</span>
+                                  <span>{ph.display}</span>
+                                </a>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[0.75rem] text-[#86868b]">Sem telefone</span>
+                          )}
+                        </td>
+
+                        {/* Coluna da Frente: Devolutiva da Secretaria / Feedback da Família (Salva automaticamente) */}
+                        <td className="py-3.5 px-4">
+                          <input
+                            type="text"
+                            value={familyFeedback}
+                            onChange={(e) =>
+                              handleUpdateSecretariaFeedback(
+                                cls.id,
+                                student.id,
+                                e.target.value
+                              )
+                            }
+                            placeholder="Digite aqui o retorno da família p/ o(a) professor(a)..."
+                            className="w-full min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] focus:bg-[#eaf6ef]/60 text-[#1d1d1f] font-medium text-[0.82rem] placeholder:text-[#86868b] focus:outline-none transition-colors"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* NEW TAB: Relatórios Bimestrais com Faltas e Atestados por Mês (a partir de Fev./27) para o Sistema Bolsa Família / MEC */}
       {activeTab === 'bimestral_bolsa' && (

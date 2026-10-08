@@ -14,6 +14,7 @@ import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
 import { getStudentAttendanceMetrics } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
 import { OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
+import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 
 type ViewMode = 'grid' | 'compact' | 'table';
 type StatusFilter =
@@ -275,15 +276,15 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   }, [orderedStudents, searchStudent, statusFilter, diasLetivosMes, userRole]);
 
   return (
-    <div className="flex flex-col w-full max-w-xl md:max-w-5xl lg:max-w-7xl xl:max-w-[1780px] mx-auto space-y-4 pb-28 animate-gentle-fade">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
       {/* Se a professora PEB I tiver 2 ou mais turmas vinculadas, seletor estilo Segmented Control iOS */}
       {userRole === 'usuario' && assignedClasses.length > 1 && onSwitchAssignedClass && (
-        <section className="bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-black/[0.06] flex flex-wrap items-center justify-between gap-2.5 shadow-2xs">
+        <section className="bg-white/90 backdrop-blur-md rounded-2xl p-2.5 sm:p-3 border border-black/[0.06] flex flex-wrap items-center justify-between gap-2 shadow-2xs">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[19px] text-[#005035]">
+            <span className="material-symbols-outlined text-[18px] text-[#0071e3]">
               swap_horiz
             </span>
-            <span className="text-[0.8rem] font-bold text-[#003440]">
+            <span className="text-[0.78rem] font-semibold text-[#1d1d1f]">
               Suas Turmas ({assignedClasses.length}):
             </span>
           </div>
@@ -307,32 +308,32 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         </section>
       )}
 
-      {/* ALTA DA TURMA: Cabeçalho iOS Clean + Quadro Docente Oficial + Resumo Completo de Estudantes */}
-      <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-6 border border-black/[0.06] space-y-4">
+      {/* ALTA DA TURMA: Cabeçalho Apple Clean + Quadro Docente Oficial + Resumo Completo de Estudantes */}
+      <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-3.5 sm:space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {classGroup.turmaAbrev && (
-                <span className="text-[0.74rem] font-black uppercase tracking-wider text-white bg-[#003440] px-2.5 py-0.5 rounded-lg font-mono">
+                <span className="text-[0.7rem] font-bold uppercase tracking-wider text-white bg-[#1d1d1f] px-2.5 py-0.5 rounded-lg font-mono">
                   {classGroup.turmaAbrev}
                 </span>
               )}
-              <span className="text-[0.72rem] font-bold uppercase tracking-wider text-[#005035] bg-[#eaf6ef] px-2.5 py-0.5 rounded-full">
+              <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-[#0066cc] bg-[#0071e3]/10 px-2.5 py-0.5 rounded-full">
                 {classGroup.shift} · {classGroup.room}
               </span>
               {classGroup.classeSedCode && (
-                <span className="text-[0.72rem] font-mono font-bold text-[#004e64] bg-[#e6f4f8] px-2.5 py-0.5 rounded-full">
-                  CLASSE SED: {classGroup.classeSedCode}
+                <span className="text-[0.7rem] font-mono font-semibold text-[#1d1d1f] bg-[#f5f5f7] px-2.5 py-0.5 rounded-full">
+                  SED: {classGroup.classeSedCode}
                 </span>
               )}
-              <span className="text-[0.72rem] font-semibold text-[#5a676b] bg-[#f4f6f5] px-2.5 py-0.5 rounded-full">
-                Mínimo Legal: {minLegalPresence}% ({isInfantilClass ? 'Ed. Infantil' : 'Ens. Fundamental'})
+              <span className="text-[0.7rem] font-medium text-[#6e6e73] bg-[#f5f5f7] px-2.5 py-0.5 rounded-full">
+                Mín. Legal: {minLegalPresence}%
               </span>
             </div>
-            <h1 className="text-[1.75rem] sm:text-[2rem] font-extrabold text-[#003440] tracking-tight leading-tight mt-1">
+            <h1 className="text-[1.4rem] sm:text-[1.8rem] font-bold text-[#1d1d1f] tracking-tight leading-tight mt-1">
               Turma {classGroup.name}
             </h1>
-            <p className="text-[0.84rem] text-[#5a676b] font-medium">
+            <p className="text-[0.78rem] sm:text-[0.84rem] text-[#6e6e73] font-normal">
               {classGroup.sedClassName
                 ? `${classGroup.sedClassName} · Qtd Prevista SED: ${classGroup.sedExpectedStudents ?? classSummary.totalMatriculados}`
                 : `${classGroup.grade} · ${classGroup.room}`}{' '}
@@ -340,66 +341,19 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             </p>
           </div>
 
-          {/* Botões superiores discretos estilo iOS */}
-          <div className="flex flex-wrap items-center gap-2">
-            {onNavigateToOnibusFretado && (
+          {/* Cabeçalho Minimalista da Turma: Apenas 1 ação discreta para Admin baixar Excel se desejar */}
+          {userRole === 'admin' && (
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={onNavigateToOnibusFretado}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f0f9ff] hover:bg-[#e0f2fe] text-[#0369a1] border border-[#0284c7]/20 font-bold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
+                onClick={() => setIsExportXlsModalOpen(true)}
+                className="min-h-[36px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.76rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
               >
-                <span className="material-symbols-outlined text-[18px]">directions_bus</span>
-                <span>Aba Ônibus Fretado</span>
+                <span className="material-symbols-outlined text-[16px] text-[#0071e3]">download</span>
+                <span>Exportar .XLS</span>
               </button>
-            )}
-
-            {userRole === 'admin' && onNavigateToBolsaFamilia && (
-              <button
-                type="button"
-                onClick={onNavigateToBolsaFamilia}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#fef3c7] hover:bg-[#fde68a] text-[#92400e] border border-[#f59e0b]/30 font-bold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
-              >
-                <span className="material-symbols-outlined text-[18px]">family_restroom</span>
-                <span>Aba Bolsa Família (Admin)</span>
-              </button>
-            )}
-
-            {userRole === 'admin' && (
-              <button
-                type="button"
-                onClick={onGoToMonthlySummary}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#003440] font-semibold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
-              >
-                <span className="material-symbols-outlined text-[18px] text-[#005035]">
-                  assessment
-                </span>
-                <span>Relatório Bolsa Família</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setIsExportXlsModalOpen(true)}
-              className="min-h-[42px] px-4 py-2 rounded-xl bg-[#005035] hover:bg-[#003d28] text-white font-bold text-[0.82rem] flex items-center gap-2 cursor-pointer shadow-xs transition-all active:scale-97"
-            >
-              <span className="material-symbols-outlined text-[19px]">download</span>
-              <span>Baixar Planilha (.xls)</span>
-              <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[0.68rem] font-extrabold">
-                Colunas &amp; Ordem
-              </span>
-            </button>
-
-            {userRole !== 'usuario' && (
-              <button
-                type="button"
-                onClick={onBackToClasses}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#3c3c43] font-semibold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
-              >
-                <span className="material-symbols-outlined text-[18px]">arrow_back_ios_new</span>
-                <span>39 Turmas</span>
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Quadro Docente Oficial da Turma: Professor(a) Regente PEB I + Especialistas PEB II (Arte, Educação Física e Língua Inglesa) */}
@@ -636,20 +590,19 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
         </div>
 
-        {/* Banner de Alerta Nominal: Estudantes sem Ficha Informativa Escaneada (PDF no Drive) */}
+        {/* Banner de Alerta Nominal: Estudantes sem Ficha Informativa Escaneada */}
         {classSummary.semFichaEscaneadaCount > 0 && (
-          <div className="mt-2 rounded-2xl bg-[#fff1f2] border-2 border-[#e11d48]/40 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+          <div className="mt-2 rounded-2xl bg-[#fff2f2] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[22px] text-[#be123c] animate-pulse shrink-0">
+              <span className="material-symbols-outlined text-[21px] text-[#ff3b30] shrink-0">
                 notification_important
               </span>
-              <p className="text-[0.82rem] font-bold text-[#881337] leading-snug">
-                <strong>ALERTA DE DOCUMENTAÇÃO:</strong> Esta turma possui{' '}
-                <strong className="underline">
+              <p className="text-[0.82rem] font-medium text-[#1d1d1f] leading-snug">
+                <strong>Atenção, Professor(a):</strong> Há{' '}
+                <strong className="text-[#ff3b30]">
                   {classSummary.semFichaEscaneadaCount} estudante(s)
                 </strong>{' '}
-                sem a <strong>Ficha Informativa Escaneada (PDF)</strong> vinculada no Google
-                Drive. Clique no alerta de cada card para vincular o documento.
+                sem Ficha Informativa. Por favor, solicite às famílias que preencham a ficha.
               </p>
             </div>
             <button
@@ -657,13 +610,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               onClick={() =>
                 setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')
               }
-              className="px-3 py-1.5 rounded-xl bg-[#be123c] hover:bg-[#9f1239] text-white font-extrabold text-[0.75rem] flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
+              className="px-3.5 py-1.5 rounded-full bg-[#ff3b30] hover:bg-[#d70015] text-white font-semibold text-[0.75rem] flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">filter_alt</span>
               <span>
                 {statusFilter === 'sem_ficha_pdf'
-                  ? 'Mostrar Todos da Turma'
-                  : `Filtrar Sem Ficha (${classSummary.semFichaEscaneadaCount})`}
+                  ? 'Mostrar Todos'
+                  : `Ver Sem Ficha (${classSummary.semFichaEscaneadaCount})`}
               </span>
             </button>
           </div>
@@ -1049,12 +1002,37 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       {student.filiacao2 || 'Não informado'}
                     </span>
                   </div>
-                  <div className="pt-1 border-t border-black/[0.05] flex items-center justify-between gap-2 text-[0.7rem]">
-                    <span className="font-mono font-semibold text-[#005035] truncate">
-                      {student.telefones || student.guardianPhone || 'Sem telefone'}
-                    </span>
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="pt-1 border-t border-black/[0.05] flex items-center justify-between gap-2 text-[0.7rem]"
+                  >
+                    {(() => {
+                      const waList = buildWhatsAppLinksFromPhoneString(
+                        student.telefones || student.guardianPhone,
+                        student.name
+                      );
+                      if (waList.length === 0) {
+                        return (
+                          <span className="font-mono text-[#86868b] truncate">
+                            Sem telefone
+                          </span>
+                        );
+                      }
+                      return (
+                        <a
+                          href={waList[0].waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Abrir WhatsApp: ${waList[0].display}`}
+                          className="inline-flex items-center gap-1 font-mono font-semibold text-[#128C7E] hover:text-[#25D366] hover:underline truncate cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">chat</span>
+                          <span className="truncate">{waList[0].display}</span>
+                        </a>
+                      );
+                    })()}
                     {student.dataNascimento && (
-                      <span className="font-mono text-[#5a676b] shrink-0">
+                      <span className="font-mono text-[#86868b] shrink-0">
                         {student.dataNascimento}
                       </span>
                     )}
@@ -1080,35 +1058,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 )}
 
-                {/* Alerta de Notificação se NÃO tiver Ficha Informativa Escaneada no Drive */}
-                {!(
-                  (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
-                  (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
-                ) && (
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onOpenStudentPdf) onOpenStudentPdf(student);
-                    }}
-                    title="Clique para vincular a Ficha Informativa Escaneada em PDF no Google Drive"
-                    className="px-2.5 py-1.5 rounded-xl bg-[#fff1f2] border border-[#e11d48]/45 text-[#be123c] text-[0.7rem] font-extrabold flex items-center justify-between gap-1.5 shadow-2xs hover:bg-[#ffe4e6] transition-colors"
-                  >
-                    <span className="flex items-center gap-1.5 leading-tight">
-                      <span className="material-symbols-outlined text-[15px] shrink-0 animate-pulse">
-                        notification_important
-                      </span>
-                      <span>ALERTA: Sem Ficha Informativa Escaneada</span>
-                    </span>
-                    <span className="text-[0.63rem] uppercase bg-[#be123c] text-white px-1.5 py-0.5 rounded font-black shrink-0">
-                      Vincular
-                    </span>
-                  </div>
-                )}
-
-                {/* Rodapé Minimalista do Card: Único Hyperlink = Ficha Informativa Escaneada em PDF do Drive (Upload de foto ocorre apenas ao clicar na foto) */}
+                {/* Rodapé Minimalista do Card: Ficha Informativa Escaneada ou Aviso para pedir à família */}
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="pt-2 border-t border-black/[0.06] flex items-center justify-between gap-1.5 text-[0.72rem]"
+                  className="pt-2 flex items-center justify-between gap-1.5 text-[0.72rem]"
                 >
                   {onOpenStudentPdf ? (
                     <a
@@ -1123,14 +1076,19 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         e.stopPropagation();
                         onOpenStudentPdf(student);
                       }}
-                      title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                      className={`doc-hyperlink px-2.5 py-1 rounded-xl font-extrabold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                      title={
+                        (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+                          ? `Abrir Ficha Informativa de ${student.name}`
+                          : 'Estudante sem ficha: clique para ver o aviso de solicitação à família'
+                      }
+                      className={`doc-hyperlink px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
                         (student.fichaPdfDriveUrl &&
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white border border-[#005035]/25'
-                          : 'bg-[#fff1f2] hover:bg-[#be123c] text-[#be123c] hover:!text-white border border-[#e11d48]/40'
+                          ? 'bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white'
+                          : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#ff3b30] hover:!text-white'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[15px]">
@@ -1139,15 +1097,15 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
                           ? 'document_scanner'
-                          : 'warning'}
+                          : 'notification_important'}
                       </span>
                       <span>
                         {(student.fichaPdfDriveUrl &&
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'Ficha Informativa Escaneada (Drive)'
-                          : '⚠️ Sem Ficha Escaneada (Vincular PDF)'}
+                          ? 'Ficha Informativa'
+                          : 'Sem Ficha • Pedir à família'}
                       </span>
                     </a>
                   ) : (
@@ -1291,8 +1249,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'Ficha Informativa (Drive)'
-                          : '⚠️ ALERTA: Sem Ficha PDF'}
+                          ? 'Ficha Informativa'
+                          : 'Sem Ficha • Pedir à família'}
                       </span>
                     </a>
                   )}
