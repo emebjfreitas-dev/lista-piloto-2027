@@ -53,8 +53,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'planilha',
-      label: 'Planilha',
-      icon: 'table_chart',
+      label: 'Nuvem',
+      icon: 'cloud_done',
       adminOnly: true,
     },
     {
@@ -65,7 +65,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'usuarios_acesso',
-      label: 'Prof. & Acessos',
+      label: 'Acessos',
       icon: 'manage_accounts',
       adminOnly: true,
     },
@@ -88,11 +88,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   return (
     <nav
-      aria-label="Barra de Navegação Inferior iOS"
-      className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe ios-glass border-t border-black/[0.07] shadow-[0_-2px_20px_rgba(0,0,0,0.04)]"
+      aria-label="Barra de Navegação Inferior"
+      className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe ios-glass border-t border-black/[0.08]"
     >
       <div
-        className={`flex justify-around items-center h-[60px] px-2 mx-auto ${
+        className={`flex justify-around items-center h-[58px] px-2 mx-auto ${
           isAdmin ? 'max-w-xl md:max-w-2xl' : 'max-w-sm'
         }`}
       >
@@ -104,19 +104,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               type="button"
               onClick={() => onChangeScreen(item.id)}
               aria-current={isActive ? 'page' : undefined}
-              className={`group relative flex flex-col items-center justify-center flex-1 h-full px-1 transition-all duration-200 cursor-pointer select-none active:scale-92 ${
+              className={`group relative flex flex-col items-center justify-center flex-1 h-full px-1 transition-all duration-150 cursor-pointer select-none active:scale-95 ${
                 isActive
-                  ? 'text-[#005035]'
-                  : 'text-[#8e8e93] hover:text-[#3c3c43]'
+                  ? 'text-[#0071e3]'
+                  : 'text-[#86868b] hover:text-[#1d1d1f]'
               }`}
             >
               <div
-                className={`flex items-center justify-center w-11 h-7 rounded-full transition-colors duration-200 ${
-                  isActive ? 'bg-[#005035]/12' : 'bg-transparent'
+                className={`flex items-center justify-center w-10 h-6 rounded-full transition-colors duration-150 ${
+                  isActive ? 'bg-[#0071e3]/12' : 'bg-transparent'
                 }`}
               >
                 <span
-                  className="material-symbols-outlined text-[22px] transition-transform duration-200"
+                  className="material-symbols-outlined text-[21px]"
                   style={
                     isActive ? { fontVariationSettings: "'FILL' 1, 'wght' 600" } : undefined
                   }
@@ -126,8 +126,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               </div>
 
               <span
-                className={`text-[0.68rem] tracking-tight leading-tight mt-0.5 truncate max-w-full ${
-                  isActive ? 'font-bold text-[#005035]' : 'font-medium text-[#8e8e93]'
+                className={`text-[0.67rem] tracking-tight leading-tight mt-0.5 truncate max-w-full whitespace-nowrap ${
+                  isActive ? 'font-semibold text-[#0071e3]' : 'font-normal text-[#86868b]'
                 }`}
               >
                 {item.label}
@@ -141,12 +141,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             type="button"
             onClick={onLogout}
             title="Sair da conta"
-            className="group relative flex flex-col items-center justify-center flex-1 h-full px-1 transition-all duration-200 cursor-pointer select-none active:scale-92 text-[#ba1a1a] hover:text-[#93000a]"
+            className="group relative flex flex-col items-center justify-center flex-1 h-full px-1 transition-all duration-150 cursor-pointer select-none active:scale-95 text-[#ff3b30]"
           >
-            <div className="flex items-center justify-center w-11 h-7 rounded-full bg-[#ffdad6]/40 group-hover:bg-[#ffdad6]/75 transition-colors duration-200">
-              <span className="material-symbols-outlined text-[21px]">logout</span>
+            <div className="flex items-center justify-center w-10 h-6 rounded-full bg-[#ff3b30]/10 group-hover:bg-[#ff3b30]/20 transition-colors">
+              <span className="material-symbols-outlined text-[20px]">logout</span>
             </div>
-            <span className="text-[0.68rem] font-bold tracking-tight leading-tight mt-0.5 truncate max-w-full text-[#ba1a1a]">
+            <span className="text-[0.67rem] font-semibold tracking-tight leading-tight mt-0.5 truncate max-w-full whitespace-nowrap text-[#ff3b30]">
               Sair
             </span>
           </button>

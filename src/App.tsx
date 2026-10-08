@@ -347,7 +347,7 @@ export default function App() {
     };
 
     syncFromBackendServer();
-    const pollId = window.setInterval(syncFromBackendServer, 1800);
+    const pollId = window.setInterval(syncFromBackendServer, 1200);
     return () => {
       active = false;
       window.clearInterval(pollId);
@@ -503,7 +503,7 @@ export default function App() {
 
     window.addEventListener('focus', handleWindowFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    const intervalId = window.setInterval(pullMasterDataFromGoogle, 12000);
+    const intervalId = window.setInterval(pullMasterDataFromGoogle, 6500);
 
     return () => {
       isMounted = false;
@@ -511,7 +511,7 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [currentScreen, currentUserEmail]);
 
   // Keep selectedClass restricted when userRole is 'usuario'
   useEffect(() => {

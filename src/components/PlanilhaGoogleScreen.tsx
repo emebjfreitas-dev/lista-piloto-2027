@@ -133,6 +133,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       (user) => {
         setNeedsAuth(false);
         setGoogleUserEmail(user.email || user.displayName || OFFICIAL_ADMIN_EMAIL);
+        // Sincronização 100% Automática ao abrir a tela (sem necessidade de clicar manualmente)
+        window.setTimeout(() => {
+          handleSyncAllCloudAndFoldersNow();
+        }, 120);
       },
       () => {
         setNeedsAuth(true);

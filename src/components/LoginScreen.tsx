@@ -181,50 +181,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   return (
-    <div className="relative min-h-screen bg-[#f4f7f5] text-[#0f1614] flex items-center justify-center p-4 overflow-hidden animate-gentle-fade">
-      {/* Marca d'água de fundo em tela cheia com a Foto Oficial da Escola (Flickr) */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none select-none fixed inset-0 flex items-center justify-center overflow-hidden z-0"
-      >
-        <img
-          src={SCHOOL_PATRON_WATERMARK_URL}
-          alt=""
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover opacity-[0.13] scale-105 mix-blend-multiply"
-        />
-      </div>
+    <div className="relative min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex items-center justify-center p-4 overflow-hidden animate-gentle-fade">
+      <main className="relative z-10 w-full max-w-[440px] bg-white rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-black/[0.06] px-8 py-11 flex flex-col items-center text-center space-y-7 overflow-hidden">
+        <div className="w-16 h-16 rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-2.5 flex items-center justify-center">
+          <img
+            src={APP_LOGO_URL}
+            alt="Brasão Oficial de Jundiaí"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = APP_LOGO_FALLBACK_URL;
+            }}
+            className="w-full h-full object-contain"
+          />
+        </div>
 
-      <main className="relative z-10 w-full max-w-[440px] bg-white/95 backdrop-blur-xl rounded-3xl shadow-[0_24px_60px_-14px_rgba(0,52,64,0.18)] border border-[#003440]/12 px-8 py-11 flex flex-col items-center text-center space-y-7 overflow-hidden">
-        {/* Marca d'água interna exclusiva deste quadro: Brasão Oficial de Jundiaí centralizado ao fundo */}
-        <img
-          src={APP_LOGO_URL}
-          alt=""
-          aria-hidden="true"
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            e.currentTarget.onerror = null;
-            e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-          }}
-          className="pointer-events-none select-none absolute inset-0 m-auto w-64 h-64 object-contain opacity-[0.085] mix-blend-multiply"
-        />
-
-        {/* Tipografia Institucional Coesa e Elegante */}
-        <div className="relative z-10 space-y-2.5 w-full">
-          <h1 className="text-[1.75rem] font-black uppercase tracking-[0.06em] text-[#003440] leading-tight">
-            LISTA PILOTO 2027
+        <div className="relative z-10 space-y-2 w-full">
+          <p className="text-[0.76rem] font-semibold tracking-tight text-[#0066cc]">
+            Prefeitura de Jundiaí · Secretaria Municipal de Educação
+          </p>
+          <h1 className="text-[2rem] font-bold tracking-tight text-[#1d1d1f] leading-tight">
+            Lista Piloto 2027
           </h1>
-          <p className="text-[1.02rem] font-extrabold text-[#005035] leading-snug">
+          <p className="text-[0.95rem] font-medium text-[#6e6e73] leading-snug">
             EMEB Professor Joaquim Candelário de Freitas
           </p>
-          <div className="pt-3.5 mt-1 border-t border-[#003440]/12 space-y-1">
-            <p className="text-[0.8rem] font-extrabold uppercase tracking-[0.1em] text-[#003440]">
-              Prefeitura do Município de Jundiaí
-            </p>
-            <p className="text-[0.74rem] font-bold uppercase tracking-[0.09em] text-[#436370]">
-              Secretaria Municipal de Educação
-            </p>
-          </div>
         </div>
 
         {/* Mensagem de erro + Ajuda Direta caso falte autorizar o domínio do GitHub no Firebase */}

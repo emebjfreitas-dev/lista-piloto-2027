@@ -37,10 +37,10 @@ jobs:
       - name: 4. Compilar Aplicativo (Vite Build)
         run: npm run build
 
-      - name: 5. Garantir Fallback SPA (404.html) e CNAME (Endereço Personalizado)
+      - name: 5. Garantir Fallback SPA (404.html) e Remover CNAME antigo
         run: |
           cp dist/index.html dist/404.html
-          if [ -s public/CNAME ]; then cp public/CNAME dist/CNAME; else rm -f dist/CNAME; fi
+          rm -f dist/CNAME public/CNAME
 
       - name: 6. Configurar GitHub Pages
         uses: actions/configure-pages@v5
