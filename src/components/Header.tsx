@@ -122,18 +122,20 @@ export const Header: React.FC<HeaderProps> = ({
               <span>{userRole === 'usuario' ? '1. Minha Turma' : '1. Turmas'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => onChangeScreen('frequencia_mensal')}
-              className={`min-h-[42px] px-3 rounded-xl font-extrabold text-[0.82rem] flex items-center gap-1.5 transition-all cursor-pointer ${
-                currentScreen === 'frequencia_mensal'
-                  ? 'bg-[#005035] text-white shadow-xs'
-                  : 'text-[#003440] hover:bg-white/80'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[19px]">edit_calendar</span>
-              <span>{userRole === 'peb2' ? '2. Frequência' : '2. Lançar Faltas'}</span>
-            </button>
+            {userRole !== 'peb2' && (
+              <button
+                type="button"
+                onClick={() => onChangeScreen('frequencia_mensal')}
+                className={`min-h-[42px] px-3 rounded-xl font-extrabold text-[0.82rem] flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentScreen === 'frequencia_mensal'
+                    ? 'bg-[#005035] text-white shadow-xs'
+                    : 'text-[#003440] hover:bg-white/80'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[19px]">edit_calendar</span>
+                <span>2. Lançar Faltas</span>
+              </button>
+            )}
 
             {isAdmin && (
               <button

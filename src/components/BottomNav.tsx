@@ -27,6 +27,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     label: string;
     icon: string;
     adminOnly?: boolean;
+    hideForPeb2?: boolean;
   }> = [
     {
       id: 'turmas',
@@ -35,8 +36,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'frequencia_mensal',
-      label: userRole === 'peb2' ? 'Frequência' : 'Lançar Faltas',
+      label: 'Lançar Faltas',
       icon: 'edit_calendar',
+      hideForPeb2: true,
     },
     {
       id: 'bolsa_familia',
@@ -69,7 +71,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
   ];
 
-  const navItems = allNavItems.filter((item) => !item.adminOnly || isAdmin);
+  const navItems = allNavItems.filter(
+    (item) => (!item.adminOnly || isAdmin) && !(item.hideForPeb2 && userRole === 'peb2')
+  );
 
   const getIsActive = (itemId: ScreenType) => {
     if (itemId === 'turmas') {

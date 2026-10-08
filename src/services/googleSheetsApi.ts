@@ -27,6 +27,7 @@ import {
   getStoredAuthorizedUsers,
   getStoredAccessSessionLogs,
   formatDurationHuman,
+  pushCloudLinksToServer,
 } from './db';
 import {
   getStudentAttendanceMetrics,
@@ -114,6 +115,10 @@ export const saveFichasPdfDriveFolderUrl = (
     : `https://drive.google.com/drive/folders/${extractedId}`;
   localStorage.setItem(DRIVE_FICHAS_PDF_ID_KEY, extractedId);
   localStorage.setItem(DRIVE_FICHAS_PDF_URL_KEY, fullUrl);
+  pushCloudLinksToServer({
+    fichasPdfFolderId: extractedId,
+    fichasPdfFolderUrl: fullUrl,
+  });
 };
 
 export const getSavedPhotosDriveFolderInfo = (): {
@@ -140,18 +145,22 @@ export const getSavedPhotosDriveFolderUrl = (): string => {
 
 export const savePhotosDriveFolderUrl = (url: string, folderId?: string): void => {
   const trimmed = url.trim();
-  localStorage.setItem(
-    DRIVE_PHOTOS_URL_KEY,
-    trimmed || DEFAULT_DRIVE_PHOTOS_FOLDER_URL
-  );
+  const finalUrl = trimmed || DEFAULT_DRIVE_PHOTOS_FOLDER_URL;
+  localStorage.setItem(DRIVE_PHOTOS_URL_KEY, finalUrl);
+  let resolvedId = folderId || '';
   if (folderId) {
     localStorage.setItem(DRIVE_PHOTOS_ID_KEY, folderId);
   } else {
     const match = trimmed.match(/\/folders\/([a-zA-Z0-9-_]+)/);
     if (match && match[1]) {
+      resolvedId = match[1];
       localStorage.setItem(DRIVE_PHOTOS_ID_KEY, match[1]);
     }
   }
+  pushCloudLinksToServer({
+    photosFolderId: resolvedId || localStorage.getItem(DRIVE_PHOTOS_ID_KEY) || '',
+    photosFolderUrl: finalUrl,
+  });
 };
 
 export const getSavedSpreadsheetInfo = (): {
@@ -176,6 +185,10 @@ export const getSavedSpreadsheetInfo = (): {
 export const saveSpreadsheetInfo = (spreadsheetId: string, title: string) => {
   localStorage.setItem(SHEET_ID_STORAGE_KEY, spreadsheetId);
   localStorage.setItem(SHEET_TITLE_STORAGE_KEY, title);
+  pushCloudLinksToServer({
+    spreadsheetId,
+    spreadsheetTitle: title,
+  });
 };
 
 export const extractSpreadsheetId = (input: string): string => {
@@ -1416,6 +1429,13 @@ export const getStoredDiscoveredNominalPdfs = (): DriveNominalPdfFile[] => {
 export const saveStoredDiscoveredNominalPdfs = (files: DriveNominalPdfFile[]): void => {
   try {
     localStorage.setItem(DISCOVERED_PDFS_STORAGE_KEY, JSON.stringify(files));
+    pushCloudLinksToServer(
+      {
+        fichasPdfFolderId: getSavedFichasPdfDriveFolderInfo().folderId,
+        fichasPdfFolderUrl: getSavedFichasPdfDriveFolderInfo().folderUrl,
+      },
+      files
+    );
   } catch {
     // ignore storage quota
   }
@@ -2602,13 +2622,22 @@ export const readClassesFromGoogleSheet = async (
   // Group all rows from Google Sheet by Turma so even brand-new students added manually in Sheets appear in the App!
   const existingPhotoByStudentName = new Map<
     string,
-    { photo?: string; photoDriveUrl?: string }
+    {
+      photo?: string;
+      photoDriveUrl?: string;
+      fichaPdfDriveId?: string;
+      fichaPdfDriveUrl?: string;
+      fichaPdfSubfolder?: string;
+    }
   >();
   currentClasses.forEach((c) =>
     c.students.forEach((s) => {
       existingPhotoByStudentName.set(normalizeStudentNameForPhoto(s.name), {
         photo: s.photo,
         photoDriveUrl: s.photoDriveUrl,
+        fichaPdfDriveId: s.fichaPdfDriveId,
+        fichaPdfDriveUrl: s.fichaPdfDriveUrl,
+        fichaPdfSubfolder: s.fichaPdfSubfolder,
       });
     })
   );
@@ -2705,6 +2734,9 @@ export const readClassesFromGoogleSheet = async (
       initials,
       photo: prevPhoto?.photo,
       photoDriveUrl: linkFotoCol || prevPhoto?.photoDriveUrl,
+      fichaPdfDriveId: prevPhoto?.fichaPdfDriveId,
+      fichaPdfDriveUrl: prevPhoto?.fichaPdfDriveUrl,
+      fichaPdfSubfolder: prevPhoto?.fichaPdfSubfolder,
       status: validFaltas > 0 ? 'absent' : 'present',
       totalAbsencesMonth: validFaltas,
       justifiedAbsences: validAtestados,
@@ -2806,7 +2838,7 @@ export const readClassesFromGoogleSheet = async (
     };
   });
 
-  // 3. Also automatically sync photos dropped into the Google Drive Folder!
+  // 3. Also automatically sync photos dropped into the Google Drive Folder + Scanned PDFs from Fichas Informativas!
   let matchedPhotosCount = 0;
   try {
     const driveSync = await syncPhotosFromDriveFolder(updatedClasses);
@@ -2814,6 +2846,13 @@ export const readClassesFromGoogleSheet = async (
     matchedPhotosCount = driveSync.matchedPhotosCount;
   } catch (e) {
     console.warn('Aviso ao sincronizar fotos da pasta do Google Drive:', e);
+  }
+
+  try {
+    const pdfSync = await syncNominalPdfsFromDriveSubfolders(updatedClasses);
+    updatedClasses = pdfSync.updatedClasses;
+  } catch (e) {
+    console.warn('Aviso ao sincronizar PDFs escaneados das subpastas do Drive:', e);
   }
 
   saveSpreadsheetInfo(spreadsheetId, meta.title);

@@ -435,10 +435,79 @@ export const pushAttendanceWindowToServer = async (
   }
 };
 
+export interface SharedCloudLinks {
+  spreadsheetId?: string;
+  spreadsheetTitle?: string;
+  photosFolderId?: string;
+  photosFolderUrl?: string;
+  fichasPdfFolderId?: string;
+  fichasPdfFolderUrl?: string;
+  updatedAtMs?: number;
+}
+
+const CLASSES_UPDATED_AT_KEY = 'emeb_candelario_classes_updated_at_ms_2027';
+
+export const getLocalClassesUpdatedAtMs = (): number => {
+  try {
+    return parseInt(localStorage.getItem(CLASSES_UPDATED_AT_KEY) || '0', 10) || 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const setLocalClassesUpdatedAtMs = (ts: number): void => {
+  safeSetLocalStorage(CLASSES_UPDATED_AT_KEY, String(ts));
+};
+
+export const pushClassesToServer = async (
+  classes: ClassGroup[],
+  cloudLinks?: SharedCloudLinks,
+  discoveredNominalPdfs?: any[]
+): Promise<void> => {
+  try {
+    const nowMs = Date.now();
+    setLocalClassesUpdatedAtMs(nowMs);
+    await fetch('/api/school-state/classes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        classes,
+        classesUpdatedAtMs: nowMs,
+        ...(cloudLinks ? { cloudLinks } : {}),
+        ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
+      }),
+    });
+  } catch {
+    // ignore offline
+  }
+};
+
+export const pushCloudLinksToServer = async (
+  cloudLinks: SharedCloudLinks,
+  discoveredNominalPdfs?: any[]
+): Promise<void> => {
+  try {
+    await fetch('/api/school-state/links', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cloudLinks,
+        ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
+      }),
+    });
+  } catch {
+    // ignore offline
+  }
+};
+
 export const pullSharedSchoolStateFromServer = async (): Promise<{
   authorizedUsers?: AuthorizedUser[];
   accessSessionLogs?: UserAccessSessionLog[];
   attendanceWindowConfig?: AttendanceWindowConfig;
+  classes?: ClassGroup[];
+  classesUpdatedAtMs?: number;
+  cloudLinks?: SharedCloudLinks;
+  discoveredNominalPdfs?: any[];
 } | null> => {
   try {
     const res = await fetch('/api/school-state', { cache: 'no-store' });
@@ -448,6 +517,10 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
       authorizedUsers?: AuthorizedUser[];
       accessSessionLogs?: UserAccessSessionLog[];
       attendanceWindowConfig?: AttendanceWindowConfig;
+      classes?: ClassGroup[];
+      classesUpdatedAtMs?: number;
+      cloudLinks?: SharedCloudLinks;
+      discoveredNominalPdfs?: any[];
     } = {};
 
     if (Array.isArray(data?.authorizedUsers) && data.authorizedUsers.length > 0) {
@@ -500,6 +573,59 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
         JSON.stringify(data.attendanceWindowConfig)
       );
       result.attendanceWindowConfig = data.attendanceWindowConfig;
+    }
+
+    if (data?.cloudLinks && typeof data.cloudLinks === 'object') {
+      const cl: SharedCloudLinks = data.cloudLinks;
+      if (cl.spreadsheetId) {
+        safeSetLocalStorage('emeb_candelario_linked_spreadsheet_id_2027', cl.spreadsheetId);
+      }
+      if (cl.spreadsheetTitle) {
+        safeSetLocalStorage(
+          'emeb_candelario_linked_spreadsheet_title_2027',
+          cl.spreadsheetTitle
+        );
+      }
+      if (cl.photosFolderId) {
+        safeSetLocalStorage('emeb_candelario_drive_photos_folder_id_2027', cl.photosFolderId);
+      }
+      if (cl.photosFolderUrl) {
+        safeSetLocalStorage('emeb_candelario_drive_photos_folder_url_2027', cl.photosFolderUrl);
+      }
+      if (cl.fichasPdfFolderId) {
+        safeSetLocalStorage(
+          'emeb_candelario_drive_fichas_pdf_folder_id_2027',
+          cl.fichasPdfFolderId
+        );
+      }
+      if (cl.fichasPdfFolderUrl) {
+        safeSetLocalStorage(
+          'emeb_candelario_drive_fichas_pdf_folder_url_2027',
+          cl.fichasPdfFolderUrl
+        );
+      }
+      result.cloudLinks = cl;
+    }
+
+    if (Array.isArray(data?.discoveredNominalPdfs) && data.discoveredNominalPdfs.length > 0) {
+      safeSetLocalStorage(
+        'emeb_candelario_discovered_nominal_pdfs_2027_v1',
+        JSON.stringify(data.discoveredNominalPdfs)
+      );
+      result.discoveredNominalPdfs = data.discoveredNominalPdfs;
+    }
+
+    if (Array.isArray(data?.classes) && data.classes.length > 0) {
+      const srvClassesTime = data.classesUpdatedAtMs || 0;
+      const locClassesTime = getLocalClassesUpdatedAtMs();
+      if (srvClassesTime > locClassesTime) {
+        const enriched = enrichClassesWithOfficialMatrix(data.classes);
+        memoryCachedClasses = enriched;
+        setLocalClassesUpdatedAtMs(srvClassesTime);
+        safeSetLocalStorage(STORAGE_KEY, JSON.stringify(enriched));
+        result.classes = enriched;
+        result.classesUpdatedAtMs = srvClassesTime;
+      }
     }
 
     return result;
@@ -593,10 +719,24 @@ export const getStoredClasses = (): ClassGroup[] => {
   return INITIAL_CLASSES;
 };
 
-// Save classes to localStorage safely without throwing QuotaExceededError
-export const saveStoredClasses = (classes: ClassGroup[]): void => {
+let serverClassesPushTimer: number | null = null;
+
+// Save classes to localStorage safely without throwing QuotaExceededError + auto-broadcast to server
+export const saveStoredClasses = (
+  classes: ClassGroup[],
+  skipServerPush = false
+): void => {
   const enriched = enrichClassesWithOfficialMatrix(classes);
   memoryCachedClasses = enriched;
+  if (!skipServerPush && typeof window !== 'undefined') {
+    setLocalClassesUpdatedAtMs(Date.now());
+    if (serverClassesPushTimer) {
+      window.clearTimeout(serverClassesPushTimer);
+    }
+    serverClassesPushTimer = window.setTimeout(() => {
+      pushClassesToServer(enriched);
+    }, 180);
+  }
   try {
     const serialized = JSON.stringify(enriched);
     if (safeSetLocalStorage(STORAGE_KEY, serialized)) {

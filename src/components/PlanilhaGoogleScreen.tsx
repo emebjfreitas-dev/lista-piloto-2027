@@ -361,6 +361,63 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     }
   };
 
+  // Unified 1-click Sync: Spreadsheet + Drive Photos Folder + Drive Fichas Informativas PDF Subfolders
+  const handleSyncAllCloudAndFoldersNow = async () => {
+    const token = await getAccessToken();
+    if (!token) {
+      setNeedsAuth(true);
+      showToast(
+        'info',
+        'Conecte sua conta Google primeiro para sincronizar Planilhas e Pastas automaticamente.'
+      );
+      return;
+    }
+
+    setIsSyncingCloud(true);
+    try {
+      let currentUpdated = classesToSync;
+      let rowsRead = 0;
+      let sheetTitle = connectedTitle;
+
+      const cleanId = extractSpreadsheetId(spreadsheetInput);
+      if (cleanId) {
+        const sheetRes = await readClassesFromGoogleSheet(cleanId, currentUpdated);
+        currentUpdated = sheetRes.updatedClasses;
+        rowsRead = sheetRes.rowsRead;
+        sheetTitle = sheetRes.sheetTitle;
+        setSpreadsheetInput(cleanId);
+        setConnectedTitle(sheetTitle);
+      }
+
+      const photoRes = await syncPhotosFromDriveFolder(currentUpdated);
+      currentUpdated = photoRes.updatedClasses;
+
+      const pdfRes = await syncNominalPdfsFromDriveSubfolders(currentUpdated);
+      currentUpdated = pdfRes.updatedClasses;
+
+      if (onUpdateAllClasses) {
+        onUpdateAllClasses(currentUpdated);
+      }
+      onSyncWithClasses();
+
+      showToast(
+        'success',
+        `Sincronização Fluida Concluída: ${
+          rowsRead > 0 ? `${rowsRead} registros da Planilha + ` : ''
+        }${photoRes.matchedPhotosCount} fotos + ${
+          pdfRes.matchedPdfsCount
+        } fichas PDF escaneadas (${pdfRes.subfoldersScannedCount} subpastas)!`
+      );
+    } catch (err: any) {
+      showToast(
+        'error',
+        err?.message || 'Erro durante a sincronização automática de pastas e planilhas.'
+      );
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
   // Sync photos dropped into the Google Drive Folder by student name
   const handleSyncDrivePhotosNow = async () => {
     const token = await getAccessToken();
@@ -846,12 +903,22 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             ) : (
               <button
                 type="button"
-                disabled={isSyncingCloud || !spreadsheetInput.trim()}
-                onClick={handleReadFromGoogleSheet}
-                className="min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-bold text-[0.8rem] border border-[#005035]/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                disabled={isSyncingCloud}
+                onClick={handleSyncAllCloudAndFoldersNow}
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-extrabold text-[0.8rem] border border-[#005035]/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
               >
-                <span className="material-symbols-outlined text-[18px]">sync</span>
-                <span>Sincronizar Nuvem</span>
+                <span
+                  className={`material-symbols-outlined text-[18px] ${
+                    isSyncingCloud ? 'animate-spin' : ''
+                  }`}
+                >
+                  bolt
+                </span>
+                <span>
+                  {isSyncingCloud
+                    ? 'Sincronizando Tudo...'
+                    : 'Sincronizar Tudo (Planilha + Pastas + PDFs)'}
+                </span>
               </button>
             )}
 
@@ -966,16 +1033,16 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               </div>
             )}
 
-            {/* Bulk Photo Upload + SED TSV Importer + Links */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
+            {/* Bulk Photo Upload + Links (Planilha, Pasta de Fotos e Pasta Fichas PDF Escaneadas) com Auto-Sync Instantâneo */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               {/* 1. Bulk Photos */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <span className="text-[0.76rem] font-extrabold text-[#003440] block truncate">
-                    Subir Fotos em Lote (NOME.jpg)
+                  <span className="text-[0.75rem] font-extrabold text-[#003440] block truncate">
+                    Fotos em Lote (NOME.jpg)
                   </span>
-                  <span className="text-[0.7rem] text-[#5a676b] block truncate">
-                    Salva na pasta nomeada automaticamente
+                  <span className="text-[0.69rem] text-[#5a676b] block truncate">
+                    Associa e sobe p/ o Drive
                   </span>
                 </div>
                 <input
@@ -990,23 +1057,23 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   type="button"
                   disabled={isSyncingCloud}
                   onClick={() => bulkPhotoInputRef.current?.click()}
-                  className="px-3 min-h-[36px] rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.74rem] shrink-0 cursor-pointer"
+                  className="px-2.5 min-h-[34px] rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.72rem] shrink-0 cursor-pointer"
                 >
-                  Selecionar JPGs
+                  Selecionar
                 </button>
               </div>
 
-              {/* 2. Link Planilha */}
+              {/* 2. Link Planilha (Auto-Salva e Sincroniza ao Colar) */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[0.74rem] font-extrabold text-[#003440] truncate">
+                  <span className="text-[0.73rem] font-extrabold text-[#003440] truncate">
                     Planilha ({connectedTitle})
                   </span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => handleCopyLink('sheet', currentSheetFullUrl)}
-                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.68rem] border border-[#c0c8cb] cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.66rem] border border-[#c0c8cb] cursor-pointer"
                     >
                       {copiedKey === 'sheet' ? '✓' : 'Copiar'}
                     </button>
@@ -1014,7 +1081,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       href={currentSheetFullUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded bg-[#005035] text-white font-bold text-[0.68rem]"
+                      className="px-2 py-0.5 rounded bg-[#005035] text-white font-bold text-[0.66rem]"
                     >
                       Abrir
                     </a>
@@ -1024,23 +1091,30 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   type="text"
                   readOnly={!isAdmin}
                   value={spreadsheetInput}
-                  onChange={(e) => setSpreadsheetInput(e.target.value)}
-                  placeholder="ID ou URL da Planilha Google..."
-                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.72rem] rounded-lg border border-[#c0c8cb]"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSpreadsheetInput(val);
+                    const extracted = extractSpreadsheetId(val);
+                    if (extracted) {
+                      saveSpreadsheetInfo(extracted, connectedTitle);
+                    }
+                  }}
+                  placeholder="Cole link ou ID da Planilha..."
+                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.71rem] rounded-lg border border-[#c0c8cb]"
                 />
               </div>
 
-              {/* 3. Link Pasta Drive */}
+              {/* 3. Link Pasta Drive Fotos (Auto-Salva e Sincroniza ao Colar) */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[0.74rem] font-extrabold text-[#003440] truncate">
-                    Pasta Nomeada Fotos (Drive)
+                  <span className="text-[0.73rem] font-extrabold text-[#003440] truncate">
+                    Pasta de Fotos (Drive)
                   </span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => handleCopyLink('drive', driveFolderUrl)}
-                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.68rem] border border-[#c0c8cb] cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.66rem] border border-[#c0c8cb] cursor-pointer"
                     >
                       {copiedKey === 'drive' ? '✓' : 'Copiar'}
                     </button>
@@ -1048,7 +1122,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       href={driveFolderUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded bg-[#003440] text-white font-bold text-[0.68rem]"
+                      className="px-2 py-0.5 rounded bg-[#003440] text-white font-bold text-[0.66rem]"
                     >
                       Drive
                     </a>
@@ -1062,7 +1136,59 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     setDriveFolderUrl(e.target.value);
                     savePhotosDriveFolderUrl(e.target.value);
                   }}
-                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.72rem] rounded-lg border border-[#c0c8cb]"
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (pasted && pasted.includes('drive.google.com')) {
+                      savePhotosDriveFolderUrl(pasted);
+                      setTimeout(() => handleSyncDrivePhotosNow(), 80);
+                    }
+                  }}
+                  placeholder="Cole link da pasta de fotos..."
+                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.71rem] rounded-lg border border-[#c0c8cb]"
+                />
+              </div>
+
+              {/* 4. Link Pasta Fichas Informativas PDF Escaneadas (Auto-Salva e Sincroniza Subpastas ao Colar) */}
+              <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[0.73rem] font-extrabold text-[#005035] truncate">
+                    Pasta Fichas PDF (Drive)
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLink('fichas_pdf', fichasPdfFolderUrl)}
+                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.66rem] border border-[#c0c8cb] cursor-pointer"
+                    >
+                      {copiedKey === 'fichas_pdf' ? '✓' : 'Copiar'}
+                    </button>
+                    <a
+                      href={fichasPdfFolderUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-0.5 rounded bg-[#005035] text-white font-bold text-[0.66rem]"
+                    >
+                      PDFs
+                    </a>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  readOnly={!isAdmin}
+                  value={fichasPdfFolderUrl}
+                  onChange={(e) => {
+                    setFichasPdfFolderUrl(e.target.value);
+                    saveFichasPdfDriveFolderUrl(e.target.value);
+                  }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (pasted && pasted.includes('drive.google.com')) {
+                      saveFichasPdfDriveFolderUrl(pasted);
+                      setTimeout(() => handleSyncNominalPdfsNow(), 80);
+                    }
+                  }}
+                  placeholder="Cole link da pasta Fichas Informativas..."
+                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.71rem] rounded-lg border border-[#c0c8cb]"
                 />
               </div>
             </div>

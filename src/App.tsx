@@ -311,9 +311,8 @@ export default function App() {
     }
   }, [authorizedUsers, currentUserEmail, simulatedTeacherEmail, classes]);
 
-  // Real-time Cross-Browser & Cross-Device Synchronization via Backend API (/api/school-state) every 2.5 seconds!
-  // This guarantees that when Admin edits a teacher's class (e.g. giulia.patez) or opens the launch window in Browser A,
-  // the teacher logged into Browser B / Incognito / Mobile updates automatically in 2.5s!
+  // Real-time Cross-Browser & Cross-Device Synchronization via Backend API (/api/school-state) every 1.8 seconds!
+  // Synchronizes Classes, Attendance, Photos, Scanned PDF links, Cloud Folder/Sheet Links, Users, and Launch Window instantaneously.
   useEffect(() => {
     let active = true;
 
@@ -324,11 +323,18 @@ export default function App() {
       if (shared.authorizedUsers && shared.authorizedUsers.length > 0) {
         setAuthorizedUsers(shared.authorizedUsers);
       } else {
-        // Seed backend server if it has no users yet
         const currentLocal = getStoredAuthorizedUsers();
         if (currentLocal.length > 0) {
           pushAuthorizedUsersToServer(currentLocal);
         }
+      }
+
+      if (shared.classes && shared.classes.length > 0) {
+        setClasses(shared.classes);
+        setSelectedClass((prev) => {
+          const found = shared.classes?.find((c) => c.id === prev.id);
+          return found || prev;
+        });
       }
 
       if (shared.accessSessionLogs && shared.accessSessionLogs.length > 0) {
@@ -341,22 +347,32 @@ export default function App() {
     };
 
     syncFromBackendServer();
-    const pollId = window.setInterval(syncFromBackendServer, 2500);
+    const pollId = window.setInterval(syncFromBackendServer, 1800);
     return () => {
       active = false;
       window.clearInterval(pollId);
     };
   }, []);
 
-  // Listen to localStorage changes from other browser tabs so when Admin edits a teacher's class in Tab 1, Tab 2 updates in 0ms!
+  // Listen to localStorage changes from other browser tabs so when any tab updates classes, users, or links, all tabs update in 0ms!
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'emeb_candelario_authorized_users_2027_v2') {
+      if (
+        e.key === 'emeb_candelario_authorized_users_2027_v3' ||
+        e.key === 'emeb_candelario_authorized_users_2027_v2'
+      ) {
         const freshUsers = getStoredAuthorizedUsers();
         setAuthorizedUsers(freshUsers);
-      } else if (e.key === 'emeb_candelario_sed_classes_2027_v5') {
+      } else if (
+        e.key === 'emeb_candelario_sed_classes_2027_v6' ||
+        e.key === 'emeb_candelario_sed_classes_2027_v5'
+      ) {
         const freshClasses = getStoredClasses();
         setClasses(freshClasses);
+        setSelectedClass((prev) => {
+          const found = freshClasses.find((c) => c.id === prev.id);
+          return found || prev;
+        });
       } else if (e.key === 'emeb_candelario_attendance_window_2027_v1') {
         setAttendanceWindowConfig(getStoredAttendanceWindowConfig());
       } else if (e.key === 'emeb_candelario_access_session_logs_2027_v1') {
@@ -367,41 +383,43 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Debounced persist classes to local database for instant UI responsiveness (0ms lag on + / - clicks)
+  // Debounced persist classes to local database & server for instant UI responsiveness (0ms lag on + / - clicks)
   useEffect(() => {
     const timer = window.setTimeout(() => {
       saveStoredClasses(classes);
-    }, 120);
+    }, 90);
     return () => window.clearTimeout(timer);
   }, [classes]);
 
-  // Automatic Pull from Master Google Sheet (student edits, 200 days) & Drive Folder (photos)
+  // Automatic & Super-Fluid Pull from Master Google Sheet (student edits, 200 days) + Drive Folders (photos + scanned PDFs)
   useEffect(() => {
     let isMounted = true;
+    let isPulling = false;
 
     const pullMasterDataFromGoogle = async () => {
+      if (isPulling) return;
       const token = await getAccessToken();
       if (!token) return;
 
-      const spreadsheetId = await ensureOfficialSpreadsheetId();
+      isPulling = true;
       try {
+        const spreadsheetId = await ensureOfficialSpreadsheetId();
+        let latestClasses = getStoredClasses();
+        let didMutateClasses = false;
+
         if (spreadsheetId) {
           const result = await readClassesFromGoogleSheet(
             spreadsheetId,
-            getStoredClasses()
+            latestClasses
           );
-          if (isMounted && result.rowsRead > 0) {
-            setClasses(result.updatedClasses);
-            saveStoredClasses(result.updatedClasses);
-            setSelectedClass((prev) => {
-              const found = result.updatedClasses.find((c) => c.id === prev.id);
-              return found || prev;
-            });
+          if (result.rowsRead > 0) {
+            latestClasses = result.updatedClasses;
+            didMutateClasses = true;
           }
           // Pull latest authorizedUsers (roles, assigned classes, access counts, durations) from Google Sheet
           const sheetUsers = await readAuthorizedUsersFromGoogleSheet(
             getStoredAuthorizedUsers(),
-            result.updatedClasses || getStoredClasses()
+            latestClasses
           );
           if (isMounted && sheetUsers && sheetUsers.length > 0) {
             const currentLocal = getStoredAuthorizedUsers();
@@ -445,40 +463,52 @@ export default function App() {
             saveStoredAccessSessionLogs(combinedLogs);
           }
         } else {
-          // Sync photos from Drive folder + nominal PDFs from Fichas Informativas subfolders if available
-          const photoSync = await syncPhotosFromDriveFolder(getStoredClasses());
+          // Even without a spreadsheet yet, sync photos + nominal scanned PDFs from Drive folders in parallel!
+          const photoSync = await syncPhotosFromDriveFolder(latestClasses);
           const pdfSync = await syncNominalPdfsFromDriveSubfolders(
             photoSync.updatedClasses
           );
-          if (
-            isMounted &&
-            (photoSync.matchedPhotosCount > 0 || pdfSync.matchedPdfsCount > 0)
-          ) {
-            setClasses(pdfSync.updatedClasses);
-            saveStoredClasses(pdfSync.updatedClasses);
-            setSelectedClass((prev) => {
-              const found = pdfSync.updatedClasses.find(
-                (c) => c.id === prev.id
-              );
-              return found || prev;
-            });
+          if (photoSync.matchedPhotosCount > 0 || pdfSync.matchedPdfsCount > 0) {
+            latestClasses = pdfSync.updatedClasses;
+            didMutateClasses = true;
           }
+        }
+
+        if (isMounted && didMutateClasses) {
+          setClasses(latestClasses);
+          saveStoredClasses(latestClasses);
+          setSelectedClass((prev) => {
+            const found = latestClasses.find((c) => c.id === prev.id);
+            return found || prev;
+          });
         }
       } catch (err) {
         console.warn('Auto-sync em segundo plano:', err);
+      } finally {
+        isPulling = false;
       }
     };
+
+    // Run immediately on startup and whenever window regains focus or visibility
+    pullMasterDataFromGoogle();
 
     const handleWindowFocus = () => {
       pullMasterDataFromGoogle();
     };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        pullMasterDataFromGoogle();
+      }
+    };
 
     window.addEventListener('focus', handleWindowFocus);
-    const intervalId = window.setInterval(pullMasterDataFromGoogle, 30000);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const intervalId = window.setInterval(pullMasterDataFromGoogle, 12000);
 
     return () => {
       isMounted = false;
       window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.clearInterval(intervalId);
     };
   }, []);
@@ -543,6 +573,12 @@ export default function App() {
   };
 
   const handleSelectClassForMonthlyAttendance = (cls: ClassGroup) => {
+    if (userRole === 'peb2') {
+      setSelectedClass(cls);
+      setCurrentScreen('detalhes');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
     setSelectedClass(cls);
     setCurrentScreen('frequencia_mensal');
@@ -995,6 +1031,9 @@ export default function App() {
         }}
         onBack={handleBack}
         onChangeScreen={(screen) => {
+          if (userRole === 'peb2' && screen === 'frequencia_mensal') {
+            return;
+          }
           if (
             userRole !== 'admin' &&
             (screen === 'bolsa_familia' ||
@@ -1204,7 +1243,7 @@ export default function App() {
           />
         )}
 
-        {currentScreen === 'frequencia_mensal' && (
+        {currentScreen === 'frequencia_mensal' && userRole !== 'peb2' && (
           <RegistroFrequenciaMensalScreen
             classGroup={selectedClass}
             userRole={userRole}
@@ -1298,9 +1337,15 @@ export default function App() {
         selectedClassName={selectedClass?.name}
         onLogout={handleLogout}
         onChangeScreen={(screen) => {
+          if (userRole === 'peb2' && screen === 'frequencia_mensal') {
+            return;
+          }
           if (
             userRole !== 'admin' &&
-            (screen === 'planilha' || screen === 'dias_letivos' || screen === 'usuarios_acesso')
+            (screen === 'bolsa_familia' ||
+              screen === 'planilha' ||
+              screen === 'dias_letivos' ||
+              screen === 'usuarios_acesso')
           ) {
             return;
           }
@@ -1397,23 +1442,41 @@ export default function App() {
           saveStoredClasses(updated);
           const found = updated.find((c) => c.id === selectedClass.id);
           if (found) setSelectedClass(found);
+          setPdfModalData((prev) => {
+            if (!prev) return null;
+            for (const c of updated) {
+              const st = c.students.find((s) => s.id === prev.student.id);
+              if (st) return { ...prev, student: st };
+            }
+            return prev;
+          });
         }}
         onSaveStudentPdfLink={(studentId, pdfId, pdfUrl, subfolder) => {
           setClasses((prevClasses) => {
-            const next = prevClasses.map((cls) => ({
-              ...cls,
-              students: cls.students.map((s) =>
-                s.id === studentId
-                  ? {
-                      ...s,
-                      fichaPdfDriveId: pdfId,
-                      fichaPdfDriveUrl: pdfUrl,
-                      fichaPdfSubfolder: subfolder,
-                    }
-                  : s
-              ),
-            }));
+            let updatedCls: ClassGroup | null = null;
+            const next = prevClasses.map((cls) => {
+              const hasStudent = cls.students.some((s) => s.id === studentId);
+              if (!hasStudent) return cls;
+              const nextCls = {
+                ...cls,
+                students: cls.students.map((s) =>
+                  s.id === studentId
+                    ? {
+                        ...s,
+                        fichaPdfDriveId: pdfId,
+                        fichaPdfDriveUrl: pdfUrl,
+                        fichaPdfSubfolder: subfolder,
+                      }
+                    : s
+                ),
+              };
+              updatedCls = nextCls;
+              return nextCls;
+            });
             saveStoredClasses(next);
+            if (updatedCls) {
+              triggerDebouncedSheetWrite(updatedCls, next);
+            }
             return next;
           });
           setSelectedClass((prev) => ({
@@ -1429,6 +1492,19 @@ export default function App() {
                 : s
             ),
           }));
+          setPdfModalData((prev) =>
+            prev && prev.student.id === studentId
+              ? {
+                  ...prev,
+                  student: {
+                    ...prev.student,
+                    fichaPdfDriveId: pdfId,
+                    fichaPdfDriveUrl: pdfUrl,
+                    fichaPdfSubfolder: subfolder,
+                  },
+                }
+              : prev
+          );
         }}
       />
       {/* Modal do Administrador: Configurar 200 Dias Letivos Mensais por Turma & Links */}

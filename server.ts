@@ -12,6 +12,18 @@ interface SharedSchoolState {
   authorizedUsers?: any[];
   accessSessionLogs?: any[];
   attendanceWindowConfig?: any;
+  classes?: any[];
+  classesUpdatedAtMs?: number;
+  discoveredNominalPdfs?: any[];
+  cloudLinks?: {
+    spreadsheetId?: string;
+    spreadsheetTitle?: string;
+    photosFolderId?: string;
+    photosFolderUrl?: string;
+    fichasPdfFolderId?: string;
+    fichasPdfFolderUrl?: string;
+    updatedAtMs?: number;
+  };
   updatedAtMs: number;
 }
 
@@ -91,13 +103,82 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '50mb' }));
 
-  // API: Obter estado compartilhado (Usuários Autorizados, Turmas Vinculadas, Logs de Acesso e Janela de Lançamento)
+  // API: Obter estado compartilhado (Usuários Autorizados, Turmas, Estudantes, Fotos, PDFs Escaneados, Links Drive/Sheets e Logs)
   app.get('/api/school-state', (_req, res) => {
     const state = readSharedState();
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json(state);
+  });
+
+  // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS, Ônibus Fretado e Links de PDFs Escaneados em tempo real
+  app.post('/api/school-state/classes', (req, res) => {
+    const { classes, classesUpdatedAtMs, discoveredNominalPdfs, cloudLinks } = req.body || {};
+    if (!Array.isArray(classes)) {
+      res.status(400).json({ error: 'Lista de turmas inválida' });
+      return;
+    }
+    const current = readSharedState();
+    const incTime = classesUpdatedAtMs || Date.now();
+
+    // Compact any oversized inline base64 strings (>25KB) while preserving Drive photo URLs & PDF links
+    const compactClasses = classes.map((cls: any) => ({
+      ...cls,
+      students: Array.isArray(cls.students)
+        ? cls.students.map((st: any) => ({
+            ...st,
+            photo:
+              st.photo &&
+              typeof st.photo === 'string' &&
+              st.photo.startsWith('data:image') &&
+              st.photo.length > 35000 &&
+              st.photoDriveUrl
+                ? st.photoDriveUrl
+                : st.photo,
+          }))
+        : [],
+    }));
+
+    const patch: Partial<SharedSchoolState> = {
+      classes: compactClasses,
+      classesUpdatedAtMs: Math.max(incTime, current.classesUpdatedAtMs || 0),
+    };
+
+    if (Array.isArray(discoveredNominalPdfs) && discoveredNominalPdfs.length > 0) {
+      patch.discoveredNominalPdfs = discoveredNominalPdfs;
+    }
+    if (cloudLinks && typeof cloudLinks === 'object') {
+      patch.cloudLinks = {
+        ...(current.cloudLinks || {}),
+        ...cloudLinks,
+        updatedAtMs: Date.now(),
+      };
+    }
+
+    const saved = writeSharedState(patch);
+    res.json({ ok: true, classesUpdatedAtMs: saved.classesUpdatedAtMs });
+  });
+
+  // API: Sincronizar Links de Pastas (Fotos / Fichas Informativas PDF) e Planilha Oficial Google Sheets
+  app.post('/api/school-state/links', (req, res) => {
+    const { cloudLinks, discoveredNominalPdfs } = req.body || {};
+    const current = readSharedState();
+    const patch: Partial<SharedSchoolState> = {};
+
+    if (cloudLinks && typeof cloudLinks === 'object') {
+      patch.cloudLinks = {
+        ...(current.cloudLinks || {}),
+        ...cloudLinks,
+        updatedAtMs: Date.now(),
+      };
+    }
+    if (Array.isArray(discoveredNominalPdfs)) {
+      patch.discoveredNominalPdfs = discoveredNominalPdfs;
+    }
+
+    const saved = writeSharedState(patch);
+    res.json(saved);
   });
 
   // API: Atualizar Usuários Autorizados (vínculo de turmas PEB I / PEB II / Admin)

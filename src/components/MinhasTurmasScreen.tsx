@@ -477,7 +477,11 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                 </div>
 
                 {/* Clear, Cohesive & Intelligent Action Buttons */}
-                <div className="grid grid-cols-2 gap-2.5 pt-3.5 border-t border-[#003440]/8">
+                <div
+                  className={`grid ${
+                    userRole === 'peb2' ? 'grid-cols-1' : 'grid-cols-2'
+                  } gap-2.5 pt-3.5 border-t border-[#003440]/8`}
+                >
                   {/* Botão 1: Ver Estudantes (SEMPRE DISPONÍVEL O TEMPO TODO) */}
                   <button
                     type="button"
@@ -506,84 +510,60 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                     </span>
                   </button>
 
-                  {/* Botão 2: Lançar Faltas / Consultar Frequência */}
-                  {userRole === 'peb2' ? (
-                    <button
-                      type="button"
-                      onClick={() => onSelectClassForMonthlyAttendance(cls)}
-                      className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#7a4100] hover:bg-[#5c3000] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
-                    >
-                      <div className="flex items-center gap-2 min-w-0 text-left">
-                        <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[20px]">
-                            fact_check
-                          </span>
+                  {/* Botão 2: Lançar Faltas (Apenas para PEB I e Admin — PEB II não exibe tela de frequência) */}
+                  {userRole !== 'peb2' &&
+                    (isLaunchButtonOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => onSelectClassForMonthlyAttendance(cls)}
+                        className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#005035] hover:bg-[#003824] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 text-left">
+                          <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[20px] text-[#a4f3ca]">
+                              edit_calendar
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block font-extrabold text-[0.86rem] leading-tight">
+                              Lançar Faltas
+                            </span>
+                            <span className="block text-[0.7rem] text-[#a4f3ca] font-semibold leading-tight mt-0.5">
+                              Aberto • Salva auto
+                            </span>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <span className="block font-extrabold text-[0.86rem] leading-tight">
-                            Ver Frequência
-                          </span>
-                          <span className="block text-[0.7rem] text-white/85 font-semibold leading-tight mt-0.5">
-                            Modo Leitura
-                          </span>
+                        <span className="material-symbols-outlined text-[18px] text-[#a4f3ca] shrink-0">
+                          arrow_forward
+                        </span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="O lançamento de faltas abre no último dia letivo do mês e nos 2 primeiros dias letivos do próximo mês (ou mediante liberação excepcional na aba Acessos)."
+                        className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#f4f7f5] text-[#566366] border border-[#c0c8cb] flex items-center justify-between gap-2 cursor-not-allowed"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 text-left">
+                          <div className="w-8 h-8 rounded-lg bg-[#e2e8e5] flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[19px] text-[#566366]">
+                              lock_clock
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block font-extrabold text-[0.85rem] text-[#41484b] leading-tight">
+                              Lançar Faltas
+                            </span>
+                            <span className="block text-[0.68rem] text-[#566366] font-semibold leading-tight mt-0.5">
+                              Abre no fecho mensal
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <span className="material-symbols-outlined text-[18px] shrink-0 opacity-90">
-                        arrow_forward
-                      </span>
-                    </button>
-                  ) : isLaunchButtonOpen ? (
-                    <button
-                      type="button"
-                      onClick={() => onSelectClassForMonthlyAttendance(cls)}
-                      className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#005035] hover:bg-[#003824] text-white flex items-center justify-between gap-2 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
-                    >
-                      <div className="flex items-center gap-2 min-w-0 text-left">
-                        <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[20px] text-[#a4f3ca]">
-                            edit_calendar
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <span className="block font-extrabold text-[0.86rem] leading-tight">
-                            Lançar Faltas
-                          </span>
-                          <span className="block text-[0.7rem] text-[#a4f3ca] font-semibold leading-tight mt-0.5">
-                            Aberto • Salva auto
-                          </span>
-                        </div>
-                      </div>
-                      <span className="material-symbols-outlined text-[18px] text-[#a4f3ca] shrink-0">
-                        arrow_forward
-                      </span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      title="O lançamento de faltas abre no último dia letivo do mês e nos 2 primeiros dias letivos do próximo mês (ou mediante liberação excepcional na aba Acessos)."
-                      className="w-full min-h-[58px] px-3 py-2.5 rounded-xl bg-[#f4f7f5] text-[#566366] border border-[#c0c8cb] flex items-center justify-between gap-2 cursor-not-allowed"
-                    >
-                      <div className="flex items-center gap-2 min-w-0 text-left">
-                        <div className="w-8 h-8 rounded-lg bg-[#e2e8e5] flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[19px] text-[#566366]">
-                            lock_clock
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <span className="block font-extrabold text-[0.85rem] text-[#41484b] leading-tight">
-                            Lançar Faltas
-                          </span>
-                          <span className="block text-[0.68rem] text-[#566366] font-semibold leading-tight mt-0.5">
-                            Abre no fecho mensal
-                          </span>
-                        </div>
-                      </div>
-                      <span className="material-symbols-outlined text-[17px] text-[#71787b] shrink-0">
-                        lock
-                      </span>
-                    </button>
-                  )}
+                        <span className="material-symbols-outlined text-[17px] text-[#71787b] shrink-0">
+                          lock
+                        </span>
+                      </button>
+                    ))}
                 </div>
               </div>
             );
