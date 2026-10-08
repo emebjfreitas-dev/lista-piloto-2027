@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ScreenType, UserRole } from '../types';
+import React, { useState } from 'react';
+import { ClassGroup, ScreenType, UserRole } from '../types';
 import { APP_LOGO_URL, APP_LOGO_FALLBACK_URL, SCHOOL_NAME } from '../data/mockData';
 import { StudentAvatar } from './StudentAvatar';
-import { APP_FONT_OPTIONS, AppFontId } from '../utils/fontTheme';
+import { AppFontId } from '../utils/fontTheme';
+import { PushNotificationCenter } from './PushNotificationCenter';
 
 interface HeaderProps {
   currentScreen: ScreenType;
@@ -11,11 +12,14 @@ interface HeaderProps {
   userEmail?: string;
   userName?: string;
   userRole?: UserRole;
+  visibleClasses?: ClassGroup[];
+  allClasses?: ClassGroup[];
   activeFontId?: AppFontId;
   onSelectFont?: (fontId: AppFontId) => void;
   onRestoreAdminRole?: () => void;
   onBack?: () => void;
   onChangeScreen?: (screen: ScreenType) => void;
+  onSelectClassById?: (classId: string) => void;
   onNavigatePlanilha: () => void;
   onLogout: () => void;
 }
@@ -26,34 +30,18 @@ export const Header: React.FC<HeaderProps> = ({
   userEmail,
   userName,
   userRole = 'admin',
-  activeFontId = 'inter',
-  onSelectFont,
+  visibleClasses = [],
+  allClasses = [],
   onRestoreAdminRole,
   onBack,
   onChangeScreen,
+  onSelectClassById,
   onNavigatePlanilha,
   onLogout,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showFontMenu, setShowFontMenu] = useState(false);
-  const fontMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (fontMenuRef.current && !fontMenuRef.current.contains(e.target as Node)) {
-        setShowFontMenu(false);
-      }
-    };
-    if (showFontMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showFontMenu]);
 
   if (currentScreen === 'login') return null;
-
-  const activeFontOption =
-    APP_FONT_OPTIONS.find((f) => f.id === activeFontId) || APP_FONT_OPTIONS[0];
 
   const isAdmin = userRole === 'admin';
 
@@ -148,19 +136,29 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {userRole === 'usuario' && (
-              <button
-                type="button"
-                onClick={() => onChangeScreen('faltas_consecutivas')}
-                className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
-                  currentScreen === 'faltas_consecutivas'
-                    ? 'bg-[#ff3b30] text-white font-semibold shadow-2xs'
-                    : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
-                }`}
-              >
-                Faltas Seguidas (3+ Dias)
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => onChangeScreen('faltas_consecutivas')}
+              className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                currentScreen === 'faltas_consecutivas'
+                  ? 'bg-[#ff3b30] text-white font-semibold shadow-2xs'
+                  : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+              }`}
+            >
+              Faltas Seguidas
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onChangeScreen('resumo')}
+              className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                currentScreen === 'resumo'
+                  ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
+                  : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+              }`}
+            >
+              Resumo Mensal
+            </button>
 
             {isAdmin && (
               <button
@@ -230,98 +228,20 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         )}
 
-        {/* Zone 3: Actions (Font Switcher, Profile Badge & Sair) */}
+        {/* Zone 3: Actions (Push Notifications, Profile Badge & Sair) */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
-          {/* Seletor de Fonte Global (Inter, Manrope, DM Sans, Plus Jakarta Sans, IBM Plex Sans) */}
-          {onSelectFont && (
-            <div className="relative" ref={fontMenuRef}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowFontMenu(!showFontMenu);
-                  setShowProfileMenu(false);
-                }}
-                title="Testar fontes tipográficas em todo o projeto"
-                className={`h-[32px] sm:h-[34px] px-2.5 sm:px-3 rounded-full text-[0.73rem] sm:text-[0.76rem] font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-                  showFontMenu
-                    ? 'bg-[#1d1d1f] text-white shadow-2xs'
-                    : 'bg-[#e8e8ed]/85 hover:bg-[#d2d2d7]/80 text-[#1d1d1f]'
-                }`}
-              >
-                <span className="text-[0.8rem] font-bold tracking-tight">Aa</span>
-                <span className="hidden md:inline">{activeFontOption.shortLabel}</span>
-              </button>
-
-              {showFontMenu && (
-                <div className="absolute right-0 mt-2.5 w-[310px] sm:w-[340px] bg-white/98 backdrop-blur-2xl rounded-3xl shadow-[0_18px_48px_rgba(0,0,0,0.14)] p-3 z-50 animate-gentle-fade">
-                  <div className="px-2.5 pt-1 pb-2.5 flex items-center justify-between">
-                    <div>
-                      <p className="text-[0.82rem] font-bold text-[#1d1d1f]">
-                        Tipografia do Projeto
-                      </p>
-                      <p className="text-[0.68rem] text-[#6e6e73]">
-                        Toque para testar instantaneamente em todas as telas
-                      </p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-[#f5f5f7] text-[#0071e3] text-[0.65rem] font-bold">
-                      5 Fontes
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    {APP_FONT_OPTIONS.map((font) => {
-                      const isSelected = font.id === activeFontId;
-                      return (
-                        <button
-                          key={font.id}
-                          type="button"
-                          onClick={() => {
-                            onSelectFont(font.id);
-                          }}
-                          style={{ fontFamily: font.cssFamily }}
-                          className={`w-full text-left px-3 py-2.5 rounded-2xl transition-all cursor-pointer flex items-start justify-between gap-2.5 ${
-                            isSelected
-                              ? 'bg-[#0071e3] text-white shadow-2xs'
-                              : 'hover:bg-[#f5f5f7] text-[#1d1d1f]'
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[0.86rem] font-bold leading-tight">
-                                {font.name}
-                              </span>
-                              {font.badge && (
-                                <span
-                                  className={`px-1.5 py-0.5 rounded-full text-[0.6rem] font-bold uppercase tracking-wide ${
-                                    isSelected
-                                      ? 'bg-white/20 text-white'
-                                      : 'bg-[#0071e3]/10 text-[#0071e3]'
-                                  }`}
-                                >
-                                  {font.badge}
-                                </span>
-                              )}
-                            </div>
-                            <p
-                              className={`text-[0.7rem] leading-snug mt-0.5 ${
-                                isSelected ? 'text-white/90' : 'text-[#6e6e73]'
-                              }`}
-                            >
-                              {font.description}
-                            </p>
-                          </div>
-
-                          <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">
-                            {isSelected ? 'check_circle' : 'radio_button_unchecked'}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <PushNotificationCenter
+            visibleClasses={visibleClasses}
+            allClasses={allClasses}
+            userRole={userRole}
+            userName={userName}
+            onNavigateScreen={(targetScreen, targetClassId) => {
+              if (targetClassId && onSelectClassById) {
+                onSelectClassById(targetClassId);
+              }
+              onChangeScreen?.(targetScreen);
+            }}
+          />
 
           {!isAdmin &&
             onRestoreAdminRole &&

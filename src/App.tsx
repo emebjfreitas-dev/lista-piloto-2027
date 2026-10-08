@@ -1036,8 +1036,14 @@ export default function App() {
         userEmail={simulatedTeacherEmail || currentUserEmail}
         userName={currentUserName}
         userRole={userRole}
+        visibleClasses={visibleClasses}
+        allClasses={classes}
         activeFontId={activeFontId}
         onSelectFont={(fontId) => setActiveFontId(fontId)}
+        onSelectClassById={(classId) => {
+          const found = classes.find((c) => c.id === classId);
+          if (found) setSelectedClass(found);
+        }}
         onRestoreAdminRole={() => {
           setSimulatedTeacherEmail(null);
           setUserRole('admin');
@@ -1286,10 +1292,11 @@ export default function App() {
           />
         )}
 
-        {currentScreen === 'faltas_consecutivas' && userRole === 'usuario' && (
+        {currentScreen === 'faltas_consecutivas' && (
           <FaltasConsecutivasScreen
             classGroup={selectedClass}
-            availableClasses={visibleClasses}
+            availableClasses={userRole === 'admin' || userRole === 'peb2' ? classes : visibleClasses}
+            userRole={userRole}
             onSelectClass={(cls) => {
               setAssignedClassId(cls.id);
               setSelectedClass(cls);
@@ -1312,9 +1319,15 @@ export default function App() {
         {currentScreen === 'resumo' && (
           <ResumoMensalScreen
             currentClass={selectedClass}
-            allClasses={visibleClasses}
+            allClasses={userRole === 'admin' || userRole === 'peb2' ? classes : visibleClasses}
             userRole={userRole}
+            initialTab={userRole === 'admin' ? 'metricas_uso' : 'resumo_turma'}
             onSelectClass={(cls) => setSelectedClass(cls)}
+            onOpenMonthlyLaunchForClass={(cls) => {
+              setSelectedClass(cls);
+              setCurrentScreen('frequencia_mensal');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             onOpenReportPrint={() => setIsReportPrintModalOpen(true)}
             onNavigateToSheet={() => setCurrentScreen('planilha')}
           />

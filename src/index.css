@@ -20,39 +20,16 @@
     --apple-red: #ff3b30;
     --apple-amber: #ff9500;
 
-    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    --font-display: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-display: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
     --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
-  html[data-font="inter"] {
-    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-display: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-    letter-spacing: -0.014em;
-  }
-
-  html[data-font="manrope"] {
+  html,
+  html[data-font] {
     --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
     --font-display: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
     letter-spacing: -0.012em;
-  }
-
-  html[data-font="dm-sans"] {
-    --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-display: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-    letter-spacing: -0.01em;
-  }
-
-  html[data-font="plus-jakarta"] {
-    --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-    letter-spacing: -0.015em;
-  }
-
-  html[data-font="ibm-plex"] {
-    --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-display: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-    letter-spacing: -0.006em;
   }
 
   * {

@@ -25,7 +25,14 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   const [imageError, setImageError] = useState(false);
   const [isExpandedOpen, setIsExpandedOpen] = useState(false);
 
-  const effectivePhoto = photo ?? student?.photo ?? '';
+  const rawPhoto = (photo ?? student?.photo ?? '').trim();
+  const isMockTestPhoto =
+    rawPhoto.includes('aida-public') ||
+    rawPhoto.includes('randomuser.me') ||
+    rawPhoto.includes('unsplash.com') ||
+    rawPhoto.includes('pravatar.cc') ||
+    rawPhoto.includes('picsum.photos');
+  const effectivePhoto = isMockTestPhoto ? '' : rawPhoto;
   const effectiveName = name ?? student?.name ?? 'Estudante';
   const effectiveInitials = initials ?? student?.initials;
 

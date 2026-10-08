@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
-import { SchoolDay, UserRole } from '../types';
+import React from 'react';
+import { UserRole } from '../types';
 import {
-  OFFICIAL_OCTOBER_DAYS,
   MONTHLY_SCHOOL_DAYS_2027,
   TOTAL_ANNUAL_SCHOOL_DAYS,
   SCHOOL_NAME,
   CITY_NAME,
 } from '../data/mockData';
-import {
-  getSavedSpreadsheetInfo,
-  getSavedPhotosDriveFolderUrl,
-} from '../services/googleSheetsApi';
+import { getSavedSpreadsheetInfo } from '../services/googleSheetsApi';
 
 interface DiasLetivosScreenProps {
   userRole?: UserRole;
@@ -20,342 +16,76 @@ interface DiasLetivosScreenProps {
 }
 
 export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
-  userRole = 'admin',
-  onOpenConfigDaysModal,
   onNavigateToSheet,
-  onBack,
 }) => {
-  const [days] = useState<SchoolDay[]>(OFFICIAL_OCTOBER_DAYS);
-  const [filterType, setFilterType] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-
   const savedSheet = getSavedSpreadsheetInfo();
-  const drivePhotosUrl = getSavedPhotosDriveFolderUrl();
-
-  const letivosCount = days.filter((d) => d.type === 'dia_letivo' || d.type === 'sabado_letivo').length;
-  const feriadosCount = days.filter((d) => d.type === 'feriado').length;
-  const planejamentoCount = days.filter((d) => d.type === 'planejamento').length;
-  const recessoCount = days.filter((d) => d.type === 'recesso').length;
-
-  const filteredDays = days.filter((d) => {
-    const matchesFilter =
-      filterType === 'all' ||
-      (filterType === 'letivo' && (d.type === 'dia_letivo' || d.type === 'sabado_letivo')) ||
-      (filterType === 'nao_letivo' && (d.type === 'feriado' || d.type === 'recesso')) ||
-      (filterType === 'planejamento' && d.type === 'planejamento');
-
-    const matchesSearch =
-      d.date.includes(searchQuery) ||
-      d.dayOfWeek.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.description.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesFilter && matchesSearch;
-  });
-
-  const getBadgeStyle = (type: string) => {
-    switch (type) {
-      case 'dia_letivo':
-        return 'bg-[#a4f3ca]/60 text-[#003723]';
-      case 'sabado_letivo':
-        return 'bg-[#c3e5f4] text-[#001f29] font-bold';
-      case 'feriado':
-        return 'bg-[#ffdad6] text-[#ba1a1a] font-bold';
-      case 'planejamento':
-        return 'bg-[#fef08a] text-[#854d0e] font-bold';
-      default:
-        return 'bg-[#f3f4f2] text-[#71787b]';
-    }
-  };
-
-  const getLabel = (type: string) => {
-    switch (type) {
-      case 'dia_letivo':
-        return 'Dia Letivo';
-      case 'sabado_letivo':
-        return 'Sábado Letivo';
-      case 'feriado':
-        return 'Feriado';
-      case 'planejamento':
-        return 'Planejamento';
-      default:
-        return 'Fim de Semana';
-    }
-  };
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
-      {/* Institutional School Header Banner */}
-      <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#0071e3]/10 text-[#0066cc] text-[0.7rem] font-semibold">
-                <span className="material-symbols-outlined text-[14px]">event_available</span>
-                Calendário Escolar Oficial
-              </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f5f5f7] text-[#6e6e73] text-[0.7rem] font-semibold">
-                <span className="material-symbols-outlined text-[14px]">table_chart</span>
-                Aba: Dias_Letivos_SME
-              </span>
-            </div>
-            <h2 className="text-[1.25rem] sm:text-[1.5rem] font-bold text-[#1d1d1f] leading-tight mt-1">
-              Dias Letivos — Outubro / 2027
-            </h2>
-            <p className="text-[0.8rem] sm:text-[0.85rem] text-[#6e6e73] font-normal mt-0.5">
-              {SCHOOL_NAME} • {CITY_NAME}
+    <div className="flex flex-col w-full max-w-[1100px] mx-auto space-y-4 pb-12 animate-gentle-fade">
+      <section className="card-welcoming bg-white p-6 sm:p-8 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0071e3]/10 text-[#0066cc] text-[0.72rem] font-bold uppercase tracking-wider">
+              <span className="material-symbols-outlined text-[15px]">table_chart</span>
+              Gestão Manual Direta na Planilha Oficial
+            </span>
+            <h1 className="text-[1.45rem] sm:text-[1.75rem] font-bold text-[#1d1d1f] tracking-tight leading-tight">
+              Listagem de Dias Letivos (200 Dias)
+            </h1>
+            <p className="text-[0.86rem] text-[#6e6e73] max-w-2xl">
+              A listagem e o controle dos dias letivos de {SCHOOL_NAME} ({CITY_NAME}) são realizados exclusivamente de forma manual na própria Planilha Google oficial (<span className="font-mono font-semibold text-[#1d1d1f]">Dias_Letivos_SME_2027</span>) e sincronizados instantaneamente com o aplicativo.
             </p>
           </div>
-          <button
-            onClick={onNavigateToSheet}
-            title="Ver Planilha Google"
-            className="w-10 h-10 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#0071e3] flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+
+          <a
+            href={savedSheet.fullUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="min-h-[46px] px-5 py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-[0.84rem] inline-flex items-center justify-center gap-2 shrink-0 transition-all active:scale-95"
           >
-            <span className="material-symbols-outlined text-[21px]">table_chart</span>
-          </button>
+            <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+            <span>Editar Dias Letivos na Planilha ↗</span>
+          </a>
         </div>
 
-        {/* Calendar KPI Summary */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-3.5 border-t border-black/[0.06] text-center">
-          <div className="bg-[#0071e3]/10 p-3 rounded-2xl border border-[#0071e3]/20">
-            <span className="text-[0.68rem] font-bold text-[#0066cc] block uppercase">Total Ano</span>
-            <span className="text-[1.45rem] font-bold text-[#0066cc] block tabular-nums">
-              {TOTAL_ANNUAL_SCHOOL_DAYS}
+        {/* Resumo dos 200 Dias Letivos */}
+        <div className="pt-4 border-t border-black/[0.05] space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[0.8rem] font-bold text-[#1d1d1f]">
+              Referência Anual na Planilha ({TOTAL_ANNUAL_SCHOOL_DAYS} Dias Letivos)
             </span>
-            <span className="text-[0.68rem] text-[#0066cc] font-medium">dias letivos</span>
+            <button
+              type="button"
+              onClick={onNavigateToSheet}
+              className="text-[0.78rem] font-semibold text-[#0066cc] hover:underline cursor-pointer"
+            >
+              Ver sincronização no app →
+            </button>
           </div>
 
-          <div className="bg-[#f5f5f7] p-3 rounded-2xl">
-            <span className="text-[0.68rem] font-bold text-[#6e6e73] block uppercase">Outubro</span>
-            <span className="text-[1.45rem] font-bold text-[#1d1d1f] block tabular-nums">{letivosCount}</span>
-            <span className="text-[0.68rem] text-[#6e6e73]">dias no mês</span>
-          </div>
-
-          <div className="bg-[#f5f5f7] p-3 rounded-2xl">
-            <span className="text-[0.68rem] font-bold text-[#6e6e73] block uppercase">Feriados</span>
-            <span className="text-[1.45rem] font-bold text-[#ff3b30] block tabular-nums">{feriadosCount}</span>
-            <span className="text-[0.68rem] text-[#6e6e73]">suspensões</span>
-          </div>
-
-          <div className="bg-[#f5f5f7] p-3 rounded-2xl">
-            <span className="text-[0.68rem] font-bold text-[#6e6e73] block uppercase">Planej.</span>
-            <span className="text-[1.45rem] font-bold text-[#ff9500] block tabular-nums">{planejamentoCount}</span>
-            <span className="text-[0.68rem] text-[#6e6e73]">pedagógico</span>
-          </div>
-        </div>
-
-        {/* 11-Month Breakdown of the 200 School Days */}
-        <div className="mt-4 pt-3.5 border-t border-black/[0.06] space-y-2">
-          <p className="text-[0.78rem] font-semibold text-[#1d1d1f]">
-            Distribuição Oficial na Aba <span className="font-mono text-[#0066cc]">Dias_Letivos_SME_2027</span> (Soma = 200 Dias):
-          </p>
-          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-1.5 text-center">
+          <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-2 text-center">
             {MONTHLY_SCHOOL_DAYS_2027.map((m) => (
               <div
                 key={m.month}
-                className="p-2 rounded-xl bg-[#f5f5f7] border border-black/[0.05]"
+                className="p-3 rounded-2xl bg-[#f5f5f7]"
               >
-                <span className="text-[0.66rem] font-semibold text-[#6e6e73] block truncate">
+                <span className="text-[0.68rem] font-semibold text-[#6e6e73] block truncate">
                   {m.month.substring(0, 3)}
                 </span>
-                <span className="text-[0.95rem] font-bold text-[#1d1d1f] block tabular-nums">
+                <span className="text-[1.05rem] font-extrabold text-[#1d1d1f] block tabular-nums mt-0.5">
                   {m.schoolDays}d
                 </span>
               </div>
             ))}
-            <div className="p-2 rounded-xl bg-[#1d1d1f] text-white font-bold">
-              <span className="text-[0.65rem] block opacity-80">SOMA</span>
-              <span className="text-[0.95rem] block tabular-nums">200d</span>
+            <div className="p-3 rounded-2xl bg-[#1d1d1f] text-white font-bold">
+              <span className="text-[0.65rem] block opacity-80">TOTAL</span>
+              <span className="text-[1.05rem] block tabular-nums mt-0.5">
+                {TOTAL_ANNUAL_SCHOOL_DAYS}d
+              </span>
             </div>
           </div>
         </div>
-
-        {/* Direct Links to Manual Spreadsheet & Photos Folder */}
-        <div className="mt-4 pt-3 border-t border-[#edeeec] space-y-2">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <a
-              href={savedSheet.fullUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 min-h-[44px] px-3 py-2 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-extrabold text-[0.82rem] flex items-center justify-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-[18px]">table_chart</span>
-              <span>Abrir Link da Planilha (Aba 200 Dias) ↗</span>
-            </a>
-
-            <a
-              href={drivePhotosUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 min-h-[44px] px-3 py-2 rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-extrabold text-[0.82rem] flex items-center justify-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-[18px]">folder_shared</span>
-              <span>Abrir Link da Pasta de Fotos (Drive) ↗</span>
-            </a>
-          </div>
-
-          {userRole === 'admin' && onOpenConfigDaysModal && (
-            <button
-              type="button"
-              onClick={onOpenConfigDaysModal}
-              className="w-full min-h-[46px] px-4 py-2 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#003723] border border-[#005035]/30 font-extrabold text-[0.85rem] flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">settings_applications</span>
-              <span>Configurar Dias Letivos de Cada Turma por Mês & Editar Links (Admin)</span>
-            </button>
-          )}
-        </div>
       </section>
-
-      {/* Filter and Search Bar */}
-      <section className="bg-white rounded-2xl p-4 shadow-sm border border-[#edeeec] space-y-3">
-        <div className="relative flex items-center">
-          <span className="material-symbols-outlined absolute left-3 text-[#71787b] text-xl">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por data, dia ou evento..."
-            className="w-full min-h-[44px] pl-10 pr-4 bg-[#f3f4f2] text-[#191c1b] text-[0.925rem] rounded-xl border border-[#c0c8cb] focus:bg-white focus:outline-none focus:border-[#003440]"
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[0.8rem] font-bold">
-          <button
-            onClick={() => setFilterType('all')}
-            className={`px-3 py-1 rounded-full transition-colors cursor-pointer whitespace-nowrap ${
-              filterType === 'all'
-                ? 'bg-[#003440] text-white'
-                : 'bg-[#edeeec] text-[#41484b] hover:bg-[#e7e8e6]'
-            }`}
-          >
-            Todos ({days.length})
-          </button>
-          <button
-            onClick={() => setFilterType('letivo')}
-            className={`px-3 py-1 rounded-full transition-colors cursor-pointer whitespace-nowrap ${
-              filterType === 'letivo'
-                ? 'bg-[#005035] text-white'
-                : 'bg-[#a4f3ca]/60 text-[#003723] hover:bg-[#a4f3ca]'
-            }`}
-          >
-            Dias Letivos ({letivosCount})
-          </button>
-          <button
-            onClick={() => setFilterType('nao_letivo')}
-            className={`px-3 py-1 rounded-full transition-colors cursor-pointer whitespace-nowrap ${
-              filterType === 'nao_letivo'
-                ? 'bg-[#ba1a1a] text-white'
-                : 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-[#ffdad6]/80'
-            }`}
-          >
-            Feriados / Recessos ({feriadosCount + recessoCount})
-          </button>
-          <button
-            onClick={() => setFilterType('planejamento')}
-            className={`px-3 py-1 rounded-full transition-colors cursor-pointer whitespace-nowrap ${
-              filterType === 'planejamento'
-                ? 'bg-[#854d0e] text-white'
-                : 'bg-[#fef08a] text-[#854d0e] hover:bg-[#fef08a]/80'
-            }`}
-          >
-            Planejamento ({planejamentoCount})
-          </button>
-        </div>
-      </section>
-
-      {/* Days Table List */}
-      <section className="bg-white rounded-2xl p-4 shadow-sm border border-[#edeeec] space-y-2">
-        <div className="flex items-center justify-between pb-2 border-b border-[#edeeec]">
-          <span className="text-[0.85rem] font-bold text-[#436370]">
-            Lista Oficial do Calendário Letivo
-          </span>
-          <span className="text-[0.75rem] font-semibold text-[#71787b]">
-            {filteredDays.length} registros exibidos
-          </span>
-        </div>
-
-        <div className="divide-y divide-[#edeeec] overflow-hidden">
-          {filteredDays.map((day) => {
-            const isSchoolDay = day.type === 'dia_letivo' || day.type === 'sabado_letivo';
-
-            return (
-              <div
-                key={day.id}
-                className="py-3 px-1 flex items-center justify-between gap-3 hover:bg-[#f9faf8] transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 font-bold ${
-                      isSchoolDay
-                        ? 'bg-[#a4f3ca]/40 text-[#003723] border border-[#a4f3ca]'
-                        : 'bg-[#f3f4f2] text-[#71787b]'
-                    }`}
-                  >
-                    <span className="text-[1rem] leading-none">{day.date.split('/')[0]}</span>
-                    <span className="text-[0.625rem] uppercase">OUT</span>
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[0.875rem] font-bold text-[#003440]">
-                        {day.dayOfWeek}
-                      </span>
-                      <span className={`text-[0.7rem] px-2 py-0.2 rounded-full ${getBadgeStyle(day.type)}`}>
-                        {getLabel(day.type)}
-                      </span>
-                    </div>
-                    <p className="text-[0.825rem] text-[#41484b] truncate mt-0.5">
-                      {day.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="shrink-0 text-right">
-                  {isSchoolDay ? (
-                    <span className="inline-flex items-center gap-1 text-[0.8rem] font-bold text-[#005035]">
-                      <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                      Contabilizado
-                    </span>
-                  ) : (
-                    <span className="text-[0.75rem] font-semibold text-[#71787b]">
-                      Sem aula
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Integration Explanation Card */}
-      <section className="bg-[#edeeec] rounded-2xl p-4 border border-[#e1e3e1]">
-        <div className="flex items-start gap-2.5">
-          <span className="material-symbols-outlined text-[22px] text-[#003440] shrink-0 mt-0.5">
-            sync_alt
-          </span>
-          <div>
-            <h4 className="text-[0.95rem] font-bold text-[#003440]">
-              Alimentação do Banco de Dados
-            </h4>
-            <p className="text-[0.875rem] text-[#41484b] mt-1 leading-relaxed">
-              Esta lista de dias letivos vem diretamente da aba <strong>"Dias_Letivos_Calendário_SME"</strong> da Planilha Google da Secretaria de Educação. O total de <strong>20 dias letivos</strong> é utilizado como denominador para calcular a frequência mensal de todos os estudantes da EMEB Prof. Joaquim Candelário de Freitas.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Back button */}
-      <button
-        onClick={onBack}
-        type="button"
-        className="w-full min-h-[50px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#003440] font-bold text-[0.95rem] rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
-      >
-        <span className="material-symbols-outlined text-[22px]">arrow_back</span>
-        <span>Voltar para o Painel de Turmas</span>
-      </button>
     </div>
   );
 };

@@ -49,7 +49,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       label: 'Faltas Seguidas',
       shortLabel: '3+ Dias',
       icon: 'event_busy',
-      peb1Only: true,
+    },
+    {
+      id: 'resumo',
+      label: 'Resumo Mensal',
+      shortLabel: 'Resumo',
+      icon: 'monitoring',
     },
     {
       id: 'bolsa_familia',
@@ -96,11 +101,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   const getIsActive = (itemId: ScreenType) => {
     if (itemId === 'turmas') {
-      return (
-        currentScreen === 'turmas' ||
-        currentScreen === 'detalhes' ||
-        currentScreen === 'resumo'
-      );
+      return currentScreen === 'turmas' || currentScreen === 'detalhes';
     }
     return currentScreen === itemId;
   };
