@@ -312,10 +312,13 @@ export const logoutGoogle = async () => {
 export const normalizeStudentNameForPhoto = (raw: string): string => {
   if (!raw) return '';
   return raw
-    .replace(/\.(jpg|jpeg|png|webp|gif|bmp|heic|heif|avif|svg|tif|tiff|pdf)$/i, '')
+    .replace(/(\.(jpg|jpeg|png|webp|gif|bmp|heic|heif|avif|svg|tif|tiff|pdf))+$/i, '')
     .replace(/\s*\(\d+\)\s*$/g, '') // remove Windows/Drive duplicate suffix like " (1)"
-    .replace(/\s*-\s*C[OÓ]PIA.*$/i, '') // remove "- Cópia"
+    .replace(/\s*[-_]?\s*C[OÓ]PIA.*$/i, '') // remove "- Cópia"
+    .replace(/\s+at\s+\d+.*$/i, '') // remove WhatsApp timestamp suffix if any
+    .replace(/^WHATSAPP\s+IMAGE[\s_.-]*/i, '')
     .replace(/^FOTO[\s_.-]+(DE[\s_.-]+|DO[\s_.-]+|DA[\s_.-]+)?/i, '')
+    .replace(/^IMG[\s_.-]+/i, '')
     .replace(/^ALUN[OA][\s_.-]+/i, '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -1452,21 +1455,19 @@ export interface DiscoveredDrivePhotoFile {
 let inMemoryDrivePhotosCache: DiscoveredDrivePhotoFile[] | null = null;
 
 export const getStoredDiscoveredDrivePhotos = (): DiscoveredDrivePhotoFile[] => {
-  if (inMemoryDrivePhotosCache && inMemoryDrivePhotosCache.length > 0) {
-    return inMemoryDrivePhotosCache;
-  }
   try {
     const raw = localStorage.getItem(DISCOVERED_PHOTOS_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as DiscoveredDrivePhotoFile[];
-    if (Array.isArray(parsed)) {
-      inMemoryDrivePhotosCache = parsed;
-      return parsed;
+    if (raw) {
+      const parsed = JSON.parse(raw) as DiscoveredDrivePhotoFile[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        inMemoryDrivePhotosCache = parsed;
+        return parsed;
+      }
     }
-    return [];
   } catch {
-    return [];
+    // ignore read error
   }
+  return inMemoryDrivePhotosCache || [];
 };
 
 export const saveStoredDiscoveredDrivePhotos = (
@@ -1475,6 +1476,15 @@ export const saveStoredDiscoveredDrivePhotos = (
   inMemoryDrivePhotosCache = files;
   try {
     localStorage.setItem(DISCOVERED_PHOTOS_STORAGE_KEY, JSON.stringify(files));
+    const { folderId, folderUrl } = getSavedPhotosDriveFolderInfo();
+    pushCloudLinksToServer(
+      {
+        photosFolderId: folderId,
+        photosFolderUrl: folderUrl,
+      },
+      undefined,
+      files
+    );
   } catch {
     // ignore storage quota
   }
@@ -1520,11 +1530,11 @@ export const findPhotoInDiscoveredCache = (
     if (byRa) return { photoUrl: byRa.photoUrl, driveLink: byRa.driveLink };
   }
 
-  if (coreName.length >= 10) {
+  if (coreName.length >= 6) {
     const studentTokens = coreName.split(' ').filter(Boolean);
     if (studentTokens.length >= 2) {
       const prefixMatches = cached.filter((c) => {
-        if (!c.coreName || c.coreName.length < 10) return false;
+        if (!c.coreName || c.coreName.length < 6) return false;
         const fileTokens = c.coreName.split(' ').filter(Boolean);
         if (fileTokens.length < 2) return false;
         if (studentTokens[0] !== fileTokens[0]) return false;
@@ -1538,7 +1548,15 @@ export const findPhotoInDiscoveredCache = (
           studentTokens[studentTokens.length - 1] ===
           fileTokens[fileTokens.length - 1];
         const sameSecond = studentTokens[1] === fileTokens[1];
-        return sameLast && sameSecond;
+        if (sameLast && sameSecond) return true;
+        // Also match if all tokens in the loose photo filename exist in the student's full name in order (e.g., "ALICE PIRES.jpg" -> "ALICE DE BARROS PIRES")
+        if (
+          sameLast &&
+          fileTokens.every((ft) => studentTokens.includes(ft))
+        ) {
+          return true;
+        }
+        return false;
       });
       if (prefixMatches.length === 1) {
         return {
@@ -1561,6 +1579,86 @@ export const findPhotoInDiscoveredCache = (
  * - Shared Drives (supportsAllDrives & includeItemsFromAllDrives)
  * - Global search fallback for images shared from external folders
  */
+export const attachPhotosFromDiscoveredCache = (
+  currentClasses: ClassGroup[]
+): ClassGroup[] => {
+  const cachedList = getStoredDiscoveredDrivePhotos();
+  if (!cachedList || cachedList.length === 0) return currentClasses;
+
+  return currentClasses.map((cls) => ({
+    ...cls,
+    students: cls.students.map((s) => {
+      const hit = findPhotoInDiscoveredCache(
+        s.estudante || s.name,
+        s.ra,
+        cls.name
+      );
+      if (hit) {
+        return {
+          ...s,
+          photo:
+            s.photo && s.photo.startsWith('data:image')
+              ? s.photo
+              : hit.photoUrl,
+          photoDriveUrl: hit.driveLink || s.photoDriveUrl,
+        };
+      }
+      return s;
+    }),
+  }));
+};
+
+export const attachNominalPdfsFromDiscoveredCache = (
+  currentClasses: ClassGroup[]
+): ClassGroup[] => {
+  const cachedList = getStoredDiscoveredNominalPdfs();
+  if (!cachedList || cachedList.length === 0) return currentClasses;
+
+  const activePdfs = cachedList.filter((p) => {
+    const up = (p.subfolderName || '').toUpperCase();
+    return (
+      !up.includes('INATIVO') &&
+      !up.includes('DUPLICATA') &&
+      !up.includes('ARQUIVAD')
+    );
+  });
+
+  return currentClasses.map((cls) => {
+    const shortTurma = formatShortTurmaCode(cls.name).toUpperCase();
+    const upperClassName = cls.name.toUpperCase();
+
+    return {
+      ...cls,
+      students: cls.students.map((s) => {
+        if (s.fichaPdfDriveId && s.fichaPdfDriveUrl) return s;
+        const normStudent = normalizeStudentNameForPhoto(
+          s.estudante || s.name
+        );
+        if (!normStudent) return s;
+
+        const exactInClass = activePdfs.find((p) => {
+          if (p.normalizedStudentName !== normStudent) return false;
+          const subUp = (p.subfolderName || '').toUpperCase();
+          return subUp.includes(upperClassName) || subUp.includes(shortTurma);
+        });
+        const hit =
+          exactInClass ||
+          activePdfs.find((p) => p.normalizedStudentName === normStudent);
+
+        if (hit) {
+          return {
+            ...s,
+            fichaPdfDriveId: hit.id,
+            fichaPdfDriveUrl: hit.webViewLink,
+            fichaPdfSubfolder: hit.subfolderName,
+          };
+        }
+        return s;
+      }),
+    };
+  });
+};
+
 export const syncPhotosFromDriveFolder = async (
   currentClasses: ClassGroup[]
 ): Promise<{
@@ -1636,7 +1734,7 @@ export const syncPhotosFromDriveFolder = async (
       const tokenParam = pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '';
       const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
         rawQuery
-      )}&fields=nextPageToken,files(id,name,parents,mimeType,webViewLink,thumbnailLink)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${tokenParam}`;
+      )}&fields=nextPageToken,files(id,name,parents,mimeType,shortcutDetails,webViewLink,thumbnailLink)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true${tokenParam}`;
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -1678,10 +1776,14 @@ export const syncPhotosFromDriveFolder = async (
     id: string;
     name: string;
     parents?: string[];
+    mimeType?: string;
+    shortcutDetails?: { targetId?: string; targetMimeType?: string };
     webViewLink?: string;
     thumbnailLink?: string;
   }> = [];
 
+  // 1. Direct query for ALL loose files inside the root Photos folder (and any subfolders if present)
+  // Does not restrict by mimeType in the Drive query so loose .jpg/.png/.heic/.webp files uploaded as application/octet-stream or shortcuts are 100% captured!
   if (targetFolderId) {
     const allFolderIds = Array.from(subfolderMap.keys());
     const chunkSize = 20;
@@ -1689,13 +1791,13 @@ export const syncPhotosFromDriveFolder = async (
       const chunk = allFolderIds.slice(i, i + chunkSize);
       const parentsClause = chunk.map((id) => `'${id}' in parents`).join(' or ');
       const chunkFiles = await fetchAllDriveFiles(
-        `(${parentsClause}) and mimeType contains 'image/' and trashed = false`
+        `(${parentsClause}) and mimeType != 'application/vnd.google-apps.folder' and trashed = false`
       );
       driveFiles.push(...chunkFiles);
     }
   }
 
-  // Also query general accessible image files in Drive (up to 1000) so any student photo shared outside the folder (e.g. ANA LAURA RODRIGUES CUSTODIO.jpg) is also indexed!
+  // 2. Also query general accessible image files in Drive so any loose student photo shared directly is indexed
   try {
     const generalImages = await fetchAllDriveFiles(
       `mimeType contains 'image/' and trashed = false`
@@ -1705,9 +1807,37 @@ export const syncPhotosFromDriveFolder = async (
     // ignore fallback error
   }
 
-  // Deduplicate by file id
-  const uniqueFilesMap = new Map<string, (typeof driveFiles)[number]>();
-  driveFiles.forEach((f) => uniqueFilesMap.set(f.id, f));
+  // Filter out PDFs/Spreadsheets/Docs while keeping all loose image files or image filenames
+  const validPhotoFiles = driveFiles.filter((f) => {
+    const mt = (f.mimeType || '').toLowerCase();
+    if (
+      mt.includes('pdf') ||
+      mt.includes('spreadsheet') ||
+      mt.includes('document') ||
+      mt.includes('presentation') ||
+      mt.includes('folder')
+    ) {
+      return false;
+    }
+    if (mt.startsWith('image/')) return true;
+    if (/\.(jpg|jpeg|png|webp|gif|bmp|heic|heif|avif|tif|tiff)$/i.test(f.name)) {
+      return true;
+    }
+    // If the file is directly inside the target Photos folder, treat it as a loose student photo
+    if (targetFolderId && f.parents?.includes(targetFolderId)) {
+      return true;
+    }
+    return false;
+  });
+
+  // Deduplicate by file id (preferring files directly inside targetFolderId)
+  const uniqueFilesMap = new Map<string, (typeof validPhotoFiles)[number]>();
+  validPhotoFiles.forEach((f) => {
+    const resolvedId = f.shortcutDetails?.targetId || f.id;
+    if (!uniqueFilesMap.has(resolvedId) || f.parents?.includes(targetFolderId)) {
+      uniqueFilesMap.set(resolvedId, { ...f, id: resolvedId });
+    }
+  });
   const uniqueDriveFiles = Array.from(uniqueFilesMap.values());
 
   const candidates: DiscoveredDrivePhotoFile[] = [];
@@ -1788,12 +1918,12 @@ export const syncPhotosFromDriveFolder = async (
       if (byRa) return byRa;
     }
 
-    // 6. Prefix / First+Last token match when a middle name was abbreviated or truncated in filename
-    if (coreName.length >= 10) {
+    // 6. Prefix / First+Last token match when a middle name was omitted or truncated in loose filename
+    if (coreName.length >= 6) {
       const studentTokens = coreName.split(' ').filter(Boolean);
       if (studentTokens.length >= 2) {
         const prefixMatches = candidates.filter((c) => {
-          if (!c.coreName || c.coreName.length < 10) return false;
+          if (!c.coreName || c.coreName.length < 6) return false;
           const fileTokens = c.coreName.split(' ').filter(Boolean);
           if (fileTokens.length < 2) return false;
           // First name must match exactly
@@ -1809,7 +1939,14 @@ export const syncPhotosFromDriveFolder = async (
             studentTokens[studentTokens.length - 1] ===
             fileTokens[fileTokens.length - 1];
           const sameSecond = studentTokens[1] === fileTokens[1];
-          return sameLast && sameSecond;
+          if (sameLast && sameSecond) return true;
+          if (
+            sameLast &&
+            fileTokens.every((ft) => studentTokens.includes(ft))
+          ) {
+            return true;
+          }
+          return false;
         });
         if (prefixMatches.length === 1) {
           return prefixMatches[0];

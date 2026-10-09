@@ -34,6 +34,8 @@ import {
   readSessionLogsFromGoogleSheet,
   syncPhotosFromDriveFolder,
   syncNominalPdfsFromDriveSubfolders,
+  attachPhotosFromDiscoveredCache,
+  attachNominalPdfsFromDiscoveredCache,
   writeAttendanceOnlyToGoogleSheet,
   syncAuthorizedUsersToGoogleSheet,
   logoutGoogle,
@@ -349,10 +351,24 @@ export default function App() {
       }
 
       if (shared.classes && shared.classes.length > 0) {
-        setClasses(shared.classes);
+        const hydratedClasses = attachPhotosFromDiscoveredCache(
+          attachNominalPdfsFromDiscoveredCache(shared.classes)
+        );
+        setClasses(hydratedClasses);
         setSelectedClass((prev) => {
-          const found = shared.classes?.find((c) => c.id === prev.id);
+          const found = hydratedClasses.find((c) => c.id === prev.id);
           return found || prev;
+        });
+      } else if (shared.discoveredDrivePhotos || shared.discoveredNominalPdfs) {
+        setClasses((prevClasses) => {
+          const hydratedClasses = attachPhotosFromDiscoveredCache(
+            attachNominalPdfsFromDiscoveredCache(prevClasses)
+          );
+          setSelectedClass((prevSel) => {
+            const found = hydratedClasses.find((c) => c.id === prevSel.id);
+            return found || prevSel;
+          });
+          return hydratedClasses;
         });
       }
 
@@ -384,9 +400,13 @@ export default function App() {
         setAuthorizedUsers(freshUsers);
       } else if (
         e.key === 'emeb_candelario_sed_classes_2027_v6' ||
-        e.key === 'emeb_candelario_sed_classes_2027_v5'
+        e.key === 'emeb_candelario_sed_classes_2027_v5' ||
+        e.key === 'emeb_candelario_discovered_drive_photos_2027_v1' ||
+        e.key === 'emeb_candelario_discovered_nominal_pdfs_2027_v1'
       ) {
-        const freshClasses = getStoredClasses();
+        const freshClasses = attachPhotosFromDiscoveredCache(
+          attachNominalPdfsFromDiscoveredCache(getStoredClasses())
+        );
         setClasses(freshClasses);
         setSelectedClass((prev) => {
           const found = freshClasses.find((c) => c.id === prev.id);

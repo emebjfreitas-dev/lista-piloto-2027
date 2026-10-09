@@ -15,6 +15,7 @@ interface SharedSchoolState {
   classes?: any[];
   classesUpdatedAtMs?: number;
   discoveredNominalPdfs?: any[];
+  discoveredDrivePhotos?: any[];
   cloudLinks?: {
     spreadsheetId?: string;
     spreadsheetTitle?: string;
@@ -192,7 +193,13 @@ async function startServer() {
 
   // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS, Ônibus Fretado e Links de PDFs Escaneados em tempo real
   app.post('/api/school-state/classes', (req, res) => {
-    const { classes, classesUpdatedAtMs, discoveredNominalPdfs, cloudLinks } = req.body || {};
+    const {
+      classes,
+      classesUpdatedAtMs,
+      discoveredNominalPdfs,
+      discoveredDrivePhotos,
+      cloudLinks,
+    } = req.body || {};
     if (!Array.isArray(classes)) {
       res.status(400).json({ error: 'Lista de turmas inválida' });
       return;
@@ -226,6 +233,9 @@ async function startServer() {
     if (Array.isArray(discoveredNominalPdfs) && discoveredNominalPdfs.length > 0) {
       patch.discoveredNominalPdfs = discoveredNominalPdfs;
     }
+    if (Array.isArray(discoveredDrivePhotos) && discoveredDrivePhotos.length > 0) {
+      patch.discoveredDrivePhotos = discoveredDrivePhotos;
+    }
     if (cloudLinks && typeof cloudLinks === 'object') {
       patch.cloudLinks = {
         ...(current.cloudLinks || {}),
@@ -240,7 +250,7 @@ async function startServer() {
 
   // API: Sincronizar Links de Pastas (Fotos / Fichas Informativas PDF) e Planilha Oficial Google Sheets
   app.post('/api/school-state/links', (req, res) => {
-    const { cloudLinks, discoveredNominalPdfs } = req.body || {};
+    const { cloudLinks, discoveredNominalPdfs, discoveredDrivePhotos } = req.body || {};
     const current = readSharedState();
     const patch: Partial<SharedSchoolState> = {};
 
@@ -253,6 +263,9 @@ async function startServer() {
     }
     if (Array.isArray(discoveredNominalPdfs)) {
       patch.discoveredNominalPdfs = discoveredNominalPdfs;
+    }
+    if (Array.isArray(discoveredDrivePhotos) && discoveredDrivePhotos.length > 0) {
+      patch.discoveredDrivePhotos = discoveredDrivePhotos;
     }
 
     const saved = writeSharedState(patch);

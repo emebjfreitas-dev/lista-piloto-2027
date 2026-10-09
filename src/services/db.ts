@@ -42,6 +42,8 @@ const purgeLegacyStorageKeys = (preserveKeys: string[]): void => {
       'emeb_candelario_drive_photos_folder_id_2027',
       'emeb_candelario_drive_fichas_pdf_folder_url_2027',
       'emeb_candelario_drive_fichas_pdf_folder_id_2027',
+      'emeb_candelario_discovered_drive_photos_2027_v1',
+      'emeb_candelario_discovered_nominal_pdfs_2027_v1',
     ]);
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -491,7 +493,8 @@ export const pushClassesToServer = async (
 
 export const pushCloudLinksToServer = async (
   cloudLinks: SharedCloudLinks,
-  discoveredNominalPdfs?: any[]
+  discoveredNominalPdfs?: any[],
+  discoveredDrivePhotos?: any[]
 ): Promise<void> => {
   try {
     await fetch('/api/school-state/links', {
@@ -500,6 +503,7 @@ export const pushCloudLinksToServer = async (
       body: JSON.stringify({
         cloudLinks,
         ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
+        ...(discoveredDrivePhotos ? { discoveredDrivePhotos } : {}),
       }),
     });
   } catch {
@@ -515,6 +519,7 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
   classesUpdatedAtMs?: number;
   cloudLinks?: SharedCloudLinks;
   discoveredNominalPdfs?: any[];
+  discoveredDrivePhotos?: any[];
 } | null> => {
   try {
     const res = await fetch('/api/school-state', { cache: 'no-store' });
@@ -528,6 +533,7 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
       classesUpdatedAtMs?: number;
       cloudLinks?: SharedCloudLinks;
       discoveredNominalPdfs?: any[];
+      discoveredDrivePhotos?: any[];
     } = {};
 
     if (Array.isArray(data?.authorizedUsers) && data.authorizedUsers.length > 0) {
@@ -620,6 +626,14 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
         JSON.stringify(data.discoveredNominalPdfs)
       );
       result.discoveredNominalPdfs = data.discoveredNominalPdfs;
+    }
+
+    if (Array.isArray(data?.discoveredDrivePhotos) && data.discoveredDrivePhotos.length > 0) {
+      safeSetLocalStorage(
+        'emeb_candelario_discovered_drive_photos_2027_v1',
+        JSON.stringify(data.discoveredDrivePhotos)
+      );
+      result.discoveredDrivePhotos = data.discoveredDrivePhotos;
     }
 
     if (Array.isArray(data?.classes) && data.classes.length > 0) {
