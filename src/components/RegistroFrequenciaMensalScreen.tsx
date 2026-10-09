@@ -438,7 +438,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
             <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
               <h1 className="text-[1.3rem] sm:text-[1.6rem] font-bold text-[#1d1d1f] tracking-tight">
-                Lançamento de Faltas • Turma {classGroup.name}
+                Faltas do Mês • Turma {classGroup.name}
               </h1>
               <span className="text-[0.78rem] sm:text-[0.82rem] font-medium text-[#6e6e73]">
                 {classGroup.pronoun || 'PROF.'} {classGroup.teacherName || 'Regente'} • {detailedIndicators.ativosCount} ativos ({students.length} na base)

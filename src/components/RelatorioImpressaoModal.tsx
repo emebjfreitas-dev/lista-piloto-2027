@@ -20,7 +20,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
   classGroup,
 }) => {
   const [reportMode, setReportMode] = useState<'mensal' | 'bimestral'>('bimestral');
-  const [selectedBimesterId, setSelectedBimesterId] = useState<string>('4_bim_2027');
+  const [selectedBimesterId, setSelectedBimesterId] = useState<string>('5bim');
 
   if (!isOpen) return null;
 
@@ -32,11 +32,11 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
   ).length;
   const currentBimester =
     OFFICIAL_BIMESTERS_2027.find((b) => b.id === selectedBimesterId) ||
-    OFFICIAL_BIMESTERS_2027[3];
+    OFFICIAL_BIMESTERS_2027[4];
 
-  const bimesterRows = classGroup.students.map((s) =>
-    getStudentBimesterReport(s, classGroup, currentBimester.id)
-  );
+  const bimesterRows = [...classGroup.students]
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
+    .map((s) => getStudentBimesterReport(s, classGroup, currentBimester.id));
   const bimesterAlertsCount = bimesterRows.filter((r) => r.isBelowLegalThresholdBimestre).length;
 
   const handlePrint = () => {

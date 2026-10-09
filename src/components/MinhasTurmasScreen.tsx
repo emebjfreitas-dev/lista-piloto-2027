@@ -446,7 +446,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                     </span>
                   </button>
 
-                  {/* Botão 2: Lançar Faltas (Apenas para PEB I e Admin — PEB II não exibe tela de frequência) */}
+                  {/* Botão 2: Faltas do Mês (Apenas para PEB I e Admin — PEB II não exibe tela de frequência) */}
                   {userRole !== 'peb2' &&
                     (isLaunchButtonOpen ? (
                       <button
@@ -460,7 +460,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                           </span>
                           <div className="min-w-0">
                             <span className="block font-semibold text-[0.8rem] leading-tight truncate">
-                              Lançar Faltas
+                              Faltas do Mês
                             </span>
                             <span className="block text-[0.66rem] text-white/80 font-normal leading-tight mt-0.5 truncate">
                               Auto-sync
@@ -475,7 +475,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                       <button
                         type="button"
                         disabled
-                        title="O lançamento de faltas abre no último dia letivo do mês e nos 2 primeiros dias letivos do próximo mês."
+                        title="O lançamento de faltas do mês abre no último dia letivo do mês e nos 2 primeiros dias letivos do próximo mês."
                         className="w-full min-h-[46px] px-3 py-2 rounded-xl bg-[#f5f5f7] text-[#86868b] border border-black/[0.06] flex items-center justify-between gap-2 cursor-not-allowed"
                       >
                         <div className="flex items-center gap-2 min-w-0 text-left">
@@ -484,7 +484,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                           </span>
                           <div className="min-w-0">
                             <span className="block font-semibold text-[0.8rem] text-[#6e6e73] leading-tight truncate">
-                              Lançar Faltas
+                              Faltas do Mês
                             </span>
                             <span className="block text-[0.65rem] text-[#86868b] font-normal leading-tight mt-0.5 truncate">
                               No fecho mensal

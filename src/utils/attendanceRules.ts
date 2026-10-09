@@ -18,8 +18,10 @@ export interface StudentAttendanceMetrics {
   legalAlertReason: string;
 }
 
+export type BimesterId2027 = '1bim' | '2bim' | '3bim' | '4bim' | '5bim' | 'anual';
+
 export interface BimesterDefinition {
-  id: '1bim' | '2bim' | '3bim' | '4bim' | 'anual';
+  id: BimesterId2027;
   label: string;
   shortLabel: string;
   periodLabel: string;
@@ -29,52 +31,59 @@ export interface BimesterDefinition {
 export const OFFICIAL_BIMESTERS_2027: BimesterDefinition[] = [
   {
     id: '1bim',
-    label: '1º Bimestre (Fev./27 a Abr./27)',
-    shortLabel: '1º Bim. (Fev–Abr/27)',
-    periodLabel: 'Fevereiro, Março e Abril de 2027',
+    label: 'Fev + Mar / 2027 (1º Bimestre)',
+    shortLabel: 'Fev + Mar / 27',
+    periodLabel: 'Fevereiro + Março de 2027',
     months: [
       { name: 'Fevereiro', defaultDays: 16 },
       { name: 'Março', defaultDays: 22 },
-      { name: 'Abril', defaultDays: 20 },
     ],
   },
   {
     id: '2bim',
-    label: '2º Bimestre (Mai./27 a Jul./27)',
-    shortLabel: '2º Bim. (Mai–Jul/27)',
-    periodLabel: 'Maio, Junho e Julho de 2027',
+    label: 'Abr + Mai / 2027 (2º Bimestre)',
+    shortLabel: 'Abr + Mai / 27',
+    periodLabel: 'Abril + Maio de 2027',
     months: [
+      { name: 'Abril', defaultDays: 20 },
       { name: 'Maio', defaultDays: 20 },
+    ],
+  },
+  {
+    id: '3bim',
+    label: 'Jun + Jul / 2027 (3º Bimestre)',
+    shortLabel: 'Jun + Jul / 27',
+    periodLabel: 'Junho + Julho de 2027',
+    months: [
       { name: 'Junho', defaultDays: 20 },
       { name: 'Julho', defaultDays: 10 },
     ],
   },
   {
-    id: '3bim',
-    label: '3º Bimestre (Ago./27 a Set./27)',
-    shortLabel: '3º Bim. (Ago–Set/27)',
-    periodLabel: 'Agosto e Setembro de 2027',
+    id: '4bim',
+    label: 'Ago + Set / 2027 (4º Bimestre)',
+    shortLabel: 'Ago + Set / 27',
+    periodLabel: 'Agosto + Setembro de 2027',
     months: [
       { name: 'Agosto', defaultDays: 22 },
       { name: 'Setembro', defaultDays: 20 },
     ],
   },
   {
-    id: '4bim',
-    label: '4º Bimestre (Out./27 a Dez./27)',
-    shortLabel: '4º Bim. (Out–Dez/27)',
-    periodLabel: 'Outubro, Novembro e Dezembro de 2027',
+    id: '5bim',
+    label: 'Out + Nov / 2027 (5º Bimestre)',
+    shortLabel: 'Out + Nov / 27',
+    periodLabel: 'Outubro + Novembro de 2027',
     months: [
       { name: 'Outubro', defaultDays: 20 },
       { name: 'Novembro', defaultDays: 18 },
-      { name: 'Dezembro', defaultDays: 12 },
     ],
   },
   {
     id: 'anual',
-    label: 'Consolidado Anual (Fev./27 a Dez./27)',
-    shortLabel: 'Anual (Fev–Dez/27)',
-    periodLabel: 'Fevereiro a Dezembro de 2027 (200 Dias Letivos)',
+    label: 'Consolidado Fev a Nov / 2027',
+    shortLabel: 'Fev a Nov / 27',
+    periodLabel: 'Fevereiro a Novembro de 2027',
     months: [
       { name: 'Fevereiro', defaultDays: 16 },
       { name: 'Março', defaultDays: 22 },
@@ -86,7 +95,6 @@ export const OFFICIAL_BIMESTERS_2027: BimesterDefinition[] = [
       { name: 'Setembro', defaultDays: 20 },
       { name: 'Outubro', defaultDays: 20 },
       { name: 'Novembro', defaultDays: 18 },
-      { name: 'Dezembro', defaultDays: 12 },
     ],
   },
 ];
@@ -348,7 +356,7 @@ export interface StudentBimesterReportRow {
 export const getStudentBimesterReport = (
   student: Student,
   cls: ClassGroup,
-  bimesterId: '1bim' | '2bim' | '3bim' | '4bim' | 'anual' = '1bim'
+  bimesterId: BimesterId2027 | string = '5bim'
 ): StudentBimesterReportRow => {
   const bimester =
     OFFICIAL_BIMESTERS_2027.find((b) => b.id === bimesterId) || OFFICIAL_BIMESTERS_2027[0];

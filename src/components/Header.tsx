@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const getScreenTitle = () => {
     if (title) return title;
-    if (currentScreen === 'frequencia_mensal') return 'Frequência Mensal';
+    if (currentScreen === 'frequencia_mensal') return 'Faltas do Mês';
     if (currentScreen === 'faltas_consecutivas') return 'Faltas Consecutivas';
     if (currentScreen === 'detalhes') return 'Caderneta da Turma';
     if (currentScreen === 'bolsa_familia') return 'Bolsa Família';
@@ -179,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
                 }`}
               >
-                Lançar Faltas
+                Faltas do Mês
               </button>
             )}
 
@@ -192,7 +192,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
               }`}
             >
-              Faltas Seguidas
+              Faltas Consecutivas
             </button>
 
             <button

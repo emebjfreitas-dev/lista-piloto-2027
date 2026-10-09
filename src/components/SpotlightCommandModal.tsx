@@ -239,7 +239,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                   }}
                   className="px-3 py-1 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white text-[0.74rem] font-bold transition-colors cursor-pointer"
                 >
-                  Lançar Faltas do Mês
+                  Faltas do Mês
                 </button>
               )}
               <button
@@ -250,7 +250,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                 }}
                 className="px-3 py-1 rounded-full bg-[#fff2f2] hover:bg-[#ff3b30] text-[#ff3b30] hover:text-white text-[0.74rem] font-bold transition-colors cursor-pointer"
               >
-                Faltas Seguidas (3+ dias)
+                Faltas Consecutivas
               </button>
               {userRole === 'admin' && (
                 <button

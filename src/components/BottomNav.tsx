@@ -39,15 +39,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'frequencia_mensal',
-      label: 'Lançar Faltas',
-      shortLabel: 'Faltas',
+      label: 'Faltas do Mês',
+      shortLabel: 'Faltas Mês',
       icon: 'edit_calendar',
       hideForPeb2: true,
     },
     {
       id: 'faltas_consecutivas',
-      label: 'Faltas Seguidas',
-      shortLabel: '3+ Dias',
+      label: 'Faltas Consecutivas',
+      shortLabel: 'Consecutivas',
       icon: 'event_busy',
     },
     {

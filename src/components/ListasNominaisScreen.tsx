@@ -1,19 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { ClassGroup, Student, UserRole } from '../types';
-import { OFFICIAL_OCTOBER_DAYS, SCHOOL_NAME } from '../data/mockData';
+import { SCHOOL_NAME } from '../data/mockData';
 import {
-  getStudentAttendanceMetrics,
+  BimesterId2027,
   getStudentBimesterReport,
   OFFICIAL_BIMESTERS_2027,
+  StudentBimesterReportRow,
 } from '../utils/attendanceRules';
+import { getAccessToken, googleSignIn } from '../services/googleSheetsApi';
 import { StudentAvatar } from './StudentAvatar';
 
 interface ListasNominaisScreenProps {
   classes: ClassGroup[];
   userRole: UserRole;
   onUpdateStudentField: (classId: string, updatedStudent: Student) => void;
-  onOpenStudentGrid: (student: Student, classId: string, className: string, diasLetivos: number) => void;
+  onOpenStudentGrid: (
+    student: Student,
+    classId: string,
+    className: string,
+    diasLetivos: number
+  ) => void;
   onOpenPhotoModal: (student: Student, className: string) => void;
   onOpenStudentPdf: (student: Student, className: string) => void;
 }
@@ -21,710 +28,888 @@ interface ListasNominaisScreenProps {
 export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   classes,
   userRole,
-  onUpdateStudentField,
   onOpenStudentGrid,
-  onOpenPhotoModal,
-  onOpenStudentPdf,
 }) => {
-  const effectiveTab: 'bolsa_familia' = 'bolsa_familia';
-
+  const [selectedBimesterId, setSelectedBimesterId] = useState<BimesterId2027>('5bim');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
-  const [selectedShiftFilter, setSelectedShiftFilter] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
+  const [selectedSegmentFilter, setSelectedSegmentFilter] = useState<
+    'all' | 'fundamental' | 'infantil'
+  >('all');
+  const [selectedAtestadoFilter, setSelectedAtestadoFilter] = useState<
+    'all' | 'com_atestado' | 'sem_atestado'
+  >('all');
+  const [onlyBelowTarget, setOnlyBelowTarget] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [bolsaStatusFilter, setBolsaStatusFilter] = useState<'beneficiarios' | 'alerta' | 'todos_escola'>('beneficiarios');
-  const [selectedBimesterId, setSelectedBimesterId] = useState<'1bim' | '2bim' | '3bim' | '4bim' | 'anual'>('4bim');
-  const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>('all');
-  const [onibusListMode, setOnibusListMode] = useState<'usuarios_fretado' | 'todos_escola'>('usuarios_fretado');
-  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
-  const [draftValue, setDraftValue] = useState<string>('');
+  const [isExportingGoogleSheet, setIsExportingGoogleSheet] = useState<boolean>(false);
+  const [createdSheetUrl, setCreatedSheetUrl] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
-    window.setTimeout(() => setToastMsg(null), 3200);
+    window.setTimeout(() => setToastMsg(null), 3800);
   };
 
-  // Flatten all students across visible classes preserving numerical order within each class
-  const allFlattened = useMemo(() => {
+  const currentBimester = useMemo(
+    () =>
+      OFFICIAL_BIMESTERS_2027.find((b) => b.id === selectedBimesterId) ||
+      OFFICIAL_BIMESTERS_2027[4],
+    [selectedBimesterId]
+  );
+
+  // Avalia todos os estudantes ativos nas turmas em relação ao bimestre selecionado
+  const allEvaluatedRows = useMemo(() => {
     const list: Array<{
       student: Student;
       cls: ClassGroup;
+      rep: StudentBimesterReportRow;
+      hasAtestado: boolean;
+      isBelowTarget: boolean;
+      worstMonthPercent: number;
+      worstMonthName: string;
     }> = [];
+
     classes.forEach((cls) => {
-      const sorted = [...cls.students].sort((a, b) => a.number - b.number);
-      sorted.forEach((student) => {
-        list.push({ student, cls });
-      });
-    });
-    return list;
-  }, [classes]);
+      cls.students.forEach((student) => {
+        const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+        if (sit.includes('BXTR') || sit.includes('TRANSF') || sit.includes('REMAN')) {
+          return;
+        }
 
-  // Distinct bus routes
-  const availableRoutes = useMemo(() => {
-    const routes = new Set<string>();
-    allFlattened.forEach(({ student }) => {
-      if (student.rotaOnibus && student.rotaOnibus.trim()) {
-        routes.add(student.rotaOnibus.trim());
-      }
-    });
-    return Array.from(routes).sort();
-  }, [allFlattened]);
+        const rep = getStudentBimesterReport(student, cls, selectedBimesterId);
+        const hasAtestado = rep.totalAtestadosBimestre > 0;
+        const isBelowTarget =
+          rep.isBelowLegalThresholdBimestre || rep.hasAnyMonthBelowThreshold;
 
-  // Filtered rows for Bolsa Família (Admin only)
-  const bolsaFamiliaRows = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    return allFlattened
-      .map(({ student, cls }) => {
-        const m = getStudentAttendanceMetrics(
-          student,
-          cls.classesHeld || 20,
-          OFFICIAL_OCTOBER_DAYS
-        );
-        const bim = getStudentBimesterReport(student, cls, selectedBimesterId);
-        const hasNis = Boolean(student.nis && student.nis.trim().length > 0);
-        return {
+        let worstMonthPercent = 100;
+        let worstMonthName = rep.monthsBreakdown[0]?.monthName || 'Outubro';
+        rep.monthsBreakdown.forEach((mb) => {
+          if (mb.frequenciaPercent <= worstMonthPercent) {
+            worstMonthPercent = mb.frequenciaPercent;
+            worstMonthName = mb.monthName;
+          }
+        });
+
+        list.push({
           student,
           cls,
-          m,
-          bim,
-          hasNis,
-        };
-      })
-      .filter((row) => {
-        if (selectedClassFilter !== 'all' && row.cls.id !== selectedClassFilter) return false;
-        const shiftClean = row.cls.shift.toUpperCase().includes('MANH') ? 'MANHÃ' : 'TARDE';
-        if (selectedShiftFilter !== 'all' && shiftClean !== selectedShiftFilter) return false;
-
-        if (bolsaStatusFilter === 'beneficiarios' && !row.hasNis) return false;
-        if (bolsaStatusFilter === 'alerta' && !(row.hasNis && (row.m.isBelowLegalThreshold || row.bim.isBelowLegalThresholdBimestre))) {
-          return false;
-        }
-
-        if (q !== '') {
-          const match =
-            row.student.name.toLowerCase().includes(q) ||
-            (row.student.ra && row.student.ra.toLowerCase().includes(q)) ||
-            (row.student.nis && row.student.nis.toLowerCase().includes(q)) ||
-            (row.student.filiacao1 && row.student.filiacao1.toLowerCase().includes(q)) ||
-            row.cls.name.toLowerCase().includes(q);
-          if (!match) return false;
-        }
-        return true;
+          rep,
+          hasAtestado,
+          isBelowTarget,
+          worstMonthPercent,
+          worstMonthName,
+        });
       });
-  }, [
-    allFlattened,
-    selectedClassFilter,
-    selectedShiftFilter,
-    bolsaStatusFilter,
-    selectedBimesterId,
-    searchQuery,
-  ]);
-
-  // Filtered rows for Ônibus Fretado
-  const onibusFretadoRows = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    return allFlattened
-      .map(({ student, cls }) => {
-        const m = getStudentAttendanceMetrics(
-          student,
-          cls.classesHeld || 20,
-          OFFICIAL_OCTOBER_DAYS
-        );
-        const hasRoute = Boolean(student.rotaOnibus && student.rotaOnibus.trim().length > 0);
-        return {
-          student,
-          cls,
-          m,
-          hasRoute,
-        };
-      })
-      .filter((row) => {
-        if (selectedClassFilter !== 'all' && row.cls.id !== selectedClassFilter) return false;
-        const shiftClean = row.cls.shift.toUpperCase().includes('MANH') ? 'MANHÃ' : 'TARDE';
-        if (selectedShiftFilter !== 'all' && shiftClean !== selectedShiftFilter) return false;
-
-        if (onibusListMode === 'usuarios_fretado' && !row.hasRoute) return false;
-        if (selectedRouteFilter !== 'all' && (row.student.rotaOnibus || '').trim() !== selectedRouteFilter) {
-          return false;
-        }
-
-        if (q !== '') {
-          const match =
-            row.student.name.toLowerCase().includes(q) ||
-            (row.student.ra && row.student.ra.toLowerCase().includes(q)) ||
-            (row.student.rotaOnibus && row.student.rotaOnibus.toLowerCase().includes(q)) ||
-            (row.student.bairro && row.student.bairro.toLowerCase().includes(q)) ||
-            (row.student.logradouro && row.student.logradouro.toLowerCase().includes(q)) ||
-            (row.student.filiacao1 && row.student.filiacao1.toLowerCase().includes(q)) ||
-            row.cls.name.toLowerCase().includes(q);
-          if (!match) return false;
-        }
-        return true;
-      });
-  }, [
-    allFlattened,
-    selectedClassFilter,
-    selectedShiftFilter,
-    onibusListMode,
-    selectedRouteFilter,
-    searchQuery,
-  ]);
-
-  // Global KPIs
-  const stats = useMemo(() => {
-    let totalBolsa = 0;
-    let totalBolsaAlerta = 0;
-    let totalOnibus = 0;
-    let totalOnibusManha = 0;
-    let totalOnibusTarde = 0;
-
-    allFlattened.forEach(({ student, cls }) => {
-      const m = getStudentAttendanceMetrics(student, cls.classesHeld || 20, OFFICIAL_OCTOBER_DAYS);
-      if (student.nis && student.nis.trim().length > 0) {
-        totalBolsa++;
-        if (m.isBelowLegalThreshold) totalBolsaAlerta++;
-      }
-      if (student.rotaOnibus && student.rotaOnibus.trim().length > 0) {
-        totalOnibus++;
-        if (cls.shift.toUpperCase().includes('MANH')) totalOnibusManha++;
-        else totalOnibusTarde++;
-      }
     });
+
+    // Ordem alfabética estrita pelo nome do estudante (A -> Z)
+    return list.sort((a, b) =>
+      a.student.name.localeCompare(b.student.name, 'pt-BR', { sensitivity: 'base' })
+    );
+  }, [classes, selectedBimesterId]);
+
+  // Destaques / KPIs do Bimestre Selecionado (respeitando filtro de Turma se selecionado)
+  const kpiStats = useMemo(() => {
+    const classScoped = allEvaluatedRows.filter((r) =>
+      selectedClassFilter === 'all' ? true : r.cls.id === selectedClassFilter
+    );
+    const belowTargetRows = classScoped.filter((r) => r.isBelowTarget);
+    const belowFundamental = belowTargetRows.filter((r) => !r.rep.isEducacaoInfantil);
+    const belowInfantil = belowTargetRows.filter((r) => r.rep.isEducacaoInfantil);
+    const belowWithAtestado = belowTargetRows.filter((r) => r.hasAtestado);
+    const belowWithoutAtestado = belowTargetRows.filter((r) => !r.hasAtestado);
 
     return {
-      totalBolsa,
-      totalBolsaAlerta,
-      totalBolsaRegular: Math.max(0, totalBolsa - totalBolsaAlerta),
-      totalOnibus,
-      totalOnibusManha,
-      totalOnibusTarde,
+      totalEvaluated: classScoped.length,
+      totalBelowTarget: belowTargetRows.length,
+      belowFundamentalCount: belowFundamental.length,
+      belowInfantilCount: belowInfantil.length,
+      belowWithAtestadoCount: belowWithAtestado.length,
+      belowWithoutAtestadoCount: belowWithoutAtestado.length,
     };
-  }, [allFlattened]);
+  }, [allEvaluatedRows, selectedClassFilter]);
 
-  // Export Bolsa Família Nominal .XLS (Admin Only)
-  const handleExportBolsaFamiliaXLS = () => {
-    if (userRole !== 'admin') return;
-    const rows = bolsaFamiliaRows.map((r, index) => ({
-      'ORDEM': index + 1,
-      'TURMA ABREV': r.cls.turmaAbrev || r.cls.name,
-      'TURMA': r.cls.name,
-      'PERÍODO': r.cls.shift.replace('Turno ', '').toUpperCase(),
-      'SALA': r.cls.room,
-      'PROFESSOR(A) REGENTE': r.cls.teacherName || '',
-      'Nº CHAMADA': r.student.number,
-      'ESTUDANTE (NOMINAL)': r.student.name,
-      'RA': `${r.student.ra}-${r.student.digRa}/${r.student.ufRa || 'SP'}`,
-      'NIS (BOLSA FAMÍLIA)': r.student.nis || 'NÃO CADASTRADO',
-      'DATA DE NASCIMENTO': r.student.dataNascimento || '',
-      'FILIAÇÃO 1 (MÃE)': r.student.filiacao1 || r.student.guardianName || '',
-      'FILIAÇÃO 2 (PAI)': r.student.filiacao2 || '',
-      'TELEFONES': r.student.telefones || r.student.guardianPhone || '',
-      'DIAS LETIVOS (MÊS)': r.m.diasLetivosMatriculados,
-      'PRESENÇAS (MÊS)': r.m.presencas,
-      'FALTAS (MÊS)': r.m.faltas,
-      'ATESTADOS (MÊS)': r.m.atestados,
-      '% PRESENÇA MENSAL': `${r.m.frequenciaPercent}%`,
-      '% PRESENÇA BIMESTRE': `${r.bim.frequenciaBimestrePercent}%`,
-      'EXIGÊNCIA LEGAL MEC': `≥${r.m.minLegalPresencePercent}%`,
-      'SITUAÇÃO BOLSA FAMÍLIA': r.m.isBelowLegalThreshold
-        ? `ALERTA (<${r.m.minLegalPresencePercent}%)`
-        : 'REGULAR',
-      'PARECER / MOTIVO': r.bim.bolsaFamiliaMotivoPadrao,
-    }));
+  // Linhas filtradas e em ordem alfabética (A -> Z)
+  const filteredRows = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+
+    return allEvaluatedRows.filter((row) => {
+      if (onlyBelowTarget && !row.isBelowTarget) return false;
+      if (selectedClassFilter !== 'all' && row.cls.id !== selectedClassFilter) {
+        return false;
+      }
+      if (
+        selectedSegmentFilter === 'fundamental' &&
+        row.rep.isEducacaoInfantil
+      ) {
+        return false;
+      }
+      if (
+        selectedSegmentFilter === 'infantil' &&
+        !row.rep.isEducacaoInfantil
+      ) {
+        return false;
+      }
+      if (selectedAtestadoFilter === 'com_atestado' && !row.hasAtestado) {
+        return false;
+      }
+      if (selectedAtestadoFilter === 'sem_atestado' && row.hasAtestado) {
+        return false;
+      }
+
+      if (q !== '') {
+        const match =
+          row.student.name.toLowerCase().includes(q) ||
+          (row.student.ra && row.student.ra.toLowerCase().includes(q)) ||
+          (row.student.nis && row.student.nis.toLowerCase().includes(q)) ||
+          row.cls.name.toLowerCase().includes(q);
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [
+    allEvaluatedRows,
+    onlyBelowTarget,
+    selectedClassFilter,
+    selectedSegmentFilter,
+    selectedAtestadoFilter,
+    searchQuery,
+  ]);
+
+  // Monta os dados tabulares limpos para exportação (.XLS e Nova Google Sheet)
+  const buildExportObjects = () => {
+    return filteredRows.map((r, index) => {
+      const monthCols: Record<string, string | number> = {};
+      r.rep.monthsBreakdown.forEach((mb) => {
+        const shortM = mb.monthName.slice(0, 3).toUpperCase();
+        monthCols[`${shortM} (% PRESENÇA)`] = `${mb.frequenciaPercent}%`;
+        monthCols[`${shortM} (FALTAS / ATEST.)`] = `${mb.faltas}F / ${mb.atestados}A`;
+      });
+
+      return {
+        'ORDEM (A-Z)': index + 1,
+        'ESTUDANTE (ORDEM ALFABÉTICA)': r.student.name,
+        'TURMA': r.cls.name,
+        'PERÍODO': r.cls.shift.replace('Turno ', '').toUpperCase(),
+        'ETAPA DE ENSINO': r.rep.isEducacaoInfantil
+          ? 'EDUCAÇÃO INFANTIL'
+          : 'ENSINO FUNDAMENTAL',
+        'META MÍNIMA LEGAL': `≥${r.rep.minLegalPresencePercent}%`,
+        'BIMESTRE DE REFERÊNCIA': currentBimester.shortLabel,
+        ...monthCols,
+        'FALTAS NO BIMESTRE': r.rep.totalFaltasBimestre,
+        'ATESTADOS NO BIMESTRE': r.rep.totalAtestadosBimestre,
+        'POSSUI ATESTADO?': r.hasAtestado
+          ? `SIM (${r.rep.totalAtestadosBimestre} atestado(s))`
+          : 'NÃO (Sem atestado)',
+        '% PRESENÇA BIMESTRE': `${r.rep.frequenciaBimestrePercent}%`,
+        'PIOR MÊS NO BIMESTRE': `${r.worstMonthName} (${r.worstMonthPercent}%)`,
+        'STATUS META MEC / BOLSA FAMÍLIA': r.isBelowTarget
+          ? `ABAIXO DA META (<${r.rep.minLegalPresencePercent}%)`
+          : `DENTRO DA META (≥${r.rep.minLegalPresencePercent}%)`,
+        'RA': `${r.student.ra}-${r.student.digRa}`,
+        'NIS': r.student.nis || '—',
+        'RESPONSÁVEL / TELEFONE': `${r.student.filiacao1 || r.student.guardianName || '—'} (${r.student.telefones || r.student.guardianPhone || '—'})`,
+      };
+    });
+  };
+
+  // Exportação 1: Arquivo Excel (.XLS)
+  const handleExportXLS = () => {
+    const rows = buildExportObjects();
+    if (rows.length === 0) {
+      showToast('Nenhum estudante listado no filtro atual para exportar.');
+      return;
+    }
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, 'Bolsa_Familia_Nominal');
-    XLSX.writeFile(wb, `Relatorio_Nominal_Bolsa_Familia_2027.xls`, { bookType: 'biff8' });
-    showToast(`Planilha Relatorio_Nominal_Bolsa_Familia_2027.xls exportada com ${rows.length} estudantes!`);
+    const safeSheetName = `Bolsa_${currentBimester.id.toUpperCase()}`.slice(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+    const fileName = `Bolsa_Familia_Abaixo_Meta_${currentBimester.id}_2027.xls`;
+    XLSX.writeFile(wb, fileName, { bookType: 'biff8' });
+    showToast(`Planilha ${fileName} exportada com ${rows.length} estudantes em ordem alfabética!`);
   };
 
-  // Export Ônibus Fretado Nominal .XLS
-  const handleExportOnibusFretadoXLS = () => {
-    const rows = onibusFretadoRows.map((r, index) => ({
-      'ORDEM': index + 1,
-      'ROTA DO ÔNIBUS FRETADO': r.student.rotaOnibus || 'SEM ROTA',
-      'TURMA ABREV': r.cls.turmaAbrev || r.cls.name,
-      'TURMA': r.cls.name,
-      'PERÍODO': r.cls.shift.replace('Turno ', '').toUpperCase(),
-      'SALA': r.cls.room,
-      'PROFESSOR(A) REGENTE': r.cls.teacherName || '',
-      'Nº CHAMADA': r.student.number,
-      'ESTUDANTE (NOMINAL)': r.student.name,
-      'RA': `${r.student.ra}-${r.student.digRa}/${r.student.ufRa || 'SP'}`,
-      'FILIAÇÃO 1 (MÃE)': r.student.filiacao1 || r.student.guardianName || '',
-      'FILIAÇÃO 2 (PAI)': r.student.filiacao2 || '',
-      'TELEFONES': r.student.telefones || r.student.guardianPhone || '',
-      'ENDEREÇO RESIDENCIAL': `${r.student.logradouro || ''}, ${r.student.numeroResidencia || 'S/N'} ${r.student.complemento || ''}`.trim(),
-      'BAIRRO': r.student.bairro || '',
-      'CEP': r.student.cep || '',
-      '% PRESENÇA': `${r.m.frequenciaPercent}%`,
-      'FALTAS NO MÊS': r.m.faltas,
-      'SITUAÇÃO MATRÍCULA': r.student.situacao || 'ATIVO',
-    }));
+  // Exportação 2: Criar Nova Google Sheet na Nuvem
+  const handleExportNewGoogleSheet = async () => {
+    const rows = buildExportObjects();
+    if (rows.length === 0) {
+      showToast('Nenhum estudante listado no filtro atual para exportar.');
+      return;
+    }
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, 'Onibus_Fretado_Nominal');
-    XLSX.writeFile(wb, `Lista_Nominal_Onibus_Fretado_2027.xls`, { bookType: 'biff8' });
-    showToast(`Planilha Lista_Nominal_Onibus_Fretado_2027.xls exportada com ${rows.length} estudantes!`);
+    setIsExportingGoogleSheet(true);
+    setCreatedSheetUrl(null);
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        const authRes = await googleSignIn();
+        token = authRes?.accessToken || (await getAccessToken());
+      }
+      if (!token) {
+        showToast('Conecte sua conta Google para gerar a Nova Google Sheet.');
+        setIsExportingGoogleSheet(false);
+        return;
+      }
+
+      const classLabel =
+        selectedClassFilter === 'all'
+          ? 'Todas as Turmas'
+          : classes.find((c) => c.id === selectedClassFilter)?.name || 'Turma';
+
+      const sheetTitle = `Bolsa Família • ${currentBimester.shortLabel} • ${classLabel} (${new Date().toLocaleDateString('pt-BR')})`;
+
+      const createRes = await fetch(
+        'https://sheets.googleapis.com/v4/spreadsheets',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            properties: {
+              title: sheetTitle,
+              locale: 'pt_BR',
+            },
+            sheets: [
+              {
+                properties: {
+                  title: 'Abaixo_da_Meta_Bimestre',
+                  gridProperties: {
+                    frozenRowCount: 1,
+                  },
+                },
+              },
+            ],
+          }),
+        }
+      );
+
+      if (!createRes.ok) {
+        throw new Error('Falha ao criar nova planilha no Google Sheets.');
+      }
+
+      const createdData = await createRes.json();
+      const newSpreadsheetId = createdData.spreadsheetId;
+      const newSpreadsheetUrl =
+        createdData.spreadsheetUrl ||
+        `https://docs.google.com/spreadsheets/d/${newSpreadsheetId}/edit`;
+
+      const headers = Object.keys(rows[0]);
+      const values = [
+        headers,
+        ...rows.map((rowObj) =>
+          headers.map((h) => String((rowObj as Record<string, any>)[h] ?? ''))
+        ),
+      ];
+
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${newSpreadsheetId}/values/Abaixo_da_Meta_Bimestre!A1?valueInputOption=USER_ENTERED`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            values,
+          }),
+        }
+      );
+
+      setCreatedSheetUrl(newSpreadsheetUrl);
+      showToast(
+        `Nova Google Sheet criada com sucesso (${rows.length} estudantes em ordem alfabética)!`
+      );
+    } catch (err) {
+      console.error('Erro ao exportar para Nova Google Sheet:', err);
+      showToast('Não foi possível criar a Google Sheet agora. Verifique a conexão Google.');
+    } finally {
+      setIsExportingGoogleSheet(false);
+    }
   };
+
+  if (userRole !== 'admin') {
+    return (
+      <div className="max-w-xl mx-auto my-12 p-6 bg-white rounded-3xl border border-black/[0.08] text-center space-y-2">
+        <span className="material-symbols-outlined text-[36px] text-[#ff3b30]">
+          lock
+        </span>
+        <h2 className="text-[1.1rem] font-bold text-[#1d1d1f]">
+          Acesso Restrito à Gestão / Secretaria
+        </h2>
+        <p className="text-[0.84rem] text-[#6e6e73]">
+          O painel consolidado do Bolsa Família e metas bimestrais é exclusivo do perfil Administrador.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-12 animate-gentle-fade">
       {toastMsg && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-200">
+        <div className="fixed bottom-20 left-4 right-4 z-50 max-w-lg mx-auto animate-in fade-in duration-200">
           <div className="bg-[#1d1d1f] text-white px-4 py-3.5 rounded-2xl shadow-2xl border border-white/15 flex items-center gap-3">
-            <span className="material-symbols-outlined text-[20px] text-[#28cd41]">check_circle</span>
+            <span className="material-symbols-outlined text-[20px] text-[#28cd41]">
+              check_circle
+            </span>
             <p className="text-[0.82rem] font-semibold leading-snug">{toastMsg}</p>
           </div>
         </div>
       )}
 
-      {/* Cabeçalho com Alternador entre as Duas Abas Nominais */}
-      <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-3.5 sm:space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
-          <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <span className="px-2.5 py-0.5 rounded-lg bg-[#1d1d1f] text-white text-[0.68rem] font-bold uppercase tracking-wider">
-                Listagens Nominais • {SCHOOL_NAME}
+      {/* CABEÇALHO SIMPLIFICADO & EXPORTAÇÃO (.XLS OU NOVA GOOGLE SHEET) */}
+      <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2 text-[0.72rem] font-semibold text-[#6e6e73]">
+              <span className="text-[#1d1d1f] font-bold uppercase tracking-wider">
+                Bolsa Família &amp; Busca Ativa Bimestral
               </span>
-              {effectiveTab === 'bolsa_familia' && (
-                <span className="px-2.5 py-0.5 rounded-full bg-[#ff9500]/15 text-[#92400e] text-[0.68rem] font-semibold uppercase">
-                  Exclusivo Admin
-                </span>
-              )}
+              <span aria-hidden="true">·</span>
+              <span>{SCHOOL_NAME}</span>
+              <span aria-hidden="true">·</span>
+              <span className="text-[#be123c] font-bold">
+                Ens. Fundamental &lt; 75% | Ed. Infantil &lt; 60%
+              </span>
             </div>
-            <h1 className="text-[1.25rem] sm:text-[1.55rem] font-bold text-[#1d1d1f] tracking-tight leading-tight">
-              {effectiveTab === 'bolsa_familia'
-                ? 'Aba Nominal — Beneficiários do Bolsa Família'
-                : 'Aba Nominal — Estudantes do Ônibus Fretado'}
+            <h1 className="text-[1.3rem] sm:text-[1.55rem] font-bold text-[#1d1d1f] tracking-tight leading-tight">
+              Estudantes Abaixo da Meta de Presença — {currentBimester.shortLabel}
             </h1>
-            <p className="text-[0.78rem] sm:text-[0.84rem] text-[#6e6e73] font-normal">
-              {effectiveTab === 'bolsa_familia'
-                ? 'Relatório nominal exclusivo da Direção/Admin com acompanhamento de NIS, frequência mensal/bimestral e mínimo legal (≥60% Ed. Infantil e ≥75% Fundamental).'
-                : 'Relação nominal completa dos estudantes que utilizam o transporte escolar / ônibus fretado por rota, turma, turno, endereço e contatos.'}
+            <p className="text-[0.8rem] text-[#6e6e73]">
+              Relação simplificada em <strong>ordem alfabética (A–Z)</strong> por bimestre (Fev+Mar até Out+Nov/2027), destacando etapa de ensino e existência de atestado médico.
             </p>
           </div>
 
-          {/* Botão de Exportação .XLS Exclusivo do Bolsa Família (Admin) */}
+          {/* Ações de Exportação Direta: .XLS ou Nova Google Sheet */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {userRole === 'admin' && (
-              <button
-                type="button"
-                onClick={handleExportBolsaFamiliaXLS}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-[0.78rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
+            <button
+              type="button"
+              onClick={handleExportXLS}
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-[0.8rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              <span>Exportar .XLS</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportNewGoogleSheet}
+              disabled={isExportingGoogleSheet}
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#006644] hover:bg-[#005035] text-white font-semibold text-[0.8rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95 disabled:opacity-60"
+            >
+              <span
+                className={`material-symbols-outlined text-[18px] ${
+                  isExportingGoogleSheet ? 'animate-spin' : ''
+                }`}
               >
-                <span className="material-symbols-outlined text-[17px]">download</span>
-                <span>Baixar .XLS</span>
-              </button>
-            )}
+                {isExportingGoogleSheet ? 'sync' : 'add_to_drive'}
+              </span>
+              <span>
+                {isExportingGoogleSheet
+                  ? 'Criando Google Sheet...'
+                  : 'Exportar Nova Google Sheet'}
+              </span>
+            </button>
           </div>
         </div>
 
-        {/* Cards de Indicadores Rápidos da Aba Ativa */}
-        {effectiveTab === 'bolsa_familia' && userRole === 'admin' ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-            <div className="rounded-2xl bg-[#f8fafc] border border-black/[0.06] p-3.5">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#475569] block">
-                Total Beneficiários (NIS)
+        {/* Link imediato quando uma Nova Google Sheet é gerada */}
+        {createdSheetUrl && (
+          <div className="p-3.5 rounded-2xl bg-[#eaf6ef] border border-[#006644]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-[#005035] text-[0.82rem] font-semibold">
+              <span className="material-symbols-outlined text-[20px]">
+                task_alt
               </span>
-              <span className="text-[1.5rem] font-black text-[#0b3b49] tabular-nums block mt-0.5">
-                {stats.totalBolsa}
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#64748b]">
-                estudantes listados nominalmente
+              <span>
+                Nova planilha criada no seu Google Drive com os estudantes filtrados ({currentBimester.shortLabel}):
               </span>
             </div>
-
-            <div className="rounded-2xl bg-[#eaf6ef]/80 border border-[#006644]/20 p-3.5">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#006644] block">
-                Frequência Regular MEC
+            <a
+              href={createdSheetUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 rounded-xl bg-[#006644] text-white font-bold text-[0.76rem] inline-flex items-center gap-1.5 self-start sm:self-auto hover:bg-[#005035]"
+            >
+              <span>Abrir Planilha no Google Sheets</span>
+              <span className="material-symbols-outlined text-[15px]">
+                open_in_new
               </span>
-              <span className="text-[1.5rem] font-black text-[#006644] tabular-nums block mt-0.5">
-                {stats.totalBolsaRegular}
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#005035]">
-                cumprindo ≥60% (Inf.) / ≥75% (Fund.)
-              </span>
-            </div>
-
-            <div className="rounded-2xl bg-[#fff1f2] border border-[#e11d48]/25 p-3.5">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#be123c] block">
-                Em Alerta Bolsa Família
-              </span>
-              <span className="text-[1.5rem] font-black text-[#be123c] tabular-nums block mt-0.5">
-                {stats.totalBolsaAlerta}
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#9f1239]">
-                abaixo do mínimo legal no mês
-              </span>
-            </div>
-
-            <div className="rounded-2xl bg-[#f8fafc] border border-black/[0.06] p-3.5">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#475569] block">
-                Exibidos no Filtro Atual
-              </span>
-              <span className="text-[1.5rem] font-black text-[#0f172a] tabular-nums block mt-0.5">
-                {bolsaFamiliaRows.length}
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#64748b]">
-                registros prontos para conferência
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-            <div className="rounded-2xl bg-[#f0f9ff] border border-[#0284c7]/20 p-3.5">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#0369a1] block">
-                Total no Ônibus Fretado
-              </span>
-              <span className="text-[1.5rem] font-black text-[#0c4a6e] tabular-nums block mt-0.5">
-                {stats.totalOnibus}
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#0369a1]">
-                estudantes vinculados a rotas
-              </span>
-            </div>
-
-            <div className="rounded-2xl bg-[#fffbeb] border border-[#d97706]/25 p-3.5">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#b45309] block">
-                Fretado • Turno Manhã
-              </span>
-              <span className="text-[1.5rem] font-black text-[#92400e] tabular-nums block mt-0.5">
-                {stats.totalOnibusManha}
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#b45309]">
-                estudantes no período da manhã
-              </span>
-            </div>
-
-            <div className="rounded-2xl bg-[#f5f3ff] border border-[#7c3aed]/20 p-3.5">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#6d28d9] block">
-                Fretado • Turno Tarde
-              </span>
-              <span className="text-[1.5rem] font-black text-[#4c1d95] tabular-nums block mt-0.5">
-                {stats.totalOnibusTarde}
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#6d28d9]">
-                estudantes no período da tarde
-              </span>
-            </div>
-
-            <div className="rounded-2xl bg-[#f8fafc] border border-black/[0.06] p-3.5">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#475569] block">
-                Rotas Ativas / Filtrados
-              </span>
-              <span className="text-[1.5rem] font-black text-[#0f172a] tabular-nums block mt-0.5">
-                {availableRoutes.length} rotas • {onibusFretadoRows.length} alunos
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#64748b]">
-                listados nominalmente abaixo
-              </span>
-            </div>
+            </a>
           </div>
         )}
 
-        {/* Barra de Filtros: Busca, Turma, Turno e Filtros Específicos da Aba */}
+        {/* SELETOR VISUAL DE BIMESTRES (FEV+MAR ATÉ OUT+NOV DE 2027) */}
+        <div className="pt-1">
+          <span className="text-[0.68rem] font-bold uppercase tracking-wider text-[#6e6e73] block mb-2">
+            Recorte Bimestral (2027)
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {OFFICIAL_BIMESTERS_2027.map((bim) => {
+              const isSelected = bim.id === selectedBimesterId;
+              return (
+                <button
+                  key={bim.id}
+                  type="button"
+                  onClick={() => setSelectedBimesterId(bim.id)}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#1d1d1f] text-white border-[#1d1d1f] shadow-xs'
+                      : 'bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#0f172a] border-black/[0.07]'
+                  }`}
+                >
+                  <span
+                    className={`text-[0.65rem] font-bold uppercase block ${
+                      isSelected ? 'text-white/75' : 'text-[#64748b]'
+                    }`}
+                  >
+                    {bim.id === 'anual' ? 'Consolidado' : `${bim.id.replace('bim', 'º Bimestre')}`}
+                  </span>
+                  <span className="text-[0.86rem] font-extrabold block mt-0.5">
+                    {bim.shortLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* DESTAQUES VISUAIS (KPI CARDS CLICÁVEIS) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+          {/* Card 1: Total Abaixo da Meta */}
+          <button
+            type="button"
+            onClick={() => {
+              setOnlyBelowTarget(true);
+              setSelectedSegmentFilter('all');
+              setSelectedAtestadoFilter('all');
+            }}
+            className={`text-left rounded-2xl p-3.5 border transition-all cursor-pointer ${
+              onlyBelowTarget &&
+              selectedSegmentFilter === 'all' &&
+              selectedAtestadoFilter === 'all'
+                ? 'bg-[#fff1f2] border-[#be123c] ring-2 ring-[#be123c]/20'
+                : 'bg-[#fff1f2]/70 border-[#e11d48]/20 hover:bg-[#fff1f2]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#be123c]">
+                Total Abaixo da Meta
+              </span>
+              <span className="material-symbols-outlined text-[18px] text-[#be123c]">
+                warning
+              </span>
+            </div>
+            <span className="text-[1.65rem] font-black text-[#be123c] tabular-nums block mt-0.5 leading-none">
+              {kpiStats.totalBelowTarget}
+            </span>
+            <span className="text-[0.72rem] font-medium text-[#9f1239] block mt-1">
+              de {kpiStats.totalEvaluated} estudantes ativos
+            </span>
+          </button>
+
+          {/* Card 2: Ensino Fundamental (< 75%) */}
+          <button
+            type="button"
+            onClick={() => {
+              setOnlyBelowTarget(true);
+              setSelectedSegmentFilter(
+                selectedSegmentFilter === 'fundamental' ? 'all' : 'fundamental'
+              );
+            }}
+            className={`text-left rounded-2xl p-3.5 border transition-all cursor-pointer ${
+              selectedSegmentFilter === 'fundamental'
+                ? 'bg-[#eff6ff] border-[#0284c7] ring-2 ring-[#0284c7]/20'
+                : 'bg-[#f8fafc] border-black/[0.07] hover:bg-[#f1f5f9]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#0369a1]">
+                Ens. Fundamental (&lt; 75%)
+              </span>
+              <span className="material-symbols-outlined text-[18px] text-[#0284c7]">
+                menu_book
+              </span>
+            </div>
+            <span className="text-[1.65rem] font-black text-[#0c4a6e] tabular-nums block mt-0.5 leading-none">
+              {kpiStats.belowFundamentalCount}
+            </span>
+            <span className="text-[0.72rem] font-medium text-[#475569] block mt-1">
+              1º ao 5º Ano abaixo de 75%
+            </span>
+          </button>
+
+          {/* Card 3: Educação Infantil (< 60%) */}
+          <button
+            type="button"
+            onClick={() => {
+              setOnlyBelowTarget(true);
+              setSelectedSegmentFilter(
+                selectedSegmentFilter === 'infantil' ? 'all' : 'infantil'
+              );
+            }}
+            className={`text-left rounded-2xl p-3.5 border transition-all cursor-pointer ${
+              selectedSegmentFilter === 'infantil'
+                ? 'bg-[#fef3c7] border-[#d97706] ring-2 ring-[#d97706]/20'
+                : 'bg-[#f8fafc] border-black/[0.07] hover:bg-[#f1f5f9]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#b45309]">
+                Ed. Infantil (&lt; 60%)
+              </span>
+              <span className="material-symbols-outlined text-[18px] text-[#d97706]">
+                child_care
+              </span>
+            </div>
+            <span className="text-[1.65rem] font-black text-[#92400e] tabular-nums block mt-0.5 leading-none">
+              {kpiStats.belowInfantilCount}
+            </span>
+            <span className="text-[0.72rem] font-medium text-[#475569] block mt-1">
+              G4 e G5 abaixo de 60%
+            </span>
+          </button>
+
+          {/* Card 4: Com Atestado vs Sem Atestado */}
+          <div className="rounded-2xl bg-[#f8fafc] border border-black/[0.07] p-3.5 flex flex-col justify-between">
+            <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#475569] block">
+              Justificativa Médica (Atestado)
+            </span>
+            <div className="grid grid-cols-2 gap-2 mt-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedAtestadoFilter(
+                    selectedAtestadoFilter === 'com_atestado' ? 'all' : 'com_atestado'
+                  )
+                }
+                className={`p-1.5 rounded-xl border text-center cursor-pointer transition-all ${
+                  selectedAtestadoFilter === 'com_atestado'
+                    ? 'bg-[#006644] text-white border-[#006644]'
+                    : 'bg-[#eaf6ef] text-[#005035] border-[#006644]/20'
+                }`}
+              >
+                <span className="text-[1.1rem] font-black tabular-nums block leading-none">
+                  {kpiStats.belowWithAtestadoCount}
+                </span>
+                <span className="text-[0.64rem] font-bold block mt-0.5">
+                  Com Atestado
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedAtestadoFilter(
+                    selectedAtestadoFilter === 'sem_atestado' ? 'all' : 'sem_atestado'
+                  )
+                }
+                className={`p-1.5 rounded-xl border text-center cursor-pointer transition-all ${
+                  selectedAtestadoFilter === 'sem_atestado'
+                    ? 'bg-[#be123c] text-white border-[#be123c]'
+                    : 'bg-[#fff1f2] text-[#be123c] border-[#be123c]/20'
+                }`}
+              >
+                <span className="text-[1.1rem] font-black tabular-nums block leading-none">
+                  {kpiStats.belowWithoutAtestadoCount}
+                </span>
+                <span className="text-[0.64rem] font-bold block mt-0.5">
+                  Sem Atestado
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* BARRA DE FILTROS SIMPLIFICADA: POR TURMA / TODAS AS TURMAS, ETAPA, ATESTADO E BUSCA */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 pt-2 border-t border-black/[0.06]">
-          <div className="lg:col-span-4 relative">
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748b] text-[19px]">
+          {/* Filtro 1: Por Turma ou Todas as Turmas */}
+          <div className="lg:col-span-3">
+            <select
+              value={selectedClassFilter}
+              onChange={(e) => setSelectedClassFilter(e.target.value)}
+              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-[0.8rem] rounded-xl border border-black/[0.07] cursor-pointer"
+            >
+              <option value="all">Todas as Turmas ({classes.length} turmas)</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  Turma {c.name} ({c.shift.replace('Turno ', '')})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro 2: Etapa (Infantil <60% vs Fundamental <75%) */}
+          <div className="lg:col-span-3">
+            <select
+              value={selectedSegmentFilter}
+              onChange={(e) => setSelectedSegmentFilter(e.target.value as any)}
+              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-[0.8rem] rounded-xl border border-black/[0.07] cursor-pointer"
+            >
+              <option value="all">Todas as Etapas (Inf. &lt;60% | Fund. &lt;75%)</option>
+              <option value="fundamental">Ensino Fundamental (Meta &lt; 75%)</option>
+              <option value="infantil">Educação Infantil (Meta &lt; 60%)</option>
+            </select>
+          </div>
+
+          {/* Filtro 3: Se tem Atestado ou Não */}
+          <div className="lg:col-span-2">
+            <select
+              value={selectedAtestadoFilter}
+              onChange={(e) => setSelectedAtestadoFilter(e.target.value as any)}
+              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-[0.8rem] rounded-xl border border-black/[0.07] cursor-pointer"
+            >
+              <option value="all">Com e Sem Atestado</option>
+              <option value="com_atestado">Com Atestado Médico</option>
+              <option value="sem_atestado">Sem Atestado (Injustificadas)</option>
+            </select>
+          </div>
+
+          {/* Filtro 4: Modo de Exibição (Somente Abaixo da Meta vs Todos) */}
+          <div className="lg:col-span-2">
+            <select
+              value={onlyBelowTarget ? 'abaixo_meta' : 'todos'}
+              onChange={(e) => setOnlyBelowTarget(e.target.value === 'abaixo_meta')}
+              className="w-full min-h-[42px] px-3 bg-[#fff1f2] text-[#be123c] font-extrabold text-[0.8rem] rounded-xl border border-[#be123c]/25 cursor-pointer"
+            >
+              <option value="abaixo_meta">Apenas Abaixo da Meta</option>
+              <option value="todos">Todos os Estudantes (A–Z)</option>
+            </select>
+          </div>
+
+          {/* Busca Rápida por Nome */}
+          <div className="lg:col-span-2 relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b] text-[18px]">
               search
             </span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                effectiveTab === 'bolsa_familia'
-                  ? 'Buscar por nome, RA, NIS, mãe ou turma...'
-                  : 'Buscar por nome, RA, rota de ônibus, bairro ou mãe...'
-              }
-              className="w-full min-h-[42px] pl-10 pr-8 bg-[#f1f5f9] text-[#0f172a] text-[0.84rem] rounded-xl border border-transparent focus:border-[#006644]/40 focus:bg-white focus:outline-none font-medium"
+              placeholder="Buscar aluno..."
+              className="w-full min-h-[42px] pl-9 pr-7 bg-[#f1f5f9] text-[#0f172a] text-[0.8rem] rounded-xl border border-transparent focus:border-[#0f172a]/30 focus:bg-white focus:outline-none font-medium"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a] cursor-pointer"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a] cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">cancel</span>
+                <span className="material-symbols-outlined text-[16px]">cancel</span>
               </button>
             )}
           </div>
-
-          <div className="lg:col-span-3">
-            <select
-              value={selectedClassFilter}
-              onChange={(e) => setSelectedClassFilter(e.target.value)}
-              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-[0.82rem] rounded-xl border border-black/[0.06] cursor-pointer"
-            >
-              <option value="all">Todas as Turmas ({classes.length} turmas)</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.turmaAbrev || c.name} — {c.name} ({c.shift.replace('Turno ', '')})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="lg:col-span-2">
-            <select
-              value={selectedShiftFilter}
-              onChange={(e) => setSelectedShiftFilter(e.target.value as any)}
-              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-[0.82rem] rounded-xl border border-black/[0.06] cursor-pointer"
-            >
-              <option value="all">Todos os Períodos</option>
-              <option value="MANHÃ">☀️ Período Manhã</option>
-              <option value="TARDE">⛅ Período Tarde</option>
-            </select>
-          </div>
-
-          {effectiveTab === 'bolsa_familia' ? (
-            <div className="lg:col-span-3 flex gap-2">
-              <select
-                value={bolsaStatusFilter}
-                onChange={(e) => setBolsaStatusFilter(e.target.value as any)}
-                className="flex-1 min-h-[42px] px-3 bg-[#eaf6ef] text-[#005035] font-extrabold text-[0.8rem] rounded-xl border border-[#006644]/25 cursor-pointer"
-              >
-                <option value="beneficiarios">Somente Beneficiários Bolsa Família</option>
-                <option value="alerta">⚠️ Somente em Alerta de Frequência</option>
-                <option value="todos_escola">Todos os Alunos (Incluir / Editar NIS)</option>
-              </select>
-              <select
-                value={selectedBimesterId}
-                onChange={(e) => setSelectedBimesterId(e.target.value as any)}
-                className="w-36 min-h-[42px] px-2.5 bg-[#f1f5f9] text-[#0b3b49] font-extrabold text-[0.78rem] rounded-xl border border-black/[0.08] cursor-pointer"
-              >
-                {OFFICIAL_BIMESTERS_2027.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.shortLabel}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div className="lg:col-span-3 flex gap-2">
-              <select
-                value={selectedRouteFilter}
-                onChange={(e) => setSelectedRouteFilter(e.target.value)}
-                className="flex-1 min-h-[42px] px-3 bg-[#f0f9ff] text-[#0c4a6e] font-extrabold text-[0.8rem] rounded-xl border border-[#0284c7]/25 cursor-pointer"
-              >
-                <option value="all">Todas as Rotas de Ônibus</option>
-                {availableRoutes.map((route) => (
-                  <option key={route} value={route}>
-                    {route}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={onibusListMode}
-                onChange={(e) => setOnibusListMode(e.target.value as any)}
-                className="w-40 min-h-[42px] px-2.5 bg-[#f1f5f9] text-[#0b3b49] font-extrabold text-[0.78rem] rounded-xl border border-black/[0.08] cursor-pointer"
-              >
-                <option value="usuarios_fretado">Usuários do Fretado</option>
-                <option value="todos_escola">Todos (Vincular Rota)</option>
-              </select>
-            </div>
-          )}
         </div>
       </section>
 
-      {/* CONTEÚDO DA ABA 1: LISTA NOMINAL BOLSA FAMÍLIA (EXCLUSIVO ADMIN) */}
-      {effectiveTab === 'bolsa_familia' && userRole === 'admin' && (
-        <div className="bg-white rounded-3xl border border-black/[0.07] overflow-hidden shadow-xs">
+      {/* TABELA NOMINAL SIMPLIFICADA E VISUAL EM ORDEM ALFABÉTICA (A-Z) */}
+      <div className="bg-white rounded-3xl border border-black/[0.07] overflow-hidden shadow-xs">
+        <div className="px-5 py-3.5 bg-[#f8fafc] border-b border-black/[0.06] flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-[0.8rem] font-bold text-[#0f172a]">
+            <span className="material-symbols-outlined text-[18px] text-[#0071e3]">
+              sort_by_alpha
+            </span>
+            <span>
+              Listagem em Ordem Alfabética (A–Z) • {filteredRows.length}{' '}
+              {filteredRows.length === 1 ? 'estudante listado' : 'estudantes listados'}
+            </span>
+          </div>
+          <span className="text-[0.74rem] text-[#64748b] font-medium">
+            Clique em qualquer estudante para abrir a Ficha Individual Completa
+          </span>
+        </div>
+
+        {filteredRows.length === 0 ? (
+          <div className="p-10 text-center space-y-2">
+            <span className="material-symbols-outlined text-[38px] text-[#28cd41]">
+              verified
+            </span>
+            <h3 className="text-[1.02rem] font-bold text-[#1d1d1f]">
+              Nenhum estudante abaixo da meta para os filtros selecionados
+            </h3>
+            <p className="text-[0.82rem] text-[#6e6e73]">
+              Altere o bimestre, a turma ou selecione &ldquo;Todos os Estudantes (A–Z)&rdquo; para visualizar toda a relação.
+            </p>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-[0.78rem] border-collapse min-w-[1160px]">
-              <thead className="bg-[#f8fafc] text-[#0b3b49] border-b border-black/[0.07] font-extrabold uppercase tracking-wider text-[0.68rem]">
+            <table className="w-full text-left text-[0.8rem] border-collapse min-w-[980px]">
+              <thead className="bg-[#f8fafc] text-[#475569] border-b border-black/[0.07] font-bold uppercase tracking-wider text-[0.68rem]">
                 <tr>
-                  <th className="py-3 px-3 text-center">Turma / Nº</th>
-                  <th className="py-3 px-3">Estudante (Nominal) &amp; Ficha Escaneada (Drive)</th>
-                  <th className="py-3 px-2.5">RA</th>
-                  <th className="py-3 px-3">NIS (Bolsa Família)</th>
-                  <th className="py-3 px-3">Filiação 1 (Mãe) &amp; Telefone</th>
-                  <th className="py-3 px-2.5 text-center">Presença Mês</th>
-                  <th className="py-3 px-2.5 text-center">Faltas / Atest.</th>
-                  <th className="py-3 px-2.5 text-center">% Bimestre</th>
-                  <th className="py-3 px-3 text-center">Situação MEC / Bolsa Família</th>
+                  <th className="py-3 px-4 w-12 text-center">#</th>
+                  <th className="py-3 px-4">Estudante (Ordem Alfabética A–Z)</th>
+                  <th className="py-3 px-3">Turma &amp; Etapa</th>
+                  {currentBimester.months.length <= 2 ? (
+                    currentBimester.months.map((mObj) => (
+                      <th
+                        key={mObj.name}
+                        className="py-3 px-3 text-center bg-[#f1f5f9]/70 border-x border-black/[0.05]"
+                      >
+                        {mObj.name.slice(0, 3)}/27
+                      </th>
+                    ))
+                  ) : (
+                    <th className="py-3 px-3 text-center bg-[#f1f5f9]/70 border-x border-black/[0.05]">
+                      Pior Mês no Período
+                    </th>
+                  )}
+                  <th className="py-3 px-3 text-center">Faltas no Bimestre</th>
+                  <th className="py-3 px-3 text-center">Tem Atestado?</th>
+                  <th className="py-3 px-4 text-center">% Presença vs Meta</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.05]">
-                {bolsaFamiliaRows.map(({ student, cls, m, bim }, rIdx) => {
-                  const isEditingThis = editingStudentId === `nis-${student.id}`;
+                {filteredRows.map((row, idx) => {
+                  const { student, cls, rep, hasAtestado, isBelowTarget } = row;
                   return (
                     <tr
-                      key={`${cls.id}-${student.id}-${rIdx}`}
+                      key={`${cls.id}-${student.id}`}
                       onClick={() =>
-                        onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
+                        onOpenStudentGrid(
+                          student,
+                          cls.id,
+                          cls.name,
+                          cls.classesHeld || 20
+                        )
                       }
                       className={`cursor-pointer transition-colors ${
-                        m.isBelowLegalThreshold
-                          ? 'bg-[#fff1f2]/70 hover:bg-[#ffe4e6]/80'
+                        isBelowTarget
+                          ? 'bg-[#fff1f2]/55 hover:bg-[#ffe4e6]/70'
                           : 'hover:bg-[#f8fafc]'
                       }`}
                     >
-                      <td className="py-2.5 px-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0b3b49] text-white font-mono font-extrabold text-[0.72rem]">
-                          {cls.turmaAbrev || cls.name} • Nº {student.number.toString().padStart(2, '0')}
-                        </span>
-                        <span className="block text-[0.66rem] font-semibold text-[#64748b] mt-0.5">
-                          {cls.shift.replace('Turno ', '')} · {cls.room}
-                        </span>
+                      <td className="py-3 px-4 text-center font-mono text-[0.74rem] font-bold text-[#64748b]">
+                        {(idx + 1).toString().padStart(2, '0')}
                       </td>
 
-                      <td className="py-2.5 px-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <StudentAvatar
-                              student={student}
-                              size="sm"
-                              expandableOnClick={true}
-                              onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
-                            />
-                            <div className="min-w-0">
-                              <span className="font-extrabold text-[#0f172a] block truncate">
-                                {student.name}
-                              </span>
-                              <span className="text-[0.68rem] text-[#475569] block truncate">
-                                Prof(a): {cls.teacherFirstName || cls.teacherName}
-                              </span>
+                      {/* Estudante em Ordem Alfabética */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <StudentAvatar
+                            student={student}
+                            size="sm"
+                            expandableOnClick={false}
+                          />
+                          <div className="min-w-0">
+                            <span className="font-bold text-[#0f172a] block truncate text-[0.85rem]">
+                              {student.name}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[0.7rem] text-[#64748b]">
+                              <span>RA {student.ra}-{student.digRa}</span>
+                              {student.nis && (
+                                <>
+                                  <span aria-hidden="true">·</span>
+                                  <span className="font-mono font-semibold text-[#006644]">
+                                    NIS {student.nis}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
-
-                          {/* Único Hyperlink: Ficha Informativa Escaneada em PDF do Drive */}
-                          <a
-                            href={
-                              student.fichaPdfDriveUrl ||
-                              (student.fichaPdfDriveId
-                                ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                                : `#doc-${student.id}`)
-                            }
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              onOpenStudentPdf(student, cls.name);
-                            }}
-                            title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                            className="doc-hyperlink px-2.5 py-1 rounded-xl bg-white hover:bg-[#0b3b49] text-[#0b3b49] hover:!text-white border border-black/[0.09] font-extrabold text-[0.68rem] flex items-center gap-1 shrink-0 transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">
-                              document_scanner
-                            </span>
-                            <span>Ficha (Drive)</span>
-                          </a>
                         </div>
                       </td>
 
-                      <td className="py-2.5 px-2.5 font-mono text-[0.74rem] text-[#475569]">
-                        {student.ra}-{student.digRa}
+                      {/* Turma & Etapa (Infantil ≥60% ou Fundamental ≥75%) */}
+                      <td className="py-3 px-3">
+                        <span className="font-bold text-[#0f172a] block">
+                          {cls.name}
+                        </span>
+                        <span className="text-[0.7rem] text-[#64748b] block">
+                          {rep.isEducacaoInfantil
+                            ? 'Ed. Infantil (Meta ≥60%)'
+                            : 'Ens. Fundamental (Meta ≥75%)'}
+                        </span>
                       </td>
 
-                      <td
-                        className="py-2.5 px-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {isEditingThis ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="text"
-                              value={draftValue}
-                              onChange={(e) => setDraftValue(e.target.value)}
-                              placeholder="Ex: 207.41017.82-1"
-                              className="w-36 px-2 py-1 text-[0.75rem] font-mono bg-white border border-[#006644] rounded-lg focus:outline-none"
+                      {/* Meses do Bimestre (Ex: Fev + Mar) */}
+                      {currentBimester.months.length <= 2 ? (
+                        rep.monthsBreakdown.map((mb) => (
+                          <td
+                            key={mb.monthName}
+                            className="py-3 px-3 text-center font-mono border-x border-black/[0.04]"
+                          >
+                            <span
+                              className={`font-extrabold text-[0.84rem] block ${
+                                mb.isBelowLegalThreshold
+                                  ? 'text-[#be123c]'
+                                  : 'text-[#0f172a]'
+                              }`}
+                            >
+                              {mb.frequenciaPercent}%
+                            </span>
+                            <span className="text-[0.68rem] text-[#64748b] block">
+                              {mb.faltas}F · {mb.atestados}A
+                            </span>
+                          </td>
+                        ))
+                      ) : (
+                        <td className="py-3 px-3 text-center font-mono border-x border-black/[0.04]">
+                          <span className="font-extrabold text-[0.82rem] text-[#be123c] block">
+                            {row.worstMonthName}: {row.worstMonthPercent}%
+                          </span>
+                        </td>
+                      )}
+
+                      {/* Total de Faltas no Bimestre */}
+                      <td className="py-3 px-3 text-center font-mono">
+                        <span className="font-extrabold text-[0.88rem] text-[#be123c]">
+                          {rep.totalFaltasBimestre}
+                        </span>
+                        <span className="text-[0.7rem] text-[#64748b] block">
+                          em {rep.totalDiasBimestre}d letivos
+                        </span>
+                      </td>
+
+                      {/* Se Tem Atestado ou Não (Destaque Visual Limpo) */}
+                      <td className="py-3 px-3 text-center">
+                        {hasAtestado ? (
+                          <div className="inline-flex flex-col items-center">
+                            <span className="text-[0.76rem] font-extrabold text-[#006644]">
+                              SIM ({rep.totalAtestadosBimestre} atestado{rep.totalAtestadosBimestre > 1 ? 's' : ''})
+                            </span>
+                            <span className="text-[0.66rem] text-[#64748b]">
+                              {rep.totalSemAtestadoBimestre} s/ justificativa
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex flex-col items-center">
+                            <span className="text-[0.76rem] font-extrabold text-[#be123c]">
+                              NÃO
+                            </span>
+                            <span className="text-[0.66rem] text-[#9f1239]">
+                              100% sem atestado
+                            </span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* % Presença no Bimestre e Destaque de Meta */}
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-baseline gap-1.5 font-mono">
+                            <span
+                              className={`text-[0.95rem] font-black ${
+                                isBelowTarget ? 'text-[#be123c]' : 'text-[#006644]'
+                              }`}
+                            >
+                              {rep.frequenciaBimestrePercent}%
+                            </span>
+                            <span className="text-[0.68rem] text-[#64748b]">
+                              / meta {rep.minLegalPresencePercent}%
+                            </span>
+                          </div>
+                          <div className="w-28 h-1.5 rounded-full bg-[#e2e8f0] overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                isBelowTarget ? 'bg-[#be123c]' : 'bg-[#006644]'
+                              }`}
+                              style={{
+                                width: `${Math.min(100, Math.max(8, rep.frequenciaBimestrePercent))}%`,
+                              }}
                             />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onUpdateStudentField(cls.id, {
-                                  ...student,
-                                  nis: draftValue.trim() || undefined,
-                                });
-                                setEditingStudentId(null);
-                                showToast(`NIS de ${student.name} atualizado!`);
-                              }}
-                              className="px-2 py-1 rounded-lg bg-[#006644] text-white font-bold text-[0.7rem] cursor-pointer"
-                            >
-                              Salvar
-                            </button>
                           </div>
-                        ) : (
-                          <div className="flex items-center justify-between gap-1.5">
-                            {student.nis ? (
-                              <span className="font-mono font-extrabold text-[#006644] bg-[#eaf6ef] px-2 py-0.5 rounded-lg text-[0.74rem]">
-                                {student.nis}
-                              </span>
-                            ) : (
-                              <span className="text-[0.7rem] text-[#94a3b8] italic">
-                                Sem NIS
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingStudentId(`nis-${student.id}`);
-                                setDraftValue(student.nis || '');
-                              }}
-                              title="Editar ou cadastrar NIS Bolsa Família"
-                              className="text-[#64748b] hover:text-[#0b3b49] p-1 rounded-lg hover:bg-black/5 cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">edit</span>
-                            </button>
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-2.5 px-3">
-                        <span className="font-semibold text-[#0f172a] block truncate max-w-[210px]">
-                          {student.filiacao1 || student.guardianName || '—'}
-                        </span>
-                        <span className="font-mono text-[0.7rem] text-[#006644] font-bold">
-                          {student.telefones || student.guardianPhone || '—'}
-                        </span>
-                      </td>
-
-                      <td className="py-2.5 px-2.5 text-center font-mono">
-                        <span
-                          className={`font-black text-[0.86rem] ${
-                            m.isBelowLegalThreshold ? 'text-[#be123c]' : 'text-[#006644]'
-                          }`}
-                        >
-                          {m.frequenciaPercent}%
-                        </span>
-                        <span className="block text-[0.68rem] text-[#64748b]">
-                          {m.presencas}/{m.diasLetivosMatriculados}d
-                        </span>
-                      </td>
-
-                      <td className="py-2.5 px-2.5 text-center font-mono">
-                        <span className="font-bold text-[#be123c]">{m.faltas}F</span>
-                        <span className="mx-1 text-[#cbd5e1]">/</span>
-                        <span className="font-bold text-[#006644]">{m.atestados}A</span>
-                      </td>
-
-                      <td className="py-2.5 px-2.5 text-center font-mono">
-                        <span
-                          className={`px-2 py-0.5 rounded-lg font-extrabold text-[0.76rem] ${
-                            bim.isBelowLegalThresholdBimestre
-                              ? 'bg-[#ffe4e6] text-[#be123c]'
-                              : 'bg-[#f1f5f9] text-[#0b3b49]'
-                          }`}
-                        >
-                          {bim.frequenciaBimestrePercent}%
-                        </span>
-                      </td>
-
-                      <td className="py-2.5 px-3 text-center">
-                        {m.isBelowLegalThreshold ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#be123c] text-white text-[0.68rem] font-extrabold">
-                            <span className="material-symbols-outlined text-[13px]">warning</span>
-                            <span>Alerta &lt;{m.minLegalPresencePercent}%</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#eaf6ef] text-[#006644] text-[0.68rem] font-extrabold">
-                            <span className="material-symbols-outlined text-[13px]">verified</span>
-                            <span>Regular (≥{m.minLegalPresencePercent}%)</span>
-                          </span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -732,8 +917,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

@@ -873,13 +873,13 @@ export default function App() {
       login: 'Login',
       turmas: '1. Turmas',
       detalhes: 'Detalhes da Turma',
-      frequencia_mensal: '2. Lançar Faltas',
-      faltas_consecutivas: 'Faltas Seguidas',
-      bolsa_familia: 'Bolsa Família (Nominal)',
+      frequencia_mensal: '2. Faltas do Mês',
+      faltas_consecutivas: 'Faltas Consecutivas',
+      bolsa_familia: 'Bolsa Família',
       planilha: '3. Planilha & Fotos',
       dias_letivos: '4. 200 Dias',
       usuarios_acesso: '5. Acessos',
-      resumo: 'Fechamento Mensal',
+      resumo: 'Resumo Mensal',
     };
 
     const currentLog = accessSessionLogs.find((l) => l.id === activeSessionIdRef.current);

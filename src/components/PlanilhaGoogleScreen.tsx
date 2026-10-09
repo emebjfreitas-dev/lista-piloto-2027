@@ -76,8 +76,8 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   >('faltas_consecutivas');
   const [consecShowAllStudents, setConsecShowAllStudents] = useState(false);
   const [selectedBimesterId, setSelectedBimesterId] = useState<
-    '1bim' | '2bim' | '3bim' | '4bim' | 'anual'
-  >('1bim');
+    '1bim' | '2bim' | '3bim' | '4bim' | '5bim' | 'anual'
+  >('5bim');
   const [bimesterSegmentFilter, setBimesterSegmentFilter] = useState<
     'all' | 'infantil' | 'fundamental'
   >('all');
@@ -800,7 +800,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
         list.push(rep);
       });
     });
-    return list;
+    return list.sort((a, b) =>
+      a.student.name.localeCompare(b.student.name, 'pt-BR', { sensitivity: 'base' })
+    );
   }, [
     classes,
     selectedBimesterId,
