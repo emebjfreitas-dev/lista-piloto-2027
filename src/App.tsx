@@ -636,12 +636,35 @@ export default function App() {
   const handleSaveSingleStudent = (classId: string, updatedStudent: Student) => {
     if (!canEditClass(classId)) return;
 
+    // Normalização semântica canônica: garante sincronia entre campos legados e campos oficiais SED
+    const canonicalName = (updatedStudent.estudante || updatedStudent.name || '').trim();
+    const canonicalGuardian = (
+      updatedStudent.filiacao1 ||
+      updatedStudent.guardianName ||
+      ''
+    ).trim();
+    const canonicalPhones = (
+      updatedStudent.telefones ||
+      updatedStudent.guardianPhone ||
+      ''
+    ).trim();
+    const canonicalStudent: Student = {
+      ...updatedStudent,
+      name: canonicalName || updatedStudent.name,
+      estudante: canonicalName || updatedStudent.estudante,
+      filiacao1: canonicalGuardian || updatedStudent.filiacao1,
+      guardianName: canonicalGuardian || updatedStudent.guardianName,
+      telefones: canonicalPhones || updatedStudent.telefones,
+      guardianPhone: canonicalPhones || updatedStudent.guardianPhone,
+      numeroChamada: updatedStudent.numeroChamada || updatedStudent.number,
+    };
+
     setClasses((prevClasses) => {
       let targetUpdatedClass: ClassGroup | null = null;
       const next = prevClasses.map((cls) => {
         if (cls.id !== classId) return cls;
         const updatedStudents = cls.students.map((s) =>
-          s.id === updatedStudent.id ? updatedStudent : s
+          s.id === canonicalStudent.id ? canonicalStudent : s
         );
         const tempCls = { ...cls, students: updatedStudents };
         const metrics = getClassAttendanceMetrics(tempCls, OFFICIAL_OCTOBER_DAYS);

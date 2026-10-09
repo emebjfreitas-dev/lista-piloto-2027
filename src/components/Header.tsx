@@ -189,18 +189,6 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => onChangeScreen('dias_letivos')}
-                  className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
-                    currentScreen === 'dias_letivos'
-                      ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                      : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
-                  }`}
-                >
-                  200 Dias
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => onChangeScreen('usuarios_acesso')}
                   className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
                     currentScreen === 'usuarios_acesso'
@@ -215,7 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         )}
 
-        {/* Zone 3: Actions (Spotlight Search, Push Notifications, Profile Badge & Sair) */}
+        {/* Zone 3: Actions (Spotlight Search, Push Notifications & Unified Profile Menu) */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
           {onOpenSpotlightSearch && (
             <button
@@ -263,25 +251,28 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-          <span className="hidden xl:inline-flex items-center px-2.5 py-1 rounded-full bg-black/[0.04] text-[#6e6e73] text-[0.72rem] font-semibold">
-            {userRole === 'admin'
-              ? 'ADMIN'
-              : userRole === 'usuario'
-              ? 'PEB I'
-              : 'PEB II'}
-          </span>
-
           <div className="relative">
             <button
+              type="button"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              aria-label="Menu do perfil"
-              className="flex items-center rounded-full focus:outline-none cursor-pointer"
+              aria-label="Menu do perfil e sair"
+              className="h-[34px] pl-1 pr-2.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] border border-black/[0.06] flex items-center gap-1.5 focus:outline-none cursor-pointer transition-colors"
             >
               <StudentAvatar
                 name={userName || userEmail || 'Educador'}
                 size="sm"
-                className="w-8 h-8 sm:w-9 sm:h-9 text-[0.74rem] sm:text-[0.78rem] ring-1 ring-black/12 hover:ring-[#0071e3] transition-all"
+                className="w-7 h-7 text-[0.7rem]"
               />
+              <span className="hidden sm:inline text-[0.72rem] font-bold text-[#1d1d1f]">
+                {userRole === 'admin'
+                  ? 'Admin'
+                  : userRole === 'usuario'
+                  ? 'PEB I'
+                  : 'PEB II'}
+              </span>
+              <span className="material-symbols-outlined text-[16px] text-[#6e6e73]">
+                expand_more
+              </span>
             </button>
 
             {showProfileMenu && (
@@ -334,7 +325,7 @@ export const Header: React.FC<HeaderProps> = ({
                     setShowProfileMenu(false);
                     onLogout();
                   }}
-                  className="w-full text-left px-4 py-2.5 text-[0.82rem] text-[#ff3b30] hover:bg-[#fff2f2] flex items-center gap-2 cursor-pointer font-medium"
+                  className="w-full text-left px-4 py-2.5 text-[0.82rem] text-[#ff3b30] hover:bg-[#fff2f2] flex items-center gap-2 cursor-pointer font-semibold"
                 >
                   <span className="material-symbols-outlined text-[18px]">logout</span>
                   Sair da Conta
@@ -342,16 +333,6 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            title="Sair da conta"
-            className="h-[32px] sm:h-[34px] px-2.5 sm:px-3.5 rounded-full bg-[#f5f5f7] hover:bg-[#ff3b30] text-[#1d1d1f] hover:text-white border border-black/[0.08] font-semibold text-[0.75rem] sm:text-[0.78rem] flex items-center gap-1 transition-all cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
-          >
-            <span className="material-symbols-outlined text-[16px] sm:text-[17px]">logout</span>
-            <span className="hidden sm:inline">Sair</span>
-          </button>
         </div>
       </div>
     </header>

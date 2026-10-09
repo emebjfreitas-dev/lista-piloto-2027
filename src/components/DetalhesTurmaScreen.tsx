@@ -448,183 +448,113 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
         )}
 
-        {/* Grade de Indicadores da Alta da Turma (iOS Health/Summary Cards) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5 pt-2 border-t border-black/[0.06]">
-          {/* 1. Ativos */}
-          <div className="bg-[#f7f9f8] rounded-2xl p-3 border border-black/[0.04]">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#005035] block">
+        {/* Grade Enxuta de 4 Indicadores Cadastrais da Turma (Sem Redundância de Faltas/Banners) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-black/[0.06]">
+          {/* 1. Estudantes Ativos */}
+          <div
+            onClick={() => setStatusFilter(statusFilter === 'ativos' ? 'all' : 'ativos')}
+            className="bg-[#f5f5f7] hover:bg-[#e8e8ed]/70 rounded-2xl p-3 cursor-pointer transition-colors"
+          >
+            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
               Estudantes Ativos
             </span>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[1.4rem] font-extrabold text-[#003440] tabular-nums">
+              <span className="text-[1.45rem] font-extrabold text-[#1d1d1f] tabular-nums">
                 {classSummary.ativos}
               </span>
-              <span className="text-[0.72rem] font-semibold text-[#6e777a]">
-                / {classSummary.totalMatriculados} matr.
+              <span className="text-[0.72rem] font-semibold text-[#6e6e73] tabular-nums">
+                de {classSummary.totalMatriculados} matr.
               </span>
             </div>
           </div>
 
-          {/* 2. Feminino */}
-          <div className="bg-[#fdf7fa] rounded-2xl p-3 border border-[#e5c7d6]/40">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#8f2d56] block">
-              Feminino (Meninas)
+          {/* 2. Composição por Gênero (Meninas / Meninos) */}
+          <div className="bg-[#f5f5f7] rounded-2xl p-3">
+            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
+              Meninas · Meninos
             </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[1.4rem] font-extrabold text-[#8f2d56] tabular-nums">
-                {classSummary.feminino}
+            <div className="flex items-baseline gap-2 mt-0.5 tabular-nums">
+              <span className="text-[1.35rem] font-extrabold text-[#8f2d56]">
+                {classSummary.feminino}F
               </span>
-              <span className="text-[0.72rem] font-semibold text-[#8f2d56]/75">
-                {classSummary.totalMatriculados > 0
-                  ? `${Math.round((classSummary.feminino / classSummary.totalMatriculados) * 100)}%`
-                  : '0%'}
-              </span>
-            </div>
-          </div>
-
-          {/* 3. Masculino */}
-          <div className="bg-[#f4f9fc] rounded-2xl p-3 border border-[#b9dced]/50">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#004e64] block">
-              Masculino (Meninos)
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[1.4rem] font-extrabold text-[#004e64] tabular-nums">
-                {classSummary.masculino}
-              </span>
-              <span className="text-[0.72rem] font-semibold text-[#004e64]/75">
-                {classSummary.totalMatriculados > 0
-                  ? `${Math.round((classSummary.masculino / classSummary.totalMatriculados) * 100)}%`
-                  : '0%'}
+              <span className="text-[#c7c7cc]">·</span>
+              <span className="text-[1.35rem] font-extrabold text-[#004e64]">
+                {classSummary.masculino}M
               </span>
             </div>
           </div>
 
-          {/* 4. Transferidos (BXTR) */}
-          <div className="bg-[#fff8f6] rounded-2xl p-3 border border-[#ba1a1a]/15">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#ba1a1a] block">
-              Transferidos (BXTR)
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[1.4rem] font-extrabold text-[#ba1a1a] tabular-nums">
-                {classSummary.transferidos}
-              </span>
-              <span className="text-[0.7rem] font-medium text-[#8c5000]">
-                baixa transf.
-              </span>
-            </div>
-          </div>
-
-          {/* 5. Remanejados */}
-          <div className="bg-[#fffaf2] rounded-2xl p-3 border border-[#d99b26]/25">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#8c5000] block">
-              Remanejados
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[1.4rem] font-extrabold text-[#8c5000] tabular-nums">
-                {classSummary.remanejados}
-              </span>
-              <span className="text-[0.7rem] font-medium text-[#8c5000]/80">
-                entre turmas
-              </span>
-            </div>
-          </div>
-
-          {/* 6. Presença Total (% e Qtd) */}
-          <div className="bg-[#eaf6ef]/80 rounded-2xl p-3 border border-[#005035]/20">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#005035] block">
-              Presença Total
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[1.4rem] font-extrabold text-[#005035] tabular-nums">
-                {classSummary.pctPresencaTotal}%
-              </span>
-              <span className="text-[0.72rem] font-bold text-[#005035]/80 tabular-nums">
-                ({classSummary.somaPresencas}d)
-              </span>
-            </div>
-          </div>
-
-          {/* 7. Falta Total (% e Qtd) */}
-          <div className="bg-[#fff8f7] rounded-2xl p-3 border border-[#ba1a1a]/20">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#ba1a1a] block">
-              Falta Total
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[1.4rem] font-extrabold text-[#ba1a1a] tabular-nums">
-                {classSummary.somaFaltas}
-              </span>
-              <span className="text-[0.72rem] font-bold text-[#ba1a1a]/80 tabular-nums">
-                ({classSummary.pctFaltaTotal}%)
-              </span>
-            </div>
-          </div>
-
-          {/* 8. Fichas Escaneadas & AEE */}
+          {/* 3. Movimentação (Transferidos / Remanejados) */}
           <div
             onClick={() =>
-              classSummary.semFichaEscaneadaCount > 0 && setStatusFilter('sem_ficha_pdf')
+              classSummary.transferidos + classSummary.remanejados > 0 &&
+              setStatusFilter(statusFilter === 'movimentados' ? 'all' : 'movimentados')
+            }
+            className={`bg-[#f5f5f7] rounded-2xl p-3 transition-colors ${
+              classSummary.transferidos + classSummary.remanejados > 0
+                ? 'cursor-pointer hover:bg-[#e8e8ed]/70'
+                : ''
+            }`}
+          >
+            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
+              Movimentados (BXTR / RM)
+            </span>
+            <div className="flex items-baseline gap-1.5 mt-0.5 tabular-nums">
+              <span className="text-[1.4rem] font-extrabold text-[#1d1d1f]">
+                {classSummary.transferidos + classSummary.remanejados}
+              </span>
+              <span className="text-[0.7rem] font-semibold text-[#6e6e73]">
+                ({classSummary.transferidos} transf. · {classSummary.remanejados} rem.)
+              </span>
+            </div>
+          </div>
+
+          {/* 4. Fichas Informativas PDF (Com Filtro em 1 Toque, Sem Banner Duplicado) */}
+          <div
+            onClick={() =>
+              classSummary.semFichaEscaneadaCount > 0 &&
+              setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')
             }
             className={`rounded-2xl p-3 border transition-colors ${
               classSummary.semFichaEscaneadaCount > 0
-                ? 'bg-[#fff1f2] border-[#e11d48]/35 cursor-pointer hover:bg-[#ffe4e6]'
-                : 'bg-[#f4f7f6] border-black/[0.05]'
+                ? 'bg-[#fff2f2] border-[#ff3b30]/30 cursor-pointer hover:bg-[#ffe5e5]'
+                : 'bg-[#eaf6ef]/70 border-[#005035]/20'
             }`}
           >
-            <span
-              className={`text-[0.66rem] font-bold uppercase tracking-wider block ${
-                classSummary.semFichaEscaneadaCount > 0 ? 'text-[#be123c]' : 'text-[#436370]'
-              }`}
-            >
-              {classSummary.semFichaEscaneadaCount > 0
-                ? '⚠️ Sem Ficha PDF'
-                : 'Fichas PDF OK'}
-            </span>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
+            <div className="flex items-center justify-between gap-1">
               <span
-                className={`text-[1.35rem] font-extrabold tabular-nums ${
-                  classSummary.semFichaEscaneadaCount > 0 ? 'text-[#be123c]' : 'text-[#005035]'
+                className={`text-[0.65rem] font-bold uppercase tracking-wider ${
+                  classSummary.semFichaEscaneadaCount > 0 ? 'text-[#ff3b30]' : 'text-[#005035]'
                 }`}
               >
-                {classSummary.semFichaEscaneadaCount}
+                {classSummary.semFichaEscaneadaCount > 0
+                  ? '⚠️ Sem Ficha PDF'
+                  : '✓ Fichas PDF em Dia'}
               </span>
-              <span className="text-[0.7rem] font-semibold text-[#5a676b]">
-                pend. · {classSummary.comFichaEscaneadaCount} ok
+              {classSummary.semFichaEscaneadaCount > 0 && (
+                <span className="text-[0.63rem] font-bold text-[#ff3b30] underline">
+                  {statusFilter === 'sem_ficha_pdf' ? 'Ver todos' : 'Filtrar'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-baseline gap-1.5 mt-0.5 tabular-nums">
+              <span
+                className={`text-[1.4rem] font-extrabold ${
+                  classSummary.semFichaEscaneadaCount > 0 ? 'text-[#ff3b30]' : 'text-[#005035]'
+                }`}
+              >
+                {classSummary.semFichaEscaneadaCount > 0
+                  ? classSummary.semFichaEscaneadaCount
+                  : classSummary.comFichaEscaneadaCount}
+              </span>
+              <span className="text-[0.7rem] font-semibold text-[#6e6e73]">
+                {classSummary.semFichaEscaneadaCount > 0
+                  ? `pendente(s) · ${classSummary.comFichaEscaneadaCount} ok`
+                  : '100% escaneadas'}
               </span>
             </div>
           </div>
         </div>
-
-        {/* Banner de Alerta Nominal: Estudantes sem Ficha Informativa Escaneada */}
-        {classSummary.semFichaEscaneadaCount > 0 && (
-          <div className="mt-2 rounded-2xl bg-[#fff2f2] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[21px] text-[#ff3b30] shrink-0">
-                notification_important
-              </span>
-              <p className="text-[0.82rem] font-medium text-[#1d1d1f] leading-snug">
-                <strong>Atenção, Professor(a):</strong> Há{' '}
-                <strong className="text-[#ff3b30]">
-                  {classSummary.semFichaEscaneadaCount} estudante(s)
-                </strong>{' '}
-                sem Ficha Informativa. Por favor, solicite às famílias que preencham a ficha.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')
-              }
-              className="px-3.5 py-1.5 rounded-full bg-[#ff3b30] hover:bg-[#d70015] text-white font-semibold text-[0.75rem] flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px]">filter_alt</span>
-              <span>
-                {statusFilter === 'sem_ficha_pdf'
-                  ? 'Mostrar Todos'
-                  : `Ver Sem Ficha (${classSummary.semFichaEscaneadaCount})`}
-              </span>
-            </button>
-          </div>
-        )}
       </section>
 
       {/* Resumo de Faltas Críticas da Turma (Alertas Visuais de Estudantes que Atingiram o Limiar de Faltas Consecutivas) */}

@@ -71,13 +71,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       adminOnly: true,
     },
     {
-      id: 'dias_letivos',
-      label: '200 Dias',
-      shortLabel: '200d',
-      icon: 'calendar_month',
-      adminOnly: true,
-    },
-    {
       id: 'usuarios_acesso',
       label: 'Acessos',
       shortLabel: 'Acessos',

@@ -139,199 +139,117 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 sm:space-y-5 pb-12 animate-gentle-fade">
-      {/* Top Control Row: Perfil de Acesso Ativo visible ONLY for ADMIN */}
-      <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-4 xl:gap-5 lg:items-stretch">
-        {userRole === 'admin' && (
-          <section className="lg:col-span-5 card-welcoming bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-black/[0.06] space-y-3 flex flex-col justify-between">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[0.75rem] font-extrabold text-[#1d1d1f] uppercase tracking-wider flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[18px] text-[#0071e3]">admin_panel_settings</span>
-                <span>Simulador de Perfil (Admin)</span>
+      {/* Barra Executiva Consolidada: Título + Simulador Rápido (Admin) + Status de Janela & Fichas PDF em 1 Bloco Limpo */}
+      <section className="card-welcoming bg-white rounded-3xl p-4 sm:p-5 border border-black/[0.06] space-y-3.5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[0.7rem] font-extrabold uppercase tracking-wider text-[#0066cc]">
+                {userRole === 'usuario'
+                  ? 'Acesso Exclusivo · Ano Letivo 2027'
+                  : `Ano Letivo 2027 · ${classes.length} Turmas Oficiais`}
               </span>
-              <span className="text-[0.7rem] font-semibold text-[#0066cc] bg-[#0071e3]/10 px-2.5 py-0.5 rounded-full">
-                {classes.length} Turmas
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => onChangeRole('admin')}
-                className="p-2 sm:p-2.5 rounded-xl font-bold text-[0.78rem] sm:text-[0.82rem] flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all bg-[#1d1d1f] text-white border-[#1d1d1f] shadow-2xs"
-              >
-                <span className="material-symbols-outlined text-[20px]">verified_user</span>
-                <span>ADMIN</span>
-                <span className="text-[0.62rem] font-medium opacity-80">Acesso Pleno</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangeRole('usuario')}
-                className="p-2 sm:p-2.5 rounded-xl font-bold text-[0.78rem] sm:text-[0.82rem] flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all bg-[#f5f5f7] text-[#1d1d1f] border-black/[0.08] hover:bg-[#e8e8ed]"
-              >
-                <span className="material-symbols-outlined text-[20px]">person</span>
-                <span>PEB I</span>
-                <span className="text-[0.62rem] font-medium text-[#6e6e73] truncate max-w-full">
-                  {classes.find((c) => c.id === assignedClassId)?.name || 'Simular Turma'}
+              {userRole !== 'peb2' && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold ${
+                    isLaunchButtonOpen
+                      ? 'bg-[#eaf6ef] text-[#005035]'
+                      : 'bg-[#fff9eb] text-[#c93400]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[13px]">
+                    {isLaunchButtonOpen ? 'lock_open' : 'schedule'}
+                  </span>
+                  <span>
+                    {isLaunchButtonOpen
+                      ? 'Lançamento Aberto'
+                      : `Lançamento: ${windowEval.reasonLabel}`}
+                  </span>
                 </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChangeRole('peb2')}
-                className="p-2 sm:p-2.5 rounded-xl font-bold text-[0.78rem] sm:text-[0.82rem] flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all bg-[#f5f5f7] text-[#1d1d1f] border-black/[0.08] hover:bg-[#e8e8ed]"
-              >
-                <span className="material-symbols-outlined text-[20px]">visibility</span>
-                <span>PEB II</span>
-                <span className="text-[0.62rem] font-medium text-[#6e6e73]">Só Leitura</span>
-              </button>
+              )}
+              {missingScannedFichasSummary.totalMissing > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#fff2f2] text-[#ff3b30] text-[0.68rem] font-extrabold tabular-nums">
+                  <span className="material-symbols-outlined text-[13px]">
+                    picture_as_pdf
+                  </span>
+                  <span>
+                    {missingScannedFichasSummary.totalMissing} s/ Ficha PDF ({missingScannedFichasSummary.classesWithMissing} turmas)
+                  </span>
+                </span>
+              )}
             </div>
 
-            {/* Seletor rápido da Turma para quando o Admin clicar em "PEB I" */}
-            <div className="flex items-center justify-between gap-2 pt-2 border-t border-black/[0.06]">
-              <span className="text-[0.72rem] font-semibold text-[#6e6e73] shrink-0">
-                Turma PEB I:
-              </span>
+            <h1 className="text-[1.35rem] sm:text-[1.6rem] font-extrabold text-[#1d1d1f] leading-tight tracking-tight mt-0.5">
+              {userRole === 'usuario' ? 'Minha Turma Regente' : 'Quadro Oficial de Turmas'}
+            </h1>
+          </div>
+
+          {/* Controles Rápidos do Admin na Mesma Linha */}
+          {userRole === 'admin' && (
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {/* Simulador Compacto de Perfil */}
+              <div className="flex items-center gap-1 bg-[#f5f5f7] p-1 rounded-full border border-black/[0.05]">
+                <button
+                  type="button"
+                  onClick={() => onChangeRole('admin')}
+                  className="px-3 py-1 rounded-full bg-[#1d1d1f] text-white font-bold text-[0.72rem] cursor-pointer"
+                >
+                  Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeRole('usuario')}
+                  className="px-2.5 py-1 rounded-full hover:bg-white text-[#1d1d1f] font-semibold text-[0.72rem] cursor-pointer"
+                  title="Simular visão de Professora Regente PEB I"
+                >
+                  Simular PEB I
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChangeRole('peb2')}
+                  className="px-2.5 py-1 rounded-full hover:bg-white text-[#1d1d1f] font-semibold text-[0.72rem] cursor-pointer"
+                  title="Simular visão de Especialista PEB II"
+                >
+                  Simular PEB II
+                </button>
+              </div>
+
               <select
                 value={assignedClassId}
                 onChange={(e) => onChangeAssignedClassId(e.target.value)}
-                className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] border border-black/[0.08] text-[#1d1d1f] font-semibold text-[0.75rem] cursor-pointer max-w-[200px] sm:max-w-xs truncate"
+                aria-label="Selecionar turma para simulação PEB I"
+                className="h-[34px] px-2.5 rounded-full bg-[#f5f5f7] border border-black/[0.06] text-[#1d1d1f] font-semibold text-[0.74rem] cursor-pointer max-w-[165px] truncate"
               >
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name} ({c.shift.replace('Turno ', '')})
+                    PEB I: {c.name}
                   </option>
                 ))}
               </select>
-            </div>
-          </section>
-        )}
 
-        {/* Senior Friendly Top Card */}
-        <section
-          className={`${
-            userRole === 'admin' ? 'lg:col-span-7' : 'lg:col-span-12'
-          } card-welcoming bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-black/[0.06] space-y-3 flex flex-col justify-between`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <span className="text-[0.72rem] font-bold uppercase tracking-wider text-[#0066cc] block mb-0.5">
-                {userRole === 'usuario'
-                  ? 'Acesso Exclusivo à Sua Turma · Ano Letivo 2027'
-                  : `Ano Letivo 2027 · ${classes.length} Turmas Oficiais`}
-              </span>
-              <h1 className="text-[1.25rem] sm:text-[1.5rem] font-bold text-[#1d1d1f] leading-tight tracking-tight">
-                {userRole === 'usuario' ? 'Minha Turma Regente' : 'Quadro Oficial de Turmas'}
-              </h1>
-              <p className="text-[0.82rem] sm:text-[0.88rem] text-[#6e6e73] mt-1 font-normal leading-relaxed">
-                {userRole === 'admin' &&
-                  'Acesso pleno: gerencie faltas, atestados, grade de dados de cada estudante e planilha geral.'}
-                {userRole === 'usuario' &&
-                  'Gerencie as faltas, atestados e a grade interativa de dados dos estudantes da sua turma.'}
-                {userRole === 'peb2' &&
-                  `Modo PEB II (Somente Visualização): consulte qualquer uma das ${classes.length} turmas e veja a ficha completa dos estudantes.`}
-              </p>
-            </div>
+              {onOpenConfigDaysModal && (
+                <button
+                  onClick={onOpenConfigDaysModal}
+                  type="button"
+                  className="h-[34px] px-3 rounded-full bg-[#0071e3]/10 hover:bg-[#0071e3]/18 text-[#0066cc] font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">edit_calendar</span>
+                  <span className="hidden sm:inline">200 Dias &amp; Links</span>
+                </button>
+              )}
 
-            {userRole === 'admin' && (
               <button
                 type="button"
                 onClick={onOpenNewClassModal}
-                className="h-[36px] px-3 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.78rem] border border-black/[0.08] flex items-center gap-1 cursor-pointer shrink-0"
+                className="h-[34px] px-3 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[17px]">add</span>
+                <span className="material-symbols-outlined text-[16px]">add</span>
                 <span className="hidden sm:inline">Nova Turma</span>
               </button>
-            )}
-          </div>
-
-          {userRole === 'admin' && onOpenConfigDaysModal && (
-            <div className="pt-1">
-              <button
-                onClick={onOpenConfigDaysModal}
-                type="button"
-                className="w-full min-h-[44px] bg-[#0071e3]/10 hover:bg-[#0071e3]/15 text-[#0066cc] border border-[#0071e3]/20 font-semibold text-[0.84rem] px-3.5 rounded-xl flex items-center justify-center gap-2 active:scale-98 transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">edit_calendar</span>
-                <span>Configurar 200 Dias Letivos &amp; Links do Google Drive</span>
-              </button>
             </div>
           )}
-        </section>
-      </div>
-
-      {/* Clear Banner Explaining Attendance Launch Window vs Always-Available View Students (Hidden for PEB II who don't launch attendance) */}
-      {userRole !== 'peb2' && (
-        <div
-          className={`rounded-2xl p-3.5 sm:p-4 border flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
-            isLaunchButtonOpen
-              ? 'bg-white border-[#0071e3]/25 text-[#1d1d1f]'
-              : 'bg-white border-black/[0.08] text-[#1d1d1f]'
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            <span
-              className={`material-symbols-outlined text-[22px] sm:text-[24px] shrink-0 mt-0.5 ${
-                isLaunchButtonOpen ? 'text-[#0071e3]' : 'text-[#ff9500]'
-              }`}
-            >
-              {isLaunchButtonOpen ? 'lock_open' : 'event_upcoming'}
-            </span>
-            <div className="space-y-0.5">
-              <p className="font-semibold text-[0.86rem] sm:text-[0.92rem] text-[#1d1d1f]">
-                {isLaunchButtonOpen
-                  ? 'Período de Lançamento de Faltas ABERTO • Sincronização Instantânea na Nuvem'
-                  : 'Botão "Lançar Faltas" abre no Último Dia Letivo do mês e nos 2 Primeiros do próximo mês'}
-              </p>
-              <p className="text-[0.78rem] text-[#6e6e73]">
-                • <strong>Visualizar Estudantes:</strong> Disponível 24h.{' '}
-                • <strong>Status:</strong> {windowEval.reasonLabel}.
-              </p>
-            </div>
-          </div>
-
-          {userRole === 'admin' && onNavigateToAcessos && (
-            <button
-              type="button"
-              onClick={onNavigateToAcessos}
-              className="min-h-[38px] px-3.5 rounded-full bg-[#1d1d1f] hover:bg-black text-white font-semibold text-[0.78rem] flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">key</span>
-              <span>
-                {attendanceWindowConfig.exceptionalOverrideOpen
-                  ? 'Gerenciar Abertura Excepcional'
-                  : 'Liberar Lançamento (Acessos)'}
-              </span>
-            </button>
-          )}
         </div>
-      )}
-
-      {/* Alerta Geral de Fichas Informativas Escaneadas Pendentes */}
-      {missingScannedFichasSummary.totalMissing > 0 && (
-        <div className="rounded-2xl p-3.5 sm:p-4 bg-[#fff2f2] border border-[#ff3b30]/30 text-[#1d1d1f] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#ff3b30] text-white flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[20px]">
-                notification_important
-              </span>
-            </div>
-            <div>
-              <p className="font-semibold text-[0.86rem] sm:text-[0.9rem] text-[#1d1d1f]">
-                Documentação: Estudantes sem Ficha Informativa Escaneada (PDF)
-              </p>
-              <p className="text-[0.76rem] sm:text-[0.8rem] text-[#6e6e73] mt-0.5">
-                Existem <strong>{missingScannedFichasSummary.totalMissing}</strong> estudante(s) em{' '}
-                <strong>{missingScannedFichasSummary.classesWithMissing}</strong> turma(s) sem o PDF
-                vinculado no Google Drive.
-              </p>
-            </div>
-          </div>
-          <span className="px-3 py-1 rounded-full bg-[#ff3b30] text-white font-mono font-semibold text-[0.74rem] shrink-0 self-start sm:self-center">
-            {missingScannedFichasSummary.totalMissing} pendentes
-          </span>
-        </div>
-      )}
+      </section>
 
       {/* Resumo de Faltas Críticas (Busca Ativa Escolar • Limiar de Faltas Consecutivas com Detalhes ao Clicar) */}
       <ResumoFaltasCriticasCard
