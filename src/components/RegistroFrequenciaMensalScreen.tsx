@@ -33,6 +33,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   instantSyncStatus = 'synced',
   onSaveMonthlyAttendance,
   onOpenPhotoModal,
+  onOpenStudentGrid,
   onOpenStudentPdf,
 }) => {
   const [selectedMonthName, setSelectedMonthName] = useState<string>('Outubro');
@@ -700,7 +701,10 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 }`}
               >
                 {/* Identificação Enxuta do Estudante + Indicativo Visual */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div
+                  onClick={() => onOpenStudentGrid(student)}
+                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                >
                   <span
                     className={`w-8 h-8 rounded-xl text-white font-mono font-extrabold text-[0.76rem] flex items-center justify-center shrink-0 tabular-nums ${
                       isTransferred
@@ -718,8 +722,6 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   <StudentAvatar
                     student={student}
                     size="md"
-                    expandableOnClick={true}
-                    onUploadPhotoClick={() => onOpenPhotoModal(student)}
                   />
 
                   <div className="min-w-0 flex-1">
@@ -915,14 +917,15 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     : 'bg-white border-black/[0.07]'
                 }`}
               >
-                {/* Topo do Card: Foto (upload apenas ao clicar na foto) + Nome + Indicativo de % */}
-                <div className="flex items-start justify-between gap-3">
+                {/* Topo do Card: Clique abre o perfil da criança + Nome + Indicativo de % */}
+                <div
+                  onClick={() => onOpenStudentGrid(student)}
+                  className="flex items-start justify-between gap-3 cursor-pointer"
+                >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <StudentAvatar
                       student={student}
                       size="lg"
-                      expandableOnClick={true}
-                      onUploadPhotoClick={() => onOpenPhotoModal(student)}
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">

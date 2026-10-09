@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ClassGroup, ScreenType, UserRole } from '../types';
 import { APP_LOGO_URL, APP_LOGO_FALLBACK_URL, SCHOOL_NAME } from '../data/mockData';
 import { StudentAvatar } from './StudentAvatar';
 import { PushNotificationCenter } from './PushNotificationCenter';
+import {
+  getAccessToken,
+  googleSignIn,
+  initAuth,
+} from '../services/googleSheetsApi';
 
 interface HeaderProps {
   currentScreen: ScreenType;
@@ -18,6 +23,7 @@ interface HeaderProps {
   onChangeScreen?: (screen: ScreenType) => void;
   onSelectClassById?: (classId: string) => void;
   onOpenSpotlightSearch?: () => void;
+  onQuickSyncDriveNow?: () => Promise<void>;
   onNavigatePlanilha: () => void;
   onLogout: () => void;
 }
@@ -35,10 +41,54 @@ export const Header: React.FC<HeaderProps> = ({
   onChangeScreen,
   onSelectClassById,
   onOpenSpotlightSearch,
+  onQuickSyncDriveNow,
   onNavigatePlanilha,
   onLogout,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [hasDriveToken, setHasDriveToken] = useState(false);
+  const [isSyncingDrive, setIsSyncingDrive] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    getAccessToken().then((t) => {
+      if (mounted) setHasDriveToken(Boolean(t));
+    });
+    const unsub = initAuth(
+      () => {
+        if (mounted) setHasDriveToken(true);
+      },
+      () => {
+        if (mounted) setHasDriveToken(false);
+      }
+    );
+    return () => {
+      mounted = false;
+      unsub();
+    };
+  }, [currentScreen]);
+
+  const handleDriveSyncButtonClick = async () => {
+    if (isSyncingDrive) return;
+    setIsSyncingDrive(true);
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        const res = await googleSignIn();
+        token = res?.accessToken || (await getAccessToken());
+      }
+      if (token) {
+        setHasDriveToken(true);
+        if (onQuickSyncDriveNow) {
+          await onQuickSyncDriveNow();
+        }
+      }
+    } catch (err) {
+      console.warn('Aviso ao conectar/sincronizar Google Drive pelo topo:', err);
+    } finally {
+      setIsSyncingDrive(false);
+    }
+  };
 
   if (currentScreen === 'login') return null;
 
@@ -201,8 +251,43 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         )}
 
-        {/* Zone 3: Actions (Spotlight Search, Push Notifications & Unified Profile Menu) */}
+        {/* Zone 3: Actions (Drive Sync, Spotlight Search, Push Notifications & Unified Profile Menu) */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
+          <button
+            type="button"
+            onClick={handleDriveSyncButtonClick}
+            disabled={isSyncingDrive}
+            title={
+              hasDriveToken
+                ? 'Google Drive conectado (Pasta Fotos Estudantes ativa). Clique para sincronizar fotos e planilha agora'
+                : 'Clique para autorizar leitura da pasta Fotos Estudantes no Google Drive'
+            }
+            className={`h-[34px] px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border text-[0.72rem] font-bold ${
+              hasDriveToken
+                ? 'bg-[#eaf6ef] hover:bg-[#d3eedd] text-[#005035] border-[#005035]/20'
+                : 'bg-[#fff8eb] hover:bg-[#ffefc8] text-[#9a5b00] border-[#d97706]/30 animate-pulse'
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-[16px] ${
+                isSyncingDrive ? 'animate-spin' : ''
+              }`}
+            >
+              {isSyncingDrive
+                ? 'sync'
+                : hasDriveToken
+                ? 'photo_library'
+                : 'cloud_off'}
+            </span>
+            <span className="hidden sm:inline">
+              {isSyncingDrive
+                ? 'Sincronizando Fotos...'
+                : hasDriveToken
+                ? 'Fotos Drive OK'
+                : 'Conectar Fotos Drive'}
+            </span>
+          </button>
+
           {onOpenSpotlightSearch && (
             <button
               type="button"

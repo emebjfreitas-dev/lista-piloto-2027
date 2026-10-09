@@ -64,8 +64,11 @@ const DRIVE_PHOTOS_ID_KEY = 'emeb_candelario_drive_photos_folder_id_2027';
 const DRIVE_FICHAS_PDF_URL_KEY = 'emeb_candelario_drive_fichas_pdf_folder_url_2027';
 const DRIVE_FICHAS_PDF_ID_KEY = 'emeb_candelario_drive_fichas_pdf_folder_id_2027';
 
-export const OFFICIAL_FOLDER_NAME =
-  'Fotos_Alunos_EMEB_Joaquim_Candelario_Freitas_2027';
+export const OFFICIAL_FOLDER_NAME = 'Fotos Estudantes';
+export const OFFICIAL_PHOTOS_FOLDER_ID =
+  '1FzKx1qghv2_WhOjw7ttvbT_rvaTGYPpn';
+export const OFFICIAL_PHOTOS_FOLDER_URL =
+  `https://drive.google.com/drive/folders/${OFFICIAL_PHOTOS_FOLDER_ID}`;
 export const OFFICIAL_FICHAS_PDF_FOLDER_NAME = 'Fichas Informativas';
 export const OFFICIAL_FICHAS_PDF_FOLDER_ID =
   '1GDEdQuNfhc0vps4mZXv4LLv4kDLZnauJ';
@@ -86,8 +89,7 @@ export const extractDriveFileOrFolderId = (input: string): string => {
   return trimmed;
 };
 
-export const DEFAULT_DRIVE_PHOTOS_FOLDER_URL =
-  'https://drive.google.com/drive/my-drive';
+export const DEFAULT_DRIVE_PHOTOS_FOLDER_URL = OFFICIAL_PHOTOS_FOLDER_URL;
 
 export const getSavedFichasPdfDriveFolderInfo = (): {
   folderId: string;
@@ -126,16 +128,33 @@ export const getSavedPhotosDriveFolderInfo = (): {
   folderUrl: string;
   isRealCreated: boolean;
 } => {
-  const folderId = localStorage.getItem(DRIVE_PHOTOS_ID_KEY) || '';
-  const folderUrl =
-    localStorage.getItem(DRIVE_PHOTOS_URL_KEY) ||
-    (folderId
-      ? `https://drive.google.com/drive/folders/${folderId}`
-      : DEFAULT_DRIVE_PHOTOS_FOLDER_URL);
+  const rawStoredId = localStorage.getItem(DRIVE_PHOTOS_ID_KEY) || '';
+  const rawStoredUrl = localStorage.getItem(DRIVE_PHOTOS_URL_KEY) || '';
+
+  // Auto-migrate any empty or legacy placeholder folder to the official "Dados 2025 > Fotos Estudantes" folder
+  const isLegacyOrGeneric =
+    !rawStoredId ||
+    rawStoredUrl === 'https://drive.google.com/drive/my-drive' ||
+    rawStoredUrl.includes('my-drive');
+
+  const folderId = isLegacyOrGeneric ? OFFICIAL_PHOTOS_FOLDER_ID : rawStoredId;
+  const folderUrl = isLegacyOrGeneric
+    ? OFFICIAL_PHOTOS_FOLDER_URL
+    : rawStoredUrl || `https://drive.google.com/drive/folders/${folderId}`;
+
+  if (isLegacyOrGeneric) {
+    try {
+      localStorage.setItem(DRIVE_PHOTOS_ID_KEY, OFFICIAL_PHOTOS_FOLDER_ID);
+      localStorage.setItem(DRIVE_PHOTOS_URL_KEY, OFFICIAL_PHOTOS_FOLDER_URL);
+    } catch {
+      // ignore storage errors
+    }
+  }
+
   return {
     folderId,
     folderUrl,
-    isRealCreated: Boolean(folderId),
+    isRealCreated: true,
   };
 };
 
@@ -339,9 +358,13 @@ export const toEmbeddableDrivePhotoUrl = (
   const trimmed = urlOrId.trim();
   if (!trimmed) return '';
   if (trimmed.startsWith('data:image/')) return trimmed;
+  if (trimmed.startsWith('blob:')) return trimmed;
   if (trimmed.includes('drive.google.com/thumbnail')) return trimmed;
   if (trimmed.includes('googleusercontent.com')) {
     return trimmed.replace(/=s\d+/, '=s400');
+  }
+  if (trimmed.includes('/drive/folders/')) {
+    return '';
   }
   const fileMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
   if (fileMatch && fileMatch[1]) {
@@ -354,7 +377,10 @@ export const toEmbeddableDrivePhotoUrl = (
   if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) {
     return `https://drive.google.com/thumbnail?id=${trimmed}&sz=w400`;
   }
-  return trimmed;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return '';
 };
 
 export const formatShortTurmaCode = (className: string): string => {
@@ -1401,88 +1427,139 @@ export const createRealPhotosFolderInDrive = async (): Promise<{
   folderName: string;
   alreadyExisted: boolean;
 }> => {
-  const token = await getAccessToken();
-  if (!token) {
-    throw new Error(
-      'Autenticação necessária. Conecte a conta Google do Administrador primeiro.'
-    );
-  }
-
-  const query = encodeURIComponent(
-    `name = '${OFFICIAL_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
-  );
-  const searchRes = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,webViewLink)&pageSize=1`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-
-  if (searchRes.ok) {
-    const searchData = await searchRes.json();
-    if (searchData.files && searchData.files.length > 0) {
-      const existing = searchData.files[0];
-      const existingId: string = existing.id;
-      const existingUrl: string =
-        existing.webViewLink ||
-        `https://drive.google.com/drive/folders/${existingId}`;
-      savePhotosDriveFolderUrl(existingUrl, existingId);
-      return {
-        folderId: existingId,
-        folderUrl: existingUrl,
-        folderName: OFFICIAL_FOLDER_NAME,
-        alreadyExisted: true,
-      };
-    }
-  }
-
-  const res = await fetch(
-    'https://www.googleapis.com/drive/v3/files?fields=id,name,webViewLink',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: OFFICIAL_FOLDER_NAME,
-        mimeType: 'application/vnd.google-apps.folder',
-        description:
-          'Pasta Oficial Única de Fotos dos Estudantes — EMEB Prof. Joaquim Candelário de Freitas (2027)',
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(
-      errData?.error?.message ||
-        `Erro ao criar pasta única no Google Drive (${res.status}).`
-    );
-  }
-
-  const data = await res.json();
-  const folderId: string = data.id;
-  const folderUrl: string =
-    data.webViewLink || `https://drive.google.com/drive/folders/${folderId}`;
-
-  savePhotosDriveFolderUrl(folderUrl, folderId);
-
+  savePhotosDriveFolderUrl(OFFICIAL_PHOTOS_FOLDER_URL, OFFICIAL_PHOTOS_FOLDER_ID);
   return {
-    folderId,
-    folderUrl,
+    folderId: OFFICIAL_PHOTOS_FOLDER_ID,
+    folderUrl: OFFICIAL_PHOTOS_FOLDER_URL,
     folderName: OFFICIAL_FOLDER_NAME,
-    alreadyExisted: false,
+    alreadyExisted: true,
   };
+};
+
+// Cache for all discovered Photo files in the Fotos Estudantes Drive folder (1FzKx1qghv2_WhOjw7ttvbT_rvaTGYPpn)
+const DISCOVERED_PHOTOS_STORAGE_KEY = 'emeb_candelario_discovered_drive_photos_2027_v1';
+
+export interface DiscoveredDrivePhotoFile {
+  id: string;
+  name: string;
+  normName: string;
+  coreName: string;
+  subfolderName: string;
+  photoUrl: string;
+  driveLink: string;
+}
+
+let inMemoryDrivePhotosCache: DiscoveredDrivePhotoFile[] | null = null;
+
+export const getStoredDiscoveredDrivePhotos = (): DiscoveredDrivePhotoFile[] => {
+  if (inMemoryDrivePhotosCache && inMemoryDrivePhotosCache.length > 0) {
+    return inMemoryDrivePhotosCache;
+  }
+  try {
+    const raw = localStorage.getItem(DISCOVERED_PHOTOS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as DiscoveredDrivePhotoFile[];
+    if (Array.isArray(parsed)) {
+      inMemoryDrivePhotosCache = parsed;
+      return parsed;
+    }
+    return [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveStoredDiscoveredDrivePhotos = (
+  files: DiscoveredDrivePhotoFile[]
+): void => {
+  inMemoryDrivePhotosCache = files;
+  try {
+    localStorage.setItem(DISCOVERED_PHOTOS_STORAGE_KEY, JSON.stringify(files));
+  } catch {
+    // ignore storage quota
+  }
+};
+
+export const findPhotoInDiscoveredCache = (
+  studentName?: string,
+  ra?: string,
+  className?: string
+): { photoUrl: string; driveLink: string } | undefined => {
+  if (!studentName) return undefined;
+  const cached = getStoredDiscoveredDrivePhotos();
+  if (!cached || cached.length === 0) return undefined;
+
+  const normName = normalizeStudentNameForPhoto(studentName);
+  const coreName = normalizeStudentNameCoreTokens(studentName);
+  if (!normName) return undefined;
+
+  if (className) {
+    const shortTurma = formatShortTurmaCode(className).toUpperCase();
+    const upperClassName = className.toUpperCase();
+    const inClass = cached.find((c) => {
+      if (c.normName !== normName && (!coreName || c.coreName !== coreName)) return false;
+      const subUp = (c.subfolderName || '').toUpperCase();
+      return subUp.includes(upperClassName) || subUp.includes(shortTurma);
+    });
+    if (inClass) return { photoUrl: inClass.photoUrl, driveLink: inClass.driveLink };
+  }
+
+  const exact = cached.find((c) => c.normName === normName);
+  if (exact) return { photoUrl: exact.photoUrl, driveLink: exact.driveLink };
+
+  if (coreName) {
+    const byCore = cached.find((c) => c.coreName === coreName);
+    if (byCore) return { photoUrl: byCore.photoUrl, driveLink: byCore.driveLink };
+  }
+
+  const cleanRa = (ra || '').replace(/\D/g, '');
+  if (cleanRa && cleanRa.length >= 6) {
+    const byRa = cached.find(
+      (c) => c.normName === cleanRa || c.normName.includes(cleanRa)
+    );
+    if (byRa) return { photoUrl: byRa.photoUrl, driveLink: byRa.driveLink };
+  }
+
+  if (coreName.length >= 10) {
+    const studentTokens = coreName.split(' ').filter(Boolean);
+    if (studentTokens.length >= 2) {
+      const prefixMatches = cached.filter((c) => {
+        if (!c.coreName || c.coreName.length < 10) return false;
+        const fileTokens = c.coreName.split(' ').filter(Boolean);
+        if (fileTokens.length < 2) return false;
+        if (studentTokens[0] !== fileTokens[0]) return false;
+        if (
+          c.coreName.startsWith(coreName) ||
+          coreName.startsWith(c.coreName)
+        ) {
+          return true;
+        }
+        const sameLast =
+          studentTokens[studentTokens.length - 1] ===
+          fileTokens[fileTokens.length - 1];
+        const sameSecond = studentTokens[1] === fileTokens[1];
+        return sameLast && sameSecond;
+      });
+      if (prefixMatches.length === 1) {
+        return {
+          photoUrl: prefixMatches[0].photoUrl,
+          driveLink: prefixMatches[0].driveLink,
+        };
+      }
+    }
+  }
+
+  return undefined;
 };
 
 /**
  * Sync student photos dropped into the Google Drive Folder (and any class subfolders inside it)!
  * Supports:
+ * - Official Folder: Dados 2025 > Fotos Estudantes (1FzKx1qghv2_WhOjw7ttvbT_rvaTGYPpn)
  * - Subfolders inside the main Photos folder (e.g., GRUPO 04 A, 1º ANO A, etc.)
- * - Full pagination (nextPageToken) for 600+ students
+ * - Full pagination (nextPageToken) for 1000+ students
  * - Shared Drives (supportsAllDrives & includeItemsFromAllDrives)
- * - Exact name match, particle-insensitive match (without DE/DA/DO/DOS/DAS), Nome Social, RA match, and unambiguous prefix match
+ * - Global search fallback for images shared from external folders
  */
 export const syncPhotosFromDriveFolder = async (
   currentClasses: ClassGroup[]
@@ -1493,6 +1570,35 @@ export const syncPhotosFromDriveFolder = async (
 }> => {
   const token = await getAccessToken();
   if (!token) {
+    // Even if not currently holding an OAuth token in memory, apply any previously discovered Drive photos from cache!
+    const cachedList = getStoredDiscoveredDrivePhotos();
+    if (cachedList.length > 0) {
+      let cachedMatched = 0;
+      const hydrated = currentClasses.map((cls) => ({
+        ...cls,
+        students: cls.students.map((s) => {
+          const hit = findPhotoInDiscoveredCache(
+            s.estudante || s.name,
+            s.ra,
+            cls.name
+          );
+          if (hit) {
+            cachedMatched++;
+            return {
+              ...s,
+              photo: hit.photoUrl,
+              photoDriveUrl: hit.driveLink,
+            };
+          }
+          return s;
+        }),
+      }));
+      return {
+        updatedClasses: hydrated,
+        matchedPhotosCount: cachedMatched,
+        totalDriveImagesFound: cachedList.length,
+      };
+    }
     return {
       updatedClasses: currentClasses,
       matchedPhotosCount: 0,
@@ -1501,29 +1607,7 @@ export const syncPhotosFromDriveFolder = async (
   }
 
   const { folderId } = getSavedPhotosDriveFolderInfo();
-  let targetFolderId = folderId;
-
-  // If folderId is not cached yet, try locating the official folder in Drive
-  if (!targetFolderId) {
-    const qFolder = encodeURIComponent(
-      `name = '${OFFICIAL_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
-    );
-    const fRes = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${qFolder}&fields=files(id,webViewLink)&pageSize=10&supportsAllDrives=true&includeItemsFromAllDrives=true`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (fRes.ok) {
-      const fData = await fRes.json();
-      if (fData.files && fData.files.length > 0) {
-        targetFolderId = fData.files[0].id;
-        savePhotosDriveFolderUrl(
-          fData.files[0].webViewLink ||
-            `https://drive.google.com/drive/folders/${targetFolderId}`,
-          targetFolderId
-        );
-      }
-    }
-  }
+  const targetFolderId = folderId || OFFICIAL_PHOTOS_FOLDER_ID;
 
   // Helper to fetch all pages of Drive files for a given query
   const fetchAllDriveFiles = async (
@@ -1611,11 +1695,14 @@ export const syncPhotosFromDriveFolder = async (
     }
   }
 
-  // Fallback: if the configured folder had 0 images (or photos were uploaded into another Drive folder), search all accessible images
-  if (driveFiles.length === 0) {
-    driveFiles = await fetchAllDriveFiles(
+  // Also query general accessible image files in Drive (up to 1000) so any student photo shared outside the folder (e.g. ANA LAURA RODRIGUES CUSTODIO.jpg) is also indexed!
+  try {
+    const generalImages = await fetchAllDriveFiles(
       `mimeType contains 'image/' and trashed = false`
     );
+    driveFiles.push(...generalImages);
+  } catch {
+    // ignore fallback error
   }
 
   // Deduplicate by file id
@@ -1623,19 +1710,9 @@ export const syncPhotosFromDriveFolder = async (
   driveFiles.forEach((f) => uniqueFilesMap.set(f.id, f));
   const uniqueDriveFiles = Array.from(uniqueFilesMap.values());
 
-  interface DrivePhotoCandidate {
-    id: string;
-    name: string;
-    normName: string;
-    coreName: string;
-    subfolderName: string;
-    photoUrl: string;
-    driveLink: string;
-  }
-
-  const candidates: DrivePhotoCandidate[] = [];
-  const exactMap = new Map<string, DrivePhotoCandidate>();
-  const coreMap = new Map<string, DrivePhotoCandidate>();
+  const candidates: DiscoveredDrivePhotoFile[] = [];
+  const exactMap = new Map<string, DiscoveredDrivePhotoFile>();
+  const coreMap = new Map<string, DiscoveredDrivePhotoFile>();
 
   uniqueDriveFiles.forEach((f) => {
     const norm = normalizeStudentNameForPhoto(f.name);
@@ -1647,7 +1724,7 @@ export const syncPhotosFromDriveFolder = async (
     const driveLink =
       f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`;
 
-    const item: DrivePhotoCandidate = {
+    const item: DiscoveredDrivePhotoFile = {
       id: f.id,
       name: f.name,
       normName: norm,
@@ -1657,16 +1734,23 @@ export const syncPhotosFromDriveFolder = async (
       driveLink,
     };
     candidates.push(item);
-    exactMap.set(norm, item);
-    if (core) {
+    // Prioritize files that are inside the official Photos folder (`subfolderName` present)
+    if (!exactMap.has(norm) || subfolderName) {
+      exactMap.set(norm, item);
+    }
+    if (core && (!coreMap.has(core) || subfolderName)) {
       coreMap.set(core, item);
     }
   });
 
+  if (candidates.length > 0) {
+    saveStoredDiscoveredDrivePhotos(candidates);
+  }
+
   const findBestPhotoForStudent = (
     s: Student,
     className: string
-  ): DrivePhotoCandidate | undefined => {
+  ): DiscoveredDrivePhotoFile | undefined => {
     const normName = normalizeStudentNameForPhoto(s.estudante || s.name);
     const coreName = normalizeStudentNameCoreTokens(s.estudante || s.name);
     const normSocial = s.nomeSocial ? normalizeStudentNameForPhoto(s.nomeSocial) : '';

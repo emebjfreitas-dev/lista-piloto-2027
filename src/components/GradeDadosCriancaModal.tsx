@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Student, UserRole } from '../types';
 import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
 import { getStudentAttendanceMetrics } from '../utils/attendanceRules';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
+import {
+  findPhotoInDiscoveredCache,
+  toEmbeddableDrivePhotoUrl,
+  getAccessToken,
+  uploadStudentPhotoToDrive,
+} from '../services/googleSheetsApi';
 
 interface GradeDadosCriancaModalProps {
   isOpen: boolean;
@@ -123,6 +129,82 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   const [savedBanner, setSavedBanner] = useState(false);
   const [showAllSedFields, setShowAllSedFields] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [portraitFallbackIdx, setPortraitFallbackIdx] = useState(0);
+  const [portraitImgError, setPortraitImgError] = useState(false);
+  const internalPhotoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleInternalPhotoSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !draft) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rawDataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        let finalDataUrl = rawDataUrl;
+        try {
+          const maxDim = 360;
+          let width = img.width;
+          let height = img.height;
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height >= width && height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            finalDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          }
+        } catch {
+          // fallback to original dataUrl
+        }
+
+        const updated: Student = {
+          ...draft,
+          photo: finalDataUrl,
+        };
+        setPortraitFallbackIdx(0);
+        setPortraitImgError(false);
+        setDraft(updated);
+        onSaveStudent(updated);
+        setSavedBanner(true);
+        setTimeout(() => setSavedBanner(false), 2500);
+
+        // Sincroniza silenciosamente em segundo plano se já houver sessão ativa
+        getAccessToken()
+          .then((token) => {
+            if (token) {
+              return uploadStudentPhotoToDrive(updated, className, finalDataUrl);
+            }
+            return null;
+          })
+          .then((uploaded) => {
+            if (uploaded?.webViewLink) {
+              onSaveStudent({
+                ...updated,
+                photoDriveUrl: uploaded.webViewLink,
+              });
+            }
+          })
+          .catch(() => {});
+      };
+      img.onerror = () => {
+        const updated: Student = { ...draft, photo: rawDataUrl };
+        setDraft(updated);
+        onSaveStudent(updated);
+      };
+      img.src = rawDataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const orderedList = React.useMemo(
     () => [...classStudents].sort((a, b) => a.number - b.number),
@@ -147,6 +229,8 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     setSavedBanner(false);
     setShowAllSedFields(false);
     setIsLightboxOpen(false);
+    setPortraitFallbackIdx(0);
+    setPortraitImgError(false);
   }, [student]);
 
   useEffect(() => {
@@ -169,7 +253,61 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   if (!isOpen || !draft) return null;
 
   const metrics = getStudentAttendanceMetrics(draft, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
-  const hasPhoto = Boolean(draft.photo && draft.photo.trim().length > 0);
+  const cachedDriveHit = findPhotoInDiscoveredCache(
+    draft.estudante || draft.name,
+    draft.ra,
+    draft.turma
+  );
+  const rawPhotoCandidate = (
+    draft.photo ||
+    (draft.photoDriveUrl ? toEmbeddableDrivePhotoUrl(draft.photoDriveUrl) : '') ||
+    cachedDriveHit?.photoUrl ||
+    (cachedDriveHit?.driveLink
+      ? toEmbeddableDrivePhotoUrl(cachedDriveHit.driveLink)
+      : '') ||
+    ''
+  ).trim();
+
+  const extractDriveFileId = (url: string): string => {
+    if (!url || url.startsWith('data:image/')) return '';
+    const m1 = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    if (m1 && m1[1]) return m1[1];
+    const m2 = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+    if (m2 && m2[1]) return m2[1];
+    const m3 = url.match(/googleusercontent\.com\/d\/([a-zA-Z0-9-_]+)/);
+    if (m3 && m3[1]) return m3[1];
+    return '';
+  };
+
+  const portraitDriveId = extractDriveFileId(rawPhotoCandidate);
+  const portraitCandidates = (() => {
+    if (!rawPhotoCandidate) return [];
+    if (rawPhotoCandidate.startsWith('data:image/') || rawPhotoCandidate.startsWith('blob:')) {
+      return [rawPhotoCandidate];
+    }
+    if (portraitDriveId) {
+      return [
+        `https://drive.google.com/thumbnail?id=${portraitDriveId}&sz=w500`,
+        `https://lh3.googleusercontent.com/d/${portraitDriveId}=w500`,
+        `https://drive.google.com/uc?export=view&id=${portraitDriveId}`,
+      ];
+    }
+    if (rawPhotoCandidate.startsWith('http://') || rawPhotoCandidate.startsWith('https://')) {
+      return [rawPhotoCandidate];
+    }
+    return [];
+  })();
+
+  const effectivePhotoUrl = portraitCandidates[portraitFallbackIdx] || '';
+  const hasPhoto = Boolean(effectivePhotoUrl.length > 0 && !portraitImgError);
+
+  const handlePortraitImgError = () => {
+    if (portraitFallbackIdx + 1 < portraitCandidates.length) {
+      setPortraitFallbackIdx((prev) => prev + 1);
+    } else {
+      setPortraitImgError(true);
+    }
+  };
   const hasPdf = Boolean(
     (draft.fichaPdfDriveUrl && draft.fichaPdfDriveUrl.trim().length > 0) ||
       (draft.fichaPdfDriveId && draft.fichaPdfDriveId.trim().length > 0)
@@ -337,18 +475,26 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
             {/* COLUNA ESQUERDA (5 cols): RETRATO GIGANTE DO ESTUDANTE */}
             <div className="md:col-span-5 flex flex-col">
+              <input
+                ref={internalPhotoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleInternalPhotoSelected}
+                className="hidden"
+              />
               <div
                 onClick={() => {
                   if (hasPhoto) setIsLightboxOpen(true);
-                  else if (onOpenPhotoModal) onOpenPhotoModal(draft);
+                  else internalPhotoInputRef.current?.click();
                 }}
                 className="relative w-full flex-1 min-h-[320px] sm:min-h-[380px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#1d1d1f] to-[#2c2c2e] shadow-md border border-black/[0.06] flex items-center justify-center group cursor-pointer"
               >
                 {hasPhoto ? (
                   <>
                     <img
-                      src={draft.photo}
+                      src={effectivePhotoUrl}
                       alt={draft.name}
+                      onError={handlePortraitImgError}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-103"
                       referrerPolicy="no-referrer"
                     />
@@ -357,19 +503,17 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         <span className="material-symbols-outlined text-[17px]">fullscreen</span>
                         Ampliar foto
                       </span>
-                      {onOpenPhotoModal && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenPhotoModal(draft);
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/35 backdrop-blur-md text-white text-[0.73rem] font-bold flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">photo_camera</span>
-                          Trocar Foto
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          internalPhotoInputRef.current?.click();
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/35 backdrop-blur-md text-white text-[0.73rem] font-bold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">photo_camera</span>
+                        Trocar Foto
+                      </button>
                     </div>
                   </>
                 ) : (
@@ -380,19 +524,17 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     <span className="mt-3 text-[0.82rem] text-white/75 font-medium">
                       Estudante sem foto cadastrada
                     </span>
-                    {onOpenPhotoModal && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenPhotoModal(draft);
-                        }}
-                        className="mt-5 px-4 py-2.5 rounded-2xl bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] font-bold text-[0.8rem] flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
-                        <span>Adicionar Foto</span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        internalPhotoInputRef.current?.click();
+                      }}
+                      className="mt-5 px-4 py-2.5 rounded-2xl bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] font-bold text-[0.8rem] flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
+                      <span>Subir Foto do Dispositivo</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -854,7 +996,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             className="relative max-w-2xl w-full flex flex-col items-center"
           >
             <img
-              src={draft.photo}
+              src={effectivePhotoUrl}
               alt={draft.name}
               className="max-h-[78vh] w-auto rounded-3xl shadow-2xl border border-white/15 object-contain"
               referrerPolicy="no-referrer"

@@ -1859,6 +1859,7 @@ export const generateSedStudentsForClass = (
   const periodo = shift === 'Turno Manhã' ? 'MANHÃ' : 'TARDE';
 
   const realPhotoFolderNames = [
+    'ANA LAURA RODRIGUES CUSTODIO',
     'RAUANNY GRAZIELLY DA SILVA LIMA',
     'ADRIAN DA SILVA SANTOS',
     'ADRIELLY LOPES OCTAVIANO',

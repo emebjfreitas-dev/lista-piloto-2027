@@ -1044,6 +1044,32 @@ export default function App() {
     setClasses((prev) => [...prev]);
   };
 
+  const handleQuickSyncDriveNow = async () => {
+    try {
+      const spreadsheetId = await ensureOfficialSpreadsheetId();
+      let latestClasses = getStoredClasses();
+      if (spreadsheetId) {
+        const res = await readClassesFromGoogleSheet(spreadsheetId, latestClasses);
+        if (res.rowsRead > 0) {
+          latestClasses = res.updatedClasses;
+        }
+      }
+      const photoSync = await syncPhotosFromDriveFolder(latestClasses);
+      const pdfSync = await syncNominalPdfsFromDriveSubfolders(
+        photoSync.updatedClasses
+      );
+      latestClasses = pdfSync.updatedClasses;
+      setClasses(latestClasses);
+      saveStoredClasses(latestClasses);
+      setSelectedClass((prev) => {
+        const found = latestClasses.find((c) => c.id === prev.id);
+        return found || prev;
+      });
+    } catch (e) {
+      console.warn('Erro ao sincronizar Drive rapidamente:', e);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col font-sans selection:bg-[#0071e3]/15 selection:text-[#0066cc]">
       {/* Top Minimalist Header */}
@@ -1115,6 +1141,7 @@ export default function App() {
         onNavigatePlanilha={() => {
           if (userRole === 'admin') setCurrentScreen('planilha');
         }}
+        onQuickSyncDriveNow={handleQuickSyncDriveNow}
         onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
         onLogout={handleLogout}
       />

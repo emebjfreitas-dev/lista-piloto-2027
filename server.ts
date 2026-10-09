@@ -120,6 +120,24 @@ const readSharedState = (): SharedSchoolState => {
         if (Array.isArray(parsed.classes)) {
           parsed.classes = sanitizeAndDeduplicateClasses(parsed.classes);
         }
+        parsed.cloudLinks = {
+          photosFolderId: '1FzKx1qghv2_WhOjw7ttvbT_rvaTGYPpn',
+          photosFolderUrl:
+            'https://drive.google.com/drive/folders/1FzKx1qghv2_WhOjw7ttvbT_rvaTGYPpn',
+          fichasPdfFolderId: '1GDEdQuNfhc0vps4mZXv4LLv4kDLZnauJ',
+          fichasPdfFolderUrl:
+            'https://drive.google.com/drive/folders/1GDEdQuNfhc0vps4mZXv4LLv4kDLZnauJ',
+          ...(parsed.cloudLinks || {}),
+        };
+        // Force override if cloudLinks had old placeholder or empty photosFolderId
+        if (
+          !parsed.cloudLinks.photosFolderId ||
+          parsed.cloudLinks.photosFolderUrl?.includes('my-drive')
+        ) {
+          parsed.cloudLinks.photosFolderId = '1FzKx1qghv2_WhOjw7ttvbT_rvaTGYPpn';
+          parsed.cloudLinks.photosFolderUrl =
+            'https://drive.google.com/drive/folders/1FzKx1qghv2_WhOjw7ttvbT_rvaTGYPpn';
+        }
         return parsed;
       }
     }
