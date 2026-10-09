@@ -250,7 +250,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
             {visibleItems.map((item) => {
               const {
                 cls,
@@ -280,7 +280,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       setSelectedDetailItem(item);
                     }
                   }}
-                  className={`group rounded-2xl p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 border ${
+                  className={`group rounded-2xl p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 border h-full min-h-[118px] ${
                     hasFamilyFeedback
                       ? 'bg-[#fbfbfd] hover:bg-[#f5f5f7] border-black/[0.07]'
                       : 'bg-[#fff8f7] hover:bg-[#fff2f0] border-[#ff3b30]/25'

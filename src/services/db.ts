@@ -15,6 +15,15 @@ import {
   INSTITUTIONAL_EMAIL_DOMAIN,
 } from '../data/mockData';
 import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils/attendanceRules';
+import {
+  saveClassesToFirestoreCloud,
+  saveConfigMetaToFirestoreCloud,
+  fetchStateFromFirestoreCloud,
+  enqueuePendingSyncOperation,
+  markSyncOperationSuccess,
+  setSyncingActiveState,
+  registerOfflineFlushHandler,
+} from './firebaseSync';
 
 const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v6';
 const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v3';
@@ -390,39 +399,71 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
 export const pushAuthorizedUsersToServer = async (
   users: AuthorizedUser[]
 ): Promise<AuthorizedUser[] | null> => {
+  const sanitized = classesOrUsersSanitize(users);
+  setSyncingActiveState();
+  let savedToAny = false;
+
   try {
-    const sanitized = classesOrUsersSanitize(users);
+    const cloudOk = await saveConfigMetaToFirestoreCloud({ authorizedUsers: sanitized });
+    if (cloudOk) savedToAny = true;
+  } catch {
+    // continue to backend API
+  }
+
+  try {
     const res = await fetch('/api/school-state/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ authorizedUsers: sanitized }),
     });
     if (res.ok) {
+      savedToAny = true;
       const data = await res.json();
       if (Array.isArray(data?.authorizedUsers)) {
         const clean = classesOrUsersSanitize(data.authorizedUsers);
         memoryCachedUsers = clean;
         safeSetLocalStorage(USERS_STORAGE_KEY, JSON.stringify(clean));
+        markSyncOperationSuccess('save_users');
         return clean;
       }
     }
   } catch {
-    // ignore offline
+    // handled below
   }
-  return null;
+
+  if (savedToAny) {
+    markSyncOperationSuccess('save_users');
+    return sanitized;
+  } else {
+    enqueuePendingSyncOperation(
+      'save_users',
+      `Atualização de ${sanitized.length} perfis de acesso`,
+      'Aguardando conexão para sincronizar quadro de acessos'
+    );
+    return null;
+  }
 };
 
 export const pushSessionLogsToServer = async (
   logs: UserAccessSessionLog[],
   users?: AuthorizedUser[]
 ): Promise<void> => {
+  const sanitizedUsers = users ? classesOrUsersSanitize(users) : undefined;
+  try {
+    await saveConfigMetaToFirestoreCloud({
+      accessSessionLogs: logs,
+      ...(sanitizedUsers ? { authorizedUsers: sanitizedUsers } : {}),
+    });
+  } catch {
+    // ignore
+  }
   try {
     await fetch('/api/school-state/logs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         accessSessionLogs: logs,
-        ...(users ? { authorizedUsers: classesOrUsersSanitize(users) } : {}),
+        ...(sanitizedUsers ? { authorizedUsers: sanitizedUsers } : {}),
       }),
     });
   } catch {
@@ -433,14 +474,32 @@ export const pushSessionLogsToServer = async (
 export const pushAttendanceWindowToServer = async (
   config: AttendanceWindowConfig
 ): Promise<void> => {
+  setSyncingActiveState();
+  let saved = false;
   try {
-    await fetch('/api/school-state/window', {
+    const ok = await saveConfigMetaToFirestoreCloud({ attendanceWindowConfig: config });
+    if (ok) saved = true;
+  } catch {
+    // ignore
+  }
+  try {
+    const res = await fetch('/api/school-state/window', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ attendanceWindowConfig: config }),
     });
+    if (res.ok) saved = true;
   } catch {
     // ignore offline
+  }
+  if (saved) {
+    markSyncOperationSuccess('save_window');
+  } else {
+    enqueuePendingSyncOperation(
+      'save_window',
+      'Configuração de janela de chamada',
+      'Sem conexão com o servidor'
+    );
   }
 };
 
@@ -468,15 +527,104 @@ export const setLocalClassesUpdatedAtMs = (ts: number): void => {
   safeSetLocalStorage(CLASSES_UPDATED_AT_KEY, String(ts));
 };
 
+/**
+ * Merges incoming remote classes with local classes per-class and per-student
+ * so newer local edits or manual photo/PDF links are never overwritten by stale remote polls.
+ */
+export const mergeClassesWithConcurrencyControl = (
+  remoteClasses: ClassGroup[],
+  localClasses: ClassGroup[],
+  remoteUpdatedAtMs: number,
+  localUpdatedAtMs: number
+): ClassGroup[] => {
+  const localMap = new Map(localClasses.map((c) => [c.id.toLowerCase(), c]));
+  return remoteClasses.map((remCls) => {
+    const locCls = localMap.get(remCls.id.toLowerCase());
+    if (!locCls) return remCls;
+
+    const remTime = remCls.updatedAtMs || remoteUpdatedAtMs || 0;
+    const locTime = locCls.updatedAtMs || localUpdatedAtMs || 0;
+    const preferLocalClass = locTime > remTime;
+    const baseCls = preferLocalClass ? locCls : remCls;
+
+    const locStudentMap = new Map(locCls.students.map((s) => [s.id, s]));
+    const remStudentMap = new Map(remCls.students.map((s) => [s.id, s]));
+
+    const mergedStudents = baseCls.students.map((st) => {
+      const locSt = locStudentMap.get(st.id);
+      const remSt = remStudentMap.get(st.id);
+      if (!locSt || !remSt) return st;
+
+      const stLocTime = locSt.updatedAtMs || locTime;
+      const stRemTime = remSt.updatedAtMs || remTime;
+      const winnerSt = stLocTime > stRemTime ? locSt : remSt;
+
+      // Always preserve manual photo/PDF links if set on either side unless newer explicit link overrides
+      const manualPhotoSt =
+        locSt.photoManualLink && (!remSt.photoManualLink || stLocTime >= stRemTime)
+          ? locSt
+          : remSt.photoManualLink
+          ? remSt
+          : winnerSt;
+
+      const manualPdfSt =
+        locSt.fichaPdfManualLink && (!remSt.fichaPdfManualLink || stLocTime >= stRemTime)
+          ? locSt
+          : remSt.fichaPdfManualLink
+          ? remSt
+          : winnerSt;
+
+      return {
+        ...winnerSt,
+        updatedAtMs: Math.max(stLocTime, stRemTime),
+        photo: manualPhotoSt.photo || locSt.photo || remSt.photo,
+        photoDriveId: manualPhotoSt.photoDriveId || locSt.photoDriveId || remSt.photoDriveId,
+        photoDriveUrl: manualPhotoSt.photoDriveUrl || locSt.photoDriveUrl || remSt.photoDriveUrl,
+        photoManualLink: Boolean(locSt.photoManualLink || remSt.photoManualLink),
+        fichaPdfDriveId:
+          manualPdfSt.fichaPdfDriveId || locSt.fichaPdfDriveId || remSt.fichaPdfDriveId,
+        fichaPdfDriveUrl:
+          manualPdfSt.fichaPdfDriveUrl || locSt.fichaPdfDriveUrl || remSt.fichaPdfDriveUrl,
+        fichaPdfSubfolder:
+          manualPdfSt.fichaPdfSubfolder || locSt.fichaPdfSubfolder || remSt.fichaPdfSubfolder,
+        fichaPdfManualLink: Boolean(locSt.fichaPdfManualLink || remSt.fichaPdfManualLink),
+      };
+    });
+
+    return {
+      ...baseCls,
+      updatedAtMs: Math.max(remTime, locTime),
+      students: mergedStudents,
+    };
+  });
+};
+
 export const pushClassesToServer = async (
   classes: ClassGroup[],
   cloudLinks?: SharedCloudLinks,
   discoveredNominalPdfs?: any[]
-): Promise<void> => {
+): Promise<boolean> => {
+  const nowMs = Date.now();
+  setLocalClassesUpdatedAtMs(nowMs);
+  setSyncingActiveState();
+
+  let savedToFirestore = false;
+  let savedToApi = false;
+
   try {
-    const nowMs = Date.now();
-    setLocalClassesUpdatedAtMs(nowMs);
-    await fetch('/api/school-state/classes', {
+    savedToFirestore = await saveClassesToFirestoreCloud(classes, nowMs);
+    if (cloudLinks || discoveredNominalPdfs) {
+      await saveConfigMetaToFirestoreCloud({
+        ...(cloudLinks ? { cloudLinks } : {}),
+        ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
+      });
+    }
+  } catch {
+    // fallback to API
+  }
+
+  try {
+    const res = await fetch('/api/school-state/classes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -486,8 +634,23 @@ export const pushClassesToServer = async (
         ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
       }),
     });
+    if (res.ok) {
+      savedToApi = true;
+    }
   } catch {
-    // ignore offline
+    // offline or serverless cold start
+  }
+
+  if (savedToFirestore || savedToApi) {
+    markSyncOperationSuccess('save_classes');
+    return true;
+  } else {
+    enqueuePendingSyncOperation(
+      'save_classes',
+      `Alterações de frequência/cadastro (${classes.length} turmas)`,
+      'Dispositivo offline — alterações salvas na fila para sincronização automática'
+    );
+    return false;
   }
 };
 
@@ -496,8 +659,20 @@ export const pushCloudLinksToServer = async (
   discoveredNominalPdfs?: any[],
   discoveredDrivePhotos?: any[]
 ): Promise<void> => {
+  setSyncingActiveState();
+  let saved = false;
   try {
-    await fetch('/api/school-state/links', {
+    const ok = await saveConfigMetaToFirestoreCloud({
+      cloudLinks,
+      ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
+      ...(discoveredDrivePhotos ? { discoveredDrivePhotos } : {}),
+    });
+    if (ok) saved = true;
+  } catch {
+    // ignore
+  }
+  try {
+    const res = await fetch('/api/school-state/links', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -506,10 +681,35 @@ export const pushCloudLinksToServer = async (
         ...(discoveredDrivePhotos ? { discoveredDrivePhotos } : {}),
       }),
     });
+    if (res.ok) saved = true;
   } catch {
     // ignore offline
   }
+  if (saved) {
+    markSyncOperationSuccess('save_links');
+  } else {
+    enqueuePendingSyncOperation(
+      'save_links',
+      'Vínculos de pastas e arquivos Google Drive',
+      'Aguardando conexão para sincronizar metadados do Drive'
+    );
+  }
 };
+
+export const flushPendingOfflineQueue = async (): Promise<boolean> => {
+  const classes = getStoredClasses();
+  const users = getStoredAuthorizedUsers();
+  const windowCfg = getStoredAttendanceWindowConfig();
+  const okClasses = await pushClassesToServer(classes);
+  await pushAuthorizedUsersToServer(users);
+  await pushAttendanceWindowToServer(windowCfg);
+  return okClasses;
+};
+
+// Automatically flush offline queue whenever browser regains internet connectivity
+registerOfflineFlushHandler(async () => {
+  await flushPendingOfflineQueue();
+});
 
 export const pullSharedSchoolStateFromServer = async (): Promise<{
   authorizedUsers?: AuthorizedUser[];
@@ -522,9 +722,29 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
   discoveredDrivePhotos?: any[];
 } | null> => {
   try {
-    const res = await fetch('/api/school-state', { cache: 'no-store' });
-    if (!res.ok) return null;
-    const data = await res.json();
+    let apiData: any = null;
+    try {
+      const res = await fetch('/api/school-state', { cache: 'no-store' });
+      if (res.ok) {
+        apiData = await res.json();
+      }
+    } catch {
+      // API unreachable or serverless route not active; fallback to Firestore Cloud
+    }
+
+    // If API has no classes (e.g. fresh serverless container on Vercel), pull from Cloud Firestore!
+    let firestoreData: any = null;
+    if (!apiData || !Array.isArray(apiData.classes) || apiData.classes.length === 0) {
+      firestoreData = await fetchStateFromFirestoreCloud();
+    }
+
+    const data =
+      apiData && Array.isArray(apiData.classes) && apiData.classes.length > 0
+        ? apiData
+        : firestoreData || apiData;
+
+    if (!data) return null;
+
     const result: {
       authorizedUsers?: AuthorizedUser[];
       accessSessionLogs?: UserAccessSessionLog[];
@@ -639,10 +859,19 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
     if (Array.isArray(data?.classes) && data.classes.length > 0) {
       const srvClassesTime = data.classesUpdatedAtMs || 0;
       const locClassesTime = getLocalClassesUpdatedAtMs();
-      if (srvClassesTime > locClassesTime) {
-        const enriched = enrichClassesWithOfficialMatrix(data.classes);
+      if (locClassesTime === 0 || srvClassesTime >= locClassesTime) {
+        const currentLocal = memoryCachedClasses || getStoredClasses();
+        const merged = mergeClassesWithConcurrencyControl(
+          data.classes,
+          currentLocal,
+          srvClassesTime,
+          locClassesTime
+        );
+        const enriched = enrichClassesWithOfficialMatrix(merged);
         memoryCachedClasses = enriched;
-        setLocalClassesUpdatedAtMs(srvClassesTime);
+        if (srvClassesTime > 0) {
+          setLocalClassesUpdatedAtMs(Math.max(srvClassesTime, locClassesTime));
+        }
         safeSetLocalStorage(STORAGE_KEY, JSON.stringify(enriched));
         result.classes = enriched;
         result.classesUpdatedAtMs = srvClassesTime;

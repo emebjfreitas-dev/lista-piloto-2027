@@ -327,7 +327,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
       )}
 
       {/* List of Classes: 1 col Mobile, 2 cols Tablet (sm/md), 3 cols Laptop (lg), 4 cols Widescreen (2xl) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5 sm:gap-4 items-stretch">
         {filteredClasses.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-black/[0.06] sm:col-span-2 lg:col-span-3 2xl:col-span-4">
             <p className="text-[1rem] font-semibold text-[#6e6e73]">
@@ -352,14 +352,14 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             return (
               <div
                 key={cls.id}
-                className="card-welcoming bg-white p-4 sm:p-5 border border-black/[0.06] flex flex-col justify-between gap-3.5"
+                className="card-welcoming bg-white p-4 sm:p-5 border border-black/[0.06] flex flex-col justify-between gap-3.5 h-full min-h-[196px]"
               >
                 {/* Class Details Header */}
                 <div
                   onClick={() => {
                     onSelectClassForDetails(cls);
                   }}
-                  className="cursor-pointer flex items-start gap-3 min-w-0 group"
+                  className="cursor-pointer flex items-start gap-3 min-w-0 group flex-1"
                 >
                   <div
                     className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-bold text-[0.95rem] sm:text-[1.02rem] tracking-tight shrink-0 transition-transform group-hover:scale-[1.03] ${
@@ -371,26 +371,28 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                     {shortBadge}
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <h2 className="text-[1.02rem] sm:text-[1.1rem] font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors leading-tight truncate">
-                        {cls.name}
-                      </h2>
-                      <span className="font-mono font-semibold text-[0.76rem] text-[#1d8338] tabular-nums shrink-0">
-                        {cls.presenceRate}%
-                      </span>
-                    </div>
-                    <p className="text-[0.75rem] text-[#6e6e73] font-medium mt-0.5 truncate">
-                      {cls.shift.replace('Turno ', '')} · {cls.room}
-                      {cls.classeSedCode ? ` · SED ${cls.classeSedCode}` : ''}
-                    </p>
-                    {cls.teacherName && (
-                      <p className="text-[0.75rem] font-semibold text-[#0066cc] truncate mt-0.5">
-                        {cls.teacherPronoun || 'PROF.'}: {cls.teacherName}
+                  <div className="min-w-0 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h2 className="text-[1.02rem] sm:text-[1.08rem] font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors leading-tight truncate">
+                          {cls.name}
+                        </h2>
+                        <span className="font-mono font-bold text-[0.75rem] text-[#005035] bg-[#eaf6ef] px-2 py-0.5 rounded-md tabular-nums shrink-0">
+                          {cls.presenceRate}%
+                        </span>
+                      </div>
+                      <p className="text-[0.74rem] text-[#6e6e73] font-medium mt-0.5 truncate">
+                        {cls.shift.replace('Turno ', '')} · {cls.room}
+                        {cls.classeSedCode ? ` · SED ${cls.classeSedCode}` : ''}
                       </p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[0.72rem] font-medium text-[#6e6e73] tabular-nums">
-                      <span>{cls.totalStudents} alunos</span>
+                      <p className="text-[0.75rem] font-semibold text-[#0066cc] truncate mt-0.5 min-h-[1.125rem]">
+                        {cls.teacherName
+                          ? `${cls.teacherPronoun || 'PROF.'}: ${cls.teacherName}`
+                          : 'Regente Institucional'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[0.72rem] font-medium text-[#6e6e73] tabular-nums">
+                      <span className="font-semibold text-[#1d1d1f]">{cls.totalStudents} alunos</span>
                       <span aria-hidden="true" className="text-[#d2d2d7]">·</span>
                       <span className={cls.monthlyAbsences > 0 ? 'text-[#ff3b30] font-semibold' : 'text-[#1d8338]'}>
                         {cls.monthlyAbsences} faltas

@@ -643,18 +643,24 @@ export default function App() {
 
   const handleSaveMonthlyAttendance = (updatedClass: ClassGroup) => {
     if (!canEditClass(updatedClass.id)) return;
+    const nowMs = Date.now();
+    const stampedClass: ClassGroup = {
+      ...updatedClass,
+      updatedAtMs: nowMs,
+    };
     setClasses((prev) => {
-      const next = prev.map((c) => (c.id === updatedClass.id ? updatedClass : c));
+      const next = prev.map((c) => (c.id === stampedClass.id ? stampedClass : c));
       saveStoredClasses(next);
       // Atualização instantânea na Google Sheet (Abas Nominais + Colunas de Frequência) ao preenchimento do professor PEB I / Usuário
-      triggerDebouncedSheetWrite(updatedClass, next);
+      triggerDebouncedSheetWrite(stampedClass, next);
       return next;
     });
-    setSelectedClass(updatedClass);
+    setSelectedClass(stampedClass);
   };
 
   const handleSaveSingleStudent = (classId: string, updatedStudent: Student) => {
     if (!canEditClass(classId)) return;
+    const nowMs = Date.now();
 
     // Normalização semântica canônica: garante sincronia entre campos legados e campos oficiais SED
     const canonicalName = (updatedStudent.estudante || updatedStudent.name || '').trim();
@@ -670,6 +676,7 @@ export default function App() {
     ).trim();
     const canonicalStudent: Student = {
       ...updatedStudent,
+      updatedAtMs: nowMs,
       name: canonicalName || updatedStudent.name,
       estudante: canonicalName || updatedStudent.estudante,
       filiacao1: canonicalGuardian || updatedStudent.filiacao1,
@@ -686,10 +693,11 @@ export default function App() {
         const updatedStudents = cls.students.map((s) =>
           s.id === canonicalStudent.id ? canonicalStudent : s
         );
-        const tempCls = { ...cls, students: updatedStudents };
+        const tempCls = { ...cls, students: updatedStudents, updatedAtMs: nowMs };
         const metrics = getClassAttendanceMetrics(tempCls, OFFICIAL_OCTOBER_DAYS);
         const finalCls: ClassGroup = {
           ...tempCls,
+          updatedAtMs: nowMs,
           presenceRate: metrics.presenceRate,
           monthlyAbsences: metrics.totalFaltasTurma,
         };
@@ -713,7 +721,7 @@ export default function App() {
 
   const handleSaveNotes = (notes: string) => {
     if (!canEditClass(selectedClass.id)) return;
-    const updated = { ...selectedClass, pedagogicalNotes: notes };
+    const updated = { ...selectedClass, pedagogicalNotes: notes, updatedAtMs: Date.now() };
     setClasses((prev) => {
       const next = prev.map((c) => (c.id === updated.id ? updated : c));
       saveStoredClasses(next);
@@ -725,13 +733,20 @@ export default function App() {
   const handleAddNewClass = (newClass: ClassGroup) => {
     if (userRole !== 'admin') return;
     setClasses((prev) => {
-      const next = [newClass, ...prev];
+      const next = [{ ...newClass, updatedAtMs: Date.now() }, ...prev];
       saveStoredClasses(next);
       return next;
     });
   };
 
-  const handleSaveStudentPhoto = (studentId: string, newPhotoUrl: string, driveLink?: string) => {
+  const handleSaveStudentPhoto = (
+    studentId: string,
+    newPhotoUrl: string,
+    driveLink?: string,
+    driveFileId?: string,
+    isManualLink = true
+  ) => {
+    const nowMs = Date.now();
     setClasses((prevClasses) => {
       let updatedTargetClass: ClassGroup | null = null;
       const next = prevClasses.map((cls) => {
@@ -739,12 +754,16 @@ export default function App() {
         if (!hasStudent) return cls;
         const updatedCls: ClassGroup = {
           ...cls,
+          updatedAtMs: nowMs,
           students: cls.students.map((s) =>
             s.id === studentId
               ? {
                   ...s,
+                  updatedAtMs: nowMs,
                   photo: newPhotoUrl,
-                  photoDriveUrl: driveLink || s.photoDriveUrl,
+                  photoDriveId: driveFileId !== undefined ? driveFileId : s.photoDriveId,
+                  photoDriveUrl: driveLink !== undefined ? driveLink : s.photoDriveUrl,
+                  photoManualLink: isManualLink,
                 }
               : s
           ),
@@ -761,12 +780,16 @@ export default function App() {
 
     setSelectedClass((prev) => ({
       ...prev,
+      updatedAtMs: nowMs,
       students: prev.students.map((s) =>
         s.id === studentId
           ? {
               ...s,
+              updatedAtMs: nowMs,
               photo: newPhotoUrl,
-              photoDriveUrl: driveLink || s.photoDriveUrl,
+              photoDriveId: driveFileId !== undefined ? driveFileId : s.photoDriveId,
+              photoDriveUrl: driveLink !== undefined ? driveLink : s.photoDriveUrl,
+              photoManualLink: isManualLink,
             }
           : s
       ),
@@ -1549,6 +1572,13 @@ export default function App() {
         student={photoModalStudent}
         className={selectedClass.name}
         onSavePhoto={handleSaveStudentPhoto}
+        onSyncDrivePhotos={async () => {
+          const photoSync = await syncPhotosFromDriveFolder(getStoredClasses());
+          if (photoSync.matchedPhotosCount > 0) {
+            setClasses(photoSync.updatedClasses);
+            saveStoredClasses(photoSync.updatedClasses);
+          }
+        }}
       />
 
       {/* Grade de Dados Interativa de Cada Criança (Com Navegação Anterior / Próximo) */}
@@ -1627,6 +1657,13 @@ export default function App() {
         student={pdfModalData?.student || null}
         className={pdfModalData?.className || selectedClass.name}
         allClasses={classes}
+        onSyncDrivePdfs={async () => {
+          const pdfSync = await syncNominalPdfsFromDriveSubfolders(getStoredClasses());
+          if (pdfSync.matchedPdfsCount > 0) {
+            setClasses(pdfSync.updatedClasses);
+            saveStoredClasses(pdfSync.updatedClasses);
+          }
+        }}
         onUpdateAllClasses={(updated) => {
           setClasses(updated);
           saveStoredClasses(updated);
@@ -1641,21 +1678,25 @@ export default function App() {
             return prev;
           });
         }}
-        onSaveStudentPdfLink={(studentId, pdfId, pdfUrl, subfolder) => {
+        onSaveStudentPdfLink={(studentId, pdfId, pdfUrl, subfolder, isManualLink = true) => {
+          const nowMs = Date.now();
           setClasses((prevClasses) => {
             let updatedCls: ClassGroup | null = null;
             const next = prevClasses.map((cls) => {
               const hasStudent = cls.students.some((s) => s.id === studentId);
               if (!hasStudent) return cls;
-              const nextCls = {
+              const nextCls: ClassGroup = {
                 ...cls,
+                updatedAtMs: nowMs,
                 students: cls.students.map((s) =>
                   s.id === studentId
                     ? {
                         ...s,
+                        updatedAtMs: nowMs,
                         fichaPdfDriveId: pdfId,
                         fichaPdfDriveUrl: pdfUrl,
                         fichaPdfSubfolder: subfolder,
+                        fichaPdfManualLink: isManualLink,
                       }
                     : s
                 ),
@@ -1671,13 +1712,16 @@ export default function App() {
           });
           setSelectedClass((prev) => ({
             ...prev,
+            updatedAtMs: nowMs,
             students: prev.students.map((s) =>
               s.id === studentId
                 ? {
                     ...s,
+                    updatedAtMs: nowMs,
                     fichaPdfDriveId: pdfId,
                     fichaPdfDriveUrl: pdfUrl,
                     fichaPdfSubfolder: subfolder,
+                    fichaPdfManualLink: isManualLink,
                   }
                 : s
             ),
@@ -1688,9 +1732,11 @@ export default function App() {
                   ...prev,
                   student: {
                     ...prev.student,
+                    updatedAtMs: nowMs,
                     fichaPdfDriveId: pdfId,
                     fichaPdfDriveUrl: pdfUrl,
                     fichaPdfSubfolder: subfolder,
+                    fichaPdfManualLink: isManualLink,
                   },
                 }
               : prev

@@ -5,9 +5,15 @@ import { StudentAvatar } from './StudentAvatar';
 import { PushNotificationCenter } from './PushNotificationCenter';
 import {
   getAccessToken,
+  getDriveAuthState,
   googleSignIn,
   initAuth,
 } from '../services/googleSheetsApi';
+import {
+  subscribeToSyncStatus,
+  SyncStatusSnapshot,
+} from '../services/firebaseSync';
+import { flushPendingOfflineQueue } from '../services/db';
 
 interface HeaderProps {
   currentScreen: ScreenType;
@@ -47,16 +53,41 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [hasDriveToken, setHasDriveToken] = useState(false);
+  const [isDriveTokenExpired, setIsDriveTokenExpired] = useState(false);
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
+  const [syncSnapshot, setSyncSnapshot] = useState<SyncStatusSnapshot>({
+    status: 'synced',
+    pendingCount: 0,
+    lastSyncedAtISO: null,
+    lastError: null,
+    queue: [],
+  });
+
+  useEffect(() => {
+    const unsubSync = subscribeToSyncStatus((snap) => {
+      setSyncSnapshot(snap);
+    });
+    return () => unsubSync();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
-    getAccessToken().then((t) => {
-      if (mounted) setHasDriveToken(Boolean(t));
-    });
+    const checkTokenState = async () => {
+      const t = await getAccessToken();
+      const authState = getDriveAuthState();
+      if (mounted) {
+        setHasDriveToken(Boolean(t));
+        setIsDriveTokenExpired(authState.isExpired);
+      }
+    };
+    checkTokenState();
+    const timer = window.setInterval(checkTokenState, 15000);
     const unsub = initAuth(
       () => {
-        if (mounted) setHasDriveToken(true);
+        if (mounted) {
+          setHasDriveToken(true);
+          setIsDriveTokenExpired(false);
+        }
       },
       () => {
         if (mounted) setHasDriveToken(false);
@@ -64,6 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
     );
     return () => {
       mounted = false;
+      window.clearInterval(timer);
       unsub();
     };
   }, [currentScreen]);
@@ -72,6 +104,9 @@ export const Header: React.FC<HeaderProps> = ({
     if (isSyncingDrive) return;
     setIsSyncingDrive(true);
     try {
+      if (syncSnapshot.pendingCount > 0) {
+        await flushPendingOfflineQueue();
+      }
       let token = await getAccessToken();
       if (!token) {
         const res = await googleSignIn();
@@ -79,6 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
       }
       if (token) {
         setHasDriveToken(true);
+        setIsDriveTokenExpired(false);
         if (onQuickSyncDriveNow) {
           await onQuickSyncDriveNow();
         }
@@ -120,19 +156,19 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="fixed top-0 left-0 right-0 w-full z-50 pt-safe ios-glass-top">
       <div className="h-[54px] sm:h-[60px] px-3 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
         {/* Zone 1: Brand / Back Control */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 lg:flex-initial">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 lg:flex-1">
           {showBackButton && (
             <button
               onClick={onBack}
               aria-label="Voltar para tela anterior"
-              className="h-[34px] px-2.5 sm:px-3.5 flex items-center justify-center gap-0.5 sm:gap-1 rounded-full bg-[#e8e8ed] hover:bg-[#d2d2d7] text-[#1d1d1f] font-semibold text-[0.78rem] sm:text-[0.82rem] transition-all active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+              className="h-[34px] px-2.5 sm:px-3.5 flex items-center justify-center gap-0.5 sm:gap-1 rounded-full bg-[#e8e8ed] hover:bg-[#d2d2d7] text-[#1d1d1f] font-semibold text-[0.78rem] sm:text-[0.8rem] transition-all active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
             >
               <span className="material-symbols-outlined text-[18px]">chevron_left</span>
               <span className="hidden xs:inline sm:inline">Voltar</span>
             </button>
           )}
 
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={APP_LOGO_URL}
               alt="EMEB Joaquim Candelário de Freitas"
@@ -144,18 +180,21 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
             />
             <div className="min-w-0">
-              <span className="text-[0.86rem] sm:text-[0.95rem] font-semibold tracking-tight text-[#1d1d1f] truncate block">
+              <span className="text-[0.86rem] sm:text-[0.94rem] font-bold tracking-tight text-[#1d1d1f] truncate block leading-tight">
                 {showBackButton ? getScreenTitle() : 'EMEB Candelário de Freitas'}
+              </span>
+              <span className="hidden xl:block text-[0.66rem] font-medium text-[#6e6e73] truncate leading-none mt-0.5">
+                Plataforma Oficial SED · Ano Letivo 2027
               </span>
             </div>
           </div>
         </div>
 
-        {/* Zone 2: Apple.com Global Navigation Links (Visible on Desktop lg+) */}
+        {/* Zone 2: Global Navigation Links (Centered Symmetrically on Desktop lg+) */}
         {onChangeScreen && (
           <nav
             aria-label="Navegação Principal"
-            className="hidden lg:flex items-center gap-1 bg-[#e8e8ed]/85 p-1 rounded-full shrink-0"
+            className="hidden lg:flex items-center justify-center gap-1 bg-[#e8e8ed]/85 p-1 rounded-full shrink-0 border border-black/[0.04]"
           >
             <button
               type="button"
@@ -251,40 +290,69 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         )}
 
-        {/* Zone 3: Actions (Drive Sync, Spotlight Search, Push Notifications & Unified Profile Menu) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
+        {/* Zone 3: Actions (Drive Sync & Offline Queue Status, Spotlight Search, Push Notifications & Unified Profile Menu) */}
+        <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 lg:flex-1 relative">
+          {syncSnapshot.pendingCount > 0 && (
+            <button
+              type="button"
+              onClick={() => flushPendingOfflineQueue()}
+              title={
+                syncSnapshot.lastError ||
+                `${syncSnapshot.pendingCount} operação(ões) aguardando conexão. Clique para tentar sincronizar agora.`
+              }
+              className="h-[34px] px-2.5 rounded-full bg-[#fff8eb] hover:bg-[#ffefc8] text-[#9a5b00] border border-[#d97706]/30 flex items-center gap-1 text-[0.7rem] font-extrabold cursor-pointer shrink-0"
+            >
+              <span className="material-symbols-outlined text-[15px]">cloud_upload</span>
+              <span>{syncSnapshot.pendingCount} pendente(s)</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleDriveSyncButtonClick}
             disabled={isSyncingDrive}
             title={
-              hasDriveToken
-                ? 'Google Drive conectado (Pasta Fotos Estudantes ativa). Clique para sincronizar fotos e planilha agora'
-                : 'Clique para autorizar leitura da pasta Fotos Estudantes no Google Drive'
+              isDriveTokenExpired
+                ? 'Sessão do Google Drive expirou após 1h. Clique para renovar a autorização discretamente.'
+                : hasDriveToken
+                ? 'Google Drive e Firestore sincronizados. Clique para atualizar fotos, PDFs e planilha agora'
+                : 'Dados sincronizados na nuvem escolar. Clique se desejar conectar sua conta Google Drive'
             }
             className={`h-[34px] px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition-all cursor-pointer shrink-0 border text-[0.72rem] font-bold ${
-              hasDriveToken
+              isDriveTokenExpired
+                ? 'bg-[#fff8eb] hover:bg-[#ffefc8] text-[#9a5b00] border-[#d97706]/30'
+                : hasDriveToken
                 ? 'bg-[#eaf6ef] hover:bg-[#d3eedd] text-[#005035] border-[#005035]/20'
-                : 'bg-[#fff8eb] hover:bg-[#ffefc8] text-[#9a5b00] border-[#d97706]/30 animate-pulse'
+                : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border-black/[0.08]'
             }`}
           >
             <span
               className={`material-symbols-outlined text-[16px] ${
-                isSyncingDrive ? 'animate-spin' : ''
+                isSyncingDrive || syncSnapshot.status === 'syncing'
+                  ? 'animate-spin text-[#0071e3]'
+                  : isDriveTokenExpired
+                  ? 'text-[#d97706]'
+                  : hasDriveToken
+                  ? 'text-[#005035]'
+                  : 'text-[#0071e3]'
               }`}
             >
-              {isSyncingDrive
+              {isSyncingDrive || syncSnapshot.status === 'syncing'
                 ? 'sync'
+                : isDriveTokenExpired
+                ? 'key_off'
                 : hasDriveToken
-                ? 'photo_library'
-                : 'cloud_off'}
+                ? 'cloud_done'
+                : 'cloud_sync'}
             </span>
             <span className="hidden sm:inline">
-              {isSyncingDrive
-                ? 'Sincronizando Fotos...'
+              {isSyncingDrive || syncSnapshot.status === 'syncing'
+                ? 'Sincronizando...'
+                : isDriveTokenExpired
+                ? 'Renovar Sessão Drive'
                 : hasDriveToken
-                ? 'Fotos Drive OK'
-                : 'Conectar Fotos Drive'}
+                ? 'Nuvem Ativa'
+                : 'Sincronizar Drive'}
             </span>
           </button>
 

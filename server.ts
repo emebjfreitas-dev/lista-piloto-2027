@@ -248,7 +248,10 @@ async function startServer() {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        if (mediaRes.ok) {
+        if (mediaRes.status === 401) {
+          // Evict expired token so stale tokens are not reused indefinitely
+          writeSharedState({ adminDriveToken: '', adminDriveTokenUpdatedAtMs: 0 });
+        } else if (mediaRes.ok) {
           const contentType =
             mediaRes.headers.get('content-type') || 'image/jpeg';
           if (contentType.startsWith('image/') || contentType.includes('octet-stream')) {
@@ -311,7 +314,7 @@ async function startServer() {
     res.status(404).end();
   });
 
-  // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS, Ônibus Fretado e Links de PDFs Escaneados em tempo real
+  // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS, Ônibus Fretado e Links de PDFs Escaneados em tempo real com controle de concorrência por turma/estudante
   app.post('/api/school-state/classes', (req, res) => {
     const {
       classes,
@@ -320,30 +323,94 @@ async function startServer() {
       discoveredDrivePhotos,
       cloudLinks,
     } = req.body || {};
-    if (!Array.isArray(classes)) {
+    if (!Array.isArray(classes) || classes.length === 0 || classes.length > 80) {
       res.status(400).json({ error: 'Lista de turmas inválida' });
       return;
     }
     const current = readSharedState();
     const incTime = classesUpdatedAtMs || Date.now();
+    const existingClassesMap = new Map<string, any>();
+    if (Array.isArray(current.classes)) {
+      current.classes.forEach((c: any) => {
+        if (c && c.id) existingClassesMap.set(String(c.id).toLowerCase(), c);
+      });
+    }
 
-    // Compact any oversized inline base64 strings (>25KB) while preserving Drive photo URLs & PDF links
-    const compactClasses = classes.map((cls: any) => ({
-      ...cls,
-      students: Array.isArray(cls.students)
-        ? cls.students.map((st: any) => ({
-            ...st,
-            photo:
-              st.photo &&
-              typeof st.photo === 'string' &&
-              st.photo.startsWith('data:image') &&
-              st.photo.length > 35000 &&
-              st.photoDriveUrl
-                ? st.photoDriveUrl
-                : st.photo,
-          }))
-        : [],
-    }));
+    // Per-class and per-student concurrency merge so two teachers editing different classes or students never overwrite each other
+    const compactClasses = classes.map((cls: any) => {
+      const existingCls = existingClassesMap.get(String(cls?.id || '').toLowerCase());
+      const clsIncTime = cls?.updatedAtMs || incTime;
+      const clsExtTime = existingCls?.updatedAtMs || 0;
+
+      // If existing class on server is strictly newer than incoming class, keep existing class
+      if (existingCls && clsExtTime > clsIncTime) {
+        return existingCls;
+      }
+
+      const existingStudentsMap = new Map<string, any>();
+      if (existingCls && Array.isArray(existingCls.students)) {
+        existingCls.students.forEach((s: any) => {
+          if (s && s.id) existingStudentsMap.set(String(s.id), s);
+        });
+      }
+
+      const mergedStudents = Array.isArray(cls.students)
+        ? cls.students.map((st: any) => {
+            const extSt = existingStudentsMap.get(String(st?.id || ''));
+            const stIncTime = st?.updatedAtMs || 0;
+            const stExtTime = extSt?.updatedAtMs || 0;
+            const baseSt = extSt && stExtTime > stIncTime ? extSt : st;
+
+            // Preserve manual photo and manual PDF links unless explicitly updated
+            const preserveManualPhoto =
+              extSt?.photoManualLink && !st?.photoManualLink && stIncTime < stExtTime;
+            const preserveManualPdf =
+              extSt?.fichaPdfManualLink && !st?.fichaPdfManualLink && stIncTime < stExtTime;
+
+            const finalPhotoRaw = preserveManualPhoto ? extSt.photo : baseSt.photo;
+            const finalPhotoDriveUrl = preserveManualPhoto
+              ? extSt.photoDriveUrl
+              : baseSt.photoDriveUrl || extSt?.photoDriveUrl;
+
+            return {
+              ...baseSt,
+              photoDriveId: preserveManualPhoto
+                ? extSt.photoDriveId
+                : baseSt.photoDriveId || extSt?.photoDriveId,
+              photoDriveUrl: finalPhotoDriveUrl,
+              photoManualLink: Boolean(
+                preserveManualPhoto ? extSt.photoManualLink : baseSt.photoManualLink
+              ),
+              fichaPdfDriveId: preserveManualPdf
+                ? extSt.fichaPdfDriveId
+                : baseSt.fichaPdfDriveId || extSt?.fichaPdfDriveId,
+              fichaPdfDriveUrl: preserveManualPdf
+                ? extSt.fichaPdfDriveUrl
+                : baseSt.fichaPdfDriveUrl || extSt?.fichaPdfDriveUrl,
+              fichaPdfSubfolder: preserveManualPdf
+                ? extSt.fichaPdfSubfolder
+                : baseSt.fichaPdfSubfolder || extSt?.fichaPdfSubfolder,
+              fichaPdfManualLink: Boolean(
+                preserveManualPdf ? extSt.fichaPdfManualLink : baseSt.fichaPdfManualLink
+              ),
+              photo:
+                finalPhotoRaw &&
+                typeof finalPhotoRaw === 'string' &&
+                finalPhotoRaw.startsWith('data:image') &&
+                finalPhotoRaw.length > 35000 &&
+                finalPhotoDriveUrl
+                  ? finalPhotoDriveUrl
+                  : finalPhotoRaw,
+            };
+          })
+        : [];
+
+      return {
+        ...cls,
+        updatedAtMs: Math.max(clsIncTime, clsExtTime),
+        students: mergedStudents,
+      };
+    });
 
     const patch: Partial<SharedSchoolState> = {
       classes: compactClasses,

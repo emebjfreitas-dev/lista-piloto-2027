@@ -95,10 +95,14 @@ export interface Student extends StudentSedData {
   number: number;
   name: string;
   photo?: string;
+  photoDriveId?: string;
   photoDriveUrl?: string;
+  photoManualLink?: boolean;
   fichaPdfDriveId?: string;
   fichaPdfDriveUrl?: string;
   fichaPdfSubfolder?: string;
+  fichaPdfManualLink?: boolean;
+  updatedAtMs?: number;
   initials?: string;
   status: AttendanceStatus;
   alert?: string;
@@ -110,6 +114,17 @@ export interface Student extends StudentSedData {
   notes?: string;
   guardianName?: string;
   guardianPhone?: string;
+}
+
+export type SyncStateStatus = 'synced' | 'syncing' | 'pending' | 'error';
+
+export interface PendingSyncOperation {
+  opId: string;
+  type: 'save_classes' | 'save_users' | 'save_window' | 'save_links';
+  createdAtMs: number;
+  attempts: number;
+  lastError?: string;
+  payloadSummary: string;
 }
 
 export interface DriveNominalPdfFile {
@@ -163,6 +178,7 @@ export interface ClassGroup {
   weeklyPerformance: WeeklyData[];
   pedagogicalNotes: string;
   driveFolderUrl?: string;
+  updatedAtMs?: number;
 }
 
 export interface SheetTabInfo {

@@ -55,6 +55,36 @@ provider.setCustomParameters({
 // In-memory access token cache (NEVER stored in localStorage/sessionStorage per security rules)
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;
+let cachedAccessTokenExpiresAtMs: number = 0;
+let lastDriveAuthError: 'expired' | 'forbidden' | 'network' | null = null;
+
+const TOKEN_DEFAULT_TTL_MS = 54 * 60 * 1000; // 54 minutes safety window before Google's 60m expiry
+
+export const getDriveAuthState = (): {
+  hasValidToken: boolean;
+  isExpired: boolean;
+  lastError: 'expired' | 'forbidden' | 'network' | null;
+} => {
+  const now = Date.now();
+  const isExpired =
+    Boolean(cachedAccessToken && cachedAccessTokenExpiresAtMs > 0 && now >= cachedAccessTokenExpiresAtMs) ||
+    lastDriveAuthError === 'expired';
+  return {
+    hasValidToken: Boolean(cachedAccessToken && !isExpired),
+    isExpired,
+    lastError: lastDriveAuthError,
+  };
+};
+
+export const markDriveTokenExpiredOrForbidden = (status: number): void => {
+  if (status === 401) {
+    cachedAccessToken = null;
+    cachedAccessTokenExpiresAtMs = 0;
+    lastDriveAuthError = 'expired';
+  } else if (status === 403) {
+    lastDriveAuthError = 'forbidden';
+  }
+};
 
 // Storage keys for non-sensitive resource IDs/URLs
 const SHEET_ID_STORAGE_KEY = 'emeb_candelario_linked_spreadsheet_id_2027';
@@ -261,6 +291,8 @@ export const checkGoogleRedirectResult = async (): Promise<{
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (credential?.accessToken) {
       cachedAccessToken = credential.accessToken;
+      cachedAccessTokenExpiresAtMs = Date.now() + TOKEN_DEFAULT_TTL_MS;
+      lastDriveAuthError = null;
       registerDriveTokenOnServer(cachedAccessToken);
     }
     return { user: result.user, accessToken: cachedAccessToken || '' };
@@ -280,6 +312,8 @@ export const googleSignIn = async (): Promise<{
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (credential?.accessToken) {
       cachedAccessToken = credential.accessToken;
+      cachedAccessTokenExpiresAtMs = Date.now() + TOKEN_DEFAULT_TTL_MS;
+      lastDriveAuthError = null;
       registerDriveTokenOnServer(cachedAccessToken);
     }
     return { user: result.user, accessToken: cachedAccessToken || '' };
@@ -302,6 +336,16 @@ export const googleSignIn = async (): Promise<{
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
+  if (
+    cachedAccessToken &&
+    cachedAccessTokenExpiresAtMs > 0 &&
+    Date.now() >= cachedAccessTokenExpiresAtMs
+  ) {
+    cachedAccessToken = null;
+    cachedAccessTokenExpiresAtMs = 0;
+    lastDriveAuthError = 'expired';
+    return null;
+  }
   if (cachedAccessToken) {
     registerDriveTokenOnServer(cachedAccessToken);
   }
@@ -315,6 +359,8 @@ export const getCurrentGoogleUser = (): User | null => {
 export const logoutGoogle = async () => {
   await auth.signOut();
   cachedAccessToken = null;
+  cachedAccessTokenExpiresAtMs = 0;
+  lastDriveAuthError = null;
 };
 
 /**
@@ -1605,6 +1651,21 @@ export const attachPhotosFromDiscoveredCache = (
   return currentClasses.map((cls) => ({
     ...cls,
     students: cls.students.map((s) => {
+      // Preserve explicit manual photo link chosen by user
+      if (s.photoManualLink && s.photo) return s;
+
+      // If student has a manually or previously linked photoDriveId in cache, resolve by ID first
+      if (s.photoDriveId) {
+        const byId = cachedList.find((c) => c.id === s.photoDriveId);
+        if (byId) {
+          return {
+            ...s,
+            photo: byId.photoUrl,
+            photoDriveUrl: byId.driveLink || s.photoDriveUrl,
+          };
+        }
+      }
+
       const hit = findPhotoInDiscoveredCache(
         s.estudante || s.name,
         s.ra,
@@ -1647,6 +1708,8 @@ export const attachNominalPdfsFromDiscoveredCache = (
     return {
       ...cls,
       students: cls.students.map((s) => {
+        // Never overwrite a manual PDF association or existing valid ID+URL pair
+        if (s.fichaPdfManualLink && s.fichaPdfDriveId) return s;
         if (s.fichaPdfDriveId && s.fichaPdfDriveUrl) return s;
         const normStudent = normalizeStudentNameForPhoto(
           s.estudante || s.name
@@ -1692,6 +1755,10 @@ export const syncPhotosFromDriveFolder = async (
       const hydrated = currentClasses.map((cls) => ({
         ...cls,
         students: cls.students.map((s) => {
+          if (s.photoManualLink && s.photo) {
+            cachedMatched++;
+            return s;
+          }
           const hit = findPhotoInDiscoveredCache(
             s.estudante || s.name,
             s.ra,
@@ -1756,7 +1823,10 @@ export const syncPhotosFromDriveFolder = async (
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) break;
+      if (!res.ok) {
+        markDriveTokenExpiredOrForbidden(res.status);
+        break;
+      }
       const data = await res.json();
       if (Array.isArray(data.files)) {
         all.push(...data.files);
@@ -1978,6 +2048,12 @@ export const syncPhotosFromDriveFolder = async (
 
   const updatedClasses = currentClasses.map((cls) => {
     const updatedStudents = cls.students.map((s) => {
+      // Respect manual photo link bound by user
+      if (s.photoManualLink && s.photo) {
+        matchedPhotosCount++;
+        return s;
+      }
+
       const matched = findBestPhotoForStudent(s, cls.name);
 
       if (matched) {
@@ -1985,6 +2061,7 @@ export const syncPhotosFromDriveFolder = async (
         return {
           ...s,
           photo: matched.photoUrl,
+          photoDriveId: matched.id,
           photoDriveUrl: matched.driveLink,
         };
       }
@@ -2247,6 +2324,11 @@ export const syncNominalPdfsFromDriveSubfolders = async (
 
   const updatedClasses = currentClasses.map((cls) => {
     const updatedStudents = cls.students.map((s) => {
+      if (s.fichaPdfManualLink && s.fichaPdfDriveId) {
+        matchedPdfsCount++;
+        return s;
+      }
+
       const matched = findBestPdfForStudent(s, cls.name);
 
       if (matched) {
