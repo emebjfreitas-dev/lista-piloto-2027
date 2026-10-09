@@ -713,15 +713,29 @@ export default function App() {
 
   const handleSaveStudentPhoto = (studentId: string, newPhotoUrl: string, driveLink?: string) => {
     setClasses((prevClasses) => {
-      const next = prevClasses.map((cls) => ({
-        ...cls,
-        students: cls.students.map((s) =>
-          s.id === studentId
-            ? { ...s, photo: newPhotoUrl, photoDriveUrl: driveLink }
-            : s
-        ),
-      }));
+      let updatedTargetClass: ClassGroup | null = null;
+      const next = prevClasses.map((cls) => {
+        const hasStudent = cls.students.some((s) => s.id === studentId);
+        if (!hasStudent) return cls;
+        const updatedCls: ClassGroup = {
+          ...cls,
+          students: cls.students.map((s) =>
+            s.id === studentId
+              ? {
+                  ...s,
+                  photo: newPhotoUrl,
+                  photoDriveUrl: driveLink || s.photoDriveUrl,
+                }
+              : s
+          ),
+        };
+        updatedTargetClass = updatedCls;
+        return updatedCls;
+      });
       saveStoredClasses(next);
+      if (updatedTargetClass) {
+        triggerDebouncedSheetWrite(updatedTargetClass, next);
+      }
       return next;
     });
 
@@ -729,7 +743,11 @@ export default function App() {
       ...prev,
       students: prev.students.map((s) =>
         s.id === studentId
-          ? { ...s, photo: newPhotoUrl, photoDriveUrl: driveLink }
+          ? {
+              ...s,
+              photo: newPhotoUrl,
+              photoDriveUrl: driveLink || s.photoDriveUrl,
+            }
           : s
       ),
     }));

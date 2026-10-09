@@ -25,20 +25,63 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   const [imageError, setImageError] = useState(false);
   const [isExpandedOpen, setIsExpandedOpen] = useState(false);
 
-  const rawPhoto = (photo ?? student?.photo ?? '').trim();
+  const rawPhoto = (
+    photo ??
+    student?.photo ??
+    student?.photoDriveUrl ??
+    ''
+  ).trim();
   const isMockTestPhoto =
     rawPhoto.includes('aida-public') ||
     rawPhoto.includes('randomuser.me') ||
     rawPhoto.includes('unsplash.com') ||
     rawPhoto.includes('pravatar.cc') ||
     rawPhoto.includes('picsum.photos');
-  const effectivePhoto = isMockTestPhoto ? '' : rawPhoto;
+
+  // Extract Google Drive file ID if present so we can cascade through fallback image endpoints if one fails
+  const extractDriveId = (url: string): string => {
+    if (!url || url.startsWith('data:image/')) return '';
+    const m1 = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    if (m1 && m1[1]) return m1[1];
+    const m2 = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+    if (m2 && m2[1]) return m2[1];
+    const m3 = url.match(/googleusercontent\.com\/d\/([a-zA-Z0-9-_]+)/);
+    if (m3 && m3[1]) return m3[1];
+    return '';
+  };
+
+  const driveFileId = isMockTestPhoto ? '' : extractDriveId(rawPhoto);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+
+  const candidateUrls = React.useMemo(() => {
+    if (isMockTestPhoto || !rawPhoto) return [];
+    if (rawPhoto.startsWith('data:image/')) return [rawPhoto];
+    if (driveFileId) {
+      return [
+        `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400`,
+        `https://lh3.googleusercontent.com/d/${driveFileId}=w400`,
+        `https://drive.google.com/uc?export=view&id=${driveFileId}`,
+      ];
+    }
+    return [rawPhoto];
+  }, [rawPhoto, isMockTestPhoto, driveFileId]);
+
+  const effectivePhoto = candidateUrls[fallbackIndex] || '';
   const effectiveName = name ?? student?.name ?? 'Estudante';
   const effectiveInitials = initials ?? student?.initials;
 
   useEffect(() => {
+    setFallbackIndex(0);
     setImageError(false);
-  }, [effectivePhoto]);
+  }, [rawPhoto]);
+
+  const handleImageError = () => {
+    if (fallbackIndex + 1 < candidateUrls.length) {
+      setFallbackIndex((prev) => prev + 1);
+    } else {
+      setImageError(true);
+    }
+  };
 
   const sizeMap: Record<string, string> = {
     xs: 'w-7 h-7 text-[0.65rem] rounded-lg',
@@ -94,7 +137,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
             alt={`Foto de ${effectiveName}`}
             loading="lazy"
             referrerPolicy="no-referrer"
-            onError={() => setImageError(true)}
+            onError={handleImageError}
             className="w-full h-full object-cover"
           />
         ) : (
