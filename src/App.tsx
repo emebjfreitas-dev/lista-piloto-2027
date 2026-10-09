@@ -687,7 +687,7 @@ export default function App() {
     });
 
     setGridModalData((prev) =>
-      prev ? { ...prev, student: updatedStudent } : null
+      prev ? { ...prev, student: canonicalStudent } : null
     );
   };
 
@@ -744,7 +744,6 @@ export default function App() {
       currentScreen === 'frequencia_mensal' ||
       currentScreen === 'detalhes' ||
       currentScreen === 'bolsa_familia' ||
-      currentScreen === 'onibus_fretado' ||
       currentScreen === 'dias_letivos' ||
       currentScreen === 'planilha' ||
       currentScreen === 'usuarios_acesso'
@@ -839,7 +838,6 @@ export default function App() {
       frequencia_mensal: '2. Lançar Faltas',
       faltas_consecutivas: 'Faltas Seguidas',
       bolsa_familia: 'Bolsa Família (Nominal)',
-      onibus_fretado: 'Ônibus Fretado (Nominal)',
       planilha: '3. Planilha & Fotos',
       dias_letivos: '4. 200 Dias',
       usuarios_acesso: '5. Acessos',
@@ -1040,8 +1038,6 @@ export default function App() {
             ? `Turma ${selectedClass.name}`
             : currentScreen === 'bolsa_familia'
             ? 'Relatório Nominal • Bolsa Família'
-            : currentScreen === 'onibus_fretado'
-            ? 'Lista Nominal • Ônibus Fretado'
             : currentScreen === 'dias_letivos'
             ? 'Dias Letivos SME'
             : currentScreen === 'resumo'
@@ -1265,10 +1261,6 @@ export default function App() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-            onNavigateToOnibusFretado={() => {
-              setCurrentScreen('onibus_fretado');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
             onNavigateToConsecutiveAbsences={() => {
               setCurrentScreen('faltas_consecutivas');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1281,16 +1273,10 @@ export default function App() {
           />
         )}
 
-        {(currentScreen === 'bolsa_familia' || currentScreen === 'onibus_fretado') && (
+        {currentScreen === 'bolsa_familia' && (
           <ListasNominaisScreen
-            activeTab={currentScreen === 'bolsa_familia' ? 'bolsa_familia' : 'onibus_fretado'}
             classes={userRole === 'admin' ? classes : visibleClasses}
             userRole={userRole}
-            onSwitchTab={(newMode) => {
-              if (newMode === 'bolsa_familia' && userRole !== 'admin') return;
-              setCurrentScreen(newMode);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
             onOpenStudentPdf={(student, className) =>
               setPdfModalData({ student, className })
             }
@@ -1372,6 +1358,7 @@ export default function App() {
             userRole={userRole}
             initialTab={userRole === 'admin' ? 'metricas_uso' : 'resumo_turma'}
             onSelectClass={(cls) => setSelectedClass(cls)}
+            onSaveNotes={handleSaveNotes}
             onOpenMonthlyLaunchForClass={(cls) => {
               setSelectedClass(cls);
               setCurrentScreen('frequencia_mensal');

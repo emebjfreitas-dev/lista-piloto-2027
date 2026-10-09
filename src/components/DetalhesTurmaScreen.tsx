@@ -44,7 +44,6 @@ interface DetalhesTurmaScreenProps {
   onOpenPhotoModal?: (student: Student) => void;
   onOpenStudentPdf?: (student: Student) => void;
   onNavigateToBolsaFamilia?: () => void;
-  onNavigateToOnibusFretado?: () => void;
   onNavigateToConsecutiveAbsences?: () => void;
   onNavigateToSheet: () => void;
   onBackToClasses: () => void;
@@ -60,7 +59,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   onOpenPhotoModal,
   onOpenStudentPdf,
   onNavigateToBolsaFamilia,
-  onNavigateToOnibusFretado,
   onNavigateToConsecutiveAbsences,
   onBackToClasses,
 }) => {

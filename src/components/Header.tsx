@@ -49,7 +49,6 @@ export const Header: React.FC<HeaderProps> = ({
     currentScreen === 'faltas_consecutivas' ||
     (currentScreen === 'detalhes' && userRole !== 'usuario') ||
     currentScreen === 'bolsa_familia' ||
-    currentScreen === 'onibus_fretado' ||
     currentScreen === 'dias_letivos' ||
     currentScreen === 'planilha' ||
     currentScreen === 'usuarios_acesso';
@@ -60,7 +59,6 @@ export const Header: React.FC<HeaderProps> = ({
     if (currentScreen === 'faltas_consecutivas') return 'Faltas Consecutivas';
     if (currentScreen === 'detalhes') return 'Caderneta da Turma';
     if (currentScreen === 'bolsa_familia') return 'Bolsa Família';
-    if (currentScreen === 'onibus_fretado') return 'Ônibus Fretado';
     if (currentScreen === 'dias_letivos') return '200 Dias Letivos';
     if (currentScreen === 'resumo') return 'Fechamento Mensal';
     if (currentScreen === 'planilha') return 'Sincronização Nuvem';

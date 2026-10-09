@@ -10,8 +10,6 @@ import {
 import { StudentAvatar } from './StudentAvatar';
 
 interface ListasNominaisScreenProps {
-  activeTab: 'bolsa_familia' | 'onibus_fretado';
-  onSwitchTab: (tab: 'bolsa_familia' | 'onibus_fretado') => void;
   classes: ClassGroup[];
   userRole: UserRole;
   onUpdateStudentField: (classId: string, updatedStudent: Student) => void;
@@ -21,8 +19,6 @@ interface ListasNominaisScreenProps {
 }
 
 export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
-  activeTab,
-  onSwitchTab,
   classes,
   userRole,
   onUpdateStudentField,
@@ -30,8 +26,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   onOpenPhotoModal,
   onOpenStudentPdf,
 }) => {
-  const effectiveTab =
-    userRole !== 'admin' && activeTab === 'bolsa_familia' ? 'onibus_fretado' : activeTab;
+  const effectiveTab: 'bolsa_familia' = 'bolsa_familia';
 
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
   const [selectedShiftFilter, setSelectedShiftFilter] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
@@ -728,186 +723,6 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#eaf6ef] text-[#006644] text-[0.68rem] font-extrabold">
                             <span className="material-symbols-outlined text-[13px]">verified</span>
                             <span>Regular (≥{m.minLegalPresencePercent}%)</span>
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* CONTEÚDO DA ABA 2: LISTA NOMINAL ÔNIBUS FRETADO (TRANSPORTE ESCOLAR) */}
-      {effectiveTab === 'onibus_fretado' && (
-        <div className="bg-white rounded-3xl border border-black/[0.07] overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[0.78rem] border-collapse min-w-[1160px]">
-              <thead className="bg-[#f8fafc] text-[#0b3b49] border-b border-black/[0.07] font-extrabold uppercase tracking-wider text-[0.68rem]">
-                <tr>
-                  <th className="py-3 px-3 text-center">Turma / Nº</th>
-                  <th className="py-3 px-3">Estudante (Nominal) &amp; Ficha Escaneada (Drive)</th>
-                  <th className="py-3 px-3">Rota do Ônibus Fretado</th>
-                  <th className="py-3 px-3">Endereço / Bairro / CEP</th>
-                  <th className="py-3 px-3">Filiação (Mãe e Pai)</th>
-                  <th className="py-3 px-2.5">Telefones</th>
-                  <th className="py-3 px-2.5 text-center">Presença / Faltas</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/[0.05]">
-                {onibusFretadoRows.map(({ student, cls, m }, rIdx) => {
-                  const isEditingRoute = editingStudentId === `route-${student.id}`;
-                  return (
-                    <tr
-                      key={`${cls.id}-${student.id}-${rIdx}`}
-                      onClick={() =>
-                        onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
-                      }
-                      className="hover:bg-[#f8fafc] cursor-pointer transition-colors"
-                    >
-                      <td className="py-2.5 px-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0b3b49] text-white font-mono font-extrabold text-[0.72rem]">
-                          {cls.turmaAbrev || cls.name} • Nº {student.number.toString().padStart(2, '0')}
-                        </span>
-                        <span className="block text-[0.66rem] font-semibold text-[#64748b] mt-0.5">
-                          {cls.shift.replace('Turno ', '')} · {cls.room}
-                        </span>
-                      </td>
-
-                      <td className="py-2.5 px-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <StudentAvatar
-                              student={student}
-                              size="sm"
-                              expandableOnClick={true}
-                              onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
-                            />
-                            <div className="min-w-0">
-                              <span className="font-extrabold text-[#0f172a] block truncate">
-                                {student.name}
-                              </span>
-                              <span className="font-mono text-[0.68rem] text-[#64748b]">
-                                RA {student.ra}-{student.digRa}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Único Hyperlink: Ficha Informativa Escaneada em PDF do Drive */}
-                          <a
-                            href={
-                              student.fichaPdfDriveUrl ||
-                              (student.fichaPdfDriveId
-                                ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                                : `#doc-${student.id}`)
-                            }
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              onOpenStudentPdf(student, cls.name);
-                            }}
-                            title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                            className="doc-hyperlink px-2.5 py-1 rounded-xl bg-white hover:bg-[#0b3b49] text-[#0b3b49] hover:!text-white border border-black/[0.09] font-extrabold text-[0.68rem] flex items-center gap-1 shrink-0 transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">
-                              document_scanner
-                            </span>
-                            <span>Ficha (Drive)</span>
-                          </a>
-                        </div>
-                      </td>
-
-                      <td
-                        className="py-2.5 px-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {isEditingRoute ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="text"
-                              value={draftValue}
-                              onChange={(e) => setDraftValue(e.target.value)}
-                              placeholder="Ex: ROTA 01 - TERRA DA UVA"
-                              className="w-48 px-2 py-1 text-[0.75rem] bg-white border border-[#0284c7] rounded-lg focus:outline-none"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onUpdateStudentField(cls.id, {
-                                  ...student,
-                                  rotaOnibus: draftValue.trim() || undefined,
-                                });
-                                setEditingStudentId(null);
-                                showToast(`Rota de ônibus de ${student.name} atualizada!`);
-                              }}
-                              className="px-2 py-1 rounded-lg bg-[#0b3b49] text-white font-bold text-[0.7rem] cursor-pointer"
-                            >
-                              Salvar
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between gap-1.5">
-                            {student.rotaOnibus ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#f0f9ff] text-[#0369a1] border border-[#0284c7]/20 font-extrabold text-[0.72rem]">
-                                <span className="material-symbols-outlined text-[14px]">
-                                  directions_bus
-                                </span>
-                                <span>{student.rotaOnibus}</span>
-                              </span>
-                            ) : (
-                              <span className="text-[0.7rem] text-[#94a3b8] italic">
-                                Sem rota vinculada
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingStudentId(`route-${student.id}`);
-                                setDraftValue(
-                                  student.rotaOnibus ||
-                                    'ROTA 01 - RESIDENCIAL TERRA DA UVA / SANTOS DUMONT'
-                                );
-                              }}
-                              title="Editar ou vincular Rota do Ônibus Fretado"
-                              className="text-[#64748b] hover:text-[#0b3b49] p-1 rounded-lg hover:bg-black/5 cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">edit</span>
-                            </button>
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-2.5 px-3 text-[0.74rem]">
-                        <span className="font-semibold text-[#0f172a] block truncate max-w-[230px]">
-                          {student.logradouro || '—'}, {student.numeroResidencia || 'S/N'}
-                        </span>
-                        <span className="text-[0.68rem] text-[#475569] block">
-                          {student.bairro || 'Jundiaí'} • CEP {student.cep || '—'}
-                        </span>
-                      </td>
-
-                      <td className="py-2.5 px-3 text-[0.73rem]">
-                        <div className="truncate max-w-[210px]">
-                          <strong>Mãe:</strong> {student.filiacao1 || student.guardianName || '—'}
-                        </div>
-                        <div className="truncate max-w-[210px] text-[#475569]">
-                          <strong>Pai:</strong> {student.filiacao2 || '—'}
-                        </div>
-                      </td>
-
-                      <td className="py-2.5 px-2.5 font-mono text-[0.72rem] font-bold text-[#006644]">
-                        {student.telefones || student.guardianPhone || '—'}
-                      </td>
-
-                      <td className="py-2.5 px-2.5 text-center font-mono">
-                        <span className="px-2 py-0.5 rounded-lg bg-[#eaf6ef] text-[#006644] font-bold text-[0.74rem]">
-                          {m.frequenciaPercent}% ({m.presencas}d)
-                        </span>
-                        {m.faltas > 0 && (
-                          <span className="block text-[0.68rem] text-[#be123c] font-bold mt-0.5">
-                            {m.faltas} falta(s)
                           </span>
                         )}
                       </td>

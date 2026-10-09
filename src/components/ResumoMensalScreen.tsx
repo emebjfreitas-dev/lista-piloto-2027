@@ -19,6 +19,7 @@ interface ResumoMensalScreenProps {
   userRole?: UserRole;
   initialTab?: 'resumo_turma' | 'metricas_uso';
   onSelectClass: (cls: ClassGroup) => void;
+  onSaveNotes?: (notes: string) => void;
   onOpenMonthlyLaunchForClass?: (cls: ClassGroup) => void;
   onOpenReportPrint: () => void;
   onNavigateToSheet: () => void;
@@ -46,6 +47,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   userRole = 'admin',
   initialTab = 'resumo_turma',
   onSelectClass,
+  onSaveNotes,
   onOpenMonthlyLaunchForClass,
   onOpenReportPrint,
   onNavigateToSheet,
@@ -86,6 +88,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   const [pedagogicalNotes, setPedagogicalNotes] = useState(currentClass.pedagogicalNotes);
   const [showSaveFeedback, setShowSaveFeedback] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState('11h42');
+
+  React.useEffect(() => {
+    const m = getClassAttendanceMetrics(currentClass, OFFICIAL_OCTOBER_DAYS);
+    setAbsences(m.totalFaltasTurma);
+    setSavedAbsences(m.totalFaltasTurma);
+    setPedagogicalNotes(currentClass.pedagogicalNotes || '');
+  }, [currentClass.id, currentClass.pedagogicalNotes]);
 
   const TOTAL_POSSIBLE_ATTENDANCE =
     classMetrics.totalDiasMatriculadosTurma ||
@@ -1215,7 +1224,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               id="monthly-notes"
               rows={3}
               value={pedagogicalNotes}
-              onChange={(e) => setPedagogicalNotes(e.target.value)}
+              onChange={(e) => {
+                setPedagogicalNotes(e.target.value);
+                onSaveNotes?.(e.target.value);
+              }}
               placeholder="Escreva anotações importantes sobre o acompanhamento da turma..."
               className="w-full p-3.5 rounded-2xl bg-[#f5f5f7] text-[#1d1d1f] text-[0.92rem] focus:bg-white focus:outline-none resize-none leading-relaxed"
             />

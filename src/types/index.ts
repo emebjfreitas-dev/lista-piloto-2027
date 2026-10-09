@@ -295,7 +295,6 @@ export type ScreenType =
   | 'frequencia_mensal'
   | 'faltas_consecutivas'
   | 'bolsa_familia'
-  | 'onibus_fretado'
   | 'dias_letivos'
   | 'resumo'
   | 'planilha'

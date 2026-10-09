@@ -143,7 +143,9 @@ const writeSharedState = (patch: Partial<SharedSchoolState>): SharedSchoolState 
     updatedAtMs: Date.now(),
   };
   try {
-    fs.writeFileSync(STATE_FILE_PATH, JSON.stringify(next, null, 2), 'utf-8');
+    const tmpPath = `${STATE_FILE_PATH}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(next, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, STATE_FILE_PATH);
   } catch (err) {
     console.warn('Erro ao gravar shared_school_state_2027.json:', err);
   }
@@ -154,6 +156,13 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.disable('x-powered-by');
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+  });
   app.use(express.json({ limit: '50mb' }));
 
   // API: Obter estado compartilhado (Usuários Autorizados, Turmas, Estudantes, Fotos, PDFs Escaneados, Links Drive/Sheets e Logs)
