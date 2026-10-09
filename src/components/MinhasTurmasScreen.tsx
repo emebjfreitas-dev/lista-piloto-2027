@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { ClassGroup, UserRole, AttendanceWindowConfig } from '../types';
+import { ClassGroup, Student, UserRole, AttendanceWindowConfig } from '../types';
 import { evaluateAttendanceLaunchWindow } from '../services/db';
+import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
 
 interface MinhasTurmasScreenProps {
   classes: ClassGroup[];
@@ -17,6 +18,14 @@ interface MinhasTurmasScreenProps {
   onOpenConfigDaysModal?: () => void;
   onNavigateToSheet: () => void;
   onNavigateToAcessos?: () => void;
+  onSelectStudentForConsecutiveScreen?: (cls: ClassGroup, student: Student) => void;
+  onOpenStudentGrid?: (
+    student: Student,
+    classId: string,
+    className: string,
+    diasLetivosMes: number
+  ) => void;
+  onOpenStudentPdf?: (student: Student, className: string) => void;
 }
 
 export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
@@ -32,6 +41,9 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   onOpenNewClassModal,
   onOpenConfigDaysModal,
   onNavigateToAcessos,
+  onSelectStudentForConsecutiveScreen,
+  onOpenStudentGrid,
+  onOpenStudentPdf,
 }) => {
   const [selectedShift, setSelectedShift] = useState<'Todos' | 'Turno Manhã' | 'Turno Tarde'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
@@ -320,6 +332,15 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           </span>
         </div>
       )}
+
+      {/* Resumo de Faltas Críticas (Busca Ativa Escolar • Limiar de Faltas Consecutivas com Detalhes ao Clicar) */}
+      <ResumoFaltasCriticasCard
+        classes={filteredClasses}
+        userRole={userRole}
+        onSelectStudentForConsecutiveScreen={onSelectStudentForConsecutiveScreen}
+        onOpenStudentGrid={onOpenStudentGrid}
+        onOpenStudentPdf={onOpenStudentPdf}
+      />
 
       {/* Shift Selector & Search: Responsive Proportions on Mobile, Tablet & Desktop */}
       {userRole !== 'usuario' && (

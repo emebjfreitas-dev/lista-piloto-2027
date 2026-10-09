@@ -1180,6 +1180,22 @@ export default function App() {
             onOpenConfigDaysModal={() => setIsConfigDaysModalOpen(true)}
             onNavigateToSheet={() => setCurrentScreen('planilha')}
             onNavigateToAcessos={() => setCurrentScreen('usuarios_acesso')}
+            onSelectStudentForConsecutiveScreen={(cls) => {
+              setSelectedClass(cls);
+              setCurrentScreen('faltas_consecutivas');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onOpenStudentGrid={(student, classId, className, diasLetivosMes) =>
+              setGridModalData({
+                student,
+                classId,
+                className,
+                diasLetivosMes,
+              })
+            }
+            onOpenStudentPdf={(student, className) =>
+              setPdfModalData({ student, className })
+            }
           />
         )}
 
@@ -1224,6 +1240,10 @@ export default function App() {
             }}
             onNavigateToOnibusFretado={() => {
               setCurrentScreen('onibus_fretado');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigateToConsecutiveAbsences={() => {
+              setCurrentScreen('faltas_consecutivas');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateToSheet={() => setCurrentScreen('planilha')}

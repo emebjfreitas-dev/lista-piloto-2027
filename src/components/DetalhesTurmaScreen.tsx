@@ -15,6 +15,7 @@ import { getStudentAttendanceMetrics } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
 import { OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
+import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
 
 type ViewMode = 'grid' | 'compact' | 'table';
 type StatusFilter =
@@ -43,6 +44,7 @@ interface DetalhesTurmaScreenProps {
   onOpenStudentPdf?: (student: Student) => void;
   onNavigateToBolsaFamilia?: () => void;
   onNavigateToOnibusFretado?: () => void;
+  onNavigateToConsecutiveAbsences?: () => void;
   onNavigateToSheet: () => void;
   onBackToClasses: () => void;
 }
@@ -58,6 +60,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   onOpenStudentPdf,
   onNavigateToBolsaFamilia,
   onNavigateToOnibusFretado,
+  onNavigateToConsecutiveAbsences,
   onBackToClasses,
 }) => {
   const [searchStudent, setSearchStudent] = useState('');
@@ -622,6 +625,25 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
         )}
       </section>
+
+      {/* Resumo de Faltas Críticas da Turma (Alertas Visuais de Estudantes que Atingiram o Limiar de Faltas Consecutivas) */}
+      <ResumoFaltasCriticasCard
+        classes={[classGroup]}
+        userRole={userRole}
+        onSelectStudentForConsecutiveScreen={() => {
+          onNavigateToConsecutiveAbsences?.();
+        }}
+        onOpenStudentGrid={
+          onOpenStudentGrid
+            ? (student) => onOpenStudentGrid(student)
+            : undefined
+        }
+        onOpenStudentPdf={
+          onOpenStudentPdf
+            ? (student) => onOpenStudentPdf(student)
+            : undefined
+        }
+      />
 
       {/* Barra de Controles iOS: Busca + Filtros de Situação + Múltiplas Opções de Visualização */}
       <section className="bg-white/90 backdrop-blur-md rounded-2xl p-3.5 border border-black/[0.06] flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-2xs">
