@@ -1,12 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
-import {
   AuthorizedUser,
   ClassGroup,
   UserRole,
@@ -881,52 +874,64 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           {/* Lado Esquerdo: Donut Chart com Total Central */}
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full lg:w-auto">
             <div className="relative w-[176px] h-[176px] shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={roleDistributionData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={54}
-                    outerRadius={78}
-                    paddingAngle={4}
-                    dataKey="value"
-                    stroke="none"
-                    isAnimationActive={true}
+              {(() => {
+                const total = Math.max(
+                  1,
+                  roleDistributionData.reduce((acc, item) => acc + item.value, 0)
+                );
+                const radius = 64;
+                const circumference = 2 * Math.PI * radius;
+                let cumulativePercent = 0;
+
+                return (
+                  <svg
+                    viewBox="0 0 176 176"
+                    className="w-full h-full -rotate-90 transform overflow-visible"
                   >
-                    {roleDistributionData.map((entry) => (
-                      <Cell
-                        key={entry.id}
-                        fill={entry.color}
-                        className="cursor-pointer transition-opacity hover:opacity-85"
-                        onClick={() => {
-                          setActiveSubTab('contas_acesso');
-                          setRoleFilter((prev) => (prev === entry.id ? 'all' : entry.id));
-                        }}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any, _name: any, props: any) => {
-                      const payload = props?.payload;
-                      return [
-                        `${value} contas (${payload?.percentage || 0}%) • ${payload?.loginsCount || 0} logins`,
-                        payload?.name || '',
-                      ];
-                    }}
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.96)',
-                      borderRadius: '16px',
-                      border: 'none',
-                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.12)',
-                      fontSize: '0.76rem',
-                      fontWeight: 600,
-                      color: '#1d1d1f',
-                      padding: '8px 12px',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                    <circle
+                      cx="88"
+                      cy="88"
+                      r={radius}
+                      fill="transparent"
+                      stroke="#e5e7eb"
+                      strokeWidth="22"
+                    />
+                    {roleDistributionData.map((entry) => {
+                      const sliceFraction = entry.value / total;
+                      const strokeDasharray = `${Math.max(
+                        0,
+                        sliceFraction * circumference - 3
+                      )} ${circumference}`;
+                      const strokeDashoffset = -cumulativePercent * circumference;
+                      cumulativePercent += sliceFraction;
+
+                      return (
+                        <circle
+                          key={entry.id}
+                          cx="88"
+                          cy="88"
+                          r={radius}
+                          fill="transparent"
+                          stroke={entry.color}
+                          strokeWidth="22"
+                          strokeDasharray={strokeDasharray}
+                          strokeDashoffset={strokeDashoffset}
+                          strokeLinecap="butt"
+                          className="cursor-pointer transition-opacity hover:opacity-80"
+                          onClick={() => {
+                            setActiveSubTab('contas_acesso');
+                            setRoleFilter((prev) => (prev === entry.id ? 'all' : entry.id));
+                          }}
+                        >
+                          <title>
+                            {`${entry.name}: ${entry.value} contas (${entry.percentage}%) • ${entry.loginsCount} logins`}
+                          </title>
+                        </circle>
+                      );
+                    })}
+                  </svg>
+                );
+              })()}
 
               {/* Centro da Rosca */}
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
