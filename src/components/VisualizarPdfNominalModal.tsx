@@ -82,8 +82,11 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
   student,
   className,
   onSaveStudentPdfLink,
+  onSyncDrivePdfs,
 }) => {
-  // Sincronização silenciosa se o PDF já tiver sido descoberto em cache
+  const [isCheckingDrive, setIsCheckingDrive] = React.useState(false);
+
+  // Sincronização silenciosa se o PDF já tiver sido descoberto em cache ou acabou de subir no Drive
   useEffect(() => {
     if (!isOpen || !student) return;
     const cachedPdfs = getStoredDiscoveredNominalPdfs();
@@ -104,7 +107,16 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
           exactOrPrefix.webViewLink,
           exactOrPrefix.subfolderName
         );
+        return;
       }
+    }
+
+    // Se o aluno ainda estiver sem PDF vinculado ao abrir o modal, dispara uma verificação imediata na pasta do Drive
+    if (!student.fichaPdfDriveId && !student.fichaPdfDriveUrl && onSyncDrivePdfs) {
+      setIsCheckingDrive(true);
+      onSyncDrivePdfs()
+        .catch(() => {})
+        .finally(() => setIsCheckingDrive(false));
     }
   }, [isOpen, student?.id]);
 
@@ -159,7 +171,9 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               {student.name}
             </h3>
             <p className="text-[0.9rem] text-[#1d1d1f] font-medium leading-relaxed pt-1">
-              Professor(a), este(a) estudante ainda está <strong>sem Ficha Informativa</strong>. Por favor, <strong>peça para a família preencher</strong> e devolver a ficha na escola.
+              {isCheckingDrive
+                ? 'Verificando em tempo real na pasta da turma no Google Drive se o PDF acabou de ser enviado...'
+                : 'Professor(a), este(a) estudante ainda está sem Ficha Informativa. Por favor, peça para a família preencher e devolver a ficha na escola.'}
             </p>
           </div>
 

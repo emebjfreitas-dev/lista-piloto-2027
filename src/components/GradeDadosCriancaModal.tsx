@@ -170,7 +170,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     draft.complemento,
     draft.bairro ? `— ${draft.bairro}` : '',
     draft.cidade ? `${draft.cidade}/${draft.uf || 'SP'}` : '',
-    draft.cep ? `(CEP ${draft.cep})` : '',
+    draft.cep ? `· CEP ${draft.cep}` : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -182,25 +182,20 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl lg:max-w-5xl rounded-[28px] shadow-2xl border border-black/[0.08] overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-[#f5f5f7] w-full max-w-4xl lg:max-w-5xl rounded-[32px] shadow-2xl border border-black/[0.08] overflow-hidden flex flex-col max-h-[92vh]"
       >
         {/* Top Minimalist Apple Bar */}
-        <div className="px-5 py-3.5 bg-white/95 backdrop-blur-md border-b border-black/[0.06] flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="px-2.5 py-1 rounded-lg bg-[#1d1d1f] text-white font-mono font-bold text-[0.75rem]">
-              Nº {draft.number.toString().padStart(2, '0')}
+        <div className="px-5 sm:px-7 py-3.5 bg-white/95 backdrop-blur-md border-b border-black/[0.05] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="px-3 py-1 rounded-xl bg-[#1d1d1f] text-white font-extrabold text-[0.78rem] tabular-nums">
+              Chamada Nº {draft.number.toString().padStart(2, '0')}
             </span>
-            <span className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] text-[#1d1d1f] font-semibold text-[0.76rem] truncate">
+            <span className="px-3 py-1 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] font-bold text-[0.78rem] truncate">
               {className}
             </span>
-            {draft.ra && (
-              <span className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] text-[#6e6e73] font-mono font-semibold text-[0.74rem]">
-                RA {draft.ra}-{draft.digRa}/{draft.ufRa || 'SP'}
-              </span>
-            )}
             {savedBanner && (
-              <span className="px-2.5 py-1 rounded-lg bg-[#eaf6ef] text-[#005035] text-[0.74rem] font-bold">
-                ✓ Salvo
+              <span className="px-2.5 py-1 rounded-xl bg-[#eaf6ef] text-[#005035] text-[0.74rem] font-bold">
+                ✓ Atualizado
               </span>
             )}
           </div>
@@ -208,24 +203,25 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#f5f5f7] hover:bg-[#ff3b30] text-[#1d1d1f] hover:text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="h-9 px-3.5 rounded-full bg-[#f5f5f7] hover:bg-[#ff3b30] text-[#1d1d1f] hover:text-white font-bold text-[0.78rem] flex items-center gap-1 cursor-pointer transition-colors shrink-0"
             aria-label="Fechar perfil do estudante"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[18px]">close</span>
+            <span>Fechar</span>
           </button>
         </div>
 
-        {/* Main Scrollable Content: Giant Photo Left + Minimalist Profile Right */}
-        <div className="overflow-y-auto flex-1 p-5 sm:p-7 space-y-6 bg-[#fbfbfd]">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            {/* COLUNA ESQUERDA (5 cols): FOTO GIGANTE DO ESTUDANTE */}
-            <div className="md:col-span-5 flex flex-col items-center">
+        {/* Main Organic & Visual Profile Layout */}
+        <div className="overflow-y-auto flex-1 p-5 sm:p-7 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+            {/* COLUNA ESQUERDA (5 cols): RETRATO GIGANTE DO ESTUDANTE */}
+            <div className="md:col-span-5 flex flex-col">
               <div
                 onClick={() => {
                   if (hasPhoto) setIsLightboxOpen(true);
                   else if (onOpenPhotoModal) onOpenPhotoModal(draft);
                 }}
-                className="relative w-full aspect-[4/5] max-w-[320px] rounded-3xl overflow-hidden bg-gradient-to-br from-[#003440] to-[#005035] shadow-lg border border-black/[0.08] flex items-center justify-center group cursor-pointer"
+                className="relative w-full flex-1 min-h-[320px] sm:min-h-[380px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#1d1d1f] to-[#2c2c2e] shadow-md border border-black/[0.06] flex items-center justify-center group cursor-pointer"
               >
                 {hasPhoto ? (
                   <>
@@ -235,10 +231,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-103"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/75 via-black/30 to-transparent flex items-center justify-between text-white opacity-95">
-                      <span className="text-[0.72rem] font-semibold flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[16px]">zoom_in</span>
-                        Toque para tela cheia
+                    <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/35 to-transparent flex items-center justify-between text-white">
+                      <span className="text-[0.75rem] font-semibold flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[17px]">fullscreen</span>
+                        Ampliar foto
                       </span>
                       {onOpenPhotoModal && (
                         <button
@@ -247,21 +243,21 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                             e.stopPropagation();
                             onOpenPhotoModal(draft);
                           }}
-                          className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/35 backdrop-blur-md text-white text-[0.7rem] font-bold flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/35 backdrop-blur-md text-white text-[0.73rem] font-bold flex items-center gap-1.5 cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-[14px]">photo_camera</span>
-                          Trocar
+                          <span className="material-symbols-outlined text-[15px]">photo_camera</span>
+                          Trocar Foto
                         </button>
                       )}
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center p-6 text-center text-white">
-                    <span className="text-[4.2rem] font-extrabold tracking-tight leading-none opacity-90 select-none">
+                  <div className="flex flex-col items-center justify-center p-8 text-center text-white">
+                    <span className="text-[4.8rem] font-extrabold tracking-tight leading-none opacity-90 select-none">
                       {draft.initials}
                     </span>
-                    <span className="mt-3 text-[0.78rem] text-white/80 font-medium">
-                      Sem foto cadastrada
+                    <span className="mt-3 text-[0.82rem] text-white/75 font-medium">
+                      Estudante sem foto cadastrada
                     </span>
                     {onOpenPhotoModal && (
                       <button
@@ -270,9 +266,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           e.stopPropagation();
                           onOpenPhotoModal(draft);
                         }}
-                        className="mt-4 px-4 py-2 rounded-xl bg-white text-[#003440] hover:bg-[#eaf6ef] font-bold text-[0.78rem] flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                        className="mt-5 px-4 py-2.5 rounded-2xl bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] font-bold text-[0.8rem] flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[17px]">add_a_photo</span>
+                        <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
                         <span>Adicionar Foto</span>
                       </button>
                     )}
@@ -281,38 +277,67 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               </div>
             </div>
 
-            {/* COLUNA DIREITA (7 cols): DADOS MINIMALISTAS + BOTÃO MODERNO DE FICHA PDF */}
-            <div className="md:col-span-7 flex flex-col justify-between space-y-5">
-              {/* Nome e Situação */}
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                  <span className="px-2.5 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[0.7rem] uppercase tracking-wider">
-                    {draft.situacao || 'ATIVO'}
+            {/* COLUNA DIREITA (7 cols): COMPOSIÇÃO ORGÂNICA E VISUAL */}
+            <div className="md:col-span-7 flex flex-col justify-between space-y-4">
+              {/* 1. Identidade Principal + Pílulas Numéricas Ultra-Legíveis (Manrope Tabular) */}
+              <div className="bg-white rounded-[24px] p-5 border border-black/[0.05] shadow-2xs space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] font-bold text-[0.7rem] uppercase tracking-wider">
+                    {draft.situacao || 'MATRÍCULA ATIVA'}
                   </span>
-                  {draft.dataNascimento && (
-                    <span className="text-[0.78rem] font-medium text-[#6e6e73]">
-                      Nasc.: <strong className="text-[#1d1d1f]">{draft.dataNascimento}</strong>
-                      {draft.idade ? ` (${draft.idade})` : ''}
-                    </span>
-                  )}
                   {draft.deficiencia && (
-                    <span className="px-2.5 py-0.5 rounded-md bg-[#f5f3ff] text-[#5b21b6] font-bold text-[0.7rem]">
-                      AEE: {draft.deficiencia}
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#f5f3ff] text-[#5b21b6] font-bold text-[0.72rem]">
+                      AEE · {draft.deficiencia}
                     </span>
                   )}
                 </div>
 
-                <h1 className="text-[1.45rem] sm:text-[1.75rem] font-extrabold text-[#1d1d1f] tracking-tight leading-snug">
+                <h1 className="text-[1.45rem] sm:text-[1.7rem] font-extrabold text-[#1d1d1f] tracking-tight leading-tight">
                   {draft.name}
                 </h1>
+
+                {/* Cartões Visuais de Números-Chave (RA, Nascimento/Idade e Frequência) */}
+                <div className="grid grid-cols-3 gap-2.5 pt-1">
+                  <div className="rounded-2xl bg-[#f5f5f7] p-3">
+                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                      Registro (RA)
+                    </span>
+                    <span className="text-[0.98rem] sm:text-[1.06rem] font-extrabold text-[#1d1d1f] tabular-nums block mt-0.5">
+                      {draft.ra ? `${draft.ra}-${draft.digRa}` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl bg-[#f5f5f7] p-3">
+                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                      Nascimento
+                    </span>
+                    <span className="text-[0.95rem] sm:text-[1.02rem] font-extrabold text-[#1d1d1f] tabular-nums block mt-0.5">
+                      {draft.dataNascimento || '—'}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl bg-[#f5f5f7] p-3">
+                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                      Frequência Mês
+                    </span>
+                    <div className="flex items-baseline gap-1.5 mt-0.5">
+                      <span className="text-[1.02rem] sm:text-[1.1rem] font-extrabold text-[#005035] tabular-nums">
+                        {metrics.frequenciaPercent}%
+                      </span>
+                      <span className="text-[0.72rem] font-semibold text-[#6e6e73] tabular-nums">
+                        ({metrics.faltas} {metrics.faltas === 1 ? 'falta' : 'faltas'})
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* BOTÃO PRINCIPAL MODERNO E DE FÁCIL LOCALIZAÇÃO: ABRIR PDF DA FICHA INFORMATIVA */}
+              {/* 2. BOTÃO DE DESTAQUE MODERNO: ABRIR PDF DA FICHA INFORMATIVA */}
               {onOpenStudentPdf && (
                 <button
                   type="button"
                   onClick={() => onOpenStudentPdf(draft)}
-                  className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between gap-3.5 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
+                  className={`w-full p-4 rounded-[24px] border text-left flex items-center justify-between gap-3.5 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
                     hasPdf
                       ? 'bg-[#0071e3] hover:bg-[#005bb5] border-[#0071e3] text-white'
                       : 'bg-[#fff2f2] hover:bg-[#ffe5e5] border-[#ff3b30]/35 text-[#1d1d1f]'
@@ -320,10 +345,8 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                        hasPdf
-                          ? 'bg-white/20 text-white'
-                          : 'bg-[#ff3b30] text-white'
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                        hasPdf ? 'bg-white/20 text-white' : 'bg-[#ff3b30] text-white'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[26px]">
@@ -333,14 +356,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     <div className="min-w-0">
                       <span
                         className={`text-[0.68rem] font-bold uppercase tracking-wider block ${
-                          hasPdf ? 'text-white/80' : 'text-[#ff3b30]'
+                          hasPdf ? 'text-white/85' : 'text-[#ff3b30]'
                         }`}
                       >
                         {hasPdf
-                          ? 'Documento Oficial Escaneado · Google Drive'
+                          ? 'Ficha Informativa Escaneada · Google Drive'
                           : 'Documento Pendente na Pasta da Turma'}
                       </span>
-                      <span className="text-[1rem] sm:text-[1.08rem] font-extrabold block truncate mt-0.5">
+                      <span className="text-[1.02rem] sm:text-[1.1rem] font-extrabold block truncate mt-0.5">
                         {hasPdf
                           ? 'Abrir PDF da Ficha Informativa'
                           : 'Sem Ficha PDF · Solicitar à Família'}
@@ -349,49 +372,62 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   </div>
 
                   <div
-                    className={`px-3.5 py-2 rounded-xl font-bold text-[0.78rem] flex items-center gap-1 shrink-0 ${
-                      hasPdf
-                        ? 'bg-white text-[#0071e3]'
-                        : 'bg-[#ff3b30] text-white'
+                    className={`px-4 py-2 rounded-xl font-bold text-[0.8rem] flex items-center gap-1.5 shrink-0 ${
+                      hasPdf ? 'bg-white text-[#0071e3]' : 'bg-[#ff3b30] text-white'
                     }`}
                   >
-                    <span>{hasPdf ? 'Visualizar PDF' : 'Ver Aviso'}</span>
+                    <span>{hasPdf ? 'Abrir PDF' : 'Ver Aviso'}</span>
                     <span className="material-symbols-outlined text-[17px]">open_in_new</span>
                   </div>
                 </button>
               )}
 
-              {/* Resumo Minimalista deDados Essenciais (Filiação, WhatsApp, Endereço, Frequência Somente Leitura) */}
-              <div className="bg-white rounded-2xl border border-black/[0.06] divide-y divide-black/[0.05]">
-                {/* Filiação */}
-                <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <span className="text-[0.68rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                      Mãe / Filiação 1
-                    </span>
-                    <p className="text-[0.88rem] font-bold text-[#1d1d1f] mt-0.5">
-                      {draft.filiacao1 || draft.guardianName || 'Não informado'}
-                    </p>
+              {/* 3. Cartão Orgânico da Família, WhatsApp e Endereço */}
+              <div className="bg-white rounded-[24px] p-5 border border-black/[0.05] shadow-2xs space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="material-symbols-outlined text-[18px]">person</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                        Mãe / Filiação 1
+                      </span>
+                      <p className="text-[0.9rem] font-bold text-[#1d1d1f] leading-snug mt-0.5">
+                        {draft.filiacao1 || draft.guardianName || 'Não informado'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[0.68rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                      Pai / Filiação 2
-                    </span>
-                    <p className="text-[0.88rem] font-bold text-[#1d1d1f] mt-0.5">
-                      {draft.filiacao2 || 'Não informado'}
-                    </p>
+
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="material-symbols-outlined text-[18px]">person</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                        Pai / Filiação 2
+                      </span>
+                      <p className="text-[0.9rem] font-bold text-[#1d1d1f] leading-snug mt-0.5">
+                        {draft.filiacao2 || 'Não informado'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Contatos / WhatsApp Direto */}
-                <div className="p-3.5 flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="text-[0.68rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                      Telefones & WhatsApp da Família
-                    </span>
-                    <p className="text-[0.84rem] font-mono font-semibold text-[#1d1d1f] mt-0.5">
-                      {draft.telefones || draft.guardianPhone || 'Sem telefone cadastrado'}
-                    </p>
+                {/* Linha de Telefones com Botões Diretos de WhatsApp */}
+                <div className="pt-3 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#25D366]/15 text-[#128C7E] flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[18px]">call</span>
+                    </div>
+                    <div>
+                      <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                        Contato Rápido (WhatsApp)
+                      </span>
+                      <span className="text-[0.9rem] font-bold text-[#1d1d1f] tabular-nums">
+                        {draft.telefones || draft.guardianPhone || 'Sem telefone cadastrado'}
+                      </span>
+                    </div>
                   </div>
 
                   {whatsappLinks.length > 0 && (
@@ -402,78 +438,56 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           href={ph.waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366] text-[#075E54] hover:text-white font-mono font-bold text-[0.76rem] flex items-center gap-1.5 transition-colors cursor-pointer"
+                          className="px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold text-[0.78rem] tabular-nums flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                         >
                           <span className="material-symbols-outlined text-[16px]">chat</span>
-                          <span>{ph.display}</span>
+                          <span>Chamar {ph.display}</span>
                         </a>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Endereço e Transporte */}
+                {/* Endereço e Rota de Ônibus */}
                 {(fullAddress || draft.rotaOnibus) && (
-                  <div className="p-3.5 flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[0.68rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                        Endereço Residencial
-                      </span>
-                      <p className="text-[0.82rem] font-medium text-[#1d1d1f] mt-0.5">
-                        {fullAddress || '—'}
-                      </p>
+                  <div className="pt-3 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[18px]">location_on</span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                          Endereço Residencial
+                        </span>
+                        <p className="text-[0.83rem] font-semibold text-[#1d1d1f] leading-snug mt-0.5">
+                          {fullAddress || '—'}
+                        </p>
+                      </div>
                     </div>
+
                     {draft.rotaOnibus && (
-                      <span className="px-2.5 py-1 rounded-lg bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.72rem] shrink-0">
+                      <span className="px-3 py-1 rounded-xl bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.74rem] tabular-nums shrink-0">
                         🚌 {draft.rotaOnibus}
                       </span>
                     )}
                   </div>
                 )}
-
-                {/* Resumo Discreto de Frequência (Sem botões de alterar faltas aqui) */}
-                <div className="p-3.5 flex items-center justify-between gap-3 bg-[#f9fafb]">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                        Presença no Mês
-                      </span>
-                      <span className="text-[0.95rem] font-extrabold text-[#005035] tabular-nums">
-                        {metrics.frequenciaPercent}% ({metrics.presencas}/{metrics.diasLetivosMatriculados}d)
-                      </span>
-                    </div>
-                    <div className="h-6 w-px bg-black/[0.08]" />
-                    <div>
-                      <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                        Faltas Registradas
-                      </span>
-                      <span className="text-[0.95rem] font-extrabold text-[#1d1d1f] tabular-nums">
-                        {metrics.faltas} {metrics.faltas === 1 ? 'falta' : 'faltas'}
-                        {metrics.atestados > 0 ? ` (${metrics.atestados} atest.)` : ''}
-                      </span>
-                    </div>
-                  </div>
-
-                  <span className="text-[0.7rem] font-medium text-[#86868b] hidden sm:inline">
-                    Lançamento na aba Lançar Faltas
-                  </span>
-                </div>
               </div>
 
-              {/* Botão Discreto para Expandir Todos os 48 Campos SED se precisar consultar/editar */}
-              <div className="flex items-center justify-between pt-1">
+              {/* Ação Discreta para Expandir os 48 Campos SED */}
+              <div className="flex items-center justify-between pt-0.5">
                 <button
                   type="button"
                   onClick={() => setShowAllSedFields((prev) => !prev)}
-                  className="px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.78rem] flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-3.5 py-2 rounded-xl bg-white hover:bg-[#e8e8ed] text-[#6e6e73] hover:text-[#1d1d1f] border border-black/[0.05] font-semibold text-[0.76rem] flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <span className="material-symbols-outlined text-[18px]">
                     {showAllSedFields ? 'expand_less' : 'expand_more'}
                   </span>
                   <span>
                     {showAllSedFields
-                      ? 'Ocultar Ficha Técnica Completa (48 campos SED)'
-                      : 'Ver Todos os 48 Campos Cadastrais SED'}
+                      ? 'Ocultar Ficha Cadastral Completa (48 campos SED)'
+                      : 'Expandir Ficha Cadastral Completa (48 campos SED)'}
                   </span>
                 </button>
 
@@ -481,10 +495,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   <button
                     type="button"
                     onClick={handleSaveAll}
-                    className="px-4 py-2 rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.8rem] flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-bold text-[0.8rem] flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span className="material-symbols-outlined text-[17px]">save</span>
-                    <span>Salvar Dados</span>
+                    <span>Salvar Alterações</span>
                   </button>
                 )}
               </div>
@@ -493,13 +507,13 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
           {/* SEÇÃO EXPANSÍVEL OPCIONAL: GRADE DE 48 CAMPOS SED */}
           {showAllSedFields && (
-            <section className="bg-white rounded-2xl p-4 shadow-2xs border border-black/[0.06] space-y-3 animate-gentle-fade">
+            <section className="bg-white rounded-[24px] p-5 shadow-2xs border border-black/[0.06] space-y-3.5 animate-gentle-fade">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 className="text-[0.9rem] font-bold text-[#1d1d1f] flex items-center gap-1.5">
+                <h3 className="text-[0.92rem] font-bold text-[#1d1d1f] flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[19px] text-[#0071e3]">
                     grid_on
                   </span>
-                  <span>Ficha Cadastral Completa (48 Campos SED)</span>
+                  <span>Todos os 48 Campos Cadastrais SED</span>
                 </h3>
 
                 <input
@@ -507,7 +521,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   value={searchField}
                   onChange={(e) => setSearchField(e.target.value)}
                   placeholder="Filtrar campo (ex: CPF, SUS, CEP)..."
-                  className="px-3 py-1.5 bg-[#f5f5f7] rounded-xl border border-black/[0.08] text-[0.8rem] font-medium focus:bg-white focus:outline-none"
+                  className="px-3.5 py-1.5 bg-[#f5f5f7] rounded-xl border border-black/[0.08] text-[0.8rem] font-medium focus:bg-white focus:outline-none"
                 />
               </div>
 
@@ -581,11 +595,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') setEditingKey(null);
                           }}
-                          className="w-full mt-1 px-2 py-1 bg-[#f5f5f7] text-[#1d1d1f] font-semibold text-[0.84rem] rounded-lg border border-[#0071e3] focus:outline-none"
+                          className="w-full mt-1 px-2 py-1 bg-[#f5f5f7] text-[#1d1d1f] font-semibold text-[0.84rem] tabular-nums rounded-lg border border-[#0071e3] focus:outline-none"
                         />
                       ) : (
                         <p
-                          className={`text-[0.84rem] font-semibold mt-0.5 break-words ${
+                          className={`text-[0.84rem] font-semibold tabular-nums mt-0.5 break-words ${
                             displayVal === '—' ? 'text-[#c7c7cc] font-normal' : 'text-[#1d1d1f]'
                           }`}
                         >

@@ -22,13 +22,14 @@
 
     --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
     --font-display: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-mono: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
   html,
   html[data-font] {
     --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
     --font-display: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
     letter-spacing: -0.012em;
   }
 
@@ -77,9 +78,10 @@
   .tabular-nums,
   code,
   pre {
-    font-family: var(--font-mono) !important;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+    font-family: var(--font-sans) !important;
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1, "zero" 0;
+    letter-spacing: -0.01em;
   }
 
   /* Ultra-Crisp High-Performance Border & Outline Suppression (Zero Heavy Borders) */
