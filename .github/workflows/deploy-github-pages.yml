@@ -26,15 +26,17 @@ jobs:
       - name: 1. Checkout do Código
         uses: actions/checkout@v4
 
-      - name: 2. Configurar Node.js 20
+      - name: 2. Configurar Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: 3. Instalar Dependências
         run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: 4. Compilar Aplicativo (Vite Build)
+        env:
+          VITE_CONFIG_NATIVE_IGNORE_WARNING: 'true'
         run: npm run build
 
       - name: 5. Garantir Fallback SPA (404.html) e Remover CNAME antigo
