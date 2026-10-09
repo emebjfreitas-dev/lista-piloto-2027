@@ -1,15 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  ReferenceLine,
-  CartesianGrid,
-} from 'recharts';
 import { ClassGroup, Student, UserRole } from '../types';
 import { MONTHLY_SCHOOL_DAYS_2027 } from '../data/mockData';
 import { isStudentEducacaoInfantil } from '../utils/attendanceRules';
@@ -591,83 +580,105 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </p>
           </div>
 
-          <div className="w-full h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={powerBiData.classBars}
-                margin={{ top: 10, right: 8, left: -24, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="shortName"
-                  tick={{ fontSize: 11, fontWeight: 700, fill: '#0f172a' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                  axisLine={false}
-                  tickLine={false}
-                  unit="%"
-                />
-                <ReferenceLine
-                  y={85}
-                  stroke="#0f172a"
-                  strokeDasharray="4 4"
-                  strokeWidth={1.5}
-                />
-                <Tooltip
-                  cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const d = payload[0].payload;
-                    return (
-                      <div className="bg-[#0f172a] text-white px-3.5 py-2.5 rounded-xl shadow-lg text-[0.74rem] space-y-0.5">
-                        <p className="font-bold">
-                          Turma {d.className} ({d.shift}) — {d.frequencyRate}%
-                        </p>
-                        <p className="text-white/80">
-                          Faltas: {d.totalFaltas} ({d.totalAtestados} c/ atestado · {d.totalSemAtestado} s/ atestado)
-                        </p>
-                        <p className="text-white/80">
-                          Abaixo da meta (&lt;{d.minLegalPercent}%): {d.belowLegalCount} aluno(s)
-                        </p>
-                      </div>
-                    );
-                  }}
-                />
-                <Bar
-                  dataKey="frequencyRate"
-                  radius={[6, 6, 2, 2]}
-                  maxBarSize={32}
-                  className="cursor-pointer"
-                  onClick={(barData: any) => {
-                    const clickedId = barData?.classId || barData?.payload?.classId;
-                    const clickedCls = barData?.clsRef || barData?.payload?.clsRef;
-                    if (clickedId) {
-                      setScopeFilter((prev) =>
-                        prev === clickedId ? 'all_classes' : clickedId
-                      );
-                      if (clickedCls) onSelectClass(clickedCls);
-                    }
-                  }}
+          <div className="w-full h-[250px] relative pt-5 pb-7 px-2 flex flex-col justify-end select-none">
+            {/* Grade de Fundo e Eixo Y (0%, 25%, 50%, 75%, 100%) */}
+            <div className="absolute inset-x-2 top-5 bottom-7 pointer-events-none">
+              {[100, 75, 50, 25, 0].map((val) => (
+                <div
+                  key={val}
+                  className="absolute left-0 right-0 flex items-center gap-2"
+                  style={{ bottom: `${val}%`, transform: 'translateY(50%)' }}
                 >
-                  {powerBiData.classBars.map((entry, idx) => (
-                    <Cell
-                      key={`bar-${idx}`}
-                      fill={
-                        entry.frequencyRate >= 85
-                          ? '#006644'
-                          : entry.frequencyRate >= entry.minLegalPercent
-                          ? '#d97706'
-                          : '#be123c'
-                      }
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                  <span className="w-7 text-right text-[10px] font-semibold text-[#64748b] tabular-nums">
+                    {val}%
+                  </span>
+                  <div className="flex-1 border-t border-dashed border-[#e2e8f0]" />
+                </div>
+              ))}
+
+              {/* Linha de Referência da Meta Escolar (85%) */}
+              <div
+                className="absolute left-9 right-0 border-t-[1.5px] border-dashed border-[#0f172a] z-10 flex items-center justify-end"
+                style={{ bottom: '85%' }}
+              >
+                <span className="bg-[#0f172a] text-white text-[9px] font-bold px-1.5 py-0.5 rounded -mt-4 mr-1 shadow-xs">
+                  Meta 85%
+                </span>
+              </div>
+            </div>
+
+            {/* Colunas Interativas por Turma */}
+            <div className="relative z-20 pl-9 pr-1 h-full flex items-end justify-around gap-1.5 sm:gap-2.5">
+              {powerBiData.classBars.map((entry) => {
+                const isSelected = scopeFilter === entry.classId;
+                const barColor =
+                  entry.frequencyRate >= 85
+                    ? '#006644'
+                    : entry.frequencyRate >= entry.minLegalPercent
+                    ? '#d97706'
+                    : '#be123c';
+
+                return (
+                  <button
+                    key={entry.classId}
+                    type="button"
+                    onClick={() => {
+                      setScopeFilter((prev) =>
+                        prev === entry.classId ? 'all_classes' : entry.classId
+                      );
+                      onSelectClass(entry.clsRef);
+                    }}
+                    className={`group relative flex-1 h-full flex flex-col justify-end items-center focus:outline-none ${
+                      scopeFilter !== 'all_classes' && !isSelected
+                        ? 'opacity-45 hover:opacity-90'
+                        : 'opacity-100'
+                    } transition-opacity`}
+                    title={`Turma ${entry.className} (${entry.shift}): ${entry.frequencyRate}% • Faltas: ${entry.totalFaltas} (${entry.totalAtestados} c/ atestado, ${entry.totalSemAtestado} s/ atestado)`}
+                  >
+                    {/* Tooltip flutuante no hover */}
+                    <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-30 w-max max-w-[210px] bg-[#0f172a] text-white px-3 py-2 rounded-xl shadow-lg text-left text-[0.7rem] space-y-0.5">
+                      <p className="font-bold">
+                        Turma {entry.className} ({entry.shift}) — {entry.frequencyRate}%
+                      </p>
+                      <p className="text-white/80">
+                        Faltas: {entry.totalFaltas} ({entry.totalAtestados} c/ atest. ·{' '}
+                        {entry.totalSemAtestado} s/ atest.)
+                      </p>
+                      <p className="text-white/80">
+                        Abaixo da meta (&lt;{entry.minLegalPercent}%): {entry.belowLegalCount}
+                      </p>
+                    </div>
+
+                    {/* Rótulo de percentual no topo da barra */}
+                    <span className="text-[10px] font-extrabold text-[#0f172a] tabular-nums mb-1">
+                      {entry.frequencyRate}%
+                    </span>
+
+                    {/* Barra proporcional */}
+                    <div className="w-full max-w-[34px] h-full flex items-end justify-center">
+                      <div
+                        className={`w-full rounded-t-md transition-all duration-300 group-hover:brightness-110 ${
+                          isSelected ? 'ring-2 ring-[#0f172a] ring-offset-1' : ''
+                        }`}
+                        style={{
+                          height: `${Math.max(6, Math.min(100, entry.frequencyRate))}%`,
+                          backgroundColor: barColor,
+                        }}
+                      />
+                    </div>
+
+                    {/* Rótulo do eixo X (Turma) */}
+                    <span
+                      className={`absolute -bottom-6 text-[10px] font-bold truncate max-w-[54px] ${
+                        isSelected ? 'text-[#006644] underline' : 'text-[#0f172a]'
+                      }`}
+                    >
+                      {entry.shortName}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-black/[0.05] text-[0.7rem] font-semibold text-[#64748b]">
