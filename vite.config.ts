@@ -1,22 +1,48 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+
+function resolveModuleDir(pkgName: string): string {
+  try {
+    const pkgJsonPath = require.resolve(`${pkgName}/package.json`, { paths: [__dirname] });
+    return path.dirname(pkgJsonPath);
+  } catch {
+    const fallback = path.resolve(__dirname, 'node_modules', pkgName);
+    return fs.existsSync(fallback) ? fallback : pkgName;
+  }
+}
+
+const reactIsPath = resolveModuleDir('react-is');
+const rechartsPath = resolveModuleDir('recharts');
 
 export default defineConfig(() => {
   return {
     base: './',
     plugins: [react(), tailwindcss()],
     resolve: {
+      dedupe: ['react', 'react-dom', 'react-is', 'recharts'],
       alias: {
         '@': path.resolve(__dirname, '.'),
+        'react-is': reactIsPath,
+        recharts: rechartsPath,
       },
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-is', 'recharts'],
     },
     build: {
       chunkSizeWarningLimit: 3000,
+      commonjsOptions: {
+        include: [/react-is/, /recharts/, /node_modules/],
+        transformMixedEsModules: true,
+      },
       rollupOptions: {
         output: {
           manualChunks(id: string) {
@@ -47,3 +73,4 @@ export default defineConfig(() => {
     },
   };
 });
+

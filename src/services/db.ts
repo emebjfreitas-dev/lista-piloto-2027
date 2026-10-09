@@ -14,7 +14,12 @@ import {
   INITIAL_AUTHORIZED_USERS,
   INSTITUTIONAL_EMAIL_DOMAIN,
 } from '../data/mockData';
-import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils/attendanceRules';
+import {
+  getStudentAttendanceMetrics,
+  getClassAttendanceMetrics,
+  getStudentBimesterReport,
+  OFFICIAL_BIMESTERS_2027,
+} from '../utils/attendanceRules';
 import {
   saveClassesToFirestoreCloud,
   saveConfigMetaToFirestoreCloud,
@@ -1406,7 +1411,7 @@ export const downloadSpreadsheetXLSX = (
         'EMAIL MUNICIPAL': s.emailMunicipal || '',
         'ROTA DE ÔNIBUS': s.rotaOnibus || '',
         'SUCESSÃO ESCOLAR': s.sucessaoEscolar || '',
-        // Colunas de Controle de Frequência pelo Recorte da Matrícula no Mês
+        // Colunas de Controle de Frequência pelo Recorte da Matrícula no Mês + Vínculos Google Drive
         'DIAS LETIVOS DO MÊS': m.diasLetivosMes,
         'DIAS LETIVOS NO RECORTE DA MATRÍCULA': m.diasLetivosMatriculados,
         'DETALHE DO RECORTE': m.recorteLabel,
@@ -1417,6 +1422,12 @@ export const downloadSpreadsheetXLSX = (
         'QTD FALTAS SEM ATESTADO': faltasSemAtestado,
         'QTD PRESENÇAS NO PERÍODO': m.presencas,
         '% FREQUÊNCIA NO RECORTE': `${m.frequenciaPercent}%`,
+        'LINK FOTO GOOGLE DRIVE': s.photoDriveUrl || '',
+        'ID FOTO DRIVE': s.photoDriveId || '',
+        'VÍNCULO FOTO': s.photoManualLink ? 'MANUAL' : 'AUTO',
+        'ID FICHA PDF DRIVE': s.fichaPdfDriveId || '',
+        'LINK FICHA PDF DRIVE': s.fichaPdfDriveUrl || '',
+        'SUBPASTA FICHA PDF': s.fichaPdfSubfolder || '',
         'ATESTADO / ANOTAÇÕES': s.notes || '',
       });
     });
@@ -1425,7 +1436,125 @@ export const downloadSpreadsheetXLSX = (
   const wsSed = XLSX.utils.json_to_sheet(rowsSedFrequencia);
   XLSX.utils.book_append_sheet(wb, wsSed, 'SED_Matrículas_e_Frequência');
 
-  // Tab 4: Dias Letivos por Mês e Calendário SME Jundiaí 2027
+  // Tab 4: Busca Ativa — Faltas Consecutivas (3+ dias seguidos)
+  const rowsBuscaAtiva: any[] = [];
+  classes.forEach((cls) => {
+    const periodo = cls.shift.replace('Turno ', '').toUpperCase();
+    cls.students.forEach((s) => {
+      const alert = s.consecutiveAbsenceAlert;
+      if (!alert) return;
+      const occurrences =
+        alert.occurrences && alert.occurrences.length > 0
+          ? alert.occurrences
+          : alert.active || (alert.selectedDates && alert.selectedDates.length > 0) || alert.familyFeedback
+          ? [
+              {
+                id: `${s.id}_occ_1`,
+                sequenceNumber: 1,
+                selectedDates: alert.selectedDates || [],
+                reportedAt: alert.reportedAt || '',
+                reportedByTeacher: alert.reportedByTeacher || cls.teacherName || 'PEB I',
+                familyFeedback: alert.familyFeedback || '',
+                feedbackUpdatedAt: alert.feedbackUpdatedAt || '',
+              },
+            ]
+          : [];
+      occurrences.forEach((occ, idx) => {
+        const datesList = occ.selectedDates || [];
+        if (datesList.length === 0 && !occ.familyFeedback) return;
+        rowsBuscaAtiva.push({
+          'TURMA': cls.name,
+          'PERÍODO': periodo,
+          'PROFESSOR(A) PEB I': occ.reportedByTeacher || cls.teacherName || 'PEB I',
+          'Nº CHAMADA': s.number,
+          'ESTUDANTE': s.name,
+          'RA': s.ra ? `${s.ra}-${s.digRa || ''}` : '',
+          'DIAS DE FALTA CONSECUTIVA': datesList.join(', '),
+          'QTD DIAS SEGUIDOS': datesList.length,
+          'DATA DO AVISO': occ.reportedAt || '',
+          'RESPONSÁVEL': s.filiacao1 || s.guardianName || '',
+          'TELEFONE / WHATSAPP': s.telefones || s.guardianPhone || '',
+          'DEVOLUTIVA DA SECRETARIA / FAMÍLIA': occ.familyFeedback || '',
+          'DATA DA DEVOLUTIVA': occ.feedbackUpdatedAt || '',
+          'SEQUÊNCIA NO ANO': `${occ.sequenceNumber || idx + 1}ª Ocorrência`,
+        });
+      });
+    });
+  });
+  if (rowsBuscaAtiva.length > 0) {
+    const wsBusca = XLSX.utils.json_to_sheet(rowsBuscaAtiva);
+    XLSX.utils.book_append_sheet(wb, wsBusca, 'Busca_Ativa_Consecutivas');
+  }
+
+  // Tab 5: Bolsa Família & Controle Bimestral LDB (Fev+Mar a Out+Nov 2027)
+  const bimesters = OFFICIAL_BIMESTERS_2027.filter((b) => b.id !== 'anual');
+  const allEntries: Array<{ cls: ClassGroup; student: Student }> = [];
+  classes.forEach((cls) =>
+    cls.students.forEach((student) => allEntries.push({ cls, student }))
+  );
+  allEntries.sort((a, b) =>
+    a.student.name.localeCompare(b.student.name, 'pt-BR', { sensitivity: 'base' })
+  );
+  const rowsBolsaBimestral = allEntries.map(({ cls, student }) => {
+    const annualRep = getStudentBimesterReport(student, cls, 'anual');
+    const rowObj: Record<string, any> = {
+      'SEGMENTO': annualRep.isEducacaoInfantil ? 'EDUCAÇÃO INFANTIL' : 'ENSINO FUNDAMENTAL',
+      'TURMA': cls.name,
+      'PERÍODO': annualRep.shift,
+      'Nº CHAMADA': student.number,
+      'ESTUDANTE': student.name,
+      'NIS (BOLSA FAMÍLIA)': student.nis || '—',
+      'RA OFICIAL': student.ra ? `${student.ra}-${student.digRa || ''}` : '',
+      'META MÍNIMA LDB': `${annualRep.minLegalPresencePercent}%`,
+    };
+    bimesters.forEach((b) => {
+      const rep = getStudentBimesterReport(student, cls, b.id);
+      rowObj[b.shortLabel] = `${rep.frequenciaBimestrePercent}%`;
+    });
+    rowObj['TOTAL FALTAS ANO'] = annualRep.totalFaltasBimestre;
+    rowObj['TOTAL ATESTADOS ANO'] = annualRep.totalAtestadosBimestre;
+    rowObj['POSSUI ATESTADO?'] =
+      annualRep.totalAtestadosBimestre > 0
+        ? `SIM (${annualRep.totalAtestadosBimestre})`
+        : 'NÃO';
+    rowObj['% PRESENÇA CONSOLIDADA'] = `${annualRep.frequenciaBimestrePercent}%`;
+    rowObj['STATUS META'] = annualRep.isBelowLegalThresholdBimestre
+      ? `ABAIXO DA META (<${annualRep.minLegalPresencePercent}%)`
+      : `DENTRO DA META (≥${annualRep.minLegalPresencePercent}%)`;
+    rowObj['PROVIDÊNCIA MEC'] = annualRep.bolsaFamiliaMotivoPadrao;
+    return rowObj;
+  });
+  const wsBolsaBim = XLSX.utils.json_to_sheet(rowsBolsaBimestral);
+  XLSX.utils.book_append_sheet(wb, wsBolsaBim, 'Bolsa_Familia_Bimestral');
+
+  // Tab 6: Ônibus Fretado 2027
+  const rowsOnibus: any[] = [];
+  let seqBus = 1;
+  classes.forEach((cls) => {
+    const periodo = cls.shift.replace('Turno ', '').toUpperCase();
+    cls.students.forEach((s) => {
+      const rota = (s.rotaOnibus || '').trim();
+      if (!rota) return;
+      rowsOnibus.push({
+        'Nº': seqBus++,
+        'TURMA': cls.name,
+        'PERÍODO': periodo,
+        'Nº CHAMADA': s.number,
+        'ESTUDANTE': s.name,
+        'RA': s.ra ? `${s.ra}-${s.digRa || ''}` : '',
+        'ROTA DO ÔNIBUS FRETADO': rota,
+        'BAIRRO': s.bairro || '',
+        'TELEFONE / WHATSAPP': s.telefones || s.guardianPhone || '',
+        'RESPONSÁVEL': s.filiacao1 || s.guardianName || '',
+      });
+    });
+  });
+  if (rowsOnibus.length > 0) {
+    const wsOnibus = XLSX.utils.json_to_sheet(rowsOnibus);
+    XLSX.utils.book_append_sheet(wb, wsOnibus, 'Onibus_Fretado_2027');
+  }
+
+  // Tab 7: Dias Letivos por Mês e Calendário SME Jundiaí 2027
   const rowsCalendario = calendar.map((d) => ({
     'Data': d.date,
     'Dia da Semana': d.dayOfWeek,
@@ -1446,7 +1575,7 @@ export const downloadSpreadsheetXLSX = (
   const wsCalendario = XLSX.utils.json_to_sheet(rowsCalendario);
   XLSX.utils.book_append_sheet(wb, wsCalendario, 'Dias_Letivos_SME_2027');
 
-  // Tab 5: Dias Letivos por Turma e Mês (Configuração Mensal do Administrador 2027)
+  // Tab 8: Dias Letivos por Turma e Mês (Configuração Mensal do Administrador 2027)
   const rowsMesesPorTurma = classes.map((c) => {
     const row: Record<string, any> = {
       'Segmento': isEducacaoInfantilClass(c) ? 'EDUCAÇÃO INFANTIL' : 'ENSINO FUNDAMENTAL',
@@ -1469,7 +1598,7 @@ export const downloadSpreadsheetXLSX = (
   const wsMeses = XLSX.utils.json_to_sheet(rowsMesesPorTurma);
   XLSX.utils.book_append_sheet(wb, wsMeses, 'Dias_Letivos_Turma_Mês');
 
-  // Tab 6: Resumo das 40 Turmas (Ano 2027)
+  // Tab 9: Resumo das 39 Turmas (Ano 2027)
   const rowsTurmas = classes.map((c) => {
     const cm = getClassAttendanceMetrics(c, calendar);
     const percentFaltasTurma =
@@ -1502,7 +1631,7 @@ export const downloadSpreadsheetXLSX = (
   const wsTurmas = XLSX.utils.json_to_sheet(rowsTurmas);
   XLSX.utils.book_append_sheet(wb, wsTurmas, 'Turmas_Salas_2027');
 
-  // ABA 6: USUÁRIOS CADASTRADOS (@educacao.jundiai.sp.gov.br)
+  // Tab 10: USUÁRIOS CADASTRADOS (@educacao.jundiai.sp.gov.br)
   const authorizedUsers = getStoredAuthorizedUsers();
   const rowsUsuarios = authorizedUsers.map((u, idx) => ({
     'Nº': idx + 1,
@@ -1526,7 +1655,7 @@ export const downloadSpreadsheetXLSX = (
   const wsUsuarios = XLSX.utils.json_to_sheet(rowsUsuarios);
   XLSX.utils.book_append_sheet(wb, wsUsuarios, 'Usuarios_Autorizados_2027');
 
-  // ABA 7: HISTÓRICO DE ACESSOS E TEMPO CONECTADO POR SESSÃO
+  // Tab 11: HISTÓRICO DE ACESSOS E TEMPO CONECTADO POR SESSÃO
   const sessionLogs = getStoredAccessSessionLogs();
   const rowsLogs = sessionLogs.map((log, idx) => ({
     'Nº SESSÃO': idx + 1,

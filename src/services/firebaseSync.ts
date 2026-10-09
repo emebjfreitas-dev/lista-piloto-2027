@@ -6,6 +6,7 @@ import {
   getDocs,
   setDoc,
   writeBatch,
+  onSnapshot,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
@@ -291,6 +292,81 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
   }
 };
 
+export const subscribeToFirestoreRealtimeState = (callbacks: {
+  onClassesUpdate?: (classes: ClassGroup[], updatedAtMs: number) => void;
+  onMetaConfigUpdate?: (config: {
+    authorizedUsers?: AuthorizedUser[];
+    accessSessionLogs?: UserAccessSessionLog[];
+    attendanceWindowConfig?: AttendanceWindowConfig;
+    cloudLinks?: Record<string, any>;
+    discoveredNominalPdfs?: any[];
+    discoveredDrivePhotos?: any[];
+  }) => void;
+}): (() => void) => {
+  const unsubs: Array<() => void> = [];
+
+  try {
+    const unsubClasses = onSnapshot(
+      collection(firestoreDb, 'school_classes_2027'),
+      (snap) => {
+        if (snap.empty) return;
+        const classes: ClassGroup[] = [];
+        let maxUpdatedAt = 0;
+        snap.forEach((d) => {
+          const data = d.data() as ClassGroup;
+          if (data && data.id && Array.isArray(data.students)) {
+            classes.push(data);
+            if ((data.updatedAtMs || 0) > maxUpdatedAt) {
+              maxUpdatedAt = data.updatedAtMs || 0;
+            }
+          }
+        });
+        if (classes.length > 0 && callbacks.onClassesUpdate) {
+          callbacks.onClassesUpdate(classes, maxUpdatedAt || Date.now());
+        }
+      },
+      () => {
+        // Ignore transient listener errors; HTTP/Firestore fallback handles recovery
+      }
+    );
+    unsubs.push(unsubClasses);
+
+    const unsubConfig = onSnapshot(
+      doc(firestoreDb, 'school_meta_2027', 'config'),
+      (docSnap) => {
+        if (!docSnap.exists()) return;
+        const data = docSnap.data() || {};
+        if (callbacks.onMetaConfigUpdate) {
+          callbacks.onMetaConfigUpdate({
+            authorizedUsers: data.authorizedUsers,
+            accessSessionLogs: data.accessSessionLogs,
+            attendanceWindowConfig: data.attendanceWindowConfig,
+            cloudLinks: data.cloudLinks,
+            discoveredNominalPdfs: data.discoveredNominalPdfs,
+            discoveredDrivePhotos: data.discoveredDrivePhotos,
+          });
+        }
+      },
+      () => {
+        // Ignore transient listener errors
+      }
+    );
+    unsubs.push(unsubConfig);
+  } catch {
+    // Ignore initialization errors if offline
+  }
+
+  return () => {
+    unsubs.forEach((u) => {
+      try {
+        u();
+      } catch {
+        // ignore
+      }
+    });
+  };
+};
+
 export const registerOfflineFlushHandler = (flushFn: () => Promise<void>): (() => void) => {
   if (typeof window === 'undefined') return () => {};
   const handleOnline = () => {
@@ -304,3 +380,4 @@ export const registerOfflineFlushHandler = (flushFn: () => Promise<void>): (() =
   window.addEventListener('online', handleOnline);
   return () => window.removeEventListener('online', handleOnline);
 };
+

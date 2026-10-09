@@ -30,8 +30,14 @@ import {
   pushCloudLinksToServer,
 } from './db';
 import {
+  enqueuePendingSyncOperation,
+  markSyncOperationSuccess,
+} from './firebaseSync';
+import {
   getStudentAttendanceMetrics,
   getClassAttendanceMetrics,
+  getStudentBimesterReport,
+  OFFICIAL_BIMESTERS_2027,
 } from '../utils/attendanceRules';
 
 export const OFFICIAL_ADMIN_EMAIL = 'emebjfreitas@educacao.jundiai.sp.gov.br';
@@ -517,17 +523,23 @@ export const SED_48_HEADERS = [
   'EMAIL MUNICIPAL',
   'ROTA DE ÔNIBUS',
   'SUCESSÃO ESCOLAR',
-  // 48..57 (Columns AW..BF): Attendance Columns fed by App when filling out absences + Photo Link
-  'DIAS LETIVOS DO MÊS', // AW (col 49)
-  'DIAS NO RECORTE DA MATRÍCULA', // AX (col 50)
-  'FALTAS NO MÊS', // AY (col 51)
-  'QTD ATESTADOS APRESENTADOS', // AZ (col 52)
-  'PRESENÇAS NO PERÍODO', // BA (col 53)
-  '% FREQUÊNCIA NO RECORTE', // BB (col 54)
-  'LINK FOTO GOOGLE DRIVE', // BC (col 55)
-  'OBSERVAÇÕES / ATESTADOS', // BD (col 56)
-  'ID_TURMA', // BE (col 57)
-  'ID_ESTUDANTE', // BF (col 58)
+  // 48..63 (Columns AW..BL): Attendance, Photo & Nominal PDF Links, Manual Flags & Sync Timestamp
+  'DIAS LETIVOS DO MÊS', // AW (col 49, idx 48)
+  'DIAS NO RECORTE DA MATRÍCULA', // AX (col 50, idx 49)
+  'FALTAS NO MÊS', // AY (col 51, idx 50)
+  'QTD ATESTADOS APRESENTADOS', // AZ (col 52, idx 51)
+  'PRESENÇAS NO PERÍODO', // BA (col 53, idx 52)
+  '% FREQUÊNCIA NO RECORTE', // BB (col 54, idx 53)
+  'LINK FOTO GOOGLE DRIVE', // BC (col 55, idx 54)
+  'OBSERVAÇÕES / ATESTADOS', // BD (col 56, idx 55)
+  'ID_TURMA', // BE (col 57, idx 56)
+  'ID_ESTUDANTE', // BF (col 58, idx 57)
+  'ID_FOTO_DRIVE', // BG (col 59, idx 58)
+  'VINCULO_MANUAL_FOTO', // BH (col 60, idx 59)
+  'ID_FICHA_PDF_DRIVE', // BI (col 61, idx 60)
+  'LINK_FICHA_PDF_DRIVE', // BJ (col 62, idx 61)
+  'SUBPASTA_FICHA_PDF', // BK (col 63, idx 62)
+  'TIMESTAMP_ATUALIZACAO_MS', // BL (col 64, idx 63)
 ];
 
 const isEducacaoInfantilClass = (cls: ClassGroup): boolean => {
@@ -760,7 +772,7 @@ const buildSedSheetValues = (
         s.emailMunicipal || '',
         s.rotaOnibus || '',
         s.sucessaoEscolar || '',
-        // Columns AW..BF (Attendance & Photo Link)
+        // Columns AW..BL (Attendance, Photo & PDF Links, Manual Flags & Sync Timestamp)
         m.diasLetivosMes,
         m.diasLetivosMatriculados,
         m.faltas,
@@ -771,8 +783,91 @@ const buildSedSheetValues = (
         s.notes || '',
         cls.id,
         s.id,
+        s.photoDriveId || '',
+        s.photoManualLink ? 'MANUAL' : 'AUTO',
+        s.fichaPdfDriveId || '',
+        s.fichaPdfDriveUrl || '',
+        s.fichaPdfSubfolder || '',
+        s.updatedAtMs || cls.updatedAtMs || 0,
       ]);
     });
+  });
+
+  return rows;
+};
+
+const buildBolsaFamiliaBimestralSheetValues = (
+  classes: ClassGroup[]
+): any[][] => {
+  const bimesterLabels = OFFICIAL_BIMESTERS_2027.filter((b) => b.id !== 'anual');
+  const headers = [
+    'SEGMENTO',
+    'TURMA',
+    'PERÍODO',
+    'Nº CHAMADA',
+    'ESTUDANTE (ORDEM ALFABÉTICA)',
+    'NIS (BOLSA FAMÍLIA)',
+    'RA OFICIAL',
+    'DATA NASCIMENTO',
+    'META MÍNIMA LDB (%)',
+    '1º BIM (FEV+MAR) %',
+    '2º BIM (ABR+MAI) %',
+    '3º BIM (JUN+JUL) %',
+    '4º BIM (AGO+SET) %',
+    '5º BIM (OUT+NOV) %',
+    'TOTAL FALTAS ANO',
+    'TOTAL ATESTADOS ANO',
+    'POSSUI ATESTADO?',
+    '% PRESENÇA CONSOLIDADA',
+    'STATUS META MENSAL / BIMESTRAL',
+    'PROVIDÊNCIA SISTEMA PRESENÇA MEC',
+    'ID_TURMA',
+    'ID_ESTUDANTE',
+  ];
+
+  const rows: any[][] = [headers];
+  const allEntries: Array<{ cls: ClassGroup; student: Student }> = [];
+  classes.forEach((cls) => {
+    cls.students.forEach((student) => {
+      allEntries.push({ cls, student });
+    });
+  });
+
+  allEntries.sort((a, b) =>
+    a.student.name.localeCompare(b.student.name, 'pt-BR', { sensitivity: 'base' })
+  );
+
+  allEntries.forEach(({ cls, student }) => {
+    const annualRep = getStudentBimesterReport(student, cls, 'anual');
+    const bimPercents = bimesterLabels.map((b) => {
+      const rep = getStudentBimesterReport(student, cls, b.id);
+      return `${rep.frequenciaBimestrePercent}%`;
+    });
+
+    rows.push([
+      annualRep.isEducacaoInfantil ? 'EDUCACAO INFANTIL' : 'ENSINO FUNDAMENTAL',
+      cls.name,
+      annualRep.shift,
+      student.number,
+      student.name,
+      student.nis || '—',
+      student.ra ? `${student.ra}-${student.digRa || ''}` : '',
+      student.dataNascimento || '',
+      `${annualRep.minLegalPresencePercent}%`,
+      ...bimPercents,
+      annualRep.totalFaltasBimestre,
+      annualRep.totalAtestadosBimestre,
+      annualRep.totalAtestadosBimestre > 0
+        ? `SIM (${annualRep.totalAtestadosBimestre})`
+        : 'NÃO',
+      `${annualRep.frequenciaBimestrePercent}%`,
+      annualRep.isBelowLegalThresholdBimestre
+        ? `ABAIXO DA META (<${annualRep.minLegalPresencePercent}%)`
+        : `DENTRO DA META (≥${annualRep.minLegalPresencePercent}%)`,
+      annualRep.bolsaFamiliaMotivoPadrao,
+      cls.id,
+      student.id,
+    ]);
   });
 
   return rows;
@@ -1152,16 +1247,44 @@ export const ensureOfficialSpreadsheetId = async (): Promise<string> => {
   return '';
 };
 
+// Single-flight queue state for Authorized Users & Session Logs Google Sheet sync
+let isSyncingUsersToSheet = false;
+let pendingUsersSheetPayload: {
+  users?: AuthorizedUser[];
+  sessionLogs?: UserAccessSessionLog[];
+} | null = null;
+
+export const hasPendingUsersSheetSync = (): boolean => {
+  return pendingUsersSheetPayload !== null;
+};
+
 export const syncAuthorizedUsersToGoogleSheet = async (
   users?: AuthorizedUser[],
   sessionLogs?: UserAccessSessionLog[]
-): Promise<void> => {
-  const token = await getAccessToken();
-  if (!token) return;
-  const spreadsheetId = await ensureOfficialSpreadsheetId();
-  if (!spreadsheetId) return;
+): Promise<boolean> => {
+  // Coalesce latest snapshot into single-flight slot (never duplicates rows or concurrent requests)
+  pendingUsersSheetPayload = {
+    users: users || pendingUsersSheetPayload?.users,
+    sessionLogs: sessionLogs || pendingUsersSheetPayload?.sessionLogs,
+  };
+
+  if (isSyncingUsersToSheet) {
+    return false;
+  }
+
+  isSyncingUsersToSheet = true;
+  const currentPayload = pendingUsersSheetPayload;
 
   try {
+    const token = await getAccessToken();
+    if (!token) {
+      throw new Error('Sessão Google ausente ou expirada — aguardando reconexão');
+    }
+    const spreadsheetId = await ensureOfficialSpreadsheetId();
+    if (!spreadsheetId) {
+      throw new Error('Planilha oficial ainda não localizada — aguardando próximo ciclo (5s)');
+    }
+
     const meta = await fetchSpreadsheetMetadata(spreadsheetId);
     const missingTabs: any[] = [];
     ['Emails_Permitidos_2027', 'Monitoramento_Acessos_2027'].forEach((tName) => {
@@ -1178,7 +1301,7 @@ export const syncAuthorizedUsersToGoogleSheet = async (
     });
 
     if (missingTabs.length > 0) {
-      await fetch(
+      const tabRes = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
           spreadsheetId
         )}:batchUpdate`,
@@ -1191,9 +1314,33 @@ export const syncAuthorizedUsersToGoogleSheet = async (
           body: JSON.stringify({ requests: missingTabs }),
         }
       );
+      if (!tabRes.ok) {
+        markDriveTokenExpiredOrForbidden(tabRes.status);
+        throw new Error(`Falha ao criar abas de acesso (${tabRes.status})`);
+      }
     }
 
+    // Clear existing data rows before writing so removed users or rotated logs never leave ghost/duplicate rows
     await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}/values:batchClear`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ranges: [
+            'Emails_Permitidos_2027!A2:O1000',
+            'Monitoramento_Acessos_2027!A2:K1000',
+          ],
+        }),
+      }
+    ).catch(() => {});
+
+    const writeRes = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
         spreadsheetId
       )}/values:batchUpdate`,
@@ -1208,18 +1355,39 @@ export const syncAuthorizedUsersToGoogleSheet = async (
           data: [
             {
               range: 'Emails_Permitidos_2027!A1',
-              values: buildEmailsPermitidosValues(users),
+              values: buildEmailsPermitidosValues(currentPayload?.users),
             },
             {
               range: 'Monitoramento_Acessos_2027!A1',
-              values: buildMonitoramentoAcessosValues(sessionLogs),
+              values: buildMonitoramentoAcessosValues(currentPayload?.sessionLogs),
             },
           ],
         }),
       }
     );
-  } catch (e) {
-    console.warn('Aviso ao sincronizar abas de acessos e monitoramento:', e);
+
+    if (!writeRes.ok) {
+      markDriveTokenExpiredOrForbidden(writeRes.status);
+      throw new Error(`Falha ao atualizar abas de acesso (${writeRes.status})`);
+    }
+
+    // Clear pending slot only if no newer payload arrived while in-flight
+    if (pendingUsersSheetPayload === currentPayload) {
+      pendingUsersSheetPayload = null;
+    }
+    markSyncOperationSuccess('save_users');
+    return true;
+  } catch (e: any) {
+    // Keep pendingUsersSheetPayload intact so the next 5s heartbeat retries automatically
+    enqueuePendingSyncOperation(
+      'save_users',
+      'Sincronização de Acessos e Sessões na Planilha Google',
+      e?.message || 'Falha de rede — aguardando próximo ciclo (5s)'
+    );
+    console.warn('Fila de sync (Acessos): será retentada no próximo pulso de 5s:', e);
+    return false;
+  } finally {
+    isSyncingUsersToSheet = false;
   }
 };
 
@@ -2751,6 +2919,12 @@ export const createSchoolDatabaseSpreadsheet = async (
                 gridProperties: { frozenRowCount: 1 },
               },
             },
+            {
+              properties: {
+                title: 'Bolsa_Familia_Bimestral_2027',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
           ],
         }),
       }
@@ -2786,19 +2960,30 @@ export const createSchoolDatabaseSpreadsheet = async (
   };
 };
 
+// Single-flight queue manager for Attendance & Class Records Google Sheet sync (zero duplicate writes, automatic 5s heartbeat retry)
+let isSyncingAttendanceToSheet = false;
+const pendingAttendanceClassesById = new Map<string, ClassGroup>();
+let pendingAttendanceAllClasses: ClassGroup[] | null = null;
+let pendingAttendanceCalendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS;
+
+export const hasPendingAttendanceSheetSync = (): boolean => {
+  return pendingAttendanceClassesById.size > 0;
+};
+
 /**
- * Write ONLY Attendance Columns (AW:BF) to the Google Sheet when filling out absences in the App!
- * NEVER overwrites Columns A:AV (the 48 SED student data columns managed manually in Google Sheets).
+ * Internal single-attempt execution of queued attendance writes to Google Sheets.
+ * Supports coalescing multiple classes modified while offline into a single atomic batchUpdate.
  */
-export const writeAttendanceOnlyToGoogleSheet = async (
-  updatedClass: ClassGroup,
+const executeQueuedAttendanceSheetWrite = async (
+  targetClasses: ClassGroup[],
   allClasses: ClassGroup[],
   calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
 ): Promise<{ updatedStudentsCount: number }> => {
   const token = await getAccessToken();
-  const { spreadsheetId } = getSavedSpreadsheetInfo();
+  const savedInfo = getSavedSpreadsheetInfo();
+  const spreadsheetId = savedInfo.spreadsheetId || (await ensureOfficialSpreadsheetId());
   if (!token || !spreadsheetId) {
-    return { updatedStudentsCount: 0 };
+    throw new Error('Sem conexão ativa ou planilha Google ainda não autenticada.');
   }
 
   const meta = await fetchSpreadsheetMetadata(spreadsheetId);
@@ -2806,19 +2991,24 @@ export const writeAttendanceOnlyToGoogleSheet = async (
     ? 'SED_Matriculas_e_Frequencia'
     : meta.sheetTitles[0];
 
-  if (!targetTab) return { updatedStudentsCount: 0 };
+  if (!targetTab) {
+    throw new Error('Aba principal SED_Matriculas_e_Frequencia não encontrada.');
+  }
 
-  // Read existing Columns A..BF to find the exact row number of each student in the Sheet
+  // Read existing Columns A..BL to find the exact row number of each student in the Sheet
   const readRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       spreadsheetId
-    )}/values/${encodeURIComponent(`${targetTab}!A1:BF2000`)}`,
+    )}/values/${encodeURIComponent(`${targetTab}!A1:BL2000`)}`,
     {
       headers: { Authorization: `Bearer ${token}` },
     }
   );
 
-  if (!readRes.ok) return { updatedStudentsCount: 0 };
+  if (!readRes.ok) {
+    markDriveTokenExpiredOrForbidden(readRes.status);
+    throw new Error(`Falha ao ler linhas da planilha (${readRes.status})`);
+  }
 
   const readData = await readRes.json();
   const rows: any[][] = readData.values || [];
@@ -2834,10 +3024,7 @@ export const writeAttendanceOnlyToGoogleSheet = async (
       ? headers.indexOf('ID_ESTUDANTE')
       : headers.indexOf('ID_ALUNO');
 
-  const shortTurma = formatShortTurmaCode(updatedClass.name).toUpperCase();
-  const diasLetivosMes = updatedClass.classesHeld || 20;
-
-  // Map student -> 1-based row number in Google Sheet
+  // Map student -> 1-based row number in Google Sheet across all coalesced targetClasses
   const dataUpdates: Array<{ range: string; values: any[][] }> = [];
 
   for (let rIdx = 1; rIdx < rows.length; rIdx++) {
@@ -2855,58 +3042,82 @@ export const writeAttendanceOnlyToGoogleSheet = async (
     const rowAlunoId =
       idxIdAluno >= 0 ? String(row[idxIdAluno] || '').trim() : '';
 
-    // Check if this row belongs to updatedClass
-    const matchesTurma =
-      rowTurma === shortTurma ||
-      rowTurma === updatedClass.name.toUpperCase();
+    for (const updatedClass of targetClasses) {
+      const shortTurma = formatShortTurmaCode(updatedClass.name).toUpperCase();
+      const diasLetivosMes = updatedClass.classesHeld || 20;
 
-    const matchedStudent = updatedClass.students.find((s) => {
-      if (rowAlunoId && s.id === rowAlunoId) return true;
-      if (rowRa && s.ra && s.ra.trim() === rowRa) return true;
-      if (
-        matchesTurma &&
-        (normalizeStudentNameForPhoto(s.name) === rowName ||
-          s.number === rowChamada)
-      ) {
-        return true;
-      }
-      return false;
-    });
+      const matchesTurma =
+        rowTurma === shortTurma ||
+        rowTurma === updatedClass.name.toUpperCase();
 
-    if (matchedStudent) {
-      const m = getStudentAttendanceMetrics(
-        matchedStudent,
-        diasLetivosMes,
-        calendar
-      );
-      // Columns AW to BF (10 columns: index 48 to 57)
-      dataUpdates.push({
-        range: `${targetTab}!AW${rowNumber}:BF${rowNumber}`,
-        values: [
-          [
-            m.diasLetivosMes,
-            m.diasLetivosMatriculados,
-            m.faltas,
-            m.atestados,
-            m.presencas,
-            `${m.frequenciaPercent}%`,
-            matchedStudent.photoDriveUrl || '',
-            matchedStudent.notes || '',
-            updatedClass.id,
-            matchedStudent.id,
-          ],
-        ],
+      const matchedStudent = updatedClass.students.find((s) => {
+        if (rowAlunoId && s.id === rowAlunoId) return true;
+        if (rowRa && s.ra && s.ra.trim() === rowRa) return true;
+        if (
+          matchesTurma &&
+          (normalizeStudentNameForPhoto(s.name) === rowName ||
+            s.number === rowChamada)
+        ) {
+          return true;
+        }
+        return false;
       });
+
+      if (matchedStudent) {
+        const m = getStudentAttendanceMetrics(
+          matchedStudent,
+          diasLetivosMes,
+          calendar
+        );
+        const consecDates = matchedStudent.consecutiveAbsenceAlert?.selectedDates || [];
+        const consecFeedback = matchedStudent.consecutiveAbsenceAlert?.familyFeedback || '';
+        const consecNote =
+          consecDates.length > 0
+            ? `[Faltas Consecutivas: ${consecDates.join(', ')}${
+                consecFeedback ? ` | Devolutiva: ${consecFeedback}` : ''
+              }]`
+            : '';
+        const combinedNotes = [matchedStudent.notes || '', consecNote]
+          .filter(Boolean)
+          .join(' ');
+
+        // Columns AW to BL (16 columns: index 48 to 63)
+        dataUpdates.push({
+          range: `${targetTab}!AW${rowNumber}:BL${rowNumber}`,
+          values: [
+            [
+              m.diasLetivosMes,
+              m.diasLetivosMatriculados,
+              m.faltas,
+              m.atestados,
+              m.presencas,
+              `${m.frequenciaPercent}%`,
+              matchedStudent.photoDriveUrl || '',
+              combinedNotes,
+              updatedClass.id,
+              matchedStudent.id,
+              matchedStudent.photoDriveId || '',
+              matchedStudent.photoManualLink ? 'MANUAL' : 'AUTO',
+              matchedStudent.fichaPdfDriveId || '',
+              matchedStudent.fichaPdfDriveUrl || '',
+              matchedStudent.fichaPdfSubfolder || '',
+              matchedStudent.updatedAtMs || updatedClass.updatedAtMs || Date.now(),
+            ],
+          ],
+        });
+        break;
+      }
     }
   }
 
-  // Ensure nominal stage tabs and consecutive absence tab exist and update them as well
+  // Ensure nominal stage tabs, consecutive absence tab, bus tab, and bimester Bolsa Familia tab exist
   const missingNominalTabs: any[] = [];
   [
     'Faltas_Atestados_Infantil',
     'Faltas_Atestados_Fundamental',
     'Busca_Ativa_Faltas_Consecutivas_2027',
     'Onibus_Fretado_2027',
+    'Bolsa_Familia_Bimestral_2027',
   ].forEach((tName) => {
     if (!meta.sheetTitles.includes(tName)) {
       missingNominalTabs.push({
@@ -2921,7 +3132,7 @@ export const writeAttendanceOnlyToGoogleSheet = async (
   });
 
   if (missingNominalTabs.length > 0) {
-    await fetch(
+    const tabRes = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
         spreadsheetId
       )}:batchUpdate`,
@@ -2933,24 +3144,37 @@ export const writeAttendanceOnlyToGoogleSheet = async (
         },
         body: JSON.stringify({ requests: missingNominalTabs }),
       }
-    ).catch(() => {});
+    );
+    if (!tabRes.ok) {
+      markDriveTokenExpiredOrForbidden(tabRes.status);
+      throw new Error(`Falha ao validar abas nominais (${tabRes.status})`);
+    }
   }
 
-  // Clear Busca_Ativa_Faltas_Consecutivas_2027 before writing so removed occurrences never leave ghost rows
+  // Clear nominal and Busca Ativa ranges before writing so removed occurrences never leave ghost or duplicate rows
   await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       spreadsheetId
-    )}/values/${encodeURIComponent('Busca_Ativa_Faltas_Consecutivas_2027!A2:Q1000')}:clear`,
+    )}/values:batchClear`,
     {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        ranges: [
+          'Faltas_Atestados_Infantil!A2:P1000',
+          'Faltas_Atestados_Fundamental!A2:P1000',
+          'Busca_Ativa_Faltas_Consecutivas_2027!A2:Q1000',
+          'Onibus_Fretado_2027!A2:J1000',
+          'Bolsa_Familia_Bimestral_2027!A2:U1000',
+        ],
+      }),
     }
   ).catch(() => {});
 
-  // Update Nominal Tabs separated by Educação Infantil and Ensino Fundamental + Busca Ativa Faltas Consecutivas
+  // Update Nominal Tabs separated by Educação Infantil and Ensino Fundamental + Busca Ativa + Ônibus + Bolsa Família Bimestral
   dataUpdates.push({
     range: 'Faltas_Atestados_Infantil!A1',
     values: buildNominalStageSheetValues(allClasses, 'EDUCACAO INFANTIL', calendar),
@@ -2967,6 +3191,10 @@ export const writeAttendanceOnlyToGoogleSheet = async (
     range: 'Onibus_Fretado_2027!A1',
     values: buildOnibusFretadoSheetValues(allClasses),
   });
+  dataUpdates.push({
+    range: 'Bolsa_Familia_Bimestral_2027!A1',
+    values: buildBolsaFamiliaBimestralSheetValues(allClasses),
+  });
 
   // Also update Turmas_Salas_2027 summary tab
   if (meta.sheetTitles.includes('Turmas_Salas_2027')) {
@@ -2977,7 +3205,7 @@ export const writeAttendanceOnlyToGoogleSheet = async (
   }
 
   if (dataUpdates.length > 0) {
-    await fetch(
+    const batchRes = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
         spreadsheetId
       )}/values:batchUpdate`,
@@ -2993,9 +3221,123 @@ export const writeAttendanceOnlyToGoogleSheet = async (
         }),
       }
     );
+    if (!batchRes.ok) {
+      markDriveTokenExpiredOrForbidden(batchRes.status);
+      throw new Error(`Falha ao gravar faltas na Planilha Google (${batchRes.status})`);
+    }
   }
 
   return { updatedStudentsCount: dataUpdates.length };
+};
+
+/**
+ * Single-flight Queue Manager for Attendance & Class Records:
+ * Coalesces updates by class ID so rapid edits or offline drops never duplicate rows or fire concurrent writes.
+ * Performs a single attempt now; if the network fails, keeps the snapshot in the queue for automatic retry on the next 5s heartbeat.
+ */
+export const writeAttendanceOnlyToGoogleSheet = async (
+  updatedClass: ClassGroup,
+  allClasses: ClassGroup[],
+  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
+): Promise<{ updatedStudentsCount: number }> => {
+  if (updatedClass && updatedClass.id) {
+    pendingAttendanceClassesById.set(updatedClass.id, updatedClass);
+  }
+  pendingAttendanceAllClasses = allClasses;
+  pendingAttendanceCalendar = calendar;
+
+  return flushPendingAttendanceSheetQueue();
+};
+
+export const flushPendingAttendanceSheetQueue = async (): Promise<{
+  updatedStudentsCount: number;
+}> => {
+  if (isSyncingAttendanceToSheet) {
+    return { updatedStudentsCount: 0 };
+  }
+  if (pendingAttendanceClassesById.size === 0 || !pendingAttendanceAllClasses) {
+    return { updatedStudentsCount: 0 };
+  }
+
+  isSyncingAttendanceToSheet = true;
+  const classesSnapshot = Array.from(pendingAttendanceClassesById.values());
+  const allClassesSnapshot = pendingAttendanceAllClasses;
+  const calendarSnapshot = pendingAttendanceCalendar;
+
+  try {
+    const result = await executeQueuedAttendanceSheetWrite(
+      classesSnapshot,
+      allClassesSnapshot,
+      calendarSnapshot
+    );
+
+    // Only dequeue class entries that were not updated again while the request was in-flight
+    classesSnapshot.forEach((syncedCls) => {
+      const currentQueued = pendingAttendanceClassesById.get(syncedCls.id);
+      if (
+        currentQueued &&
+        (currentQueued.updatedAtMs || 0) <= (syncedCls.updatedAtMs || 0)
+      ) {
+        pendingAttendanceClassesById.delete(syncedCls.id);
+      }
+    });
+
+    if (pendingAttendanceClassesById.size === 0) {
+      pendingAttendanceAllClasses = null;
+      markSyncOperationSuccess('save_classes');
+    }
+    return result;
+  } catch (e: any) {
+    const classNames = classesSnapshot.map((c) => c.name).join(', ');
+    enqueuePendingSyncOperation(
+      'save_classes',
+      `Sincronização de Faltas na Planilha Google (${classNames || 'Turmas'})`,
+      e?.message || 'Falha de rede — aguardando próximo ciclo (5s)'
+    );
+    console.warn(
+      'Fila de sync (Faltas): tentativa única falhou; será retentada no próximo pulso de 5s:',
+      e
+    );
+    throw e;
+  } finally {
+    isSyncingAttendanceToSheet = false;
+  }
+};
+
+/**
+ * Heartbeat Flush Dispatcher (invoked every 5s in App.tsx):
+ * Retries any pending Attendance or AuthorizedUsers/SessionLogs Google Sheet writes with single-flight safety.
+ */
+export const flushAllPendingGoogleSheetQueues = async (
+  latestClasses?: ClassGroup[]
+): Promise<{
+  flushedAttendance: boolean;
+  flushedUsers: boolean;
+}> => {
+  let flushedAttendance = false;
+  let flushedUsers = false;
+
+  if (hasPendingAttendanceSheetSync()) {
+    if (latestClasses && latestClasses.length > 0) {
+      pendingAttendanceAllClasses = latestClasses;
+    }
+    try {
+      await flushPendingAttendanceSheetQueue();
+      flushedAttendance = !hasPendingAttendanceSheetSync();
+    } catch {
+      flushedAttendance = false;
+    }
+  }
+
+  if (hasPendingUsersSheetSync()) {
+    try {
+      flushedUsers = await syncAuthorizedUsersToGoogleSheet();
+    } catch {
+      flushedUsers = false;
+    }
+  }
+
+  return { flushedAttendance, flushedUsers };
 };
 
 /**
@@ -3020,6 +3362,7 @@ export const syncClassesToGoogleSheet = async (
     'Faltas_Atestados_Fundamental',
     'Busca_Ativa_Faltas_Consecutivas_2027',
     'Onibus_Fretado_2027',
+    'Bolsa_Familia_Bimestral_2027',
     'SED_Matriculas_e_Frequencia',
     'Dias_Letivos_SME_2027',
     'Turmas_Salas_2027',
@@ -3069,6 +3412,7 @@ export const syncClassesToGoogleSheet = async (
   const emailsPermitidosValues = buildEmailsPermitidosValues();
   const faltasConsecutivasValues = buildFaltasConsecutivasSheetValues(classes);
   const onibusFretadoValues = buildOnibusFretadoSheetValues(classes);
+  const bolsaFamiliaBimestralValues = buildBolsaFamiliaBimestralSheetValues(classes);
 
   const batchRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
@@ -3098,6 +3442,10 @@ export const syncClassesToGoogleSheet = async (
           {
             range: 'Onibus_Fretado_2027!A1',
             values: onibusFretadoValues,
+          },
+          {
+            range: 'Bolsa_Familia_Bimestral_2027!A1',
+            values: bolsaFamiliaBimestralValues,
           },
           {
             range: 'SED_Matriculas_e_Frequencia!A1',
@@ -3361,11 +3709,11 @@ export const readClassesFromGoogleSheet = async (
     throw new Error('Nenhuma aba encontrada na planilha informada.');
   }
 
-  // 1. Read SED_Matriculas_e_Frequencia (all 58 columns)
+  // 1. Read SED_Matriculas_e_Frequencia (all 64 columns A..BL)
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       spreadsheetId
-    )}/values/${encodeURIComponent(`${targetTab}!A1:BF2000`)}`,
+    )}/values/${encodeURIComponent(`${targetTab}!A1:BL2000`)}`,
     {
       headers: { Authorization: `Bearer ${token}` },
     }
@@ -3429,10 +3777,18 @@ export const readClassesFromGoogleSheet = async (
     string,
     {
       photo?: string;
+      photoDriveId?: string;
       photoDriveUrl?: string;
+      photoManualLink?: boolean;
       fichaPdfDriveId?: string;
       fichaPdfDriveUrl?: string;
       fichaPdfSubfolder?: string;
+      fichaPdfManualLink?: boolean;
+      updatedAtMs?: number;
+      totalAbsencesMonth?: number;
+      justifiedAbsences?: number;
+      diasLetivosRecorte?: number;
+      notes?: string;
       consecutiveAbsenceAlert?: Student['consecutiveAbsenceAlert'];
       monthlyAttendanceByMonth?: Student['monthlyAttendanceByMonth'];
     }
@@ -3442,10 +3798,18 @@ export const readClassesFromGoogleSheet = async (
     c.students.forEach((s) => {
       const entry = {
         photo: s.photo,
+        photoDriveId: s.photoDriveId,
         photoDriveUrl: s.photoDriveUrl,
+        photoManualLink: s.photoManualLink,
         fichaPdfDriveId: s.fichaPdfDriveId,
         fichaPdfDriveUrl: s.fichaPdfDriveUrl,
         fichaPdfSubfolder: s.fichaPdfSubfolder,
+        fichaPdfManualLink: s.fichaPdfManualLink,
+        updatedAtMs: s.updatedAtMs || c.updatedAtMs,
+        totalAbsencesMonth: s.totalAbsencesMonth,
+        justifiedAbsences: s.justifiedAbsences,
+        diasLetivosRecorte: s.diasLetivosRecorte,
+        notes: s.notes,
         consecutiveAbsenceAlert: s.consecutiveAbsenceAlert,
         monthlyAttendanceByMonth: s.monthlyAttendanceByMonth,
       };
@@ -3643,7 +4007,7 @@ export const readClassesFromGoogleSheet = async (
     const rotaOnibus = rotaFromDedicatedTab || String(cols[46] || '').trim();
     const sucessaoEscolar = String(cols[47] || '').trim();
 
-    // Attendance & Photo columns (48..57)
+    // Attendance & Photo/PDF columns (48..63 / AW..BL)
     const diasMesCol = parseInt(String(cols[48] || '20'), 10) || 20;
     const diasRecorteCol = parseInt(String(cols[49] || ''), 10);
     const faltasCol = parseInt(String(cols[50] || '0'), 10) || 0;
@@ -3651,6 +4015,12 @@ export const readClassesFromGoogleSheet = async (
     const linkFotoCol = String(cols[54] || '').trim();
     const obsCol = String(cols[55] || '').trim();
     const idAlunoCol = String(cols[57] || '').trim();
+    const idFotoDriveCol = String(cols[58] || '').trim();
+    const manualFotoCol = String(cols[59] || '').trim().toUpperCase() === 'MANUAL';
+    const idPdfDriveCol = String(cols[60] || '').trim();
+    const linkPdfDriveCol = String(cols[61] || '').trim();
+    const subpastaPdfCol = String(cols[62] || '').trim();
+    const sheetUpdatedAtMsCol = parseInt(String(cols[63] || '0'), 10) || 0;
 
     const validRecorte = !isNaN(diasRecorteCol)
       ? Math.max(1, Math.min(diasMesCol, diasRecorteCol))
@@ -3675,6 +4045,27 @@ export const readClassesFromGoogleSheet = async (
       ) ||
       existingPhotoByStudentName.get(normalizeStudentNameForPhoto(estudante));
 
+    const localUpdatedAtMs = prevPhoto?.updatedAtMs || 0;
+    const preferLocalAttendance =
+      localUpdatedAtMs > 0 && localUpdatedAtMs > sheetUpdatedAtMsCol;
+
+    const effectiveRecorte =
+      preferLocalAttendance && typeof prevPhoto?.diasLetivosRecorte === 'number'
+        ? prevPhoto.diasLetivosRecorte
+        : validRecorte;
+    const effectiveFaltas =
+      preferLocalAttendance && typeof prevPhoto?.totalAbsencesMonth === 'number'
+        ? prevPhoto.totalAbsencesMonth
+        : validFaltas;
+    const effectiveAtestados =
+      preferLocalAttendance && typeof prevPhoto?.justifiedAbsences === 'number'
+        ? prevPhoto.justifiedAbsences
+        : validAtestados;
+    const effectiveNotes =
+      preferLocalAttendance && prevPhoto?.notes !== undefined
+        ? prevPhoto.notes
+        : obsCol;
+
     const list = groupedFromSheet.get(turmaCode) || [];
     const normEstudante = normalizeStudentNameForPhoto(estudante);
     const alreadyInSheetTurma = list.some(
@@ -3692,20 +4083,25 @@ export const readClassesFromGoogleSheet = async (
       number: numChamada,
       name: estudante,
       initials,
+      updatedAtMs: Math.max(localUpdatedAtMs, sheetUpdatedAtMsCol),
       photo:
         prevPhoto?.photo ||
+        (idFotoDriveCol ? toEmbeddableDrivePhotoUrl(idFotoDriveCol) : undefined) ||
         (linkFotoCol ? toEmbeddableDrivePhotoUrl(linkFotoCol) : undefined),
+      photoDriveId: prevPhoto?.photoDriveId || idFotoDriveCol || undefined,
       photoDriveUrl: linkFotoCol || prevPhoto?.photoDriveUrl,
-      fichaPdfDriveId: prevPhoto?.fichaPdfDriveId,
-      fichaPdfDriveUrl: prevPhoto?.fichaPdfDriveUrl,
-      fichaPdfSubfolder: prevPhoto?.fichaPdfSubfolder,
+      photoManualLink: Boolean(prevPhoto?.photoManualLink || manualFotoCol),
+      fichaPdfDriveId: prevPhoto?.fichaPdfDriveId || idPdfDriveCol || undefined,
+      fichaPdfDriveUrl: prevPhoto?.fichaPdfDriveUrl || linkPdfDriveCol || undefined,
+      fichaPdfSubfolder: prevPhoto?.fichaPdfSubfolder || subpastaPdfCol || undefined,
+      fichaPdfManualLink: Boolean(prevPhoto?.fichaPdfManualLink || idPdfDriveCol),
       consecutiveAbsenceAlert: prevPhoto?.consecutiveAbsenceAlert,
       monthlyAttendanceByMonth: prevPhoto?.monthlyAttendanceByMonth,
-      status: validFaltas > 0 ? 'absent' : 'present',
-      totalAbsencesMonth: validFaltas,
-      justifiedAbsences: validAtestados,
-      diasLetivosRecorte: validRecorte,
-      notes: obsCol,
+      status: effectiveFaltas > 0 ? 'absent' : 'present',
+      totalAbsencesMonth: effectiveFaltas,
+      justifiedAbsences: effectiveAtestados,
+      diasLetivosRecorte: effectiveRecorte,
+      notes: effectiveNotes,
       guardianName: filiacao1 || filiacao2,
       guardianPhone: telefones,
       tipoEnsino,

@@ -22,7 +22,10 @@ import {
   pushSessionLogsToServer,
   pushAttendanceWindowToServer,
   pullSharedSchoolStateFromServer,
+  mergeClassesWithConcurrencyControl,
+  getLocalClassesUpdatedAtMs,
 } from './services/db';
+import { subscribeToFirestoreRealtimeState } from './services/firebaseSync';
 import { OFFICIAL_OCTOBER_DAYS } from './data/mockData';
 import { getClassAttendanceMetrics } from './utils/attendanceRules';
 import {
@@ -38,6 +41,9 @@ import {
   attachNominalPdfsFromDiscoveredCache,
   writeAttendanceOnlyToGoogleSheet,
   syncAuthorizedUsersToGoogleSheet,
+  hasPendingAttendanceSheetSync,
+  hasPendingUsersSheetSync,
+  flushAllPendingGoogleSheetQueues,
   logoutGoogle,
 } from './services/googleSheetsApi';
 import { Header } from './components/Header';
@@ -383,9 +389,46 @@ export default function App() {
 
     syncFromBackendServer();
     const pollId = window.setInterval(syncFromBackendServer, 1200);
+
+    // Instant <200ms Real-Time Push via Cloud Firestore onSnapshot
+    const unsubFirestore = subscribeToFirestoreRealtimeState({
+      onClassesUpdate: (remoteClasses, remoteUpdatedAtMs) => {
+        if (!active || !remoteClasses || remoteClasses.length === 0) return;
+        const localClasses = getStoredClasses();
+        const localUpdatedAtMs = getLocalClassesUpdatedAtMs();
+        const merged = mergeClassesWithConcurrencyControl(
+          remoteClasses,
+          localClasses,
+          remoteUpdatedAtMs,
+          localUpdatedAtMs
+        );
+        const hydrated = attachPhotosFromDiscoveredCache(
+          attachNominalPdfsFromDiscoveredCache(merged)
+        );
+        saveStoredClasses(hydrated, true);
+        setClasses(hydrated);
+        setSelectedClass((prev) => {
+          const found = hydrated.find((c) => c.id === prev.id);
+          return found || prev;
+        });
+      },
+      onMetaConfigUpdate: (cfg) => {
+        if (!active) return;
+        if (cfg.attendanceWindowConfig) {
+          setAttendanceWindowConfig(cfg.attendanceWindowConfig);
+          saveStoredAttendanceWindowConfig(cfg.attendanceWindowConfig);
+        }
+        if (Array.isArray(cfg.accessSessionLogs) && cfg.accessSessionLogs.length > 0) {
+          setAccessSessionLogs(cfg.accessSessionLogs);
+          saveStoredAccessSessionLogs(cfg.accessSessionLogs);
+        }
+      },
+    });
+
     return () => {
       active = false;
       window.clearInterval(pollId);
+      unsubFirestore();
     };
   }, []);
 
@@ -635,8 +678,11 @@ export default function App() {
           setInstantSheetSyncStatus('synced');
         })
         .catch((err) => {
-          console.warn('Aviso ao gravar faltas instantaneamente na planilha:', err);
-          setInstantSheetSyncStatus('synced');
+          console.warn(
+            'Fila de sync (Faltas): falha na tentativa única; será retentada automaticamente no próximo pulso de 5s:',
+            err
+          );
+          setInstantSheetSyncStatus('idle');
         });
     }, 150);
   };
@@ -658,8 +704,14 @@ export default function App() {
     setSelectedClass(stampedClass);
   };
 
+  const canManageClassRecords = (classId: string): boolean => {
+    if (userRole === 'admin') return true;
+    if (userRole === 'usuario') return allowedUsuarioClassIds.includes(classId);
+    return false;
+  };
+
   const handleSaveSingleStudent = (classId: string, updatedStudent: Student) => {
-    if (!canEditClass(classId)) return;
+    if (!canManageClassRecords(classId)) return;
     const nowMs = Date.now();
 
     // Normalização semântica canônica: garante sincronia entre campos legados e campos oficiais SED
@@ -1018,12 +1070,28 @@ export default function App() {
             });
             saveStoredAuthorizedUsers(updatedUsers);
             pushSessionLogsToServer(updatedLogs, updatedUsers);
-            // Sync to Google Sheets every 3 ticks (15 seconds) so Admin sees live duration from all devices
-            if (tickCounter % 3 === 0) {
+            // Retry immediately on the next 5s heartbeat if any queue has pending failed writes; otherwise sync live duration every 3 ticks (15s)
+            if (hasPendingUsersSheetSync() || tickCounter % 3 === 0) {
               syncAuthorizedUsersToGoogleSheet(updatedUsers, updatedLogs);
             }
             return updatedUsers;
           });
+        }
+
+        // Automatic single-attempt retry for queued attendance writes on every 5s heartbeat when offline/network recovers
+        if (hasPendingAttendanceSheetSync()) {
+          setInstantSheetSyncStatus('syncing');
+          flushAllPendingGoogleSheetQueues(getStoredClasses())
+            .then(({ flushedAttendance }) => {
+              if (flushedAttendance) {
+                setInstantSheetSyncStatus('synced');
+              } else {
+                setInstantSheetSyncStatus('idle');
+              }
+            })
+            .catch(() => {
+              setInstantSheetSyncStatus('idle');
+            });
         }
 
         return updatedLogs;
