@@ -1412,10 +1412,10 @@ export const syncPhotosFromDriveFolder = async (
     }
   }
 
-  // Query images inside the target folder (or any image in Drive if folder has subfolders)
+  // Query images strictly inside the target folder if known; otherwise fallback to image search
   const qImages = targetFolderId
     ? encodeURIComponent(
-        `('${targetFolderId}' in parents or mimeType contains 'image/') and mimeType contains 'image/' and trashed = false`
+        `'${targetFolderId}' in parents and mimeType contains 'image/' and trashed = false`
       )
     : encodeURIComponent(`mimeType contains 'image/' and trashed = false`);
 
@@ -1669,28 +1669,60 @@ export const syncNominalPdfsFromDriveSubfolders = async (
 
   saveStoredDiscoveredNominalPdfs(discoveredPdfs);
 
-  // Build lookup map by normalized student name
-  const pdfByNormName = new Map<string, DriveNominalPdfFile>();
-  discoveredPdfs.forEach((pdf) => {
-    if (pdf.normalizedStudentName) {
-      pdfByNormName.set(pdf.normalizedStudentName, pdf);
+  // Build lookup map by normalized student name, excluding archived/inactive folders for active students
+  const isArchivedSubfolder = (subName: string): boolean => {
+    const up = (subName || '').toUpperCase();
+    return up.includes('INATIVO') || up.includes('DUPLICATA') || up.includes('ARQUIVAD');
+  };
+
+  const activePdfs = discoveredPdfs.filter((p) => !isArchivedSubfolder(p.subfolderName));
+
+  const findBestPdfForStudent = (
+    student: Student,
+    className: string
+  ): DriveNominalPdfFile | undefined => {
+    const normStudent = normalizeStudentNameForPhoto(student.name);
+    if (!normStudent) return undefined;
+    const shortTurma = formatShortTurmaCode(className).toUpperCase();
+    const upperClassName = className.toUpperCase();
+
+    // 1. Exact name match inside the student's own class subfolder (highest semantic priority)
+    const exactInClassFolder = activePdfs.find((p) => {
+      if (p.normalizedStudentName !== normStudent) return false;
+      const subUp = (p.subfolderName || '').toUpperCase();
+      return subUp.includes(upperClassName) || subUp.includes(shortTurma);
+    });
+    if (exactInClassFolder) return exactInClassFolder;
+
+    // 2. Exact name match in any active (non-archived) subfolder
+    const exactActive = activePdfs.find((p) => p.normalizedStudentName === normStudent);
+    if (exactActive) return exactActive;
+
+    // 3. Prefix match only if >= 12 chars and same first + second name tokens
+    if (normStudent.length >= 12) {
+      const studentTokens = normStudent.split(' ');
+      const prefixCandidate = activePdfs.find((p) => {
+        if (!p.normalizedStudentName || p.normalizedStudentName.length < 12) return false;
+        const pdfTokens = p.normalizedStudentName.split(' ');
+        if (studentTokens[0] !== pdfTokens[0] || studentTokens[1] !== pdfTokens[1]) {
+          return false;
+        }
+        return (
+          p.normalizedStudentName.startsWith(normStudent) ||
+          normStudent.startsWith(p.normalizedStudentName)
+        );
+      });
+      if (prefixCandidate) return prefixCandidate;
     }
-  });
+
+    return undefined;
+  };
 
   let matchedPdfsCount = 0;
 
   const updatedClasses = currentClasses.map((cls) => {
     const updatedStudents = cls.students.map((s) => {
-      const normStudent = normalizeStudentNameForPhoto(s.name);
-      // Match exact normalized name or prefix/substring match for long names
-      let matched = pdfByNormName.get(normStudent);
-      if (!matched && normStudent.length >= 6) {
-        matched = discoveredPdfs.find(
-          (p) =>
-            p.normalizedStudentName.startsWith(normStudent) ||
-            normStudent.startsWith(p.normalizedStudentName)
-        );
-      }
+      const matched = findBestPdfForStudent(s, cls.name);
 
       if (matched) {
         matchedPdfsCount++;
@@ -2059,6 +2091,12 @@ export const createSchoolDatabaseSpreadsheet = async (
             },
             {
               properties: {
+                title: 'Busca_Ativa_Faltas_Consecutivas_2027',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+            {
+              properties: {
                 title: 'SED_Matriculas_e_Frequencia',
                 gridProperties: { frozenRowCount: 1 },
               },
@@ -2078,6 +2116,12 @@ export const createSchoolDatabaseSpreadsheet = async (
             {
               properties: {
                 title: 'Emails_Permitidos_2027',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
+            {
+              properties: {
+                title: 'Monitoramento_Acessos_2027',
                 gridProperties: { frozenRowCount: 1 },
               },
             },
@@ -2265,6 +2309,20 @@ export const writeAttendanceOnlyToGoogleSheet = async (
     ).catch(() => {});
   }
 
+  // Clear Busca_Ativa_Faltas_Consecutivas_2027 before writing so removed occurrences never leave ghost rows
+  await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}/values/${encodeURIComponent('Busca_Ativa_Faltas_Consecutivas_2027!A2:Q1000')}:clear`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  ).catch(() => {});
+
   // Update Nominal Tabs separated by Educação Infantil and Ensino Fundamental + Busca Ativa Faltas Consecutivas
   dataUpdates.push({
     range: 'Faltas_Atestados_Infantil!A1',
@@ -2334,6 +2392,7 @@ export const syncClassesToGoogleSheet = async (
     'Dias_Letivos_SME_2027',
     'Turmas_Salas_2027',
     'Emails_Permitidos_2027',
+    'Monitoramento_Acessos_2027',
   ];
 
   requiredTabs.forEach((tabName) => {
@@ -2721,7 +2780,14 @@ export const readClassesFromGoogleSheet = async (
     };
   }
 
-  // Group all rows from Google Sheet by Turma so even brand-new students added manually in Sheets appear in the App!
+  // Group all rows from Google Sheet by composite key (Turma + RA/Name) so homonyms or transfers across classes never collide!
+  const makeCompositeStudentKey = (turmaShort: string, raVal: string, nameVal: string): string => {
+    const cleanTurma = formatShortTurmaCode(turmaShort).toUpperCase().trim();
+    const normName = normalizeStudentNameForPhoto(nameVal);
+    const cleanRa = (raVal || '').trim();
+    return cleanRa ? `${cleanTurma}::RA:${cleanRa}` : `${cleanTurma}::NAME:${normName}`;
+  };
+
   const existingPhotoByStudentName = new Map<
     string,
     {
@@ -2734,9 +2800,10 @@ export const readClassesFromGoogleSheet = async (
       monthlyAttendanceByMonth?: Student['monthlyAttendanceByMonth'];
     }
   >();
-  currentClasses.forEach((c) =>
+  currentClasses.forEach((c) => {
+    const shortCode = formatShortTurmaCode(c.name).toUpperCase();
     c.students.forEach((s) => {
-      existingPhotoByStudentName.set(normalizeStudentNameForPhoto(s.name), {
+      const entry = {
         photo: s.photo,
         photoDriveUrl: s.photoDriveUrl,
         fichaPdfDriveId: s.fichaPdfDriveId,
@@ -2744,9 +2811,18 @@ export const readClassesFromGoogleSheet = async (
         fichaPdfSubfolder: s.fichaPdfSubfolder,
         consecutiveAbsenceAlert: s.consecutiveAbsenceAlert,
         monthlyAttendanceByMonth: s.monthlyAttendanceByMonth,
-      });
-    })
-  );
+      };
+      existingPhotoByStudentName.set(
+        makeCompositeStudentKey(shortCode, s.ra || '', s.name),
+        entry
+      );
+      existingPhotoByStudentName.set(
+        `${shortCode}::NAME:${normalizeStudentNameForPhoto(s.name)}`,
+        entry
+      );
+      existingPhotoByStudentName.set(normalizeStudentNameForPhoto(s.name), entry);
+    });
+  });
 
   // Also read Busca_Ativa_Faltas_Consecutivas_2027 if present so feedback typed in Google Sheets updates the App
   if (meta.sheetTitles.includes('Busca_Ativa_Faltas_Consecutivas_2027')) {
@@ -2774,6 +2850,7 @@ export const readClassesFromGoogleSheet = async (
         >();
 
         conRows.forEach((r) => {
+          const rowTurma = formatShortTurmaCode(String(r[0] || '')).toUpperCase();
           const stName = normalizeStudentNameForPhoto(String(r[4] || ''));
           if (!stName) return;
           const teacherStr = String(r[2] || '').trim();
@@ -2787,7 +2864,8 @@ export const readClassesFromGoogleSheet = async (
             : [];
           if (parsedDates.length === 0 && !feedbackStr) return;
 
-          const currentList = groupedOccByStudent.get(stName) || [];
+          const lookupKey = rowTurma ? `${rowTurma}::NAME:${stName}` : stName;
+          const currentList = groupedOccByStudent.get(lookupKey) || [];
           const seqNumber = currentList.length + 1;
           currentList.push({
             id: occId || `${stName}_occ_${seqNumber}`,
@@ -2798,14 +2876,20 @@ export const readClassesFromGoogleSheet = async (
             familyFeedback: feedbackStr,
             feedbackUpdatedAt: feedbackAt,
           });
-          groupedOccByStudent.set(stName, currentList);
+          groupedOccByStudent.set(lookupKey, currentList);
         });
 
-        groupedOccByStudent.forEach((occList, stName) => {
-          const prevEntry = existingPhotoByStudentName.get(stName) || {};
+        groupedOccByStudent.forEach((occList, lookupKey) => {
+          const fallbackName = lookupKey.includes('::NAME:')
+            ? lookupKey.split('::NAME:')[1]
+            : lookupKey;
+          const prevEntry =
+            existingPhotoByStudentName.get(lookupKey) ||
+            existingPhotoByStudentName.get(fallbackName) ||
+            {};
           const latest = occList[occList.length - 1];
           if (!latest) return;
-          existingPhotoByStudentName.set(stName, {
+          const updatedEntry = {
             ...prevEntry,
             consecutiveAbsenceAlert: {
               selectedDates: latest.selectedDates,
@@ -2816,7 +2900,9 @@ export const readClassesFromGoogleSheet = async (
               active: occList.length > 0,
               occurrences: occList,
             },
-          });
+          };
+          existingPhotoByStudentName.set(lookupKey, updatedEntry);
+          existingPhotoByStudentName.set(fallbackName, updatedEntry);
         });
       }
     } catch (e) {
@@ -2905,9 +2991,14 @@ export const readClassesFromGoogleSheet = async (
         ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
         : estudante.substring(0, 2).toUpperCase();
 
-    const prevPhoto = existingPhotoByStudentName.get(
-      normalizeStudentNameForPhoto(estudante)
-    );
+    const prevPhoto =
+      existingPhotoByStudentName.get(
+        makeCompositeStudentKey(turmaCode, ra, estudante)
+      ) ||
+      existingPhotoByStudentName.get(
+        `${turmaCode}::NAME:${normalizeStudentNameForPhoto(estudante)}`
+      ) ||
+      existingPhotoByStudentName.get(normalizeStudentNameForPhoto(estudante));
 
     const list = groupedFromSheet.get(turmaCode) || [];
     const normEstudante = normalizeStudentNameForPhoto(estudante);

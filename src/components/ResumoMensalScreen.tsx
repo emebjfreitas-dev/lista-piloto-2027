@@ -249,7 +249,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         completionRate,
         classesHeld,
         expectedDaysTarget,
-        frequencyRate: Math.round(metrics.taxaPresencaTurma),
+        frequencyRate: Math.round(metrics.presenceRate),
         totalAbsencesMonth: metrics.totalFaltasTurma,
         consecutiveAlertsCount,
         pendingCount: pendingReasons.length,

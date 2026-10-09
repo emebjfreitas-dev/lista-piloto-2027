@@ -25,6 +25,11 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
   if (!isOpen) return null;
 
   const classMetrics = getClassAttendanceMetrics(classGroup, OFFICIAL_OCTOBER_DAYS);
+  const isInfantilClass = classGroup.name.toUpperCase().startsWith('GRUPO');
+  const minLegalPresencePercent = isInfantilClass ? 60 : 75;
+  const criticalStudentsCount = classGroup.students.filter((s) =>
+    getStudentAttendanceMetrics(s, classGroup.classesHeld || 20, OFFICIAL_OCTOBER_DAYS).isBelowLegalThreshold
+  ).length;
   const currentBimester =
     OFFICIAL_BIMESTERS_2027.find((b) => b.id === selectedBimesterId) ||
     OFFICIAL_BIMESTERS_2027[3];
@@ -32,7 +37,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
   const bimesterRows = classGroup.students.map((s) =>
     getStudentBimesterReport(s, classGroup, currentBimester.id)
   );
-  const bimesterAlertsCount = bimesterRows.filter((r) => r.isBelowLegalThreshold).length;
+  const bimesterAlertsCount = bimesterRows.filter((r) => r.isBelowLegalThresholdBimestre).length;
 
   const handlePrint = () => {
     window.print();
@@ -89,7 +94,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               >
                 {OFFICIAL_BIMESTERS_2027.map((bim) => (
                   <option key={bim.id} value={bim.id}>
-                    {bim.label} ({bim.period})
+                    {bim.label} ({bim.periodLabel})
                   </option>
                 ))}
               </select>
@@ -144,10 +149,10 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <div className="text-right">
               <span className="text-[0.72rem] font-bold text-[#71787b] block">ANO LETIVO 2027</span>
               <span className="text-[1.05rem] font-extrabold text-[#003440]">
-                {reportMode === 'bimestral' ? currentBimester.period.toUpperCase() : 'OUTUBRO / 2027'}
+                {reportMode === 'bimestral' ? currentBimester.periodLabel.toUpperCase() : 'OUTUBRO / 2027'}
               </span>
               <span className="text-[0.7rem] text-[#005035] font-bold block">
-                Mínimo Legal: {classMetrics.minLegalPresencePercent}% ({classMetrics.isEducacaoInfantil ? 'Ed. Infantil' : 'Ens. Fundamental'})
+                Mínimo Legal: {minLegalPresencePercent}% ({isInfantilClass ? 'Ed. Infantil' : 'Ens. Fundamental'})
               </span>
             </div>
           </div>
@@ -161,7 +166,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <div>
               <span className="text-[#71787b] font-bold block text-[0.72rem]">ETAPA / EXIGÊNCIA MEC</span>
               <span className="font-bold text-[#191c1b]">
-                {classGroup.grade} (≥{classMetrics.minLegalPresencePercent}%)
+                {classGroup.grade} (≥{minLegalPresencePercent}%)
               </span>
             </div>
             <div>
@@ -171,7 +176,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <div>
               <span className="text-[#71787b] font-bold block text-[0.72rem]">ALERTAS LEGAIS NA TURMA</span>
               <span className={`font-black ${bimesterAlertsCount > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}`}>
-                {reportMode === 'bimestral' ? bimesterAlertsCount : classMetrics.criticalStudentsCount} estudante(s) &lt;{classMetrics.minLegalPresencePercent}%
+                {reportMode === 'bimestral' ? bimesterAlertsCount : criticalStudentsCount} estudante(s) &lt;{minLegalPresencePercent}%
               </span>
             </div>
           </div>
@@ -183,9 +188,9 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                   <tr className="bg-[#003440] text-white font-bold">
                     <th className="py-2 px-2.5 w-10 text-center">Nº</th>
                     <th className="py-2 px-3">Estudante (RA / NIS Bolsa Família)</th>
-                    {currentBimester.months.map((mName) => (
-                      <th key={mName} className="py-2 px-2 text-center bg-[#004632] border-x border-white/15">
-                        {mName.slice(0, 3)}. / 27
+                    {currentBimester.months.map((mObj) => (
+                      <th key={mObj.name} className="py-2 px-2 text-center bg-[#004632] border-x border-white/15">
+                        {mObj.name.slice(0, 3)}. / 27
                         <span className="block text-[0.62rem] font-normal opacity-85">Faltas | Atest.</span>
                       </th>
                     ))}
@@ -200,7 +205,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                     <tr
                       key={r.student.id}
                       className={`border-b border-[#edeeec] ${
-                        r.isBelowLegalThreshold
+                        r.isBelowLegalThresholdBimestre
                           ? 'bg-[#fff8f7]'
                           : idx % 2 === 0
                           ? 'bg-white'
@@ -213,7 +218,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                       <td className="py-2 px-3">
                         <span className="font-bold text-[#191c1b] block">{r.student.name}</span>
                         <span className="text-[0.68rem] font-mono text-[#71787b]">
-                          RA: {r.student.ra}-{r.student.digRa} • NIS: {r.nis}
+                          RA: {r.student.ra}-{r.student.digRa} • NIS: {r.student.nis || '—'}
                         </span>
                       </td>
                       {r.monthsBreakdown.map((mb) => (
@@ -240,7 +245,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                         {r.frequenciaBimestrePercent}%
                       </td>
                       <td className="py-2 px-2.5 text-center">
-                        {r.isBelowLegalThreshold ? (
+                        {r.isBelowLegalThresholdBimestre ? (
                           <span className="px-2 py-0.5 rounded text-[0.7rem] font-black bg-[#ffdad6] text-[#ba1a1a]">
                             ⚠️ Alerta &lt;{r.minLegalPresencePercent}%
                           </span>
@@ -275,8 +280,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                     const m = getStudentAttendanceMetrics(
                       student,
                       classGroup.classesHeld || 20,
-                      OFFICIAL_OCTOBER_DAYS,
-                      classGroup
+                      OFFICIAL_OCTOBER_DAYS
                     );
                     return (
                       <tr

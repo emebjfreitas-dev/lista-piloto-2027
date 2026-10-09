@@ -808,6 +808,7 @@ export default function App() {
       turmas: '1. Turmas',
       detalhes: 'Detalhes da Turma',
       frequencia_mensal: '2. Lançar Faltas',
+      faltas_consecutivas: 'Faltas Seguidas',
       bolsa_familia: 'Bolsa Família (Nominal)',
       onibus_fretado: 'Ônibus Fretado (Nominal)',
       planilha: '3. Planilha & Fotos',
@@ -1256,10 +1257,10 @@ export default function App() {
 
         {(currentScreen === 'bolsa_familia' || currentScreen === 'onibus_fretado') && (
           <ListasNominaisScreen
-            mode={currentScreen === 'bolsa_familia' ? 'bolsa_familia' : 'onibus_fretado'}
+            activeTab={currentScreen === 'bolsa_familia' ? 'bolsa_familia' : 'onibus_fretado'}
             classes={userRole === 'admin' ? classes : visibleClasses}
             userRole={userRole}
-            onSwitchMode={(newMode) => {
+            onSwitchTab={(newMode) => {
               if (newMode === 'bolsa_familia' && userRole !== 'admin') return;
               setCurrentScreen(newMode);
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1275,12 +1276,14 @@ export default function App() {
                 diasLetivosMes,
               })
             }
-            onOpenPhotoModal={(student, classId) => {
-              const targetClass = classes.find((c) => c.id === classId);
+            onOpenPhotoModal={(student, classNameOrId) => {
+              const targetClass =
+                classes.find((c) => c.id === classNameOrId) ||
+                classes.find((c) => c.name === classNameOrId);
               if (targetClass) setSelectedClass(targetClass);
               setPhotoModalStudent(student);
             }}
-            onUpdateStudentInClass={(classId, updatedStudent) => {
+            onUpdateStudentField={(classId, updatedStudent) => {
               handleSaveSingleStudent(classId, updatedStudent);
             }}
           />

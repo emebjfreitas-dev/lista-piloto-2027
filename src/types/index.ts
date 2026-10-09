@@ -139,13 +139,18 @@ export interface ClassGroup {
   teacherName?: string;
   teacherEmail?: string;
   pronoun?: string;
+  teacherPronoun?: string;
   teacherFirstName?: string;
   sedClassName?: string;
+  turmaSedName?: string;
   sedExpectedStudents?: number;
   classeSedCode?: string;
   artTeacher?: string;
+  artTeacherEmail?: string;
   peTeacher?: string;
+  peTeacherEmail?: string;
   englishTeacher?: string;
+  englishTeacherEmail?: string;
   totalStudents: number;
   presenceRate: number;
   statusText: string;
@@ -253,7 +258,15 @@ export interface AuthorizedUser {
   assignedClassName: string;
   assignedClassIds?: string[];
   assignedClassNames?: string[];
-  teacherRoleType?: 'peb1' | 'peb2' | 'admin' | 'apoio';
+  teacherRoleType?:
+    | 'peb1'
+    | 'peb2'
+    | 'admin'
+    | 'apoio'
+    | 'arte'
+    | 'regente'
+    | 'especialista'
+    | 'gestao';
   pronoun?: string;
   firstName?: string;
   subjectName?: 'ARTE' | 'EDUCAÇÃO FÍSICA' | 'LÍNGUA INGLESA' | 'REGENTE PEB I' | 'GESTÃO / ADMIN';

@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import {
   ClassGroup,
+  Student,
   SchoolDay,
   AuthorizedUser,
   AttendanceWindowConfig,
@@ -144,6 +145,8 @@ export const evaluateAttendanceLaunchWindow = (
   isWithinCalendarWindow: boolean;
   isAllowedToLaunch: boolean;
   reasonLabel: string;
+  statusTitle: string;
+  statusDescription: string;
   currentDateFormatted: string;
   windowRuleDescription: string;
 } => {
@@ -198,6 +201,10 @@ export const evaluateAttendanceLaunchWindow = (
     isWithinCalendarWindow,
     isAllowedToLaunch,
     reasonLabel,
+    statusTitle: isAllowedToLaunch
+      ? 'Janela de Lançamento ABERTA'
+      : 'Janela de Lançamento FECHADA',
+    statusDescription: reasonLabel,
     currentDateFormatted,
     windowRuleDescription:
       'Liberado apenas no último dia letivo do mês e nos 2 primeiros dias letivos do mês seguinte (ou abertura excepcional na aba Acessos).',

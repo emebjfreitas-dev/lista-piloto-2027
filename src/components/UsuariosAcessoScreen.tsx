@@ -219,7 +219,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       teacherFirstName:
         cls.teacherFirstName || (cls.teacherName || '').split(' ')[0] || '',
       room: cls.room || '',
-      shift: cls.shift,
+      shift: cls.shift === 'Turno Tarde' ? 'Turno Tarde' : 'Turno Manhã',
       turmaSedName: cls.turmaSedName || '',
       classeSedCode: cls.classeSedCode || '',
       artTeacher: cls.artTeacher || '',
@@ -367,17 +367,17 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     }));
 
     const nowMs = Date.now();
-    const next = authorizedUsers.map((u) =>
+    const next: AuthorizedUser[] = authorizedUsers.map((u) =>
       u.id === userId
         ? {
             ...u,
             role: newRole,
             teacherRoleType:
               newRole === 'admin'
-                ? 'gestao'
+                ? ('gestao' as const)
                 : newRole === 'peb2'
-                ? 'especialista'
-                : 'regente',
+                ? ('especialista' as const)
+                : ('regente' as const),
             ...summary,
             updatedAtMs: nowMs,
           }

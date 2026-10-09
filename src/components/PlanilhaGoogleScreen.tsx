@@ -22,6 +22,7 @@ import {
   logoutGoogle,
   getAccessToken,
   getSavedSpreadsheetInfo,
+  saveSpreadsheetInfo,
   getSavedPhotosDriveFolderInfo,
   savePhotosDriveFolderUrl,
   extractSpreadsheetId,
@@ -2211,9 +2212,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                         <div className="flex items-center gap-2.5 min-w-0">
                           <StudentAvatar
                             name={row.nome}
-                            photoUrl={row.fotoUrl}
+                            photo={row.fotoUrl}
                             size="sm"
-                            expandable
+                            expandableOnClick
                           />
                           <div className="min-w-0">
                             <span className="font-extrabold text-[#003440] block text-[0.92rem] truncate">

@@ -944,83 +944,25 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 </div>
 
-                {/* Indicadores de Presença Total (% e Qtd) e Falta Total (% e Qtd) no Card */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div
-                    className={`rounded-2xl px-3 py-2 border flex items-center justify-between ${
-                      isNonActive
-                        ? 'bg-white/85 border-black/[0.08]'
-                        : 'bg-[#eaf6ef]/70 border-[#005035]/15'
-                    }`}
-                  >
-                    <div>
-                      <span className="text-[0.64rem] font-bold uppercase tracking-wider text-[#005035] block">
-                        Presença Total
-                      </span>
-                      <span className="text-[0.72rem] font-bold text-[#003723] tabular-nums">
-                        {m.presencas}/{m.diasLetivosMatriculados} dias
-                      </span>
-                    </div>
-                    <span
-                      className={`text-[1.05rem] font-black tabular-nums ${
-                        m.isBelowLegalThreshold ? 'text-[#ba1a1a]' : 'text-[#005035]'
-                      }`}
-                    >
-                      {m.frequenciaPercent}%
-                    </span>
-                  </div>
-
-                  <div
-                    className={`rounded-2xl px-3 py-2 border flex items-center justify-between ${
-                      m.faltas > 0
-                        ? 'bg-[#fff8f7] border-[#ba1a1a]/20'
-                        : isNonActive
-                        ? 'bg-white/85 border-black/[0.08]'
-                        : 'bg-[#f6f8f7] border-black/[0.05]'
-                    }`}
-                  >
-                    <div>
-                      <span
-                        className={`text-[0.64rem] font-bold uppercase tracking-wider block ${
-                          m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#5a676b]'
-                        }`}
-                      >
-                        Falta Total
-                      </span>
-                      <span className="text-[0.72rem] font-bold text-[#374346] tabular-nums">
-                        {m.faltas} {m.faltas === 1 ? 'falta' : 'faltas'}
-                        {m.atestados > 0 ? ` (${m.atestados} at.)` : ''}
-                      </span>
-                    </div>
-                    <span
-                      className={`text-[1.05rem] font-black tabular-nums ${
-                        m.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#5a676b]'
-                      }`}
-                    >
-                      {pctFalta}%
-                    </span>
-                  </div>
-                </div>
-
-                {/* Bloco Filiação (Nome da Mãe e Nome do Pai), Telefones e E-mail Institucional */}
+                {/* Bloco Minimalista de Filiação e Contato Rápido */}
                 <div
-                  className={`rounded-2xl border p-2.5 space-y-1.5 text-[0.73rem] ${
+                  className={`rounded-2xl border p-2.5 space-y-1 text-[0.74rem] ${
                     isTransferred
                       ? 'bg-white/85 border-[#d97706]/25'
                       : isRemanejado
                       ? 'bg-white/85 border-[#7c3aed]/25'
-                      : 'bg-[#f7f9f8] border-black/[0.04]'
+                      : 'bg-[#f8f9fa] border-black/[0.04]'
                   }`}
                 >
-                  <div className="flex items-start gap-1.5">
-                    <span className="text-[#5a676b] font-bold shrink-0 w-10">Mãe:</span>
-                    <span className="font-semibold text-[#0f1715] truncate block flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[#86868b] font-semibold shrink-0 w-9">Mãe:</span>
+                    <span className="font-semibold text-[#1d1d1f] truncate block flex-1">
                       {student.filiacao1 || student.guardianName || 'Não informado'}
                     </span>
                   </div>
-                  <div className="flex items-start gap-1.5">
-                    <span className="text-[#5a676b] font-bold shrink-0 w-10">Pai:</span>
-                    <span className="font-semibold text-[#0f1715] truncate block flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[#86868b] font-semibold shrink-0 w-9">Pai:</span>
+                    <span className="font-semibold text-[#1d1d1f] truncate block flex-1">
                       {student.filiacao2 || 'Não informado'}
                     </span>
                   </div>
@@ -1059,40 +1001,16 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       </span>
                     )}
                   </div>
-                  {student.emailMunicipal && (
-                    <div className="text-[0.68rem] font-mono text-[#436370] truncate">
-                      {student.emailMunicipal}
-                    </div>
-                  )}
                 </div>
 
-                {/* Alerta Legal se <60% Infantil ou <75% Fundamental (Bolsa Família apenas p/ Admin) */}
-                {m.isBelowLegalThreshold && (
-                  <div className="px-2.5 py-1.5 rounded-xl bg-[#ffdad6]/85 border border-[#ba1a1a]/30 text-[#93000a] text-[0.7rem] font-bold flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[14px] shrink-0">
-                      warning
-                    </span>
-                    <span className="leading-tight">
-                      {userRole === 'admin'
-                        ? `Abaixo de ${m.minLegalPresencePercent}% (Alerta Busca Ativa / Bolsa Família)`
-                        : `Atenção de Frequência: Abaixo de ${m.minLegalPresencePercent}% no mês`}
-                    </span>
-                  </div>
-                )}
-
-                {/* Rodapé Minimalista do Card: Ficha Informativa Escaneada ou Aviso para pedir à família */}
+                {/* Botão Moderno e Fácil de Localizar: Abrir PDF da Ficha Informativa */}
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="pt-2 flex items-center justify-between gap-1.5 text-[0.72rem]"
+                  className="pt-1 flex flex-col gap-1.5"
                 >
-                  {onOpenStudentPdf ? (
-                    <a
-                      href={
-                        student.fichaPdfDriveUrl ||
-                        (student.fichaPdfDriveId
-                          ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                          : `#doc-${student.id}`)
-                      }
+                  {onOpenStudentPdf && (
+                    <button
+                      type="button"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1101,43 +1019,48 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       title={
                         (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
-                          ? `Abrir Ficha Informativa de ${student.name}`
+                          ? `Abrir PDF da Ficha Informativa de ${student.name}`
                           : 'Estudante sem ficha: clique para ver o aviso de solicitação à família'
                       }
-                      className={`doc-hyperlink px-3 py-1.5 rounded-full font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                      className={`w-full min-h-[38px] px-3.5 py-2 rounded-xl font-bold text-[0.76rem] flex items-center justify-between gap-2 cursor-pointer transition-all shadow-2xs active:scale-[0.99] ${
                         (student.fichaPdfDriveUrl &&
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white'
-                          : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#ff3b30] hover:!text-white'
+                          ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white'
+                          : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#d70015] hover:text-white border border-[#ff3b30]/25'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[15px]">
-                        {(student.fichaPdfDriveUrl &&
-                          student.fichaPdfDriveUrl.trim().length > 0) ||
-                        (student.fichaPdfDriveId &&
-                          student.fichaPdfDriveId.trim().length > 0)
-                          ? 'document_scanner'
-                          : 'notification_important'}
+                      <span className="flex items-center gap-1.5 truncate">
+                        <span className="material-symbols-outlined text-[17px] shrink-0">
+                          {(student.fichaPdfDriveUrl &&
+                            student.fichaPdfDriveUrl.trim().length > 0) ||
+                          (student.fichaPdfDriveId &&
+                            student.fichaPdfDriveId.trim().length > 0)
+                            ? 'picture_as_pdf'
+                            : 'notification_important'}
+                        </span>
+                        <span className="truncate">
+                          {(student.fichaPdfDriveUrl &&
+                            student.fichaPdfDriveUrl.trim().length > 0) ||
+                          (student.fichaPdfDriveId &&
+                            student.fichaPdfDriveId.trim().length > 0)
+                            ? 'Abrir Ficha Informativa (PDF)'
+                            : 'Sem Ficha PDF • Pedir à família'}
+                        </span>
                       </span>
-                      <span>
-                        {(student.fichaPdfDriveUrl &&
-                          student.fichaPdfDriveUrl.trim().length > 0) ||
-                        (student.fichaPdfDriveId &&
-                          student.fichaPdfDriveId.trim().length > 0)
-                          ? 'Ficha Informativa'
-                          : 'Sem Ficha • Pedir à família'}
+                      <span className="material-symbols-outlined text-[15px] shrink-0 opacity-85">
+                        open_in_new
                       </span>
-                    </a>
-                  ) : (
-                    <span />
+                    </button>
                   )}
 
                   {student.rotaOnibus && (
-                    <span className="px-2 py-0.5 rounded-lg bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.66rem] truncate max-w-[140px]">
-                      🚌 {student.rotaOnibus.split('-')[0].trim()}
-                    </span>
+                    <div className="flex justify-end">
+                      <span className="px-2 py-0.5 rounded-lg bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.66rem] truncate">
+                        🚌 {student.rotaOnibus.split('-')[0].trim()}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1236,34 +1159,29 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
                 <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                   {onOpenStudentPdf && (
-                    <a
-                      href={
-                        student.fichaPdfDriveUrl ||
-                        (student.fichaPdfDriveId
-                          ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                          : `#doc-${student.id}`)
-                      }
+                    <button
+                      type="button"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         onOpenStudentPdf(student);
                       }}
-                      title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                      className={`doc-hyperlink px-2.5 py-1 rounded-xl font-extrabold text-[0.72rem] flex items-center gap-1 cursor-pointer transition-colors shrink-0 ${
+                      title={`Abrir PDF da Ficha Informativa (${student.name}.pdf)`}
+                      className={`px-3.5 py-1.5 rounded-xl font-bold text-[0.74rem] flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-2xs ${
                         (student.fichaPdfDriveUrl &&
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white border border-[#005035]/25'
-                          : 'bg-[#fff1f2] hover:bg-[#be123c] text-[#be123c] hover:!text-white border border-[#e11d48]/40'
+                          ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white'
+                          : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#d70015] hover:text-white border border-[#ff3b30]/30'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[14px]">
+                      <span className="material-symbols-outlined text-[16px]">
                         {(student.fichaPdfDriveUrl &&
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'document_scanner'
+                          ? 'picture_as_pdf'
                           : 'notification_important'}
                       </span>
                       <span>
@@ -1271,25 +1189,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'Ficha Informativa'
+                          ? 'Abrir Ficha PDF'
                           : 'Sem Ficha • Pedir à família'}
                       </span>
-                    </a>
+                    </button>
                   )}
-                  <div className="flex items-center gap-2 font-mono text-[0.76rem] tabular-nums">
-                    <span className="px-2.5 py-1 rounded-xl bg-[#eaf6ef] text-[#005035] font-bold">
-                      Presença: {m.presencas}d ({m.frequenciaPercent}%)
-                    </span>
-                    <span
-                      className={`px-2.5 py-1 rounded-xl font-bold ${
-                        m.faltas > 0
-                          ? 'bg-[#ffdad6]/70 text-[#ba1a1a]'
-                          : 'bg-[#f2f4f3] text-[#5a676b]'
-                      }`}
-                    >
-                      Faltas: {m.faltas} ({pctFalta}%)
-                    </span>
-                  </div>
                   <span className="material-symbols-outlined text-[18px] text-[#8e8e93]">
                     chevron_right
                   </span>
@@ -1366,26 +1270,28 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           </span>
                         </div>
                         {onOpenStudentPdf && (
-                          <a
-                            href={
-                              student.fichaPdfDriveUrl ||
-                              (student.fichaPdfDriveId
-                                ? `https://drive.google.com/file/d/${student.fichaPdfDriveId}/view`
-                                : `#doc-${student.id}`)
-                            }
+                          <button
+                            type="button"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               onOpenStudentPdf(student);
                             }}
-                            title={`Abrir Ficha Informativa Escaneada (${student.name}.pdf) no Google Drive`}
-                            className="doc-hyperlink px-2 py-0.5 rounded-lg bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] font-extrabold text-[0.68rem] flex items-center gap-1 shrink-0"
+                            title={`Abrir PDF da Ficha Informativa (${student.name}.pdf)`}
+                            className={`px-2.5 py-1 rounded-lg font-bold text-[0.7rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
+                              (student.fichaPdfDriveUrl &&
+                                student.fichaPdfDriveUrl.trim().length > 0) ||
+                              (student.fichaPdfDriveId &&
+                                student.fichaPdfDriveId.trim().length > 0)
+                                ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white'
+                                : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#d70015] hover:text-white border border-[#ff3b30]/25'
+                            }`}
                           >
-                            <span className="material-symbols-outlined text-[13px]">
-                              document_scanner
+                            <span className="material-symbols-outlined text-[14px]">
+                              picture_as_pdf
                             </span>
-                            <span>Ficha (Drive)</span>
-                          </a>
+                            <span>Abrir PDF</span>
+                          </button>
                         )}
                       </div>
                     </td>
