@@ -69,6 +69,17 @@ export interface MonthlyAttendanceEntry {
   observacao?: string;
 }
 
+export interface ConsecutiveAbsenceOccurrence {
+  id: string;
+  sequenceNumber: number;
+  selectedDates: string[];
+  reportedAt: string;
+  reportedByTeacher?: string;
+  familyFeedback?: string;
+  feedbackUpdatedAt?: string;
+  feedbackReadByTeacher?: boolean;
+}
+
 export interface ConsecutiveAbsenceAlert {
   selectedDates: string[];
   reportedAt: string;
@@ -76,6 +87,7 @@ export interface ConsecutiveAbsenceAlert {
   familyFeedback?: string;
   feedbackUpdatedAt?: string;
   active: boolean;
+  occurrences?: ConsecutiveAbsenceOccurrence[];
 }
 
 export interface Student extends StudentSedData {

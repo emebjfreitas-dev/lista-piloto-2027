@@ -63,6 +63,51 @@ const deduplicateUsersByEmail = (users?: any[]): any[] | undefined => {
   return Array.from(map.values());
 };
 
+const sanitizeAndDeduplicateClasses = (classes?: any[]): any[] | undefined => {
+  if (!Array.isArray(classes)) return classes;
+  return classes.map((cls: any, clsIdx: number) => {
+    const cleanClassId = cls?.id || `cls-${clsIdx + 1}`;
+    const rawStudents = Array.isArray(cls?.students) ? cls.students : [];
+    const seenKeys = new Set<string>();
+    const seenIds = new Set<string>();
+    const cleanStudents: any[] = [];
+
+    rawStudents.forEach((st: any, idx: number) => {
+      if (!st || !st.name) return;
+      const normName = String(st.name)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+      const raKey = String(st.ra || '').trim();
+      const dedupKey = raKey ? `ra:${raKey}|name:${normName}` : `name:${normName}`;
+      if (seenKeys.has(dedupKey)) return;
+      seenKeys.add(dedupKey);
+
+      const num = st.number || idx + 1;
+      let studentId = st.id || `${cleanClassId}-s${num}`;
+      if (seenIds.has(studentId)) {
+        studentId = `${cleanClassId}-s${num}-i${idx + 1}`;
+      }
+      seenIds.add(studentId);
+
+      cleanStudents.push({
+        ...st,
+        id: studentId,
+        number: num,
+      });
+    });
+
+    return {
+      ...cls,
+      id: cleanClassId,
+      totalStudents: cleanStudents.length,
+      students: cleanStudents,
+    };
+  });
+};
+
 const readSharedState = (): SharedSchoolState => {
   try {
     if (fs.existsSync(STATE_FILE_PATH)) {
@@ -71,6 +116,9 @@ const readSharedState = (): SharedSchoolState => {
       if (parsed && typeof parsed === 'object') {
         if (Array.isArray(parsed.authorizedUsers)) {
           parsed.authorizedUsers = deduplicateUsersByEmail(parsed.authorizedUsers);
+        }
+        if (Array.isArray(parsed.classes)) {
+          parsed.classes = sanitizeAndDeduplicateClasses(parsed.classes);
         }
         return parsed;
       }
@@ -88,6 +136,9 @@ const writeSharedState = (patch: Partial<SharedSchoolState>): SharedSchoolState 
     ...patch,
     ...(patch.authorizedUsers
       ? { authorizedUsers: deduplicateUsersByEmail(patch.authorizedUsers) }
+      : {}),
+    ...(patch.classes
+      ? { classes: sanitizeAndDeduplicateClasses(patch.classes) }
       : {}),
     updatedAtMs: Date.now(),
   };

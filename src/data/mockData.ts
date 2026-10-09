@@ -2164,7 +2164,7 @@ export const generateSheetRowsFromClasses = (classes: ClassGroup[]): SheetRowDat
       ? 'EDUCACAO INFANTIL'
       : 'ENSINO FUNDAMENTAL';
 
-    c.students.forEach((s) => {
+    c.students.forEach((s, sIdx) => {
       const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
       const faltasSemAtestado = Math.max(0, m.faltas - m.atestados);
       const percentFaltas =
@@ -2179,7 +2179,7 @@ export const generateSheetRowsFromClasses = (classes: ClassGroup[]): SheetRowDat
           : 0;
 
       rows.push({
-        id: `${c.id}-${s.id}`,
+        id: `${c.id}-${s.id || `s${sIdx + 1}`}-idx${sIdx}`,
         studentId: s.id,
         classId: c.id,
         tipoEnsino,

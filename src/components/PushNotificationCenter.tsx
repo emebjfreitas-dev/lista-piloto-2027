@@ -46,6 +46,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
   const [newCategory, setNewCategory] = useState<PushNoticeCategory>('prazo');
   const [newTargetClassId, setNewTargetClassId] = useState<string>('all');
   const [activeBanner, setActiveBanner] = useState<PushNoticeItem | null>(null);
+  const hasShownStartupFeedbackSummaryRef = useRef(false);
 
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -111,6 +112,35 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
 
   const unreadCount = useMemo(() => {
     return allNotices.filter((n) => !n.read).length;
+  }, [allNotices]);
+
+  // Assim que a professora abre o app, se houver feedbacks da família na Busca Ativa ainda não lidos, exibe um Resumo Push automático
+  useEffect(() => {
+    if (hasShownStartupFeedbackSummaryRef.current) return;
+    const unreadFeedbackNotices = allNotices.filter(
+      (n) => n.category === 'busca_ativa' && n.id.startsWith('auto_feedback_') && !n.read
+    );
+    if (unreadFeedbackNotices.length > 0) {
+      hasShownStartupFeedbackSummaryRef.current = true;
+      const first = unreadFeedbackNotices[0];
+      const summaryNotice: PushNoticeItem =
+        unreadFeedbackNotices.length === 1
+          ? first
+          : {
+              id: first.id,
+              title: `Resumo Push • ${unreadFeedbackNotices.length} Retornos da Família`,
+              body: `${first.title.replace('Feedback da Família • ', '')}: ${first.body} (Toque para abrir e ler todas as ocorrências com calma)`,
+              category: 'busca_ativa',
+              targetClassId: first.targetClassId,
+              targetScreen: 'faltas_consecutivas',
+              createdAt: 'Ao abrir o app',
+              authorName: 'Secretaria Escolar',
+            };
+      triggerPushNotification(summaryNotice, {
+        saveToFeed: false,
+        showBanner: true,
+      });
+    }
   }, [allNotices]);
 
   const filteredNotices = useMemo(() => {

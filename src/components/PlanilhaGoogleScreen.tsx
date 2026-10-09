@@ -1462,7 +1462,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/[0.04]">
-                  {consecutiveAbsenceRows.map(({ cls, student, selectedDates, familyFeedback }) => {
+                  {consecutiveAbsenceRows.map(({ cls, student, selectedDates, familyFeedback }, rIdx) => {
                     const waLinks = buildWhatsAppLinksFromPhoneString(
                       student.telefones || student.guardianPhone,
                       student.name,
@@ -1472,7 +1472,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     );
 
                     return (
-                      <tr key={`${cls.id}-${student.id}`} className="hover:bg-[#fbfbfd]">
+                      <tr key={`${cls.id}-${student.id}-${rIdx}`} className="hover:bg-[#fbfbfd]">
                         <td className="py-3.5 px-4">
                           <span className="font-bold text-[#1d1d1f] block">
                             {cls.name} ({cls.shift.replace('Turno ', '')})
@@ -1773,7 +1773,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <tbody className="divide-y divide-[#edeeec]">
                 {bimesterReportRows.slice(0, 250).map((r, idx) => (
                   <tr
-                    key={`${r.classId}-${r.student.id}`}
+                    key={`${r.classId}-${r.student.id}-${idx}`}
                     onClick={() => onOpenStudentGrid?.(r.classId, r.student.id)}
                     className={`cursor-pointer hover:bg-[#c3e5f4]/25 transition-colors ${
                       r.isBelowLegalThresholdBimestre

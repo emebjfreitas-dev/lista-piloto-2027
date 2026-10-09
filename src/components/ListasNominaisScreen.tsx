@@ -592,11 +592,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.05]">
-                {bolsaFamiliaRows.map(({ student, cls, m, bim }) => {
+                {bolsaFamiliaRows.map(({ student, cls, m, bim }, rIdx) => {
                   const isEditingThis = editingStudentId === `nis-${student.id}`;
                   return (
                     <tr
-                      key={`${cls.id}-${student.id}`}
+                      key={`${cls.id}-${student.id}-${rIdx}`}
                       onClick={() =>
                         onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
                       }
@@ -795,11 +795,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/[0.05]">
-                {onibusFretadoRows.map(({ student, cls, m }) => {
+                {onibusFretadoRows.map(({ student, cls, m }, rIdx) => {
                   const isEditingRoute = editingStudentId === `route-${student.id}`;
                   return (
                     <tr
-                      key={`${cls.id}-${student.id}`}
+                      key={`${cls.id}-${student.id}-${rIdx}`}
                       onClick={() =>
                         onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
                       }

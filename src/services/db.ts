@@ -645,11 +645,43 @@ export const findAuthorizedUserByEmail = (
 
 const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] => {
   const officialMap = new Map(INITIAL_CLASSES.map((c) => [c.id.toLowerCase(), c]));
-  return classes.map((cls) => {
+  const seenClassIds = new Set<string>();
+  return classes.map((cls, clsIdx) => {
     const off = officialMap.get(cls.id.toLowerCase());
+    let cleanClassId = cls.id || off?.id || `cls-${clsIdx + 1}`;
+    if (seenClassIds.has(cleanClassId.toLowerCase())) {
+      cleanClassId = `${cleanClassId}-${clsIdx + 1}`;
+    }
+    seenClassIds.add(cleanClassId.toLowerCase());
+
     const baseStudents = cls.students || off?.students || [];
-    const enrichedStudents = baseStudents.map((st, idx) => {
+    const seenStudentKeysInClass = new Set<string>();
+    const deduplicatedBaseStudents: Student[] = [];
+    baseStudents.forEach((st) => {
+      if (!st || !st.name) return;
+      const normName = st.name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+      const raKey = (st.ra || '').trim();
+      const dedupKey = raKey ? `ra:${raKey}|name:${normName}` : `name:${normName}`;
+      if (seenStudentKeysInClass.has(dedupKey)) return;
+      seenStudentKeysInClass.add(dedupKey);
+      deduplicatedBaseStudents.push(st);
+    });
+
+    const seenStudentIdsInClass = new Set<string>();
+    const enrichedStudents = deduplicatedBaseStudents.map((st, idx) => {
       const num = st.number || idx + 1;
+      let cleanStudentId = st.id || `${cleanClassId}-s${num}`;
+      // Fix legacy duplicated IDs or collisions within the same class
+      if (seenStudentIdsInClass.has(cleanStudentId)) {
+        cleanStudentId = `${cleanClassId}-s${num}-i${idx + 1}`;
+      }
+      seenStudentIdsInClass.add(cleanStudentId);
+
       const defaultNis =
         st.nis !== undefined
           ? st.nis
@@ -666,6 +698,8 @@ const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] =>
           : '';
       return {
         ...st,
+        id: cleanStudentId,
+        number: num,
         nis: defaultNis || undefined,
         rotaOnibus: defaultRota || undefined,
       };
@@ -673,12 +707,14 @@ const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] =>
     if (!off) {
       return {
         ...cls,
+        id: cleanClassId,
         students: enrichedStudents,
       };
     }
     return {
       ...off,
       ...cls,
+      id: cleanClassId,
       students: enrichedStudents,
       turmaAbrev: cls.turmaAbrev || off.turmaAbrev,
       teacherName: cls.teacherName || off.teacherName,

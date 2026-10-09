@@ -298,9 +298,36 @@ export function markAllPushNoticesAsRead(ids: string[]): string[] {
   return merged;
 }
 
+export function getStudentCumulativeOccurrences(student: ClassGroup['students'][number]) {
+  const alert = student.consecutiveAbsenceAlert;
+  if (!alert) return [];
+  if (alert.occurrences && alert.occurrences.length > 0) {
+    return alert.occurrences;
+  }
+  if (
+    alert.active ||
+    (alert.selectedDates && alert.selectedDates.length > 0) ||
+    (alert.familyFeedback && alert.familyFeedback.trim().length > 0)
+  ) {
+    return [
+      {
+        id: `${student.id}_occ_1`,
+        sequenceNumber: 1,
+        selectedDates: alert.selectedDates || [],
+        reportedAt: alert.reportedAt || '',
+        reportedByTeacher: alert.reportedByTeacher,
+        familyFeedback: alert.familyFeedback || '',
+        feedbackUpdatedAt: alert.feedbackUpdatedAt || '',
+        feedbackReadByTeacher: false,
+      },
+    ];
+  }
+  return [];
+}
+
 /**
  * Gera avisos inteligentes automáticos de prazos e retornos da secretaria
- * com base nas turmas visíveis do professor ou coordenador.
+ * com base nas turmas visíveis do professor ou coordenador (incluindo múltiplas ocorrências acumuladas no ano).
  */
 export function buildContextualPushNotices(
   visibleClasses: ClassGroup[],
@@ -315,26 +342,25 @@ export function buildContextualPushNotices(
       return !sit.includes('BXTR') && !sit.includes('TRANSF') && !sit.includes('REMAN');
     });
 
-    // 1. Retornos da família registrados pela secretaria na Busca Ativa
-    const studentsWithFeedback = activeStudents.filter(
-      (s) =>
-        s.consecutiveAbsenceAlert?.active &&
-        (s.consecutiveAbsenceAlert.familyFeedback || '').trim().length > 0
-    );
-
-    if (studentsWithFeedback.length > 0) {
-      const first = studentsWithFeedback[0];
-      dynamicNotices.push({
-        id: `auto_feedback_${cls.id}_${first.id}`,
-        title: `Retorno da Família • Turma ${cls.name}`,
-        body: `${first.name.split(' ')[0]}: "${first.consecutiveAbsenceAlert?.familyFeedback}"`,
-        category: 'busca_ativa',
-        targetClassId: cls.id,
-        targetScreen: 'faltas_consecutivas',
-        createdAt: first.consecutiveAbsenceAlert?.feedbackUpdatedAt || 'Recente',
-        authorName: 'Secretaria Escolar',
+    // 1. Todos os retornos da família registrados pela secretaria nas ocorrências acumuladas
+    activeStudents.forEach((s) => {
+      const occs = getStudentCumulativeOccurrences(s);
+      occs.forEach((occ, idx) => {
+        const fb = (occ.familyFeedback || '').trim();
+        if (!fb) return;
+        const seq = occ.sequenceNumber || idx + 1;
+        dynamicNotices.push({
+          id: `auto_feedback_${cls.id}_${s.id}_${occ.id || seq}`,
+          title: `Feedback da Família • ${s.name.split(' ')[0]} (${seq}ª Ocorrência)`,
+          body: `Turma ${cls.name} (${occ.selectedDates.join(', ')}): "${fb}"`,
+          category: 'busca_ativa',
+          targetClassId: cls.id,
+          targetScreen: 'faltas_consecutivas',
+          createdAt: occ.feedbackUpdatedAt || occ.reportedAt || 'Recente',
+          authorName: 'Secretaria Escolar',
+        });
       });
-    }
+    });
 
     // 2. Prazo / Pendência de observação pedagógica ou estudantes com faltas elevadas
     const highAbsenceUnjustified = activeStudents.filter(

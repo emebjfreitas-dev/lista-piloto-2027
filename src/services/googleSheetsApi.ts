@@ -763,7 +763,7 @@ const buildFaltasConsecutivasSheetValues = (
     'Nº CHAMADA',
     'ESTUDANTE',
     'RA',
-    'DIAS DE FALTA CONSECUTIVA (ATÉ 4 DIAS ANTERIORES)',
+    'DIAS DE FALTA CONSECUTIVA (3+ DIAS SEGUIDOS)',
     'QTD DIAS SEGUIDOS',
     'DATA DO AVISO PELO PEB I',
     'RESPONSÁVEL (MÃE / PAI)',
@@ -772,6 +772,8 @@ const buildFaltasConsecutivasSheetValues = (
     'DATA DA DEVOLUTIVA',
     'ID_TURMA',
     'ID_ESTUDANTE',
+    'ID_OCORRENCIA',
+    'SEQUÊNCIA NO ANO',
   ];
 
   const rows: any[][] = [headers];
@@ -780,27 +782,50 @@ const buildFaltasConsecutivasSheetValues = (
     const periodo = cls.shift.replace('Turno ', '').toUpperCase();
     cls.students.forEach((s) => {
       const alert = s.consecutiveAbsenceAlert;
-      if (!alert || (!alert.active && !alert.familyFeedback)) return;
-      const datesList = alert.selectedDates || [];
-      if (datesList.length === 0 && !alert.familyFeedback) return;
+      if (!alert) return;
 
-      rows.push([
-        cls.name,
-        periodo,
-        cls.teacherName || 'PEB I',
-        s.number,
-        s.name,
-        s.ra ? `${s.ra}-${s.digRa || ''}` : '',
-        datesList.join(', '),
-        datesList.length,
-        alert.reportedAt || '',
-        s.filiacao1 || s.guardianName || '',
-        s.telefones || s.guardianPhone || '',
-        alert.familyFeedback || '',
-        alert.feedbackUpdatedAt || '',
-        cls.id,
-        s.id,
-      ]);
+      const occurrences =
+        alert.occurrences && alert.occurrences.length > 0
+          ? alert.occurrences
+          : alert.active || (alert.selectedDates && alert.selectedDates.length > 0) || alert.familyFeedback
+          ? [
+              {
+                id: `${s.id}_occ_1`,
+                sequenceNumber: 1,
+                selectedDates: alert.selectedDates || [],
+                reportedAt: alert.reportedAt || '',
+                reportedByTeacher: alert.reportedByTeacher || cls.teacherName || 'PEB I',
+                familyFeedback: alert.familyFeedback || '',
+                feedbackUpdatedAt: alert.feedbackUpdatedAt || '',
+              },
+            ]
+          : [];
+
+      occurrences.forEach((occ, idx) => {
+        const datesList = occ.selectedDates || [];
+        if (datesList.length === 0 && !occ.familyFeedback) return;
+        const seqNum = occ.sequenceNumber || idx + 1;
+
+        rows.push([
+          cls.name,
+          periodo,
+          occ.reportedByTeacher || cls.teacherName || 'PEB I',
+          s.number,
+          s.name,
+          s.ra ? `${s.ra}-${s.digRa || ''}` : '',
+          datesList.join(', '),
+          datesList.length,
+          occ.reportedAt || '',
+          s.filiacao1 || s.guardianName || '',
+          s.telefones || s.guardianPhone || '',
+          occ.familyFeedback || '',
+          occ.feedbackUpdatedAt || '',
+          cls.id,
+          s.id,
+          occ.id || `${s.id}_occ_${seqNum}`,
+          `${seqNum}ª Ocorrência`,
+        ]);
+      });
     });
   });
 
@@ -2508,8 +2533,18 @@ export const parseSedTsvIntoClasses = (
         ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
         : estudante.substring(0, 2).toUpperCase();
 
+    const existingList = groupedByTurma.get(turmaCode) || [];
+    const normEstudante = normalizeStudentNameForPhoto(estudante);
+    const alreadyInTurma = existingList.some(
+      (s) =>
+        (ra && s.ra === ra && normalizeStudentNameForPhoto(s.name) === normEstudante) ||
+        normalizeStudentNameForPhoto(s.name) === normEstudante
+    );
+    if (alreadyInTurma) return;
+    const candidateId = `${turmaCode.toLowerCase()}-s${numChamada}`;
+    const isDupId = existingList.some((s) => s.id === candidateId);
     const studentObj: Student = {
-      id: `${turmaCode.toLowerCase()}-s${numChamada}`,
+      id: isDupId ? `${candidateId}-r${idx + 1}` : candidateId,
       number: numChamada,
       name: estudante,
       initials,
@@ -2575,7 +2610,6 @@ export const parseSedTsvIntoClasses = (
       sucessaoEscolar,
     };
 
-    const existingList = groupedByTurma.get(turmaCode) || [];
     existingList.push(studentObj);
     groupedByTurma.set(turmaCode, existingList);
     importedCount++;
@@ -2720,33 +2754,67 @@ export const readClassesFromGoogleSheet = async (
       const conRes = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
           spreadsheetId
-        )}/values/${encodeURIComponent('Busca_Ativa_Faltas_Consecutivas_2027!A2:O500')}`,
+        )}/values/${encodeURIComponent('Busca_Ativa_Faltas_Consecutivas_2027!A2:Q1000')}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (conRes.ok) {
         const conData = await conRes.json();
         const conRows: any[][] = conData.values || [];
+        const groupedOccByStudent = new Map<
+          string,
+          Array<{
+            id: string;
+            sequenceNumber: number;
+            selectedDates: string[];
+            reportedAt: string;
+            reportedByTeacher?: string;
+            familyFeedback?: string;
+            feedbackUpdatedAt?: string;
+          }>
+        >();
+
         conRows.forEach((r) => {
           const stName = normalizeStudentNameForPhoto(String(r[4] || ''));
           if (!stName) return;
+          const teacherStr = String(r[2] || '').trim();
           const datesStr = String(r[6] || '').trim();
           const reportedAt = String(r[8] || '').trim();
           const feedbackStr = String(r[11] || '').trim();
           const feedbackAt = String(r[12] || '').trim();
-          const prevEntry = existingPhotoByStudentName.get(stName) || {};
-          const prevAlert = prevEntry.consecutiveAbsenceAlert;
+          const occId = String(r[15] || '').trim();
           const parsedDates = datesStr
             ? datesStr.split(',').map((d) => d.trim()).filter(Boolean)
-            : prevAlert?.selectedDates || [];
+            : [];
+          if (parsedDates.length === 0 && !feedbackStr) return;
+
+          const currentList = groupedOccByStudent.get(stName) || [];
+          const seqNumber = currentList.length + 1;
+          currentList.push({
+            id: occId || `${stName}_occ_${seqNumber}`,
+            sequenceNumber: seqNumber,
+            selectedDates: parsedDates,
+            reportedAt,
+            reportedByTeacher: teacherStr || undefined,
+            familyFeedback: feedbackStr,
+            feedbackUpdatedAt: feedbackAt,
+          });
+          groupedOccByStudent.set(stName, currentList);
+        });
+
+        groupedOccByStudent.forEach((occList, stName) => {
+          const prevEntry = existingPhotoByStudentName.get(stName) || {};
+          const latest = occList[occList.length - 1];
+          if (!latest) return;
           existingPhotoByStudentName.set(stName, {
             ...prevEntry,
             consecutiveAbsenceAlert: {
-              selectedDates: parsedDates,
-              reportedAt: reportedAt || prevAlert?.reportedAt || '',
-              reportedByTeacher: prevAlert?.reportedByTeacher,
-              familyFeedback: feedbackStr || prevAlert?.familyFeedback || '',
-              feedbackUpdatedAt: feedbackAt || prevAlert?.feedbackUpdatedAt,
-              active: parsedDates.length > 0,
+              selectedDates: latest.selectedDates,
+              reportedAt: latest.reportedAt,
+              reportedByTeacher: latest.reportedByTeacher,
+              familyFeedback: latest.familyFeedback || '',
+              feedbackUpdatedAt: latest.feedbackUpdatedAt || '',
+              active: occList.length > 0,
+              occurrences: occList,
             },
           });
         });
@@ -2841,8 +2909,20 @@ export const readClassesFromGoogleSheet = async (
       normalizeStudentNameForPhoto(estudante)
     );
 
+    const list = groupedFromSheet.get(turmaCode) || [];
+    const normEstudante = normalizeStudentNameForPhoto(estudante);
+    const alreadyInSheetTurma = list.some(
+      (s) =>
+        (ra && s.ra === ra && normalizeStudentNameForPhoto(s.name) === normEstudante) ||
+        normalizeStudentNameForPhoto(s.name) === normEstudante
+    );
+    if (alreadyInSheetTurma) continue;
+    const baseId = idAlunoCol || `${turmaCode.toLowerCase()}-s${numChamada}`;
+    const isDuplicateInTurma = list.some((s) => s.id === baseId);
+    const uniqueStudentId = isDuplicateInTurma ? `${baseId}-row${i}` : baseId;
+
     const studentObj: Student = {
-      id: idAlunoCol || `${turmaCode.toLowerCase()}-s${numChamada}`,
+      id: uniqueStudentId,
       number: numChamada,
       name: estudante,
       initials,
@@ -2910,7 +2990,6 @@ export const readClassesFromGoogleSheet = async (
       sucessaoEscolar,
     };
 
-    const list = groupedFromSheet.get(turmaCode) || [];
     list.push(studentObj);
     groupedFromSheet.set(turmaCode, list);
   }
