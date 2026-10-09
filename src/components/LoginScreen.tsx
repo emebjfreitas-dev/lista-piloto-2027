@@ -19,19 +19,14 @@ import {
   checkGoogleRedirectResult,
   readAuthorizedUsersFromGoogleSheet,
 } from '../services/googleSheetsApi';
-import { APP_FONT_OPTIONS, AppFontId } from '../utils/fontTheme';
 
 interface LoginScreenProps {
   authorizedUsers: AuthorizedUser[];
-  activeFontId?: AppFontId;
-  onSelectFont?: (fontId: AppFontId) => void;
   onLoginSuccess: (authorizedUser: AuthorizedUser) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   authorizedUsers,
-  activeFontId = 'inter',
-  onSelectFont,
   onLoginSuccess,
 }) => {
   const [loading, setLoading] = useState(false);

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { ClassGroup, ScreenType, UserRole } from '../types';
 import { APP_LOGO_URL, APP_LOGO_FALLBACK_URL, SCHOOL_NAME } from '../data/mockData';
 import { StudentAvatar } from './StudentAvatar';
-import { AppFontId } from '../utils/fontTheme';
 import { PushNotificationCenter } from './PushNotificationCenter';
 
 interface HeaderProps {
@@ -14,8 +13,6 @@ interface HeaderProps {
   userRole?: UserRole;
   visibleClasses?: ClassGroup[];
   allClasses?: ClassGroup[];
-  activeFontId?: AppFontId;
-  onSelectFont?: (fontId: AppFontId) => void;
   onRestoreAdminRole?: () => void;
   onBack?: () => void;
   onChangeScreen?: (screen: ScreenType) => void;

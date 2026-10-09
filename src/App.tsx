@@ -59,11 +59,6 @@ import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
 import { ConfigurarDiasLetivosTurmasModal } from './components/ConfigurarDiasLetivosTurmasModal';
 import { SpotlightCommandModal } from './components/SpotlightCommandModal';
-import {
-  AppFontId,
-  getSavedAppFont,
-  applyAppFont,
-} from './utils/fontTheme';
 
 const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
 
@@ -197,12 +192,7 @@ export default function App() {
   );
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
-  const [activeFontId, setActiveFontId] = useState<AppFontId>(() => getSavedAppFont());
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
-
-  useEffect(() => {
-    applyAppFont(activeFontId);
-  }, [activeFontId]);
 
   // Global keyboard shortcut Ctrl+K or Cmd+K for Spotlight Search
   useEffect(() => {
@@ -1055,8 +1045,6 @@ export default function App() {
         userRole={userRole}
         visibleClasses={visibleClasses}
         allClasses={classes}
-        activeFontId={activeFontId}
-        onSelectFont={(fontId) => setActiveFontId(fontId)}
         onSelectClassById={(classId) => {
           const found = classes.find((c) => c.id === classId);
           if (found) setSelectedClass(found);
@@ -1103,8 +1091,6 @@ export default function App() {
         {currentScreen === 'login' && (
           <LoginScreen
             authorizedUsers={authorizedUsers}
-            activeFontId={activeFontId}
-            onSelectFont={(fontId) => setActiveFontId(fontId)}
             onLoginSuccess={handleLoginSuccess}
           />
         )}
