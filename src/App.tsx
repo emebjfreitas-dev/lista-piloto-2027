@@ -58,6 +58,7 @@ import { UploadFotoModal } from './components/UploadFotoModal';
 import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
 import { ConfigurarDiasLetivosTurmasModal } from './components/ConfigurarDiasLetivosTurmasModal';
+import { SpotlightCommandModal } from './components/SpotlightCommandModal';
 import {
   AppFontId,
   getSavedAppFont,
@@ -197,10 +198,25 @@ export default function App() {
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
   const [activeFontId, setActiveFontId] = useState<AppFontId>(() => getSavedAppFont());
+  const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
 
   useEffect(() => {
     applyAppFont(activeFontId);
   }, [activeFontId]);
+
+  // Global keyboard shortcut Ctrl+K or Cmd+K for Spotlight Search
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        if (currentScreen !== 'login') {
+          setIsSpotlightOpen((prev) => !prev);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [currentScreen]);
 
   // Automatically save current screen, selected class, and user session while logged in so page refresh returns to the exact coherent page
   useEffect(() => {
@@ -1074,6 +1090,7 @@ export default function App() {
         onNavigatePlanilha={() => {
           if (userRole === 'admin') setCurrentScreen('planilha');
         }}
+        onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -1473,11 +1490,25 @@ export default function App() {
         onSavePhoto={handleSaveStudentPhoto}
       />
 
-      {/* Grade de Dados Interativa de Cada Criança */}
+      {/* Grade de Dados Interativa de Cada Criança (Com Navegação Anterior / Próximo) */}
       <GradeDadosCriancaModal
         isOpen={gridModalData !== null}
         onClose={() => setGridModalData(null)}
         student={gridModalData?.student || null}
+        classStudents={
+          gridModalData
+            ? classes.find((c) => c.id === gridModalData.classId)?.students ||
+              selectedClass.students
+            : selectedClass.students
+        }
+        onSelectStudent={(nextStudent) => {
+          if (gridModalData) {
+            setGridModalData({
+              ...gridModalData,
+              student: nextStudent,
+            });
+          }
+        }}
         className={gridModalData?.className || selectedClass.name}
         diasLetivosMes={gridModalData?.diasLetivosMes || 20}
         userRole={userRole}
@@ -1494,6 +1525,37 @@ export default function App() {
         onOpenStudentPdf={(student) => {
           const clsName = gridModalData?.className || selectedClass.name;
           setPdfModalData({ student, className: clsName });
+        }}
+      />
+
+      {/* Busca Global Instantânea (Spotlight Command Bar · Ctrl+K / ⌘K) */}
+      <SpotlightCommandModal
+        isOpen={isSpotlightOpen}
+        onClose={() => setIsSpotlightOpen(false)}
+        classes={userRole === 'usuario' ? visibleClasses : classes}
+        userRole={userRole}
+        onSelectClass={(cls) => {
+          setAssignedClassId(cls.id);
+          setSelectedClass(cls);
+          setCurrentScreen('detalhes');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onOpenStudentGrid={(student, classId, className, diasLetivosMes) => {
+          const foundCls = classes.find((c) => c.id === classId);
+          if (foundCls) setSelectedClass(foundCls);
+          setGridModalData({
+            student,
+            classId,
+            className,
+            diasLetivosMes,
+          });
+        }}
+        onOpenStudentPdf={(student, className) => {
+          setPdfModalData({ student, className });
+        }}
+        onNavigateToScreen={(screen) => {
+          setCurrentScreen(screen);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
 

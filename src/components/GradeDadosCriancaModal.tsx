@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Student, UserRole } from '../types';
 import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
 import { getStudentAttendanceMetrics } from '../utils/attendanceRules';
+import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 
 interface GradeDadosCriancaModalProps {
   isOpen: boolean;
   onClose: () => void;
   student: Student | null;
+  classStudents?: Student[];
+  onSelectStudent?: (student: Student) => void;
   className: string;
   diasLetivosMes: number;
   userRole: UserRole;
@@ -24,6 +27,21 @@ interface SedFieldDef {
   label: string;
   category: GridCategory;
   placeholder?: string;
+}
+
+function isConsecutiveDaysBadgeLabel(
+  consecutiveDays: number,
+  totalOccurrences: number
+): string {
+  if (consecutiveDays >= 5) {
+    return `Risco Crítico · ${consecutiveDays} faltas seguidas`;
+  }
+  if (consecutiveDays >= 3) {
+    return `Em Alerta · ${consecutiveDays} faltas seguidas${
+      totalOccurrences > 1 ? ` (${totalOccurrences}ª seq.)` : ''
+    }`;
+  }
+  return '0 faltas seguidas';
 }
 
 const SED_GRID_FIELDS: SedFieldDef[] = [
@@ -88,6 +106,8 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   isOpen,
   onClose,
   student,
+  classStudents = [],
+  onSelectStudent,
   className,
   diasLetivosMes,
   userRole,
@@ -104,6 +124,23 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   const [showAllSedFields, setShowAllSedFields] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+  const orderedList = React.useMemo(
+    () => [...classStudents].sort((a, b) => a.number - b.number),
+    [classStudents]
+  );
+
+  const currentStudentIdx = React.useMemo(() => {
+    if (!draft || orderedList.length === 0) return -1;
+    return orderedList.findIndex((s) => s.id === draft.id);
+  }, [draft, orderedList]);
+
+  const prevStudent =
+    currentStudentIdx > 0 ? orderedList[currentStudentIdx - 1] : null;
+  const nextStudent =
+    currentStudentIdx >= 0 && currentStudentIdx < orderedList.length - 1
+      ? orderedList[currentStudentIdx + 1]
+      : null;
+
   useEffect(() => {
     setDraft(student);
     setEditingKey(null);
@@ -111,6 +148,23 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     setShowAllSedFields(false);
     setIsLightboxOpen(false);
   }, [student]);
+
+  useEffect(() => {
+    if (!isOpen || !onSelectStudent || editingKey !== null || isLightboxOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 'ArrowLeft' && prevStudent) {
+        e.preventDefault();
+        onSelectStudent(prevStudent);
+      } else if (e.key === 'ArrowRight' && nextStudent) {
+        e.preventDefault();
+        onSelectStudent(nextStudent);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onSelectStudent, prevStudent, nextStudent, editingKey, isLightboxOpen]);
 
   if (!isOpen || !draft) return null;
 
@@ -120,6 +174,20 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     (draft.fichaPdfDriveUrl && draft.fichaPdfDriveUrl.trim().length > 0) ||
       (draft.fichaPdfDriveId && draft.fichaPdfDriveId.trim().length > 0)
   );
+
+  // Contagem atual de faltas consecutivas do aluno (sequência mais recente e acumulado no ano)
+  const cumulativeOccurrences = getStudentCumulativeOccurrences(draft);
+  const latestConsecutiveOccurrence =
+    cumulativeOccurrences.length > 0
+      ? cumulativeOccurrences[cumulativeOccurrences.length - 1]
+      : null;
+  const currentConsecutiveDaysCount = latestConsecutiveOccurrence
+    ? latestConsecutiveOccurrence.selectedDates.length
+    : 0;
+  const totalUniqueConsecutiveDaysYear = Array.from(
+    new Set(cumulativeOccurrences.flatMap((o) => o.selectedDates))
+  ).length;
+  const isConsecutiveRisk = currentConsecutiveDaysCount >= 3;
 
   const handleFieldChange = (key: keyof Student, value: string) => {
     if (!canEdit) return;
@@ -184,15 +252,20 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         className="bg-[#f5f5f7] w-full max-w-4xl lg:max-w-5xl rounded-[32px] shadow-2xl border border-black/[0.08] overflow-hidden flex flex-col max-h-[92vh]"
       >
-        {/* Top Minimalist Apple Bar */}
-        <div className="px-5 sm:px-7 py-3.5 bg-white/95 backdrop-blur-md border-b border-black/[0.05] flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+        {/* Top Minimalist Apple Bar + Navegação Anterior / Próximo Estudante */}
+        <div className="px-5 sm:px-7 py-3.5 bg-white/95 backdrop-blur-md border-b border-black/[0.05] flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
             <span className="px-3 py-1 rounded-xl bg-[#1d1d1f] text-white font-extrabold text-[0.78rem] tabular-nums">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
             </span>
             <span className="px-3 py-1 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] font-bold text-[0.78rem] truncate">
               {className}
             </span>
+            {orderedList.length > 1 && currentStudentIdx >= 0 && (
+              <span className="hidden sm:inline-block text-[0.72rem] font-semibold text-[#86868b] tabular-nums">
+                ({currentStudentIdx + 1} de {orderedList.length})
+              </span>
+            )}
             {savedBanner && (
               <span className="px-2.5 py-1 rounded-xl bg-[#eaf6ef] text-[#005035] text-[0.74rem] font-bold">
                 ✓ Atualizado
@@ -200,15 +273,63 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-9 px-3.5 rounded-full bg-[#f5f5f7] hover:bg-[#ff3b30] text-[#1d1d1f] hover:text-white font-bold text-[0.78rem] flex items-center gap-1 cursor-pointer transition-colors shrink-0"
-            aria-label="Fechar perfil do estudante"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-            <span>Fechar</span>
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onSelectStudent && orderedList.length > 1 && (
+              <div className="flex items-center gap-1 mr-1">
+                <button
+                  type="button"
+                  disabled={!prevStudent}
+                  onClick={() => prevStudent && onSelectStudent(prevStudent)}
+                  title={
+                    prevStudent
+                      ? `Anterior: Nº ${prevStudent.number.toString().padStart(2, '0')} ${prevStudent.name} (Seta ←)`
+                      : 'Primeiro estudante da turma'
+                  }
+                  className="h-9 px-3 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white font-bold text-[0.75rem] flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:pointer-events-none tabular-nums"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    arrow_back
+                  </span>
+                  <span className="hidden md:inline">
+                    {prevStudent
+                      ? `Nº ${prevStudent.number.toString().padStart(2, '0')}`
+                      : 'Anterior'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!nextStudent}
+                  onClick={() => nextStudent && onSelectStudent(nextStudent)}
+                  title={
+                    nextStudent
+                      ? `Próximo: Nº ${nextStudent.number.toString().padStart(2, '0')} ${nextStudent.name} (Seta →)`
+                      : 'Último estudante da turma'
+                  }
+                  className="h-9 px-3 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white font-bold text-[0.75rem] flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:pointer-events-none tabular-nums"
+                >
+                  <span className="hidden md:inline">
+                    {nextStudent
+                      ? `Nº ${nextStudent.number.toString().padStart(2, '0')}`
+                      : 'Próximo'}
+                  </span>
+                  <span className="material-symbols-outlined text-[16px]">
+                    arrow_forward
+                  </span>
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-9 px-3.5 rounded-full bg-[#f5f5f7] hover:bg-[#ff3b30] text-[#1d1d1f] hover:text-white font-bold text-[0.78rem] flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+              aria-label="Fechar perfil do estudante"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+              <span>Fechar</span>
+            </button>
+          </div>
         </div>
 
         {/* Main Organic & Visual Profile Layout */}
@@ -282,27 +403,50 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               {/* 1. Identidade Principal + Pílulas Numéricas Ultra-Legíveis (Manrope Tabular) */}
               <div className="bg-white rounded-[24px] p-5 border border-black/[0.05] shadow-2xs space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] font-bold text-[0.7rem] uppercase tracking-wider">
-                    {draft.situacao || 'MATRÍCULA ATIVA'}
-                  </span>
-                  {draft.deficiencia && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#f5f3ff] text-[#5b21b6] font-bold text-[0.72rem]">
-                      AEE · {draft.deficiencia}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] font-bold text-[0.7rem] uppercase tracking-wider">
+                      {draft.situacao || 'MATRÍCULA ATIVA'}
                     </span>
-                  )}
+                    {draft.deficiencia && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#f5f3ff] text-[#5b21b6] font-bold text-[0.72rem]">
+                        AEE · {draft.deficiencia}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Badge Visual de Risco / Faltas Consecutivas Imediatamente Visível no Topo do Card */}
+                  <span
+                    className={`px-3 py-1 rounded-full font-extrabold text-[0.72rem] tabular-nums flex items-center gap-1.5 ${
+                      currentConsecutiveDaysCount >= 5
+                        ? 'bg-[#ff3b30] text-white shadow-2xs'
+                        : isConsecutiveRisk
+                        ? 'bg-[#ff9500]/15 text-[#c93400] border border-[#ff9500]/35'
+                        : 'bg-[#f5f5f7] text-[#6e6e73]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[15px]">
+                      {isConsecutiveRisk ? 'warning' : 'verified'}
+                    </span>
+                    <span>
+                      {isConsecutiveDaysBadgeLabel(
+                        currentConsecutiveDaysCount,
+                        cumulativeOccurrences.length
+                      )}
+                    </span>
+                  </span>
                 </div>
 
                 <h1 className="text-[1.45rem] sm:text-[1.7rem] font-extrabold text-[#1d1d1f] tracking-tight leading-tight">
                   {draft.name}
                 </h1>
 
-                {/* Cartões Visuais de Números-Chave (RA, Nascimento/Idade e Frequência) */}
-                <div className="grid grid-cols-3 gap-2.5 pt-1">
+                {/* Cartões Visuais de Números-Chave (RA, Nascimento, Frequência e Faltas Seguidas) */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
                   <div className="rounded-2xl bg-[#f5f5f7] p-3">
                     <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#86868b] block">
                       Registro (RA)
                     </span>
-                    <span className="text-[0.98rem] sm:text-[1.06rem] font-extrabold text-[#1d1d1f] tabular-nums block mt-0.5">
+                    <span className="text-[0.95rem] sm:text-[1.02rem] font-extrabold text-[#1d1d1f] tabular-nums block mt-0.5">
                       {draft.ra ? `${draft.ra}-${draft.digRa}` : '—'}
                     </span>
                   </div>
@@ -320,16 +464,100 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#86868b] block">
                       Frequência Mês
                     </span>
-                    <div className="flex items-baseline gap-1.5 mt-0.5">
-                      <span className="text-[1.02rem] sm:text-[1.1rem] font-extrabold text-[#005035] tabular-nums">
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-[0.98rem] sm:text-[1.05rem] font-extrabold text-[#005035] tabular-nums">
                         {metrics.frequenciaPercent}%
                       </span>
-                      <span className="text-[0.72rem] font-semibold text-[#6e6e73] tabular-nums">
-                        ({metrics.faltas} {metrics.faltas === 1 ? 'falta' : 'faltas'})
+                      <span className="text-[0.7rem] font-semibold text-[#6e6e73] tabular-nums">
+                        ({metrics.faltas}f)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Dedicado de Faltas Consecutivas (Risco de Busca Ativa) */}
+                  <div
+                    className={`rounded-2xl p-3 border ${
+                      currentConsecutiveDaysCount >= 5
+                        ? 'bg-[#fff2f2] border-[#ff3b30]/35'
+                        : isConsecutiveRisk
+                        ? 'bg-[#fff9eb] border-[#ff9500]/35'
+                        : 'bg-[#f5f5f7] border-transparent'
+                    }`}
+                  >
+                    <span
+                      className={`text-[0.65rem] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                        currentConsecutiveDaysCount >= 5
+                          ? 'text-[#ff3b30]'
+                          : isConsecutiveRisk
+                          ? 'text-[#c93400]'
+                          : 'text-[#86868b]'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        {isConsecutiveRisk ? 'notification_important' : 'event_available'}
+                      </span>
+                      <span>Faltas Seguidas</span>
+                    </span>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span
+                        className={`text-[0.98rem] sm:text-[1.05rem] font-extrabold tabular-nums ${
+                          currentConsecutiveDaysCount >= 5
+                            ? 'text-[#ff3b30]'
+                            : isConsecutiveRisk
+                            ? 'text-[#c93400]'
+                            : 'text-[#1d1d1f]'
+                        }`}
+                      >
+                        {currentConsecutiveDaysCount}d
+                      </span>
+                      <span className="text-[0.68rem] font-semibold text-[#6e6e73] tabular-nums truncate">
+                        {totalUniqueConsecutiveDaysYear > currentConsecutiveDaysCount
+                          ? `(${totalUniqueConsecutiveDaysYear}d ano)`
+                          : isConsecutiveRisk
+                          ? 'em alerta'
+                          : 'sem risco'}
                       </span>
                     </div>
                   </div>
                 </div>
+
+                {/* Alerta Contextual de Datas Faltosas e Retorno da Família se houver Faltas Seguidas */}
+                {isConsecutiveRisk && latestConsecutiveOccurrence && (
+                  <div
+                    className={`rounded-2xl p-3 border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[0.76rem] ${
+                      latestConsecutiveOccurrence.familyFeedback
+                        ? 'bg-[#eaf6ef]/70 border-[#28cd41]/30 text-[#1d1d1f]'
+                        : 'bg-[#fff2f2] border-[#ff3b30]/25 text-[#1d1d1f]'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span
+                        className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${
+                          latestConsecutiveOccurrence.familyFeedback
+                            ? 'text-[#1d8338]'
+                            : 'text-[#ff3b30]'
+                        }`}
+                      >
+                        {latestConsecutiveOccurrence.familyFeedback
+                          ? 'mark_chat_read'
+                          : 'rule'}
+                      </span>
+                      <div className="min-w-0">
+                        <span className="font-bold block">
+                          Datas seguidas ({latestConsecutiveOccurrence.sequenceNumber}ª ocorrência):{' '}
+                          <span className="tabular-nums font-extrabold">
+                            {latestConsecutiveOccurrence.selectedDates.join(', ')}
+                          </span>
+                        </span>
+                        <span className="text-[0.72rem] text-[#6e6e73] block mt-0.5">
+                          {latestConsecutiveOccurrence.familyFeedback
+                            ? `Retorno da família: "${latestConsecutiveOccurrence.familyFeedback}"`
+                            : 'Aguardando retorno / justificativa da família na Busca Ativa.'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 2. BOTÃO DE DESTAQUE MODERNO: ABRIR PDF DA FICHA INFORMATIVA */}

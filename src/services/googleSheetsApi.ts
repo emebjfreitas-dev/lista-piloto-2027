@@ -753,6 +753,62 @@ const buildCalendario200DiasValues = (
   return rows;
 };
 
+const buildOnibusFretadoSheetValues = (
+  classes: ClassGroup[]
+): any[][] => {
+  const headers = [
+    'Nº',
+    'TURMA',
+    'PERÍODO',
+    'Nº CHAMADA',
+    'ESTUDANTE (NOMINAL)',
+    'RA',
+    'ROTA DO ÔNIBUS FRETADO',
+    'ENDEREÇO RESIDENCIAL',
+    'BAIRRO',
+    'TELEFONE / WHATSAPP',
+    'RESPONSÁVEL (MÃE / PAI)',
+    'ID_TURMA',
+    'ID_ESTUDANTE',
+  ];
+
+  const rows: any[][] = [headers];
+  let seq = 1;
+
+  classes.forEach((cls) => {
+    const periodo = cls.shift.replace('Turno ', '').toUpperCase();
+    const sorted = [...cls.students].sort((a, b) => a.number - b.number);
+    sorted.forEach((s) => {
+      const rota = (s.rotaOnibus || '').trim();
+      if (!rota) return;
+      const endereco = [
+        s.logradouro,
+        s.numeroResidencia ? `nº ${s.numeroResidencia}` : '',
+        s.complemento,
+      ]
+        .filter(Boolean)
+        .join(' ');
+      rows.push([
+        seq++,
+        cls.name,
+        periodo,
+        s.number,
+        s.name,
+        s.ra ? `${s.ra}-${s.digRa || ''}` : '',
+        rota,
+        endereco,
+        s.bairro || '',
+        s.telefones || s.guardianPhone || '',
+        s.filiacao1 || s.guardianName || '',
+        cls.id,
+        s.id,
+      ]);
+    });
+  });
+
+  return rows;
+};
+
 const buildFaltasConsecutivasSheetValues = (
   classes: ClassGroup[]
 ): any[][] => {
@@ -2125,6 +2181,12 @@ export const createSchoolDatabaseSpreadsheet = async (
                 gridProperties: { frozenRowCount: 1 },
               },
             },
+            {
+              properties: {
+                title: 'Onibus_Fretado_2027',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
           ],
         }),
       }
@@ -2280,6 +2342,7 @@ export const writeAttendanceOnlyToGoogleSheet = async (
     'Faltas_Atestados_Infantil',
     'Faltas_Atestados_Fundamental',
     'Busca_Ativa_Faltas_Consecutivas_2027',
+    'Onibus_Fretado_2027',
   ].forEach((tName) => {
     if (!meta.sheetTitles.includes(tName)) {
       missingNominalTabs.push({
@@ -2336,6 +2399,10 @@ export const writeAttendanceOnlyToGoogleSheet = async (
     range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1',
     values: buildFaltasConsecutivasSheetValues(allClasses),
   });
+  dataUpdates.push({
+    range: 'Onibus_Fretado_2027!A1',
+    values: buildOnibusFretadoSheetValues(allClasses),
+  });
 
   // Also update Turmas_Salas_2027 summary tab
   if (meta.sheetTitles.includes('Turmas_Salas_2027')) {
@@ -2388,6 +2455,7 @@ export const syncClassesToGoogleSheet = async (
     'Faltas_Atestados_Infantil',
     'Faltas_Atestados_Fundamental',
     'Busca_Ativa_Faltas_Consecutivas_2027',
+    'Onibus_Fretado_2027',
     'SED_Matriculas_e_Frequencia',
     'Dias_Letivos_SME_2027',
     'Turmas_Salas_2027',
@@ -2436,6 +2504,7 @@ export const syncClassesToGoogleSheet = async (
   const turmasValues = buildTurmasSheetValues(classes, calendar);
   const emailsPermitidosValues = buildEmailsPermitidosValues();
   const faltasConsecutivasValues = buildFaltasConsecutivasSheetValues(classes);
+  const onibusFretadoValues = buildOnibusFretadoSheetValues(classes);
 
   const batchRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
@@ -2461,6 +2530,10 @@ export const syncClassesToGoogleSheet = async (
           {
             range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1',
             values: faltasConsecutivasValues,
+          },
+          {
+            range: 'Onibus_Fretado_2027!A1',
+            values: onibusFretadoValues,
           },
           {
             range: 'SED_Matriculas_e_Frequencia!A1',
@@ -2824,6 +2897,39 @@ export const readClassesFromGoogleSheet = async (
     });
   });
 
+  // Read Onibus_Fretado_2027 nominal database tab if present so any student added/edited in that sheet tab automatically shows bus info on the student card!
+  const sheetBusRouteByStudent = new Map<string, string>();
+  if (meta.sheetTitles.includes('Onibus_Fretado_2027')) {
+    try {
+      const busRes = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+          spreadsheetId
+        )}/values/${encodeURIComponent('Onibus_Fretado_2027!A2:M1500')}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (busRes.ok) {
+        const busData = await busRes.json();
+        const busRows: any[][] = busData.values || [];
+        busRows.forEach((r) => {
+          const rowTurma = formatShortTurmaCode(String(r[1] || '')).toUpperCase();
+          const stName = normalizeStudentNameForPhoto(String(r[4] || ''));
+          const rawRa = String(r[5] || '').split('-')[0].trim();
+          const rotaStr = String(r[6] || '').trim() || 'ÔNIBUS FRETADO';
+          if (!stName) return;
+          if (rowTurma && rawRa) {
+            sheetBusRouteByStudent.set(`${rowTurma}::RA:${rawRa}`, rotaStr);
+          }
+          if (rowTurma) {
+            sheetBusRouteByStudent.set(`${rowTurma}::NAME:${stName}`, rotaStr);
+          }
+          sheetBusRouteByStudent.set(stName, rotaStr);
+        });
+      }
+    } catch (e) {
+      console.warn('Aviso ao ler Onibus_Fretado_2027:', e);
+    }
+  }
+
   // Also read Busca_Ativa_Faltas_Consecutivas_2027 if present so feedback typed in Google Sheets updates the App
   if (meta.sheetTitles.includes('Busca_Ativa_Faltas_Consecutivas_2027')) {
     try {
@@ -2965,7 +3071,12 @@ export const readClassesFromGoogleSheet = async (
     const emailGoogle = String(cols[43] || '').trim();
     const emailMicrosoft = String(cols[44] || '').trim();
     const emailMunicipal = String(cols[45] || '').trim();
-    const rotaOnibus = String(cols[46] || '').trim();
+    const normEstudanteForBus = normalizeStudentNameForPhoto(estudante);
+    const rotaFromDedicatedTab =
+      sheetBusRouteByStudent.get(makeCompositeStudentKey(turmaCode, ra, estudante)) ||
+      sheetBusRouteByStudent.get(`${turmaCode}::NAME:${normEstudanteForBus}`) ||
+      sheetBusRouteByStudent.get(normEstudanteForBus);
+    const rotaOnibus = rotaFromDedicatedTab || String(cols[46] || '').trim();
     const sucessaoEscolar = String(cols[47] || '').trim();
 
     // Attendance & Photo columns (48..57)

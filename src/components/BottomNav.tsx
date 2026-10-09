@@ -64,12 +64,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       adminOnly: true,
     },
     {
-      id: 'onibus_fretado',
-      label: 'Ônibus Fretado',
-      shortLabel: 'Ônibus',
-      icon: 'directions_bus',
-    },
-    {
       id: 'planilha',
       label: 'Planilha & Drive',
       shortLabel: 'Nuvem',

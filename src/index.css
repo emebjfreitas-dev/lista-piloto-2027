@@ -20,17 +20,17 @@
     --apple-red: #ff3b30;
     --apple-amber: #ff9500;
 
-    --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    --font-display: "Manrope", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    --font-mono: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, "Inter", sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, "Inter", sans-serif;
+    --font-mono: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, "Inter", sans-serif;
   }
 
   html,
   html[data-font] {
-    --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-display: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: "Manrope", -apple-system, BlinkMacSystemFont, sans-serif;
-    letter-spacing: -0.012em;
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, "Inter", sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, "Inter", sans-serif;
+    --font-mono: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, "Inter", sans-serif;
+    letter-spacing: -0.022em;
   }
 
   * {
@@ -42,10 +42,11 @@
     font-family: var(--font-sans) !important;
     background-color: var(--apple-bg);
     color: var(--apple-text-primary);
-    font-size: clamp(14.5px, 0.25vw + 14px, 16px);
+    font-size: clamp(14.5px, 0.2vw + 14px, 16px);
     line-height: 1.47059;
     font-weight: 400;
-    letter-spacing: -0.014em;
+    letter-spacing: -0.022em;
+    font-synthesis: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -58,30 +59,45 @@
     background-color: var(--apple-bg);
     color: var(--apple-text-primary);
     overflow-x: hidden;
+    letter-spacing: -0.022em;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   }
 
-  /* Typographic Hierarchy */
+  /* Apple.com Display Typography Hierarchy (SF Pro Display Optical Sizing & Tight Negative Tracking) */
   h1, h2, h3, h4, h5, h6, .font-display {
     font-family: var(--font-display) !important;
     color: var(--apple-text-primary);
-    letter-spacing: -0.022em;
-    line-height: 1.15;
+    letter-spacing: -0.028em;
+    line-height: 1.12;
+    font-weight: 600;
     text-wrap: balance;
   }
 
-  p, span, div, li, label, input, select, textarea, button, td, th, a {
-    font-family: var(--font-sans);
+  /* Calibrate heavy tailwind weights (font-extrabold / font-black) to Apple's signature crisp Semibold/Bold (600-700) */
+  .font-black,
+  .font-extrabold {
+    font-weight: 600 !important;
+    letter-spacing: -0.024em;
   }
 
+  .font-bold {
+    font-weight: 600 !important;
+    letter-spacing: -0.02em;
+  }
+
+  p, span, div, li, label, input, select, textarea, button, td, th, a {
+    font-family: var(--font-sans) !important;
+  }
+
+  /* Apple SF Pro Tabular Numbers (Clean proportional SF digits with uniform tabular width) */
   .font-mono,
   .tabular-nums,
   code,
   pre {
     font-family: var(--font-sans) !important;
     font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: "tnum" 1, "lnum" 1, "zero" 0;
-    letter-spacing: -0.01em;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    letter-spacing: -0.018em;
   }
 
   /* Ultra-Crisp High-Performance Border & Outline Suppression (Zero Heavy Borders) */

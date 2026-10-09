@@ -244,6 +244,72 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     }
   };
 
+  // Digitação direta do número de Faltas no teclado
+  const handleDirectSetAbsence = (studentId: string, rawVal: string) => {
+    if (!effectiveCanEdit) return;
+    const digitsOnly = rawVal.replace(/\D/g, '');
+    const parsed = digitsOnly === '' ? 0 : parseInt(digitsOnly, 10);
+    const nextStudents: Student[] = students.map((s) => {
+      if (s.id !== studentId) return s;
+      const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+      const nextFaltas = Math.max(0, Math.min(m.diasLetivosMatriculados, parsed));
+      const nextAtestados = Math.min(nextFaltas, m.atestados);
+      const nextPresencas = Math.max(0, m.diasLetivosMatriculados - nextFaltas);
+      const nextFreqPct =
+        m.diasLetivosMatriculados > 0
+          ? Math.round((nextPresencas / m.diasLetivosMatriculados) * 100)
+          : 100;
+      const isBelowLegal = nextFreqPct < m.minLegalPresencePercent;
+      const nextMonthMap = {
+        ...(s.monthlyAttendanceByMonth || {}),
+        [selectedMonthName]: {
+          diasLetivosRecorte: m.diasLetivosMatriculados,
+          faltas: nextFaltas,
+          atestados: nextAtestados,
+          observacao: s.notes,
+        },
+      };
+      return {
+        ...s,
+        totalAbsencesMonth: nextFaltas,
+        justifiedAbsences: nextAtestados,
+        monthlyAttendanceByMonth: nextMonthMap,
+        status: nextFaltas > 0 ? 'absent' : 'present',
+        alert: isBelowLegal
+          ? `Presença (${nextFreqPct}%) abaixo de ${m.minLegalPresencePercent}%`
+          : undefined,
+      };
+    });
+    commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName);
+  };
+
+  // Digitação direta do número de Atestados no teclado
+  const handleDirectSetAtestado = (studentId: string, rawVal: string) => {
+    if (!effectiveCanEdit) return;
+    const digitsOnly = rawVal.replace(/\D/g, '');
+    const parsed = digitsOnly === '' ? 0 : parseInt(digitsOnly, 10);
+    const nextStudents: Student[] = students.map((s) => {
+      if (s.id !== studentId) return s;
+      const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+      const nextAtestados = Math.max(0, Math.min(m.faltas, parsed));
+      const nextMonthMap = {
+        ...(s.monthlyAttendanceByMonth || {}),
+        [selectedMonthName]: {
+          diasLetivosRecorte: m.diasLetivosMatriculados,
+          faltas: m.faltas,
+          atestados: nextAtestados,
+          observacao: s.notes,
+        },
+      };
+      return {
+        ...s,
+        justifiedAbsences: nextAtestados,
+        monthlyAttendanceByMonth: nextMonthMap,
+      };
+    });
+    commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName);
+  };
+
   // Indicativos e Contadores Consolidados da Turma no Mês
   const liveClassMetrics = useMemo(
     () =>
@@ -730,15 +796,19 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         —
                       </button>
 
-                      <div className="w-7 sm:w-9 text-center">
-                        <span
-                          className={`font-mono font-bold text-[1.05rem] sm:text-[1.18rem] tabular-nums block leading-none ${
-                            m.faltas > 0 ? 'text-[#ff3b30]' : 'text-[#1d8338]'
-                          }`}
-                        >
-                          {m.faltas}
-                        </span>
-                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        disabled={!effectiveCanEdit}
+                        value={m.faltas}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handleDirectSetAbsence(student.id, e.target.value)}
+                        aria-label={`Digitar faltas de ${student.name}`}
+                        title="Toque para digitar o número de faltas diretamente"
+                        className={`w-10 sm:w-11 h-8 sm:h-9 rounded-lg text-center font-mono font-extrabold text-[1.05rem] sm:text-[1.16rem] tabular-nums bg-transparent focus:bg-white focus:ring-2 focus:ring-[#ff3b30]/40 focus:outline-none transition-all ${
+                          m.faltas > 0 ? 'text-[#ff3b30]' : 'text-[#1d8338]'
+                        }`}
+                      />
 
                       <button
                         type="button"
@@ -780,15 +850,19 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         —
                       </button>
 
-                      <div className="w-7 sm:w-9 text-center">
-                        <span
-                          className={`font-mono font-bold text-[1.05rem] sm:text-[1.18rem] tabular-nums block leading-none ${
-                            m.atestados > 0 ? 'text-[#0066cc]' : 'text-[#86868b]'
-                          }`}
-                        >
-                          {m.atestados}
-                        </span>
-                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        disabled={!effectiveCanEdit || m.faltas === 0}
+                        value={m.atestados}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handleDirectSetAtestado(student.id, e.target.value)}
+                        aria-label={`Digitar atestados de ${student.name}`}
+                        title="Toque para digitar o número de atestados diretamente"
+                        className={`w-10 sm:w-11 h-8 sm:h-9 rounded-lg text-center font-mono font-extrabold text-[1.05rem] sm:text-[1.16rem] tabular-nums bg-transparent focus:bg-white focus:ring-2 focus:ring-[#0071e3]/40 focus:outline-none transition-all ${
+                          m.atestados > 0 ? 'text-[#0066cc]' : 'text-[#86868b]'
+                        }`}
+                      />
 
                       <button
                         type="button"
@@ -928,15 +1002,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         —
                       </button>
 
-                      <div className="text-center">
-                        <span
-                          className={`font-mono text-[1.35rem] font-black tabular-nums leading-none block ${
-                            m.faltas > 0 ? 'text-[#be123c]' : 'text-[#006644]'
-                          }`}
-                        >
-                          {m.faltas}
-                        </span>
-                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        disabled={!effectiveCanEdit}
+                        value={m.faltas}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handleDirectSetAbsence(student.id, e.target.value)}
+                        aria-label={`Digitar faltas de ${student.name}`}
+                        className={`w-12 h-10 rounded-xl text-center font-mono text-[1.35rem] font-black tabular-nums bg-transparent focus:bg-white focus:ring-2 focus:ring-[#be123c]/40 focus:outline-none ${
+                          m.faltas > 0 ? 'text-[#be123c]' : 'text-[#006644]'
+                        }`}
+                      />
 
                       <button
                         type="button"
@@ -976,15 +1053,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         —
                       </button>
 
-                      <div className="text-center">
-                        <span
-                          className={`font-mono text-[1.35rem] font-black tabular-nums leading-none block ${
-                            m.atestados > 0 ? 'text-[#0369a1]' : 'text-[#64748b]'
-                          }`}
-                        >
-                          {m.atestados}
-                        </span>
-                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        disabled={!effectiveCanEdit || m.faltas === 0}
+                        value={m.atestados}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handleDirectSetAtestado(student.id, e.target.value)}
+                        aria-label={`Digitar atestados de ${student.name}`}
+                        className={`w-12 h-10 rounded-xl text-center font-mono text-[1.35rem] font-black tabular-nums bg-transparent focus:bg-white focus:ring-2 focus:ring-[#0284c7]/40 focus:outline-none ${
+                          m.atestados > 0 ? 'text-[#0369a1]' : 'text-[#64748b]'
+                        }`}
+                      />
 
                       <button
                         type="button"

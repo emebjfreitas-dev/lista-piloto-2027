@@ -312,50 +312,12 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             </p>
           </div>
 
-          {/* Seletor das Duas Abas Nominais */}
+          {/* Botão de Exportação .XLS Exclusivo do Bolsa Família (Admin) */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <div className="ios-segmented p-1">
-              {userRole === 'admin' && (
-                <button
-                  type="button"
-                  onClick={() => onSwitchTab('bolsa_familia')}
-                  className={`ios-segmented-item flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] sm:text-[0.8rem] ${
-                    effectiveTab === 'bolsa_familia' ? 'ios-segmented-item-active' : ''
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[17px]">
-                    family_restroom
-                  </span>
-                  <span>Bolsa Família ({stats.totalBolsa})</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => onSwitchTab('onibus_fretado')}
-                className={`ios-segmented-item flex items-center gap-1.5 px-3 py-1.5 text-[0.78rem] sm:text-[0.8rem] ${
-                  effectiveTab === 'onibus_fretado' ? 'ios-segmented-item-active' : ''
-                }`}
-              >
-                <span className="material-symbols-outlined text-[17px]">
-                  directions_bus
-                </span>
-                <span>Ônibus Fretado ({stats.totalOnibus})</span>
-              </button>
-            </div>
-
-            {effectiveTab === 'bolsa_familia' && userRole === 'admin' ? (
+            {userRole === 'admin' && (
               <button
                 type="button"
                 onClick={handleExportBolsaFamiliaXLS}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-[0.78rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
-              >
-                <span className="material-symbols-outlined text-[17px]">download</span>
-                <span>Baixar .XLS</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleExportOnibusFretadoXLS}
                 className="min-h-[38px] px-3.5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-[0.78rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
               >
                 <span className="material-symbols-outlined text-[17px]">download</span>

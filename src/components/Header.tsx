@@ -20,6 +20,7 @@ interface HeaderProps {
   onBack?: () => void;
   onChangeScreen?: (screen: ScreenType) => void;
   onSelectClassById?: (classId: string) => void;
+  onOpenSpotlightSearch?: () => void;
   onNavigatePlanilha: () => void;
   onLogout: () => void;
 }
@@ -36,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   onBack,
   onChangeScreen,
   onSelectClassById,
+  onOpenSpotlightSearch,
   onNavigatePlanilha,
   onLogout,
 }) => {
@@ -174,18 +176,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={() => onChangeScreen('onibus_fretado')}
-              className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
-                currentScreen === 'onibus_fretado'
-                  ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                  : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
-              }`}
-            >
-              Ônibus Fretado
-            </button>
-
             {isAdmin && (
               <>
                 <button
@@ -228,8 +218,27 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         )}
 
-        {/* Zone 3: Actions (Push Notifications, Profile Badge & Sair) */}
+        {/* Zone 3: Actions (Spotlight Search, Push Notifications, Profile Badge & Sair) */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 relative">
+          {onOpenSpotlightSearch && (
+            <button
+              type="button"
+              onClick={onOpenSpotlightSearch}
+              title="Busca Global Instantânea (Ctrl+K ou ⌘K)"
+              className="h-[34px] px-2.5 sm:px-3 rounded-full bg-[#e8e8ed]/90 hover:bg-[#d2d2d7] text-[#1d1d1f] flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+            >
+              <span className="material-symbols-outlined text-[17px] text-[#0071e3]">
+                search
+              </span>
+              <span className="hidden md:inline text-[0.74rem] font-semibold text-[#1d1d1f]">
+                Buscar
+              </span>
+              <kbd className="hidden xl:inline-block px-1.5 py-0.5 rounded bg-white text-[#6e6e73] text-[0.62rem] font-bold border border-black/[0.08]">
+                ⌘K
+              </kbd>
+            </button>
+          )}
+
           <PushNotificationCenter
             visibleClasses={visibleClasses}
             allClasses={allClasses}

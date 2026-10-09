@@ -112,6 +112,15 @@ export function hasThreeOrMoreConsecutiveSchoolDays(
   };
 }
 
+const QUICK_FAMILY_FEEDBACK_CHIPS = [
+  'Atestado Médico Entregue',
+  'Criança com quadro febril / virose',
+  'Consulta médica / odontológica',
+  'Viagem familiar comunicada',
+  'Tentativa de contato sem sucesso (Caixa Postal)',
+  'Responsável ciente · Retorno amanhã',
+];
+
 export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> = ({
   classGroup,
   availableClasses = [],
@@ -953,43 +962,62 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                   </div>
                                 )}
 
-                                {/* Campo rápido para Admin/Secretaria responder esta ocorrência específica */}
+                                {/* Campo rápido para Admin/Secretaria responder esta ocorrência específica + Pílulas de 1 Toque */}
                                 {canEditFamilyFeedback && (
-                                  <div className="pt-1 flex flex-col sm:flex-row gap-1.5">
-                                    <input
-                                      type="text"
-                                      value={
-                                        feedbackDrafts[draftKey] !== undefined
-                                          ? feedbackDrafts[draftKey]
-                                          : occ.familyFeedback || ''
-                                      }
-                                      onChange={(e) =>
-                                        setFeedbackDrafts((prev) => ({
-                                          ...prev,
-                                          [draftKey]: e.target.value,
-                                        }))
-                                      }
-                                      placeholder="Devolutiva da família para esta ocorrência..."
-                                      className="flex-1 min-h-[36px] px-3 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-[0.76rem] focus:bg-white focus:outline-none"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const text =
+                                  <div className="pt-1 space-y-1.5">
+                                    <div className="flex flex-wrap items-center gap-1">
+                                      {QUICK_FAMILY_FEEDBACK_CHIPS.map((chip) => (
+                                        <button
+                                          key={chip}
+                                          type="button"
+                                          onClick={() =>
+                                            setFeedbackDrafts((prev) => ({
+                                              ...prev,
+                                              [draftKey]: chip,
+                                            }))
+                                          }
+                                          className="px-2 py-0.5 rounded-lg bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#6e6e73] hover:text-white text-[0.65rem] font-bold transition-colors cursor-pointer"
+                                        >
+                                          + {chip}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-1.5">
+                                      <input
+                                        type="text"
+                                        value={
                                           feedbackDrafts[draftKey] !== undefined
                                             ? feedbackDrafts[draftKey]
-                                            : occ.familyFeedback || '';
-                                        handleSaveOccurrenceFeedback(
-                                          cls,
-                                          student,
-                                          occ.id,
-                                          text
-                                        );
-                                      }}
-                                      className="min-h-[36px] px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-[0.74rem] cursor-pointer shrink-0"
-                                    >
-                                      Salvar &amp; Enviar Push
-                                    </button>
+                                            : occ.familyFeedback || ''
+                                        }
+                                        onChange={(e) =>
+                                          setFeedbackDrafts((prev) => ({
+                                            ...prev,
+                                            [draftKey]: e.target.value,
+                                          }))
+                                        }
+                                        placeholder="Devolutiva da família para esta ocorrência..."
+                                        className="flex-1 min-h-[36px] px-3 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-[0.76rem] focus:bg-white focus:outline-none"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const text =
+                                            feedbackDrafts[draftKey] !== undefined
+                                              ? feedbackDrafts[draftKey]
+                                              : occ.familyFeedback || '';
+                                          handleSaveOccurrenceFeedback(
+                                            cls,
+                                            student,
+                                            occ.id,
+                                            text
+                                          );
+                                        }}
+                                        className="min-h-[36px] px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-[0.74rem] cursor-pointer shrink-0"
+                                      >
+                                        Salvar &amp; Enviar Push
+                                      </button>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -1291,6 +1319,23 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   <label className="text-[0.76rem] font-bold text-[#1d1d1f] block">
                     Registrar ou Atualizar Devolutiva da Família (Secretaria):
                   </label>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {QUICK_FAMILY_FEEDBACK_CHIPS.map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() =>
+                          setFeedbackDrafts((prev) => ({
+                            ...prev,
+                            [`modal_${activeModalData.activeOcc.id}`]: chip,
+                          }))
+                        }
+                        className="px-2.5 py-1 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white text-[0.7rem] font-bold transition-colors cursor-pointer"
+                      >
+                        + {chip}
+                      </button>
+                    ))}
+                  </div>
                   <textarea
                     rows={3}
                     value={

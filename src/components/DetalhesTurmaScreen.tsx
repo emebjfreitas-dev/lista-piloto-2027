@@ -16,6 +16,7 @@ import { StudentAvatar } from './StudentAvatar';
 import { OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
+import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
 
 type ViewMode = 'grid' | 'compact' | 'table';
 type StatusFilter =
@@ -838,13 +839,22 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               ? 'bg-[#475569] text-white'
               : 'bg-[#003440] text-white';
 
+            const cumulativeOccs = getStudentCumulativeOccurrences(student);
+            const latestConsecOcc =
+              cumulativeOccs.length > 0
+                ? cumulativeOccs[cumulativeOccs.length - 1]
+                : null;
+            const consecDaysCount = latestConsecOcc
+              ? latestConsecOcc.selectedDates.length
+              : 0;
+
             return (
               <div
                 key={student.id}
                 onClick={() => {
                   if (onOpenStudentGrid) onOpenStudentGrid(student);
                 }}
-                title="Toque no card para abrir todos os 48 campos SED da criança"
+                title="Toque no card para abrir o perfil e os 48 campos SED da criança"
                 className={`card-welcoming rounded-3xl p-4 flex flex-col justify-between gap-3 cursor-pointer select-none transition-all ${cardColorClasses}`}
               >
                 {/* Faixa Superior Destacada para Estudantes Não Ativos (Nova Coloração) */}
@@ -941,6 +951,36 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     >
                       {student.name}
                     </h3>
+
+                    {/* Etiquetas por Exceção (Zero Ruído: só aparecem quando o aluno possui a condição) */}
+                    {(consecDaysCount >= 3 || student.deficiencia || student.rotaOnibus) && (
+                      <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                        {consecDaysCount >= 3 && (
+                          <span
+                            className={`px-2 py-0.5 rounded-md font-extrabold text-[0.64rem] tabular-nums flex items-center gap-0.5 ${
+                              consecDaysCount >= 5
+                                ? 'bg-[#ff3b30] text-white'
+                                : 'bg-[#ff9500]/15 text-[#c93400]'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[12px]">
+                              warning
+                            </span>
+                            <span>{consecDaysCount} faltas seguidas</span>
+                          </span>
+                        )}
+                        {student.deficiencia && (
+                          <span className="px-2 py-0.5 rounded-md bg-[#f5f3ff] text-[#5b21b6] font-bold text-[0.64rem] truncate max-w-[140px]">
+                            AEE
+                          </span>
+                        )}
+                        {student.rotaOnibus && (
+                          <span className="px-2 py-0.5 rounded-md bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.64rem] truncate">
+                            🚌 {student.rotaOnibus.split('-')[0].trim()}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1053,14 +1093,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         open_in_new
                       </span>
                     </button>
-                  )}
-
-                  {student.rotaOnibus && (
-                    <div className="flex justify-end">
-                      <span className="px-2 py-0.5 rounded-lg bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.66rem] truncate">
-                        🚌 {student.rotaOnibus.split('-')[0].trim()}
-                      </span>
-                    </div>
                   )}
                 </div>
               </div>
