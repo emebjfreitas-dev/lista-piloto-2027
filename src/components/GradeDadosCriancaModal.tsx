@@ -270,6 +270,8 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
   const extractDriveFileId = (url: string): string => {
     if (!url || url.startsWith('data:image/')) return '';
+    const m0 = url.match(/\/api\/drive-photo\/([a-zA-Z0-9-_]+)/);
+    if (m0 && m0[1]) return m0[1];
     const m1 = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
     if (m1 && m1[1]) return m1[1];
     const m2 = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
@@ -279,14 +281,18 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     return '';
   };
 
-  const portraitDriveId = extractDriveFileId(rawPhotoCandidate);
+  const portraitDriveId =
+    extractDriveFileId(rawPhotoCandidate) ||
+    extractDriveFileId(draft.photoDriveUrl || '') ||
+    extractDriveFileId(cachedDriveHit?.driveLink || '');
   const portraitCandidates = (() => {
-    if (!rawPhotoCandidate) return [];
+    if (!rawPhotoCandidate && !portraitDriveId) return [];
     if (rawPhotoCandidate.startsWith('data:image/') || rawPhotoCandidate.startsWith('blob:')) {
       return [rawPhotoCandidate];
     }
     if (portraitDriveId) {
       return [
+        `/api/drive-photo/${portraitDriveId}`,
         `https://drive.google.com/thumbnail?id=${portraitDriveId}&sz=w500`,
         `https://lh3.googleusercontent.com/d/${portraitDriveId}=w500`,
         `https://drive.google.com/uc?export=view&id=${portraitDriveId}`,

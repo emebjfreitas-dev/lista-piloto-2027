@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+shared_school_state*.json
+shared_school_state*.tmp
+bun.lock

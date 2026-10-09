@@ -54,6 +54,8 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   // Extract Google Drive file ID if present so we can cascade through fallback image endpoints if one fails
   const extractDriveId = (url: string): string => {
     if (!url || url.startsWith('data:image/')) return '';
+    const m0 = url.match(/\/api\/drive-photo\/([a-zA-Z0-9-_]+)/);
+    if (m0 && m0[1]) return m0[1];
     const m1 = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
     if (m1 && m1[1]) return m1[1];
     const m2 = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
@@ -63,7 +65,11 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
     return '';
   };
 
-  const driveFileId = isMockTestPhoto ? '' : extractDriveId(rawPhoto);
+  const driveFileId = isMockTestPhoto
+    ? ''
+    : extractDriveId(rawPhoto) ||
+      extractDriveId(student?.photoDriveUrl || '') ||
+      extractDriveId(cachedDriveHit?.driveLink || '');
   const [fallbackIndex, setFallbackIndex] = useState(0);
 
   const candidateUrls = React.useMemo(() => {
@@ -72,6 +78,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
     if (rawPhoto.includes('/drive/folders/')) return [];
     if (driveFileId) {
       return [
+        `/api/drive-photo/${driveFileId}`,
         `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400`,
         `https://lh3.googleusercontent.com/d/${driveFileId}=w400`,
         `https://drive.google.com/uc?export=view&id=${driveFileId}`,

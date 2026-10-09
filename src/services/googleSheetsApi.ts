@@ -242,6 +242,15 @@ export const initAuth = (
   });
 };
 
+const registerDriveTokenOnServer = (token: string | null) => {
+  if (!token || typeof window === 'undefined') return;
+  fetch('/api/school-state/drive-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken: token }),
+  }).catch(() => {});
+};
+
 export const checkGoogleRedirectResult = async (): Promise<{
   user: User;
   accessToken: string;
@@ -252,6 +261,7 @@ export const checkGoogleRedirectResult = async (): Promise<{
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (credential?.accessToken) {
       cachedAccessToken = credential.accessToken;
+      registerDriveTokenOnServer(cachedAccessToken);
     }
     return { user: result.user, accessToken: cachedAccessToken || '' };
   } catch (err) {
@@ -270,6 +280,7 @@ export const googleSignIn = async (): Promise<{
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (credential?.accessToken) {
       cachedAccessToken = credential.accessToken;
+      registerDriveTokenOnServer(cachedAccessToken);
     }
     return { user: result.user, accessToken: cachedAccessToken || '' };
   } catch (error: any) {
@@ -291,6 +302,9 @@ export const googleSignIn = async (): Promise<{
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
+  if (cachedAccessToken) {
+    registerDriveTokenOnServer(cachedAccessToken);
+  }
   return cachedAccessToken;
 };
 
@@ -354,31 +368,34 @@ export const toEmbeddableDrivePhotoUrl = (
   urlOrId?: string,
   thumbnailLink?: string
 ): string => {
-  if (thumbnailLink && thumbnailLink.trim()) {
-    return thumbnailLink.replace(/=s\d+/, '=s400');
-  }
-  if (!urlOrId) return '';
-  const trimmed = urlOrId.trim();
-  if (!trimmed) return '';
+  if (!urlOrId && (!thumbnailLink || !thumbnailLink.trim())) return '';
+  const trimmed = (urlOrId || '').trim();
   if (trimmed.startsWith('data:image/')) return trimmed;
   if (trimmed.startsWith('blob:')) return trimmed;
-  if (trimmed.includes('drive.google.com/thumbnail')) return trimmed;
-  if (trimmed.includes('googleusercontent.com')) {
-    return trimmed.replace(/=s\d+/, '=s400');
-  }
+  if (trimmed.startsWith('/api/drive-photo/')) return trimmed;
   if (trimmed.includes('/drive/folders/')) {
     return '';
   }
+  const proxyMatch = trimmed.match(/\/api\/drive-photo\/([a-zA-Z0-9-_]+)/);
+  if (proxyMatch && proxyMatch[1]) {
+    return `/api/drive-photo/${proxyMatch[1]}`;
+  }
   const fileMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
   if (fileMatch && fileMatch[1]) {
-    return `https://drive.google.com/thumbnail?id=${fileMatch[1]}&sz=w400`;
+    return `/api/drive-photo/${fileMatch[1]}`;
   }
   const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9-_]+)/);
   if (idMatch && idMatch[1]) {
-    return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w400`;
+    return `/api/drive-photo/${idMatch[1]}`;
   }
   if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) {
-    return `https://drive.google.com/thumbnail?id=${trimmed}&sz=w400`;
+    return `/api/drive-photo/${trimmed}`;
+  }
+  if (thumbnailLink && thumbnailLink.trim()) {
+    return thumbnailLink.replace(/=s\d+/, '=s400');
+  }
+  if (trimmed.includes('googleusercontent.com')) {
+    return trimmed.replace(/=s\d+/, '=s400');
   }
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     return trimmed;

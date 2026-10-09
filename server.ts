@@ -1,12 +1,14 @@
 import express from 'express';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const STATE_FILE_PATH = path.join(__dirname, 'shared_school_state_2027_v2.json');
+const STATE_FILE_PATH = path.join(os.tmpdir(), 'emeb_candelario_shared_school_state_2027_v2.json');
+const LEGACY_STATE_FILE_PATH = path.join(__dirname, 'shared_school_state_2027_v2.json');
 
 interface SharedSchoolState {
   authorizedUsers?: any[];
@@ -16,6 +18,8 @@ interface SharedSchoolState {
   classesUpdatedAtMs?: number;
   discoveredNominalPdfs?: any[];
   discoveredDrivePhotos?: any[];
+  adminDriveToken?: string;
+  adminDriveTokenUpdatedAtMs?: number;
   cloudLinks?: {
     spreadsheetId?: string;
     spreadsheetTitle?: string;
@@ -111,8 +115,13 @@ const sanitizeAndDeduplicateClasses = (classes?: any[]): any[] | undefined => {
 
 const readSharedState = (): SharedSchoolState => {
   try {
-    if (fs.existsSync(STATE_FILE_PATH)) {
-      const raw = fs.readFileSync(STATE_FILE_PATH, 'utf-8');
+    const fileToRead = fs.existsSync(STATE_FILE_PATH)
+      ? STATE_FILE_PATH
+      : fs.existsSync(LEGACY_STATE_FILE_PATH)
+      ? LEGACY_STATE_FILE_PATH
+      : null;
+    if (fileToRead) {
+      const raw = fs.readFileSync(fileToRead, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         if (Array.isArray(parsed.authorizedUsers)) {
@@ -187,8 +196,119 @@ async function startServer() {
   // API: Obter estado compartilhado (Usuários Autorizados, Turmas, Estudantes, Fotos, PDFs Escaneados, Links Drive/Sheets e Logs)
   app.get('/api/school-state', (_req, res) => {
     const state = readSharedState();
+    const { adminDriveToken: _hiddenToken, ...publicState } = state;
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.json(state);
+    res.json(publicState);
+  });
+
+  // API: Registrar token de leitura da pasta oficial do Drive para permitir proxy de fotos para todos os usuários da ponta (PEB I e PEB II)
+  app.post('/api/school-state/drive-token', (req, res) => {
+    const { accessToken } = req.body || {};
+    if (typeof accessToken === 'string' && accessToken.trim().length > 10) {
+      writeSharedState({
+        adminDriveToken: accessToken.trim(),
+        adminDriveTokenUpdatedAtMs: Date.now(),
+      });
+    }
+    res.json({ ok: true });
+  });
+
+  // Cache em memória das imagens do Drive para carregamento instantâneo nos dispositivos dos professores
+  const drivePhotoBufferCache = new Map<
+    string,
+    { buffer: Buffer; contentType: string; cachedAt: number }
+  >();
+
+  // API: Proxy universal de fotos do Google Drive (/api/drive-photo/:fileId) para que todos os usuários da ponta visualizem as fotos soltas da pasta sem bloqueio de permissão
+  app.get('/api/drive-photo/:fileId', async (req, res) => {
+    const fileId = String(req.params.fileId || '').replace(/[^a-zA-Z0-9-_]/g, '');
+    if (!fileId) {
+      res.status(400).end();
+      return;
+    }
+
+    const cached = drivePhotoBufferCache.get(fileId);
+    if (cached && Date.now() - cached.cachedAt < 1000 * 60 * 60 * 6) {
+      res.setHeader('Content-Type', cached.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.send(cached.buffer);
+      return;
+    }
+
+    const state = readSharedState();
+    const token = state.adminDriveToken;
+
+    if (token) {
+      try {
+        const mediaRes = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(
+            fileId
+          )}?alt=media&supportsAllDrives=true`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (mediaRes.ok) {
+          const contentType =
+            mediaRes.headers.get('content-type') || 'image/jpeg';
+          if (contentType.startsWith('image/') || contentType.includes('octet-stream')) {
+            const arrayBuffer = await mediaRes.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            if (buffer.length > 100) {
+              const finalType = contentType.startsWith('image/')
+                ? contentType
+                : 'image/jpeg';
+              if (drivePhotoBufferCache.size > 600) {
+                const oldestKey = drivePhotoBufferCache.keys().next().value;
+                if (oldestKey) drivePhotoBufferCache.delete(oldestKey);
+              }
+              drivePhotoBufferCache.set(fileId, {
+                buffer,
+                contentType: finalType,
+                cachedAt: Date.now(),
+              });
+              res.setHeader('Content-Type', finalType);
+              res.setHeader('Cache-Control', 'public, max-age=86400');
+              res.send(buffer);
+              return;
+            }
+          }
+        }
+      } catch {
+        // fallback to public thumbnail endpoints below
+      }
+    }
+
+    const fallbackUrls = [
+      `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`,
+      `https://lh3.googleusercontent.com/d/${fileId}=w500`,
+    ];
+
+    for (const url of fallbackUrls) {
+      try {
+        const pubRes = await fetch(url);
+        const contentType = pubRes.headers.get('content-type') || '';
+        if (pubRes.ok && contentType.startsWith('image/')) {
+          const arrayBuffer = await pubRes.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          if (buffer.length > 100) {
+            drivePhotoBufferCache.set(fileId, {
+              buffer,
+              contentType,
+              cachedAt: Date.now(),
+            });
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.send(buffer);
+            return;
+          }
+        }
+      } catch {
+        // continue
+      }
+    }
+
+    res.status(404).end();
   });
 
   // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS, Ônibus Fretado e Links de PDFs Escaneados em tempo real
