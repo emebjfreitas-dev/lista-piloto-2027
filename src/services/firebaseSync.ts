@@ -4,6 +4,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDocFromServer,
   setDoc,
   writeBatch,
   onSnapshot,
@@ -17,6 +18,10 @@ import {
   PendingSyncOperation,
   SyncStateStatus,
 } from '../types';
+import {
+  NameGenderEntry,
+  saveStoredNameGenderEntries,
+} from '../utils/genderDictionary';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
@@ -24,6 +29,18 @@ const rawFirebaseConfig = firebaseConfig as Record<string, string | undefined>;
 export const firestoreDb = rawFirebaseConfig.firestoreDatabaseId
   ? getFirestore(app, rawFirebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
+
+// Validate connection to Firestore on boot per Firebase architecture best practices
+async function validateFirestoreConnectionOnBoot(): Promise<void> {
+  try {
+    await getDocFromServer(doc(firestoreDb, 'school_meta_2027', 'state'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn('Firestore operando em modo cache/offline temporário.');
+    }
+  }
+}
+void validateFirestoreConnectionOnBoot();
 
 const OFFLINE_QUEUE_STORAGE_KEY = 'emeb_candelario_offline_sync_queue_2027_v1';
 
@@ -86,14 +103,20 @@ export const getSyncStatusSnapshot = (): SyncStatusSnapshot => {
   };
 };
 
+let isNotifyScheduled = false;
 const notifySyncListeners = (): void => {
-  const snap = getSyncStatusSnapshot();
-  syncListeners.forEach((cb) => {
-    try {
-      cb(snap);
-    } catch {
-      // ignore listener errors
-    }
+  if (isNotifyScheduled) return;
+  isNotifyScheduled = true;
+  queueMicrotask(() => {
+    isNotifyScheduled = false;
+    const snap = getSyncStatusSnapshot();
+    syncListeners.forEach((cb) => {
+      try {
+        cb(snap);
+      } catch {
+        // ignore listener errors
+      }
+    });
   });
 };
 
@@ -203,9 +226,11 @@ export const saveConfigMetaToFirestoreCloud = async (payload: {
   authorizedUsers?: AuthorizedUser[];
   accessSessionLogs?: UserAccessSessionLog[];
   attendanceWindowConfig?: AttendanceWindowConfig;
+  schoolNotices?: any[];
   cloudLinks?: Record<string, any>;
   discoveredNominalPdfs?: any[];
   discoveredDrivePhotos?: any[];
+  genderDictionary?: NameGenderEntry[];
 }): Promise<boolean> => {
   try {
     const ref = doc(firestoreDb, 'school_meta_2027', 'config');
@@ -219,12 +244,18 @@ export const saveConfigMetaToFirestoreCloud = async (payload: {
     if (payload.attendanceWindowConfig) {
       cleanPayload.attendanceWindowConfig = payload.attendanceWindowConfig;
     }
+    if (payload.schoolNotices) {
+      cleanPayload.schoolNotices = payload.schoolNotices.slice(0, 60);
+    }
     if (payload.cloudLinks) cleanPayload.cloudLinks = payload.cloudLinks;
     if (payload.discoveredNominalPdfs) {
       cleanPayload.discoveredNominalPdfs = payload.discoveredNominalPdfs.slice(0, 1200);
     }
     if (payload.discoveredDrivePhotos) {
       cleanPayload.discoveredDrivePhotos = payload.discoveredDrivePhotos.slice(0, 1200);
+    }
+    if (payload.genderDictionary) {
+      cleanPayload.genderDictionary = payload.genderDictionary.slice(0, 1500);
     }
     await setDoc(ref, cleanPayload, { merge: true });
     return true;
@@ -239,9 +270,11 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
   authorizedUsers?: AuthorizedUser[];
   accessSessionLogs?: UserAccessSessionLog[];
   attendanceWindowConfig?: AttendanceWindowConfig;
+  schoolNotices?: any[];
   cloudLinks?: Record<string, any>;
   discoveredNominalPdfs?: any[];
   discoveredDrivePhotos?: any[];
+  genderDictionary?: NameGenderEntry[];
 } | null> => {
   try {
     const [classesSnap, metaSnap] = await Promise.all([
@@ -268,6 +301,10 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
       if (d.id === 'state') stateData = d.data() || {};
     });
 
+    if (Array.isArray(configData.genderDictionary) && configData.genderDictionary.length > 0) {
+      saveStoredNameGenderEntries(configData.genderDictionary);
+    }
+
     const classesUpdatedAtMs = Math.max(
       maxClassUpdatedAt,
       stateData.classesUpdatedAtMs || 0
@@ -283,9 +320,11 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
       authorizedUsers: configData.authorizedUsers,
       accessSessionLogs: configData.accessSessionLogs,
       attendanceWindowConfig: configData.attendanceWindowConfig,
+      schoolNotices: configData.schoolNotices,
       cloudLinks: configData.cloudLinks,
       discoveredNominalPdfs: configData.discoveredNominalPdfs,
       discoveredDrivePhotos: configData.discoveredDrivePhotos,
+      genderDictionary: configData.genderDictionary,
     };
   } catch {
     return null;
@@ -298,9 +337,11 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
     authorizedUsers?: AuthorizedUser[];
     accessSessionLogs?: UserAccessSessionLog[];
     attendanceWindowConfig?: AttendanceWindowConfig;
+    schoolNotices?: any[];
     cloudLinks?: Record<string, any>;
     discoveredNominalPdfs?: any[];
     discoveredDrivePhotos?: any[];
+    genderDictionary?: NameGenderEntry[];
   }) => void;
 }): (() => void) => {
   const unsubs: Array<() => void> = [];
@@ -336,14 +377,19 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
       (docSnap) => {
         if (!docSnap.exists()) return;
         const data = docSnap.data() || {};
+        if (Array.isArray(data.genderDictionary) && data.genderDictionary.length > 0) {
+          saveStoredNameGenderEntries(data.genderDictionary);
+        }
         if (callbacks.onMetaConfigUpdate) {
           callbacks.onMetaConfigUpdate({
             authorizedUsers: data.authorizedUsers,
             accessSessionLogs: data.accessSessionLogs,
             attendanceWindowConfig: data.attendanceWindowConfig,
+            schoolNotices: data.schoolNotices,
             cloudLinks: data.cloudLinks,
             discoveredNominalPdfs: data.discoveredNominalPdfs,
             discoveredDrivePhotos: data.discoveredDrivePhotos,
+            genderDictionary: data.genderDictionary,
           });
         }
       },

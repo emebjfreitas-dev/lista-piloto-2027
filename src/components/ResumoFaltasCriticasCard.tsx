@@ -47,7 +47,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
   const [threshold, setThreshold] = useState<number>(() => {
     try {
       const saved = parseInt(localStorage.getItem(THRESHOLD_STORAGE_KEY) || '', 10);
-      if ([3, 4, 5].includes(saved)) return saved;
+      if ([3, 5, 10].includes(saved)) return saved;
     } catch {
       // ignore
     }
@@ -185,20 +185,24 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             </p>
           </div>
 
-          {/* Controles: Seletor de Limiar Configurado (3+, 4+, 5+ dias) & Filtros Rápidos */}
+          {/* Controles: Seletor de Limiar Configurado (3+, 5+, 10+ dias) & Filtros Rápidos */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <div className="flex items-center gap-1 bg-[#f5f5f7] p-1 rounded-xl">
               <span className="text-[0.72rem] font-semibold text-[#6e6e73] px-2">
                 Limiar:
               </span>
-              {[3, 4, 5].map((val) => (
+              {[3, 5, 10].map((val) => (
                 <button
                   key={val}
                   type="button"
                   onClick={() => handleUpdateThreshold(val)}
                   className={`px-2.5 py-1 rounded-lg text-[0.74rem] font-semibold font-mono tabular-nums transition-colors cursor-pointer ${
                     threshold === val
-                      ? 'bg-[#1d1d1f] text-white shadow-2xs'
+                      ? val === 10
+                        ? 'bg-[#be123c] text-white shadow-2xs'
+                        : val === 5
+                        ? 'bg-[#ea580c] text-white shadow-2xs'
+                        : 'bg-[#f59e0b] text-white shadow-2xs'
                       : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                   }`}
                 >
@@ -268,6 +272,20 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   ? latestOccurrence.selectedDates.join(', ')
                   : 'Dias registrados no lançamento mensal';
 
+              const cardTierColor =
+                consecutiveDaysCount >= 10
+                  ? 'bg-[#fff1f2] hover:bg-[#ffe4e6] border-l-4 border-l-[#e11d48] border-[#e11d48]/30'
+                  : consecutiveDaysCount >= 5
+                  ? 'bg-[#fff7ed] hover:bg-[#ffedd5] border-l-4 border-l-[#ea580c] border-[#ea580c]/30'
+                  : 'bg-[#fffbeb] hover:bg-[#fef3c7] border-l-4 border-l-[#f59e0b] border-[#f59e0b]/30';
+
+              const badgeTierColor =
+                consecutiveDaysCount >= 10
+                  ? 'bg-[#be123c] text-white'
+                  : consecutiveDaysCount >= 5
+                  ? 'bg-[#ea580c] text-white'
+                  : 'bg-[#f59e0b] text-white';
+
               return (
                 <div
                   key={`crit-${cls.id}-${student.id}`}
@@ -280,11 +298,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       setSelectedDetailItem(item);
                     }
                   }}
-                  className={`group rounded-2xl p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 border h-full min-h-[118px] ${
-                    hasFamilyFeedback
-                      ? 'bg-[#fbfbfd] hover:bg-[#f5f5f7] border-black/[0.07]'
-                      : 'bg-[#fff8f7] hover:bg-[#fff2f0] border-[#ff3b30]/25'
-                  }`}
+                  className={`group rounded-2xl p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 border h-full min-h-[118px] ${cardTierColor}`}
                 >
                   <div className="flex items-start justify-between gap-2.5">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -311,13 +325,15 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
                     <div className="text-right shrink-0">
                       <span
-                        className={`font-mono font-bold text-[0.82rem] tabular-nums block ${
-                          hasFamilyFeedback ? 'text-[#0066cc]' : 'text-[#ff3b30]'
-                        }`}
+                        className={`px-2 py-0.5 rounded-full font-mono font-black text-[0.72rem] tabular-nums inline-block ${badgeTierColor}`}
                       >
-                        {consecutiveDaysCount}d seguidos
+                        {consecutiveDaysCount >= 10
+                          ? `10+ DIAS (${consecutiveDaysCount}d)`
+                          : consecutiveDaysCount >= 5
+                          ? `5+ DIAS (${consecutiveDaysCount}d)`
+                          : `3+ DIAS (${consecutiveDaysCount}d)`}
                       </span>
-                      <span className="text-[0.68rem] text-[#6e6e73] font-mono tabular-nums block">
+                      <span className="text-[0.68rem] text-[#6e6e73] font-mono tabular-nums block mt-0.5">
                         Ano: {totalConsecutiveDaysYear}d ({occurrences.length || 1}x)
                       </span>
                     </div>

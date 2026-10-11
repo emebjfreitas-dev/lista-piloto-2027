@@ -7,6 +7,7 @@ import {
   AuthorizedUser,
   AttendanceWindowConfig,
   UserAccessSessionLog,
+  SchoolNotice,
 } from './types';
 import {
   getStoredClasses,
@@ -15,6 +16,9 @@ import {
   saveStoredAuthorizedUsers,
   getStoredAttendanceWindowConfig,
   saveStoredAttendanceWindowConfig,
+  getStoredSchoolNotices,
+  saveStoredSchoolNotices,
+  pushSchoolNoticesToServer,
   evaluateAttendanceLaunchWindow,
   getStoredAccessSessionLogs,
   saveStoredAccessSessionLogs,
@@ -26,6 +30,10 @@ import {
   getLocalClassesUpdatedAtMs,
 } from './services/db';
 import { subscribeToFirestoreRealtimeState } from './services/firebaseSync';
+import {
+  SyncQueueManager,
+  SyncQueueTaskCategory,
+} from './services/syncQueueManager';
 import { OFFICIAL_OCTOBER_DAYS } from './data/mockData';
 import { getClassAttendanceMetrics } from './utils/attendanceRules';
 import {
@@ -39,11 +47,6 @@ import {
   syncNominalPdfsFromDriveSubfolders,
   attachPhotosFromDiscoveredCache,
   attachNominalPdfsFromDiscoveredCache,
-  writeAttendanceOnlyToGoogleSheet,
-  syncAuthorizedUsersToGoogleSheet,
-  hasPendingAttendanceSheetSync,
-  hasPendingUsersSheetSync,
-  flushAllPendingGoogleSheetQueues,
   logoutGoogle,
 } from './services/googleSheetsApi';
 import { Header } from './components/Header';
@@ -200,6 +203,9 @@ export default function App() {
   );
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
+  const [schoolNotices, setSchoolNotices] = useState<SchoolNotice[]>(() =>
+    getStoredSchoolNotices()
+  );
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
 
   // Global keyboard shortcut Ctrl+K or Cmd+K for Spotlight Search
@@ -252,13 +258,39 @@ export default function App() {
     pushAttendanceWindowToServer(nextConfig);
   };
 
+  const handleSaveSchoolNotices = (updatedNotices: SchoolNotice[]) => {
+    setSchoolNotices(updatedNotices);
+    saveStoredSchoolNotices(updatedNotices);
+    pushSchoolNoticesToServer(updatedNotices);
+  };
+
+  // Subscribe to centralized SyncQueueManager and resume any persisted tasks recovered from a previous tab close
+  useEffect(() => {
+    const unsubQueue = SyncQueueManager.subscribe((snapshot) => {
+      if (snapshot.isProcessing) {
+        setInstantSheetSyncStatus('syncing');
+      } else if (snapshot.pendingTasksCount === 0 && snapshot.lastCompletedAtISO) {
+        setInstantSheetSyncStatus('synced');
+      } else if (snapshot.pendingTasksCount > 0) {
+        setInstantSheetSyncStatus('idle');
+      }
+    });
+    if (SyncQueueManager.hasPendingTasks()) {
+      void SyncQueueManager.processQueue();
+    }
+    return () => unsubQueue();
+  }, []);
+
   const handleSaveAuthorizedUsers = (updatedUsers: AuthorizedUser[]) => {
     setAuthorizedUsers(updatedUsers);
     saveStoredAuthorizedUsers(updatedUsers);
     pushAuthorizedUsersToServer(updatedUsers).then((merged) => {
       if (merged) setAuthorizedUsers(merged);
     });
-    syncAuthorizedUsersToGoogleSheet(updatedUsers);
+    SyncQueueManager.enqueueUsersAccessWrite({
+      users: updatedUsers,
+      description: 'Atualização de Permissões e E-mails Autorizados',
+    });
 
     // Keep current logged user OR simulated teacher profile in sync whenever their entry is modified in '5. Acessos'
     const targetLookupEmail = (simulatedTeacherEmail || currentUserEmail).trim().toLowerCase();
@@ -385,6 +417,10 @@ export default function App() {
       if (shared.attendanceWindowConfig) {
         setAttendanceWindowConfig(shared.attendanceWindowConfig);
       }
+
+      if (Array.isArray(shared.schoolNotices)) {
+        setSchoolNotices(shared.schoolNotices);
+      }
     };
 
     syncFromBackendServer();
@@ -417,6 +453,10 @@ export default function App() {
         if (cfg.attendanceWindowConfig) {
           setAttendanceWindowConfig(cfg.attendanceWindowConfig);
           saveStoredAttendanceWindowConfig(cfg.attendanceWindowConfig);
+        }
+        if (Array.isArray(cfg.schoolNotices)) {
+          setSchoolNotices(cfg.schoolNotices);
+          saveStoredSchoolNotices(cfg.schoolNotices);
         }
         if (Array.isArray(cfg.accessSessionLogs) && cfg.accessSessionLogs.length > 0) {
           setAccessSessionLogs(cfg.accessSessionLogs);
@@ -457,6 +497,8 @@ export default function App() {
         });
       } else if (e.key === 'emeb_candelario_attendance_window_2027_v1') {
         setAttendanceWindowConfig(getStoredAttendanceWindowConfig());
+      } else if (e.key === 'emeb_candelario_school_notices_2027_v1') {
+        setSchoolNotices(getStoredSchoolNotices());
       } else if (e.key === 'emeb_candelario_access_session_logs_2027_v1') {
         setAccessSessionLogs(getStoredAccessSessionLogs());
       }
@@ -667,23 +709,25 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const triggerDebouncedSheetWrite = (updatedClass: ClassGroup, nextClasses: ClassGroup[]) => {
+  const triggerDebouncedSheetWrite = (
+    updatedClass: ClassGroup,
+    nextClasses: ClassGroup[],
+    category: Exclude<SyncQueueTaskCategory, 'users_access'> = 'attendance',
+    studentId?: string,
+    description?: string
+  ) => {
     setInstantSheetSyncStatus('syncing');
     if (sheetWriteTimerRef.current) {
       window.clearTimeout(sheetWriteTimerRef.current);
     }
     sheetWriteTimerRef.current = window.setTimeout(() => {
-      writeAttendanceOnlyToGoogleSheet(updatedClass, nextClasses)
-        .then(() => {
-          setInstantSheetSyncStatus('synced');
-        })
-        .catch((err) => {
-          console.warn(
-            'Fila de sync (Faltas): falha na tentativa única; será retentada automaticamente no próximo pulso de 5s:',
-            err
-          );
-          setInstantSheetSyncStatus('idle');
-        });
+      SyncQueueManager.enqueueClassWrite({
+        category,
+        updatedClass,
+        allClasses: nextClasses,
+        studentId,
+        description,
+      });
     }, 150);
   };
 
@@ -697,8 +741,14 @@ export default function App() {
     setClasses((prev) => {
       const next = prev.map((c) => (c.id === stampedClass.id ? stampedClass : c));
       saveStoredClasses(next);
-      // Atualização instantânea na Google Sheet (Abas Nominais + Colunas de Frequência) ao preenchimento do professor PEB I / Usuário
-      triggerDebouncedSheetWrite(stampedClass, next);
+      // Atualização instantânea via SyncQueueManager com retry exponencial e proteção contra fechamento
+      triggerDebouncedSheetWrite(
+        stampedClass,
+        next,
+        'attendance',
+        undefined,
+        `Faltas do Mês — ${stampedClass.name}`
+      );
       return next;
     });
     setSelectedClass(stampedClass);
@@ -761,7 +811,13 @@ export default function App() {
       });
       saveStoredClasses(next);
       if (targetUpdatedClass) {
-        triggerDebouncedSheetWrite(targetUpdatedClass, next);
+        triggerDebouncedSheetWrite(
+          targetUpdatedClass,
+          next,
+          'student_data',
+          canonicalStudent.id,
+          `Dados / Busca Ativa — ${canonicalStudent.name}`
+        );
       }
       return next;
     });
@@ -825,7 +881,13 @@ export default function App() {
       });
       saveStoredClasses(next);
       if (updatedTargetClass) {
-        triggerDebouncedSheetWrite(updatedTargetClass, next);
+        triggerDebouncedSheetWrite(
+          updatedTargetClass,
+          next,
+          'photo',
+          studentId,
+          `Foto do Aluno (${studentId})`
+        );
       }
       return next;
     });
@@ -911,7 +973,11 @@ export default function App() {
     setAuthorizedUsers(nextUsers);
     saveStoredAuthorizedUsers(nextUsers);
     pushSessionLogsToServer(nextLogs, nextUsers);
-    syncAuthorizedUsersToGoogleSheet(nextUsers, nextLogs);
+    SyncQueueManager.enqueueUsersAccessWrite({
+      users: nextUsers,
+      sessionLogs: nextLogs,
+      description: `Login registrado — ${latestFromList.email}`,
+    });
 
     setSimulatedTeacherEmail(null);
     setCurrentUserEmail(latestFromList.email);
@@ -1020,6 +1086,7 @@ export default function App() {
 
     let tickCounter = 0;
     const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
       const sessId = activeSessionIdRef.current;
       if (!sessId) return;
       tickCounter++;
@@ -1070,33 +1137,24 @@ export default function App() {
             });
             saveStoredAuthorizedUsers(updatedUsers);
             pushSessionLogsToServer(updatedLogs, updatedUsers);
-            // Retry immediately on the next 5s heartbeat if any queue has pending failed writes; otherwise sync live duration every 3 ticks (15s)
-            if (hasPendingUsersSheetSync() || tickCounter % 3 === 0) {
-              syncAuthorizedUsersToGoogleSheet(updatedUsers, updatedLogs);
+            if (tickCounter % 2 === 0) {
+              SyncQueueManager.enqueueUsersAccessWrite({
+                users: updatedUsers,
+                sessionLogs: updatedLogs,
+                description: 'Heartbeat de Sessão Ativa',
+              });
             }
             return updatedUsers;
           });
         }
 
-        // Automatic single-attempt retry for queued attendance writes on every 5s heartbeat when offline/network recovers
-        if (hasPendingAttendanceSheetSync()) {
-          setInstantSheetSyncStatus('syncing');
-          flushAllPendingGoogleSheetQueues(getStoredClasses())
-            .then(({ flushedAttendance }) => {
-              if (flushedAttendance) {
-                setInstantSheetSyncStatus('synced');
-              } else {
-                setInstantSheetSyncStatus('idle');
-              }
-            })
-            .catch(() => {
-              setInstantSheetSyncStatus('idle');
-            });
+        if (SyncQueueManager.hasPendingTasks()) {
+          void SyncQueueManager.processQueue();
         }
 
         return updatedLogs;
       });
-    }, 5000);
+    }, 15000);
 
     return () => window.clearInterval(intervalId);
   }, [currentScreen, currentUserEmail, simulatedTeacherEmail]);
@@ -1138,7 +1196,11 @@ export default function App() {
       setAuthorizedUsers(nextUsers);
       saveStoredAuthorizedUsers(nextUsers);
       pushSessionLogsToServer(nextLogs, nextUsers);
-      syncAuthorizedUsersToGoogleSheet(nextUsers, nextLogs);
+      SyncQueueManager.enqueueUsersAccessWrite({
+        users: nextUsers,
+        sessionLogs: nextLogs,
+        description: `Logout registrado — ${currentUserEmail}`,
+      });
       activeSessionIdRef.current = null;
     }
 
@@ -1266,6 +1328,7 @@ export default function App() {
         {currentScreen === 'login' && (
           <LoginScreen
             authorizedUsers={authorizedUsers}
+            schoolNotices={schoolNotices}
             onLoginSuccess={handleLoginSuccess}
           />
         )}
@@ -1328,6 +1391,10 @@ export default function App() {
           <MinhasTurmasScreen
             classes={classes}
             userRole={userRole}
+            userEmail={simulatedTeacherEmail || currentUserEmail}
+            userName={currentUserName}
+            schoolNotices={schoolNotices}
+            onSaveSchoolNotices={handleSaveSchoolNotices}
             assignedClassId={assignedClassId}
             assignedClassIds={assignedClassIds}
             attendanceWindowConfig={attendanceWindowConfig}
@@ -1388,6 +1455,10 @@ export default function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             userRole={userRole}
+            userEmail={simulatedTeacherEmail || currentUserEmail}
+            userName={currentUserName}
+            schoolNotices={schoolNotices}
+            onSaveSchoolNotices={handleSaveSchoolNotices}
             canLaunchAttendance={canEditClass(selectedClass.id)}
             onGoToMonthlyAttendance={() => {
               setCurrentScreen('frequencia_mensal');
@@ -1774,7 +1845,13 @@ export default function App() {
             });
             saveStoredClasses(next);
             if (updatedCls) {
-              triggerDebouncedSheetWrite(updatedCls, next);
+              triggerDebouncedSheetWrite(
+                updatedCls,
+                next,
+                'pdf',
+                studentId,
+                `Ficha PDF do Aluno (${studentId})`
+              );
             }
             return next;
           });

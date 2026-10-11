@@ -24,6 +24,14 @@ import {
   getDefaultMonthlySchoolDaysMap,
 } from '../data/mockData';
 import {
+  GENDER_SHEET_TAB_NAME,
+  NameGenderEntry,
+  buildGenderLookupSheetValues,
+  saveStoredNameGenderEntries,
+  resolvePersonGender,
+  parseGenderCode,
+} from '../utils/genderDictionary';
+import {
   getStoredAuthorizedUsers,
   getStoredAccessSessionLogs,
   formatDurationHuman,
@@ -2925,6 +2933,12 @@ export const createSchoolDatabaseSpreadsheet = async (
                 gridProperties: { frozenRowCount: 1 },
               },
             },
+            {
+              properties: {
+                title: GENDER_SHEET_TAB_NAME,
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
           ],
         }),
       }
@@ -3368,6 +3382,7 @@ export const syncClassesToGoogleSheet = async (
     'Turmas_Salas_2027',
     'Emails_Permitidos_2027',
     'Monitoramento_Acessos_2027',
+    GENDER_SHEET_TAB_NAME,
   ];
 
   requiredTabs.forEach((tabName) => {
@@ -3413,6 +3428,7 @@ export const syncClassesToGoogleSheet = async (
   const faltasConsecutivasValues = buildFaltasConsecutivasSheetValues(classes);
   const onibusFretadoValues = buildOnibusFretadoSheetValues(classes);
   const bolsaFamiliaBimestralValues = buildBolsaFamiliaBimestralSheetValues(classes);
+  const consultaGeneroValues = buildGenderLookupSheetValues(classes);
 
   const batchRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
@@ -3463,6 +3479,10 @@ export const syncClassesToGoogleSheet = async (
             range: 'Emails_Permitidos_2027!A1',
             values: emailsPermitidosValues,
           },
+          {
+            range: `${GENDER_SHEET_TAB_NAME}!A1`,
+            values: consultaGeneroValues,
+          },
         ],
       }),
     }
@@ -3483,6 +3503,77 @@ export const syncClassesToGoogleSheet = async (
     updatedCells: batchData.totalUpdatedCells || sedValues.length * 58,
     title: meta.title,
   };
+};
+
+/**
+ * Grava/atualiza instantaneamente a aba `Consulta_Genero_Nomes_2027` na Planilha Google
+ * (Coluna A: Nome, Coluna B: M ou F)
+ */
+export const syncGenderDictionaryToGoogleSheet = async (
+  classes: ClassGroup[],
+  customEntries?: NameGenderEntry[]
+): Promise<boolean> => {
+  const token = await getAccessToken();
+  if (!token) return false;
+
+  const spreadsheetId = await ensureOfficialSpreadsheetId();
+  if (!spreadsheetId) return false;
+
+  const meta = await fetchSpreadsheetMetadata(spreadsheetId);
+  if (!meta.sheetTitles.includes(GENDER_SHEET_TAB_NAME)) {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: GENDER_SHEET_TAB_NAME,
+                  gridProperties: { frozenRowCount: 1 },
+                },
+              },
+            },
+          ],
+        }),
+      }
+    );
+  }
+
+  await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}/values/${encodeURIComponent(`${GENDER_SHEET_TAB_NAME}!A1:C2500`)}:clear`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  const values = buildGenderLookupSheetValues(classes, customEntries);
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}/values/${encodeURIComponent(
+      `${GENDER_SHEET_TAB_NAME}!A1`
+    )}?valueInputOption=USER_ENTERED`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ values }),
+    }
+  );
+  return res.ok;
 };
 
 /**
@@ -3825,6 +3916,38 @@ export const readClassesFromGoogleSheet = async (
     });
   });
 
+  // Read Consulta_Genero_Nomes_2027 (Coluna A: Nome, Coluna B: M ou F) if present, or auto-create & seed it so users can manually edit names and M/F in Google Sheets!
+  if (meta.sheetTitles.includes(GENDER_SHEET_TAB_NAME)) {
+    try {
+      const genRes = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+          spreadsheetId
+        )}/values/${encodeURIComponent(`${GENDER_SHEET_TAB_NAME}!A2:B2500`)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (genRes.ok) {
+        const genData = await genRes.json();
+        const genRows: any[][] = genData.values || [];
+        const parsedEntries: NameGenderEntry[] = [];
+        genRows.forEach((r) => {
+          const rawName = String(r[0] || '').trim();
+          const rawGender = parseGenderCode(String(r[1] || '').trim());
+          if (rawName && rawGender) {
+            parsedEntries.push({ name: rawName, gender: rawGender });
+          }
+        });
+        if (parsedEntries.length > 0) {
+          saveStoredNameGenderEntries(parsedEntries);
+        }
+      }
+    } catch (e) {
+      console.warn(`Aviso ao ler ${GENDER_SHEET_TAB_NAME}:`, e);
+    }
+  } else {
+    // Auto-create and seed the tab in background so the sheet immediately has Consulta_Genero_Nomes_2027
+    void syncGenderDictionaryToGoogleSheet(currentClasses).catch(() => {});
+  }
+
   // Read Onibus_Fretado_2027 nominal database tab if present so any student added/edited in that sheet tab automatically shows bus info on the student card!
   const sheetBusRouteByStudent = new Map<string, string>();
   if (meta.sheetTitles.includes('Onibus_Fretado_2027')) {
@@ -3977,7 +4100,12 @@ export const readClassesFromGoogleSheet = async (
     const filiacao1 = String(cols[21] || '').trim();
     const filiacao2 = String(cols[22] || '').trim();
     const nomeSocial = String(cols[23] || '').trim();
-    const genero = String(cols[24] || '').trim();
+    const rawGeneroCol = String(cols[24] || '').trim();
+    const resolvedGenderCode = resolvePersonGender(
+      nomeSocial || estudante,
+      rawGeneroCol
+    );
+    const genero = resolvedGenderCode === 'F' ? 'FEMININO' : 'MASCULINO';
     const tipoSanguineo = String(cols[25] || '').trim();
     const racaCor = String(cols[26] || '').trim();
     const nacionalidade = String(cols[27] || 'BRASILEIRA').trim();

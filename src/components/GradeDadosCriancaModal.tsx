@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Student, UserRole } from '../types';
 import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
 import { getStudentAttendanceMetrics } from '../utils/attendanceRules';
+import {
+  getStudentGenderLabel,
+  resolveGuardianRelationshipInfo,
+} from '../utils/genderDictionary';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import {
@@ -39,11 +43,14 @@ function isConsecutiveDaysBadgeLabel(
   consecutiveDays: number,
   totalOccurrences: number
 ): string {
+  if (consecutiveDays >= 10) {
+    return `Evasão Crítica (10+d) · ${consecutiveDays} faltas seguidas`;
+  }
   if (consecutiveDays >= 5) {
-    return `Risco Crítico · ${consecutiveDays} faltas seguidas`;
+    return `Busca Ativa (5+d) · ${consecutiveDays} faltas seguidas`;
   }
   if (consecutiveDays >= 3) {
-    return `Em Alerta · ${consecutiveDays} faltas seguidas${
+    return `Atenção (3+d) · ${consecutiveDays} faltas seguidas${
       totalOccurrences > 1 ? ` (${totalOccurrences}ª seq.)` : ''
     }`;
   }
@@ -555,6 +562,20 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] font-bold text-[0.7rem] uppercase tracking-wider">
                       {draft.situacao || 'MATRÍCULA ATIVA'}
                     </span>
+                    {(() => {
+                      const gInfo = getStudentGenderLabel(draft);
+                      return (
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full font-bold text-[0.7rem] ${
+                            gInfo.code === 'F'
+                              ? 'bg-[#fce7f3] text-[#9d174d]'
+                              : 'bg-[#e0f2fe] text-[#0369a1]'
+                          }`}
+                        >
+                          {gInfo.estudanteTitle} · {gInfo.label} ({gInfo.code})
+                        </span>
+                      );
+                    })()}
                     {draft.deficiencia && (
                       <span className="px-2.5 py-0.5 rounded-full bg-[#f5f3ff] text-[#5b21b6] font-bold text-[0.72rem]">
                         AEE · {draft.deficiencia}
@@ -562,18 +583,24 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     )}
                   </div>
 
-                  {/* Badge Visual de Risco / Faltas Consecutivas Imediatamente Visível no Topo do Card */}
+                  {/* Badge Visual de Risco / Faltas Consecutivas Imediatamente Visível no Topo do Card (3, 5 e 10 dias) */}
                   <span
                     className={`px-3 py-1 rounded-full font-extrabold text-[0.72rem] tabular-nums flex items-center gap-1.5 ${
-                      currentConsecutiveDaysCount >= 5
-                        ? 'bg-[#ff3b30] text-white shadow-2xs'
+                      currentConsecutiveDaysCount >= 10
+                        ? 'bg-[#be123c] text-white shadow-2xs ring-2 ring-[#e11d48]/30'
+                        : currentConsecutiveDaysCount >= 5
+                        ? 'bg-[#ea580c] text-white shadow-2xs'
                         : isConsecutiveRisk
-                        ? 'bg-[#ff9500]/15 text-[#c93400] border border-[#ff9500]/35'
+                        ? 'bg-[#fffbeb] text-[#92400e] border border-[#f59e0b]/50'
                         : 'bg-[#f5f5f7] text-[#6e6e73]'
                     }`}
                   >
                     <span className="material-symbols-outlined text-[15px]">
-                      {isConsecutiveRisk ? 'warning' : 'verified'}
+                      {currentConsecutiveDaysCount >= 10
+                        ? 'gpp_maybe'
+                        : isConsecutiveRisk
+                        ? 'warning'
+                        : 'verified'}
                     </span>
                     <span>
                       {isConsecutiveDaysBadgeLabel(
@@ -622,22 +649,26 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Card Dedicado de Faltas Consecutivas (Risco de Busca Ativa) */}
+                  {/* Card Dedicado de Faltas Consecutivas (Marcas de 3, 5 e 10 dias) */}
                   <div
                     className={`rounded-2xl p-3 border ${
-                      currentConsecutiveDaysCount >= 5
-                        ? 'bg-[#fff2f2] border-[#ff3b30]/35'
+                      currentConsecutiveDaysCount >= 10
+                        ? 'bg-[#fff1f2] border-[#e11d48]/45'
+                        : currentConsecutiveDaysCount >= 5
+                        ? 'bg-[#fff7ed] border-[#ea580c]/40'
                         : isConsecutiveRisk
-                        ? 'bg-[#fff9eb] border-[#ff9500]/35'
+                        ? 'bg-[#fffbeb] border-[#f59e0b]/45'
                         : 'bg-[#f5f5f7] border-transparent'
                     }`}
                   >
                     <span
                       className={`text-[0.65rem] font-bold uppercase tracking-wider flex items-center gap-1 ${
-                        currentConsecutiveDaysCount >= 5
-                          ? 'text-[#ff3b30]'
+                        currentConsecutiveDaysCount >= 10
+                          ? 'text-[#be123c]'
+                          : currentConsecutiveDaysCount >= 5
+                          ? 'text-[#c2410c]'
                           : isConsecutiveRisk
-                          ? 'text-[#c93400]'
+                          ? 'text-[#92400e]'
                           : 'text-[#86868b]'
                       }`}
                     >
@@ -649,20 +680,24 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span
                         className={`text-[0.98rem] sm:text-[1.05rem] font-extrabold tabular-nums ${
-                          currentConsecutiveDaysCount >= 5
-                            ? 'text-[#ff3b30]'
+                          currentConsecutiveDaysCount >= 10
+                            ? 'text-[#be123c]'
+                            : currentConsecutiveDaysCount >= 5
+                            ? 'text-[#ea580c]'
                             : isConsecutiveRisk
-                            ? 'text-[#c93400]'
+                            ? 'text-[#d97706]'
                             : 'text-[#1d1d1f]'
                         }`}
                       >
                         {currentConsecutiveDaysCount}d
                       </span>
                       <span className="text-[0.68rem] font-semibold text-[#6e6e73] tabular-nums truncate">
-                        {totalUniqueConsecutiveDaysYear > currentConsecutiveDaysCount
-                          ? `(${totalUniqueConsecutiveDaysYear}d ano)`
+                        {currentConsecutiveDaysCount >= 10
+                          ? 'crítico 10+d'
+                          : currentConsecutiveDaysCount >= 5
+                          ? 'alerta 5+d'
                           : isConsecutiveRisk
-                          ? 'em alerta'
+                          ? 'atenção 3+d'
                           : 'sem risco'}
                       </span>
                     </div>
@@ -761,33 +796,49 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               {/* 3. Cartão Orgânico da Família, WhatsApp e Endereço */}
               <div className="bg-white rounded-[24px] p-5 border border-black/[0.05] shadow-2xs space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="material-symbols-outlined text-[18px]">person</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                        Mãe / Filiação 1
-                      </span>
-                      <p className="text-[0.9rem] font-bold text-[#1d1d1f] leading-snug mt-0.5">
-                        {draft.filiacao1 || draft.guardianName || 'Não informado'}
-                      </p>
-                    </div>
-                  </div>
+                  {(() => {
+                    const g1 = resolveGuardianRelationshipInfo(
+                      draft.filiacao1 || draft.guardianName,
+                      'filiacao1',
+                      draft.notes
+                    );
+                    const g2 = resolveGuardianRelationshipInfo(
+                      draft.filiacao2,
+                      'filiacao2',
+                      draft.notes
+                    );
+                    return (
+                      <>
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="material-symbols-outlined text-[18px]">person</span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                              {g1.roleLabel} · Filiação 1 ({g1.gender})
+                            </span>
+                            <p className="text-[0.9rem] font-bold text-[#1d1d1f] leading-snug mt-0.5">
+                              {g1.cleanName || 'Não informado'}
+                            </p>
+                          </div>
+                        </div>
 
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="material-symbols-outlined text-[18px]">person</span>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                        Pai / Filiação 2
-                      </span>
-                      <p className="text-[0.9rem] font-bold text-[#1d1d1f] leading-snug mt-0.5">
-                        {draft.filiacao2 || 'Não informado'}
-                      </p>
-                    </div>
-                  </div>
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="material-symbols-outlined text-[18px]">person</span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
+                              {g2.roleLabel} · Filiação 2 ({g2.gender})
+                            </span>
+                            <p className="text-[0.9rem] font-bold text-[#1d1d1f] leading-snug mt-0.5">
+                              {g2.cleanName || 'Não informado'}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Linha de Telefones com Botões Diretos de WhatsApp */}

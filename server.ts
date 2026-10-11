@@ -14,6 +14,7 @@ interface SharedSchoolState {
   authorizedUsers?: any[];
   accessSessionLogs?: any[];
   attendanceWindowConfig?: any;
+  schoolNotices?: any[];
   classes?: any[];
   classesUpdatedAtMs?: number;
   discoveredNominalPdfs?: any[];
@@ -588,6 +589,17 @@ async function startServer() {
       return;
     }
     const saved = writeSharedState({ attendanceWindowConfig });
+    res.json(saved);
+  });
+
+  // API: Publicar / Atualizar Comunicados do Quadro de Avisos Institucional
+  app.post('/api/school-state/notices', (req, res) => {
+    const { schoolNotices } = req.body || {};
+    if (!Array.isArray(schoolNotices)) {
+      res.status(400).json({ error: 'Lista de avisos inválida' });
+      return;
+    }
+    const saved = writeSharedState({ schoolNotices: schoolNotices.slice(0, 60) });
     res.json(saved);
   });
 

@@ -20,18 +20,18 @@
     --apple-red: #ff3b30;
     --apple-amber: #ff9500;
 
-    /* Web Desktop Best-in-Class: Inter (with optical sizing & tabular numerals) + Native Fallbacks */
-    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-mono: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    /* Web Desktop Best-in-Class: Plus Jakarta Sans + JetBrains Mono (with optical sizing & tabular numerals) + Native Fallbacks */
+    --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
-  /* Mobile & Tablet (< 768px): Native OS System Typography (SF Pro Text on iOS / Roboto on Android) for maximum mobile legibility and zero-latency rendering */
+  /* Mobile & Tablet (< 768px): Plus Jakarta Sans + Native OS System Typography for maximum mobile legibility */
   @media (max-width: 767px) {
     :root {
-      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Roboto", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-      --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Roboto", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-      --font-mono: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Roboto", "Inter", sans-serif;
+      --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     }
   }
 
@@ -61,7 +61,7 @@
     background-color: var(--apple-bg);
     color: var(--apple-text-primary);
     overflow-x: hidden;
-    font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "cv05" 1;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   }
 
   /* Typographic Hierarchy */
@@ -78,27 +78,30 @@
   }
 
   .font-mono,
-  .tabular-nums,
   code,
   pre {
-    font-family: var(--font-sans) !important;
+    font-family: var(--font-mono) !important;
     font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: "tnum" 1, "lnum" 1, "zero" 0, "cv05" 1;
+    font-feature-settings: "tnum" 1, "lnum" 1, "zero" 0;
     letter-spacing: -0.01em;
   }
 
-  /* Ultra-Crisp High-Performance Border & Outline Suppression (Zero Heavy Borders) */
-  .border,
-  .border-2,
-  .border-t,
-  .border-b,
-  .border-l,
-  .border-r {
-    border-color: rgba(0, 0, 0, 0.045) !important;
+  .tabular-nums {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
   }
 
+  /* Safe-area padding utilities for iOS & Android edge-to-edge viewports */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Subtle default border color without overriding semantic alert borders (3d/5d/10d) */
   .border-2 {
-    border-width: 1px !important;
+    border-width: 1px;
   }
 
   /* Apple.com Global Remapping of Legacy Teal/Green Classes to Pure Apple.com Palette */
@@ -356,8 +359,31 @@
   }
 }
 
+@keyframes iosSheetSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .animate-gentle-fade {
   animation: gentleFadeIn 0.18s ease-out forwards;
+}
+
+.animate-ios-sheet {
+  animation: iosSheetSlideUp 0.22s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+.ios-spring-btn {
+  transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ios-spring-btn:active {
+  transform: scale(0.97);
 }
 
 @media print {

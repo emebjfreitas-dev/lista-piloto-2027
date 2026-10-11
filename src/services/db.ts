@@ -6,6 +6,7 @@ import {
   AuthorizedUser,
   AttendanceWindowConfig,
   UserAccessSessionLog,
+  SchoolNotice,
 } from '../types';
 import {
   INITIAL_CLASSES,
@@ -29,16 +30,23 @@ import {
   setSyncingActiveState,
   registerOfflineFlushHandler,
 } from './firebaseSync';
+import {
+  resolveStudentGender,
+  getStudentGenderLabel,
+  resolveGuardianRelationshipInfo,
+} from '../utils/genderDictionary';
 
 const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v6';
 const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v3';
 const ATTENDANCE_WINDOW_STORAGE_KEY = 'emeb_candelario_attendance_window_2027_v1';
 const ACCESS_LOGS_STORAGE_KEY = 'emeb_candelario_access_session_logs_2027_v1';
+const NOTICES_STORAGE_KEY = 'emeb_candelario_school_notices_2027_v1';
 
 // In-memory cache so even if browser localStorage quota is full, the app never loses runtime state or throws errors
 let memoryCachedClasses: ClassGroup[] | null = null;
 let memoryCachedUsers: AuthorizedUser[] | null = null;
 let memoryCachedLogs: UserAccessSessionLog[] | null = null;
+let memoryCachedNotices: SchoolNotice[] | null = null;
 
 // Clean up obsolete legacy storage keys from earlier versions to free localStorage space
 const purgeLegacyStorageKeys = (preserveKeys: string[]): void => {
@@ -49,6 +57,8 @@ const purgeLegacyStorageKeys = (preserveKeys: string[]): void => {
       USERS_STORAGE_KEY,
       ATTENDANCE_WINDOW_STORAGE_KEY,
       ACCESS_LOGS_STORAGE_KEY,
+      NOTICES_STORAGE_KEY,
+      'emeb_candelario_name_gender_dict_2027_v1',
       'emeb_candelario_active_session_2027_v1',
       'emeb_candelario_linked_spreadsheet_id_2027',
       'emeb_candelario_linked_spreadsheet_title_2027',
@@ -476,6 +486,96 @@ export const pushSessionLogsToServer = async (
   }
 };
 
+export const INITIAL_SCHOOL_NOTICES: SchoolNotice[] = [
+  {
+    id: 'notice-2027-fechamento-mensal',
+    title: 'Janela de Lançamento de Frequência Mensal e Busca Ativa',
+    content:
+      'Solicitamos a todos os professores regentes (PEB I) que mantenham o registro de faltas do mês e as ocorrências de 3, 5 e 10 dias consecutivos atualizados para acompanhamento imediato da Secretaria.',
+    priority: 'importante',
+    authorName: 'Direção & Secretaria Escolar',
+    authorEmail: 'emebjfreitas@jundiai.sp.gov.br',
+    createdAtISO: '2026-10-09T08:00:00.000Z',
+    updatedAtMs: 1791532800000,
+    pinned: true,
+    active: true,
+    targetAudience: 'all',
+  },
+  {
+    id: 'notice-2027-fichas-pdf-drive',
+    title: 'Conferência das Fichas Nominais Escaneadas (PDF) e Fotos',
+    content:
+      'As fichas informativas digitalizadas no Google Drive e as fotos oficiais já estão integradas por turma. Caso algum estudante recém-transferido esteja sem vínculo, utilize a busca manual no modal do aluno.',
+    priority: 'informativo',
+    authorName: 'Coordenação Pedagógica',
+    authorEmail: 'emebjfreitas@jundiai.sp.gov.br',
+    createdAtISO: '2026-10-08T10:30:00.000Z',
+    updatedAtMs: 1791455400000,
+    pinned: false,
+    active: true,
+    targetAudience: 'all',
+  },
+];
+
+export const getStoredSchoolNotices = (): SchoolNotice[] => {
+  if (memoryCachedNotices && memoryCachedNotices.length > 0) {
+    return memoryCachedNotices;
+  }
+  try {
+    const raw = localStorage.getItem(NOTICES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        memoryCachedNotices = parsed;
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore storage read error
+  }
+  memoryCachedNotices = INITIAL_SCHOOL_NOTICES;
+  return INITIAL_SCHOOL_NOTICES;
+};
+
+export const saveStoredSchoolNotices = (notices: SchoolNotice[]): void => {
+  const sliced = notices.slice(0, 60);
+  memoryCachedNotices = sliced;
+  safeSetLocalStorage(NOTICES_STORAGE_KEY, JSON.stringify(sliced));
+};
+
+export const pushSchoolNoticesToServer = async (
+  notices: SchoolNotice[]
+): Promise<void> => {
+  const sliced = notices.slice(0, 60);
+  setSyncingActiveState();
+  let saved = false;
+  try {
+    const ok = await saveConfigMetaToFirestoreCloud({ schoolNotices: sliced });
+    if (ok) saved = true;
+  } catch {
+    // ignore
+  }
+  try {
+    const res = await fetch('/api/school-state/notices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolNotices: sliced }),
+    });
+    if (res.ok) saved = true;
+  } catch {
+    // ignore offline
+  }
+  if (saved) {
+    markSyncOperationSuccess('save_notices');
+  } else {
+    enqueuePendingSyncOperation(
+      'save_notices',
+      'Publicação no Quadro de Avisos',
+      'Sem conexão com o servidor'
+    );
+  }
+};
+
 export const pushAttendanceWindowToServer = async (
   config: AttendanceWindowConfig
 ): Promise<void> => {
@@ -705,9 +805,11 @@ export const flushPendingOfflineQueue = async (): Promise<boolean> => {
   const classes = getStoredClasses();
   const users = getStoredAuthorizedUsers();
   const windowCfg = getStoredAttendanceWindowConfig();
+  const notices = getStoredSchoolNotices();
   const okClasses = await pushClassesToServer(classes);
   await pushAuthorizedUsersToServer(users);
   await pushAttendanceWindowToServer(windowCfg);
+  await pushSchoolNoticesToServer(notices);
   return okClasses;
 };
 
@@ -720,6 +822,7 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
   authorizedUsers?: AuthorizedUser[];
   accessSessionLogs?: UserAccessSessionLog[];
   attendanceWindowConfig?: AttendanceWindowConfig;
+  schoolNotices?: SchoolNotice[];
   classes?: ClassGroup[];
   classesUpdatedAtMs?: number;
   cloudLinks?: SharedCloudLinks;
@@ -754,12 +857,20 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
       authorizedUsers?: AuthorizedUser[];
       accessSessionLogs?: UserAccessSessionLog[];
       attendanceWindowConfig?: AttendanceWindowConfig;
+      schoolNotices?: SchoolNotice[];
       classes?: ClassGroup[];
       classesUpdatedAtMs?: number;
       cloudLinks?: SharedCloudLinks;
       discoveredNominalPdfs?: any[];
       discoveredDrivePhotos?: any[];
     } = {};
+
+    if (Array.isArray(data?.schoolNotices)) {
+      const sliced = data.schoolNotices.slice(0, 60);
+      memoryCachedNotices = sliced;
+      safeSetLocalStorage(NOTICES_STORAGE_KEY, JSON.stringify(sliced));
+      result.schoolNotices = sliced;
+    }
 
     if (Array.isArray(data?.authorizedUsers) && data.authorizedUsers.length > 0) {
       const localUsers = getStoredAuthorizedUsers();
@@ -1775,7 +1886,7 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
     shortLabel: 'Gênero (Fem./Masc.)',
     category: 'Identificação & Matrícula',
     width: 14,
-    getValue: (s) => s.genero || '',
+    getValue: (s) => getStudentGenderLabel(s).label.toUpperCase(),
   },
   {
     id: 'situacao',
@@ -1837,22 +1948,32 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
       (cls.name.startsWith('GRUPO') ? 'EDUCACAO INFANTIL' : 'ENSINO FUNDAMENTAL'),
   },
 
-  // 2. Filiação (Mãe e Pai) & Contatos
+  // 2. Filiação (Mãe/Pai/Tio/Tia/Avó/Avô/Vizinho) & Contatos
   {
     id: 'filiacao1',
     label: 'FILIAÇÃO 1',
-    shortLabel: 'Filiação 1 (Nome da Mãe)',
+    shortLabel: 'Filiação 1 (Mãe / Resp.)',
     category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 32,
-    getValue: (s) => s.filiacao1 || s.guardianName || '',
+    width: 34,
+    getValue: (s) => {
+      const raw = s.filiacao1 || s.guardianName || '';
+      if (!raw) return '';
+      const info = resolveGuardianRelationshipInfo(raw, 'filiacao1', s.notes);
+      return `${info.cleanName} (${info.roleLabel})`;
+    },
   },
   {
     id: 'filiacao2',
     label: 'FILIAÇÃO 2',
-    shortLabel: 'Filiação 2 (Nome do Pai)',
+    shortLabel: 'Filiação 2 (Pai / Resp.)',
     category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 32,
-    getValue: (s) => s.filiacao2 || '',
+    width: 34,
+    getValue: (s) => {
+      const raw = s.filiacao2 || '';
+      if (!raw) return '';
+      const info = resolveGuardianRelationshipInfo(raw, 'filiacao2', s.notes);
+      return `${info.cleanName} (${info.roleLabel})`;
+    },
   },
   {
     id: 'telefones',
@@ -2445,13 +2566,13 @@ export const downloadClassCustomXLS = (
 
     cls.students.forEach((s) => {
       const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
-      const gen = (s.genero || '').toUpperCase().trim();
+      const genCode = resolveStudentGender(s);
       if (sit.includes('BXTR') || sit.includes('TRANSF')) transferidos++;
       else if (sit.includes('REMAN') || sit.includes('RM')) remanejados++;
       else ativos++;
 
-      if (gen.startsWith('F')) feminino++;
-      else if (gen.startsWith('M')) masculino++;
+      if (genCode === 'F') feminino++;
+      else masculino++;
 
       if (s.deficiencia && s.deficiencia.trim().length > 0) pcd++;
 

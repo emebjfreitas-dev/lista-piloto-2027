@@ -1,5 +1,152 @@
 import { ClassGroup, SchoolDay, Student } from '../types';
 
+export type ConsecutiveAlertTier = 'none' | '3d' | '5d' | '10d';
+
+export interface ConsecutiveAlertInfo {
+  tier: ConsecutiveAlertTier;
+  days: number;
+  selectedDates: string[];
+  hasFamilyFeedback: boolean;
+  familyFeedback?: string;
+  label: string;
+  shortBadge: string;
+  actionRequired: string;
+  rowBgClass: string;
+  rowHoverClass: string;
+  borderAccentClass: string;
+  badgeBgClass: string;
+  badgeTextClass: string;
+  badgeBorderClass: string;
+  iconName: string;
+}
+
+/**
+ * Calcula o nível de alerta visual de Faltas Consecutivas (marcas de 3, 5 e 10 dias seguidos)
+ * com código de cores intuitivo:
+ * - 3 a 4 dias ('3d'): Amarelo/Âmbar — Atenção / Contato Inicial com a Família
+ * - 5 a 9 dias ('5d'): Laranja — Alerta de Busca Ativa Escolar
+ * - 10+ dias ('10d'): Vermelho/Rubi — Crítico / Risco de Evasão & Conselho Tutelar
+ */
+export const getStudentConsecutiveAlertInfo = (student: Student): ConsecutiveAlertInfo => {
+  const alert = student.consecutiveAbsenceAlert;
+  const occurrences = Array.isArray(alert?.occurrences) ? alert!.occurrences : [];
+  const latestOccurrence =
+    occurrences.length > 0 ? occurrences[occurrences.length - 1] : undefined;
+
+  const selectedDates =
+    Array.isArray(alert?.selectedDates) && alert!.selectedDates.length > 0
+      ? alert!.selectedDates
+      : latestOccurrence?.selectedDates || [];
+
+  // Unique consecutive dates across all occurrences in the year if active
+  const allUniqueDates = Array.from(
+    new Set([
+      ...selectedDates,
+      ...occurrences.flatMap((o) => o.selectedDates || []),
+    ])
+  );
+
+  // Determine the effective consecutive absence streak (supports 3+, 5+, and 10+ days)
+  const explicitConsecDays = Math.max(
+    selectedDates.length,
+    allUniqueDates.length,
+    alert?.active ? Math.max(3, selectedDates.length, student.totalAbsencesMonth || 0) : 0
+  );
+
+  // Also check if student has accumulated consecutive/high absences in the month (3, 5, or 10 days)
+  const effectiveDays =
+    explicitConsecDays > 0
+      ? explicitConsecDays
+      : (student.totalAbsencesMonth || 0) >= 3 && (student.justifiedAbsences || 0) === 0
+      ? student.totalAbsencesMonth || 0
+      : 0;
+
+  const familyFeedback = (
+    alert?.familyFeedback ||
+    latestOccurrence?.familyFeedback ||
+    ''
+  ).trim();
+  const hasFamilyFeedback = Boolean(familyFeedback);
+
+  if (effectiveDays >= 10) {
+    return {
+      tier: '10d',
+      days: effectiveDays,
+      selectedDates,
+      hasFamilyFeedback,
+      familyFeedback: familyFeedback || undefined,
+      label: `Crítico 10+ Dias (${effectiveDays}d seguidos)`,
+      shortBadge: `10+ DIAS (${effectiveDays}d)`,
+      actionRequired: 'Acionar Gestão / Conselho Tutelar (Evasão Crítica)',
+      rowBgClass: 'bg-[#fff1f2]',
+      rowHoverClass: 'hover:bg-[#ffe4e6]/80',
+      borderAccentClass: 'border-l-4 border-l-[#be123c]',
+      badgeBgClass: 'bg-[#be123c]',
+      badgeTextClass: 'text-white',
+      badgeBorderClass: 'border-[#881337]',
+      iconName: 'crisis_alert',
+    };
+  }
+
+  if (effectiveDays >= 5) {
+    return {
+      tier: '5d',
+      days: effectiveDays,
+      selectedDates,
+      hasFamilyFeedback,
+      familyFeedback: familyFeedback || undefined,
+      label: `Busca Ativa 5+ Dias (${effectiveDays}d seguidos)`,
+      shortBadge: `5+ DIAS (${effectiveDays}d)`,
+      actionRequired: 'Convocação da Família / Busca Ativa Obrigatória',
+      rowBgClass: 'bg-[#fff7ed]',
+      rowHoverClass: 'hover:bg-[#ffedd5]/80',
+      borderAccentClass: 'border-l-4 border-l-[#ea580c]',
+      badgeBgClass: 'bg-[#ea580c]',
+      badgeTextClass: 'text-white',
+      badgeBorderClass: 'border-[#c2410c]',
+      iconName: 'notification_important',
+    };
+  }
+
+  if (effectiveDays >= 3) {
+    return {
+      tier: '3d',
+      days: effectiveDays,
+      selectedDates,
+      hasFamilyFeedback,
+      familyFeedback: familyFeedback || undefined,
+      label: `Atenção 3+ Dias (${effectiveDays}d seguidos)`,
+      shortBadge: `3+ DIAS (${effectiveDays}d)`,
+      actionRequired: 'Contato Preventivo com Responsáveis (WhatsApp/Telefone)',
+      rowBgClass: 'bg-[#fefce8]',
+      rowHoverClass: 'hover:bg-[#fef9c3]/80',
+      borderAccentClass: 'border-l-4 border-l-[#d97706]',
+      badgeBgClass: 'bg-[#f59e0b]',
+      badgeTextClass: 'text-[#451a03]',
+      badgeBorderClass: 'border-[#d97706]',
+      iconName: 'warning',
+    };
+  }
+
+  return {
+    tier: 'none',
+    days: effectiveDays,
+    selectedDates,
+    hasFamilyFeedback,
+    familyFeedback: familyFeedback || undefined,
+    label: 'Regular (Sem alerta consecutivo)',
+    shortBadge: 'Regular',
+    actionRequired: 'Frequência contínua regular',
+    rowBgClass: '',
+    rowHoverClass: '',
+    borderAccentClass: '',
+    badgeBgClass: 'bg-[#f3f4f2]',
+    badgeTextClass: 'text-[#71787b]',
+    badgeBorderClass: 'border-[#c0c8cb]',
+    iconName: 'check_circle',
+  };
+};
+
 export interface StudentAttendanceMetrics {
   diasLetivosMes: number;
   diasLetivosMatriculados: number;

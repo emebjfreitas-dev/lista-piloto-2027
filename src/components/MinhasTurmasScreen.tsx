@@ -1,11 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { ClassGroup, Student, UserRole, AttendanceWindowConfig } from '../types';
+import {
+  ClassGroup,
+  Student,
+  UserRole,
+  AttendanceWindowConfig,
+  SchoolNotice,
+} from '../types';
 import { evaluateAttendanceLaunchWindow } from '../services/db';
 import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
+import { QuadroAvisosCard } from './QuadroAvisosCard';
 
 interface MinhasTurmasScreenProps {
   classes: ClassGroup[];
   userRole: UserRole;
+  userEmail?: string;
+  userName?: string;
+  schoolNotices?: SchoolNotice[];
+  onSaveSchoolNotices?: (updatedNotices: SchoolNotice[]) => void;
   assignedClassId: string;
   assignedClassIds?: string[];
   attendanceWindowConfig: AttendanceWindowConfig;
@@ -31,6 +42,10 @@ interface MinhasTurmasScreenProps {
 export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   classes,
   userRole,
+  userEmail,
+  userName,
+  schoolNotices = [],
+  onSaveSchoolNotices,
   assignedClassId,
   assignedClassIds = [],
   attendanceWindowConfig,
@@ -249,7 +264,45 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             </div>
           )}
         </div>
+
+        {/* Guia Visual Ultrassimples em 3 Passos (Desenhado para Extremo Leigos) */}
+        <div className="pt-2.5 border-t border-black/[0.05] grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-[#f5f5f7]/80">
+            <span className="w-6 h-6 rounded-full bg-[#1d1d1f] text-white font-extrabold text-[0.72rem] flex items-center justify-center shrink-0 tabular-nums">
+              1
+            </span>
+            <p className="text-[0.75rem] text-[#1d1d1f] font-medium leading-tight">
+              <strong className="font-bold">Ver Estudantes:</strong> Toque na turma para consultar fichas, fotos e telefones.
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-[#f5f5f7]/80">
+            <span className="w-6 h-6 rounded-full bg-[#0071e3] text-white font-extrabold text-[0.72rem] flex items-center justify-center shrink-0 tabular-nums">
+              2
+            </span>
+            <p className="text-[0.75rem] text-[#1d1d1f] font-medium leading-tight">
+              <strong className="font-bold">Prévia Rápida:</strong> Use o botão <span className="text-[#0066cc] font-bold">Prévia</span> no estudante para expandir sem sair da tela.
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-[#f5f5f7]/80">
+            <span className="w-6 h-6 rounded-full bg-[#1d8338] text-white font-extrabold text-[0.72rem] flex items-center justify-center shrink-0 tabular-nums">
+              3
+            </span>
+            <p className="text-[0.75rem] text-[#1d1d1f] font-medium leading-tight">
+              <strong className="font-bold">Salvo Automático:</strong> Faltas e ocorrências salvam sozinhas na nuvem e planilha.
+            </p>
+          </div>
+        </div>
       </section>
+
+      {/* Quadro de Avisos Institucional (Gestão publica / edita e todos os educadores visualizam no Login e Início) */}
+      <QuadroAvisosCard
+        notices={schoolNotices}
+        userRole={userRole}
+        userEmail={userEmail}
+        userName={userName}
+        variant="dashboard"
+        onSaveNotices={onSaveSchoolNotices}
+      />
 
       {/* Resumo de Faltas Críticas (Busca Ativa Escolar • Limiar de Faltas Consecutivas com Detalhes ao Clicar) */}
       <ResumoFaltasCriticasCard
@@ -392,7 +445,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[0.72rem] font-medium text-[#6e6e73] tabular-nums">
-                      <span className="font-semibold text-[#1d1d1f]">{cls.totalStudents} alunos</span>
+                      <span className="font-semibold text-[#1d1d1f]">{cls.totalStudents} estudantes</span>
                       <span aria-hidden="true" className="text-[#d2d2d7]">·</span>
                       <span className={cls.monthlyAbsences > 0 ? 'text-[#ff3b30] font-semibold' : 'text-[#1d8338]'}>
                         {cls.monthlyAbsences} faltas

@@ -1,5 +1,5 @@
 import { ClassGroup, Student, GoogleSheetConfig, SheetRowData, SchoolDay, AuthorizedUser } from '../types';
-import { getStudentAttendanceMetrics, getClassAttendanceMetrics } from '../utils/attendanceRules';
+import { getStudentAttendanceMetrics, getClassAttendanceMetrics, getStudentConsecutiveAlertInfo } from '../utils/attendanceRules';
 
 export const CITY_NAME = 'Prefeitura do Município de Jundiaí';
 export const SECRETARY_NAME = 'Secretaria Municipal de Educação';
@@ -1372,9 +1372,25 @@ export const REAL_G4A_STUDENTS: Student[] = [
     emailMunicipal: 'brayan.araujo@aluno.educacao.jundiai.sp.gov.br',
     guardianName: 'FABRICIA OLIVEIRA',
     guardianPhone: '(11) 95432-1098',
-    status: 'present',
-    totalAbsencesMonth: 2,
+    status: 'absent',
+    totalAbsencesMonth: 3,
     justifiedAbsences: 0,
+    consecutiveAbsenceAlert: {
+      active: true,
+      selectedDates: ['26/10', '27/10', '28/10'],
+      reportedAt: '28/10/2027 às 08:40',
+      familyFeedback: 'Mãe informou resfriado; retorna na segunda-feira.',
+      occurrences: [
+        {
+          id: 'occ-g4a-s4-3d',
+          sequenceNumber: 1,
+          selectedDates: ['26/10', '27/10', '28/10'],
+          reportedAt: '28/10/2027 às 08:40',
+          familyFeedback: 'Mãe informou resfriado; retorna na segunda-feira.',
+          monthLabel: 'Outubro/2027',
+        },
+      ],
+    },
     initials: 'BO',
   },
   {
@@ -1495,9 +1511,23 @@ export const REAL_G4A_STUDENTS: Student[] = [
     guardianName: 'JENYFER SILVA DE OLIVEIRA',
     guardianPhone: '(11) 97508-3672',
     status: 'absent',
-    totalAbsencesMonth: 4,
+    totalAbsencesMonth: 5,
     justifiedAbsences: 0,
-    alert: 'Atenção: 4 faltas acumuladas',
+    consecutiveAbsenceAlert: {
+      active: true,
+      selectedDates: ['22/10', '25/10', '26/10', '27/10', '28/10'],
+      reportedAt: '28/10/2027 às 09:15',
+      occurrences: [
+        {
+          id: 'occ-g4a-s7-5d',
+          sequenceNumber: 1,
+          selectedDates: ['22/10', '25/10', '26/10', '27/10', '28/10'],
+          reportedAt: '28/10/2027 às 09:15',
+          monthLabel: 'Outubro/2027',
+        },
+      ],
+    },
+    alert: 'Atenção: 5 faltas seguidas',
     initials: 'GS',
   },
   {
@@ -1667,9 +1697,23 @@ export const REAL_G4A_STUDENTS: Student[] = [
     guardianName: 'MONIQUE DE MELO AGUIAR',
     guardianPhone: '(11) 94964-9844',
     status: 'absent',
-    totalAbsencesMonth: 5,
-    justifiedAbsences: 1,
-    alert: 'Atenção: 5 faltas acumuladas',
+    totalAbsencesMonth: 10,
+    justifiedAbsences: 0,
+    consecutiveAbsenceAlert: {
+      active: true,
+      selectedDates: ['14/10', '18/10', '19/10', '20/10', '21/10', '22/10', '25/10', '26/10', '27/10', '28/10'],
+      reportedAt: '28/10/2027 às 09:50',
+      occurrences: [
+        {
+          id: 'occ-g4a-s11-10d',
+          sequenceNumber: 1,
+          selectedDates: ['14/10', '18/10', '19/10', '20/10', '21/10', '22/10', '25/10', '26/10', '27/10', '28/10'],
+          reportedAt: '28/10/2027 às 09:50',
+          monthLabel: 'Outubro/2027',
+        },
+      ],
+    },
+    alert: 'Crítico: 10 faltas consecutivas',
     initials: 'JL',
     photo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuChI-WCTuXhihbOKmxS9OSpP7M7I0ecPrQ8j2lYay1k2s9FuYt11psyipgv-Ltd68S5uZVrx5SJ0ogqi4dJwJx_aRT_gj_rhNS8F7qi_L2Xf4jbL3hnFp681loHuobGm-xm3FRjqC378eqSumRuK6QFop2LR2mUfLLF8vWlhdBT7n0Qt8tgBgABXnG4nc-tpMAb5GWvMdMJy-Cri_G7_CJL7uZqaCVNMR_b4BxbPoLqX6mZEmHgeCeI',
   },
@@ -1991,9 +2035,61 @@ export const generateSedStudentsForClass = (
     const cleanEmailName = name.toLowerCase().split(' ').slice(0, 2).join('.');
 
     let absences = 0;
-    if (i === 4) absences = isInfantil ? 9 : 6; // Acusa alerta legal (<60% Ed. Infantil com 11/20 = 55%, ou <75% Ens. Fundamental com 14/20 = 70%)
-    else if (i === 8) absences = 2;
-    else if (i === 11) absences = 1;
+    let consecutiveAlert: Student['consecutiveAbsenceAlert'] = undefined;
+    if (i === 4) {
+      absences = isInfantil ? 10 : 10; // Marca de 10 dias consecutivos (Crítico 10+ dias)
+      const dates10 = ['14/10', '18/10', '19/10', '20/10', '21/10', '22/10', '25/10', '26/10', '27/10', '28/10'];
+      consecutiveAlert = {
+        active: true,
+        selectedDates: dates10,
+        reportedAt: '28/10/2027 às 08:15',
+        occurrences: [
+          {
+            id: `occ-10d-${classId}-s${i}`,
+            sequenceNumber: 1,
+            selectedDates: dates10,
+            reportedAt: '28/10/2027 às 08:15',
+            monthLabel: 'Outubro/2027',
+          },
+        ],
+      };
+    } else if (i === 8) {
+      absences = 5; // Marca de 5 dias consecutivos (Alerta Severo 5+ dias)
+      const dates5 = ['22/10', '25/10', '26/10', '27/10', '28/10'];
+      consecutiveAlert = {
+        active: true,
+        selectedDates: dates5,
+        reportedAt: '28/10/2027 às 09:30',
+        occurrences: [
+          {
+            id: `occ-5d-${classId}-s${i}`,
+            sequenceNumber: 1,
+            selectedDates: dates5,
+            reportedAt: '28/10/2027 às 09:30',
+            monthLabel: 'Outubro/2027',
+          },
+        ],
+      };
+    } else if (i === 11) {
+      absences = 3; // Marca de 3 dias consecutivos (Atenção 3+ dias)
+      const dates3 = ['26/10', '27/10', '28/10'];
+      consecutiveAlert = {
+        active: true,
+        selectedDates: dates3,
+        reportedAt: '28/10/2027 às 10:10',
+        familyFeedback: 'Família contatada via WhatsApp: criança em observação médica.',
+        occurrences: [
+          {
+            id: `occ-3d-${classId}-s${i}`,
+            sequenceNumber: 1,
+            selectedDates: dates3,
+            reportedAt: '28/10/2027 às 10:10',
+            familyFeedback: 'Família contatada via WhatsApp: criança em observação médica.',
+            monthLabel: 'Outubro/2027',
+          },
+        ],
+      };
+    }
 
     // Simular recorte real de matrícula dentro do mês (ativos, transferidos BXTR e remanejados REMAN)
     const enteredLate = i === 5;
@@ -2047,7 +2143,8 @@ export const generateSedStudentsForClass = (
       guardianPhone: `(11) 9${Math.floor(7000 + i * 83)}-${Math.floor(1000 + i * 27)}`,
       status: absences > 0 ? 'absent' : 'present',
       totalAbsencesMonth: absences,
-      justifiedAbsences: absences >= 2 ? 1 : 0,
+      justifiedAbsences: 0,
+      consecutiveAbsenceAlert: consecutiveAlert,
       alert:
         absences >= (isInfantil ? 9 : 6)
           ? `Alerta Bolsa Família / LDB: Presença abaixo de ${isInfantil ? '60%' : '75%'}`
@@ -2179,6 +2276,8 @@ export const generateSheetRowsFromClasses = (classes: ClassGroup[]): SheetRowDat
           ? Math.round((m.atestados / m.diasLetivosMatriculados) * 100)
           : 0;
 
+      const consecInfo = getStudentConsecutiveAlertInfo(s);
+
       rows.push({
         id: `${c.id}-${s.id || `s${sIdx + 1}`}-idx${sIdx}`,
         studentId: s.id,
@@ -2224,6 +2323,10 @@ export const generateSheetRowsFromClasses = (classes: ClassGroup[]): SheetRowDat
         emailMunicipal: s.emailMunicipal || '',
         responsavel: s.filiacao1 || s.guardianName || 'Não informado',
         telefone: s.telefones || s.guardianPhone || '(11) 98765-4321',
+        consecutiveDays: consecInfo.days,
+        consecutiveTier: consecInfo.tier,
+        consecutiveSelectedDates: consecInfo.selectedDates,
+        consecutiveFamilyFeedback: consecInfo.familyFeedback || '',
       });
     });
   });

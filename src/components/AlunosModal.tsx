@@ -1,6 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Student } from '../types';
 import { StudentAvatar } from './StudentAvatar';
+import {
+  getStudentGenderLabel,
+  resolveGuardianRelationshipInfo,
+} from '../utils/genderDictionary';
 import { getSavedPhotosDriveFolderInfo, OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 
 interface AlunosModalProps {
@@ -171,7 +175,8 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b-2 border-[#b4c0c4]/70">
                   <span className="text-[0.82rem] font-black text-[#003440] uppercase tracking-wide">
-                    Ficha do(a) Estudante — Nº {selectedStudent.number.toString().padStart(2, '0')}
+                    Ficha {getStudentGenderLabel(selectedStudent).doEstudante} — Nº{' '}
+                    {selectedStudent.number.toString().padStart(2, '0')}
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full bg-[#c3e5f4] text-[#001f29] font-extrabold text-[0.74rem]">
                     {className}
@@ -191,7 +196,8 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                       {selectedStudent.name}
                     </h4>
                     <p className="text-[0.8rem] font-mono font-bold text-[#2c373a] mt-0.5">
-                      RA: {selectedStudent.ra || '—'}-{selectedStudent.digRa || ''}/{selectedStudent.ufRa || 'SP'}
+                      RA: {selectedStudent.ra || '—'}-{selectedStudent.digRa || ''}/{selectedStudent.ufRa || 'SP'} •{' '}
+                      {getStudentGenderLabel(selectedStudent).label}
                     </p>
                     <div className="flex flex-wrap gap-1.5 mt-2.5">
                       {onOpenStudentPdf && (
@@ -256,16 +262,32 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
                   <div className="col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf]">
                     <span className="text-[0.68rem] font-extrabold text-[#647073] uppercase block">
-                      Filiação / Responsáveis
+                      Filiação / Responsáveis (Gênero &amp; Vínculo via Planilha)
                     </span>
-                    <span className="font-bold text-[#151a18] block">
-                      1. {selectedStudent.filiacao1 || selectedStudent.guardianName || '—'}
-                    </span>
-                    {selectedStudent.filiacao2 && (
-                      <span className="font-bold text-[#374144] block">
-                        2. {selectedStudent.filiacao2}
-                      </span>
-                    )}
+                    {(() => {
+                      const g1 = resolveGuardianRelationshipInfo(
+                        selectedStudent.filiacao1 || selectedStudent.guardianName,
+                        'filiacao1',
+                        selectedStudent.notes
+                      );
+                      const g2 = resolveGuardianRelationshipInfo(
+                        selectedStudent.filiacao2,
+                        'filiacao2',
+                        selectedStudent.notes
+                      );
+                      return (
+                        <>
+                          <span className="font-bold text-[#151a18] block">
+                            1. {g1.roleLabel}: {g1.cleanName || '—'}
+                          </span>
+                          {selectedStudent.filiacao2 && (
+                            <span className="font-bold text-[#374144] block">
+                              2. {g2.roleLabel}: {g2.cleanName}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   <div className="col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf]">

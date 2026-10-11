@@ -10,6 +10,7 @@ import {
   getStudentCumulativeOccurrences,
   triggerPushNotification,
 } from '../services/pushNotificationService';
+import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 
 interface FaltasConsecutivasScreenProps {
   classGroup: ClassGroup;
@@ -31,7 +32,7 @@ export interface SchoolDayOption {
  * Gera os últimos 8 dias letivos (segunda a sexta-feira) em ordem cronológica
  * para que a professora PEB I possa selecionar facilmente 3 ou mais dias seguidos.
  */
-export function getRecentSchoolDays(referenceDate: Date = new Date(), count = 8): SchoolDayOption[] {
+export function getRecentSchoolDays(referenceDate: Date = new Date(), count = 12): SchoolDayOption[] {
   const rawDays: Array<{
     key: string;
     shortDate: string;
@@ -151,7 +152,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   const canReportDays = userRole === 'usuario' || userRole === 'admin';
   const canEditFamilyFeedback = userRole === 'admin';
 
-  const recentSchoolDays = useMemo(() => getRecentSchoolDays(new Date(), 8), []);
+  const recentSchoolDays = useMemo(() => getRecentSchoolDays(new Date(), 12), []);
 
   // Lista unificada de estudantes (por turma ou todas as turmas para PEB II / Admin)
   const scopedEntries = useMemo(() => {
@@ -610,7 +611,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               Faltas Consecutivas, Acúmulo &amp; Feedback da Família
             </h1>
             <p className="text-[0.83rem] text-[#6e6e73]">
-              A mesma criança pode registrar inúmeras sequências de 3+ faltas seguidas ao longo do ano. Cada sequência cai na planilha da secretaria e pode ser clicada a qualquer momento para leitura completa do feedback da família.
+              O(A) mesmo(a) estudante pode registrar inúmeras sequências de 3+ faltas seguidas ao longo do ano. Cada sequência cai na planilha da secretaria e pode ser clicada a qualquer momento para leitura completa do feedback da família.
             </p>
           </div>
 
@@ -667,7 +668,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
           </div>
           <div className="p-3 rounded-2xl bg-[#f5f5f7]">
             <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
-              Crianças Acompanhadas
+              Estudantes Acompanhados
             </span>
             <span className="text-[1.35rem] font-extrabold text-[#1d1d1f] tabular-nums">
               {summaryStats.studentsWithAnyOccurrence}
@@ -1278,16 +1279,24 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
               {/* Dados de Contato da Família (Com Hyperlink Direto para WhatsApp) */}
               <div className="p-4 rounded-2xl bg-[#f5f5f7]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[0.8rem]">
-                <div>
-                  <span className="text-[0.68rem] font-bold uppercase text-[#6e6e73] block">
-                    Responsável Familiar
-                  </span>
-                  <span className="font-bold text-[#1d1d1f]">
-                    {activeModalData.student.filiacao1 ||
-                      activeModalData.student.guardianName ||
-                      'Responsável Legal'}
-                  </span>
-                </div>
+                {(() => {
+                  const gInfo = resolveGuardianRelationshipInfo(
+                    activeModalData.student.filiacao1 ||
+                      activeModalData.student.guardianName,
+                    'filiacao1',
+                    activeModalData.student.notes
+                  );
+                  return (
+                    <div>
+                      <span className="text-[0.68rem] font-bold uppercase text-[#6e6e73] block">
+                        {gInfo.roleLabel} · Contato Familiar ({gInfo.gender})
+                      </span>
+                      <span className="font-bold text-[#1d1d1f]">
+                        {gInfo.cleanName || 'Responsável Legal'}
+                      </span>
+                    </div>
+                  );
+                })()}
                 {(activeModalData.student.telefones ||
                   activeModalData.student.guardianPhone) && (
                   <a

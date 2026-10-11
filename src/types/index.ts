@@ -118,9 +118,25 @@ export interface Student extends StudentSedData {
 
 export type SyncStateStatus = 'synced' | 'syncing' | 'pending' | 'error';
 
+export type NoticePriority = 'urgente' | 'importante' | 'informativo';
+
+export interface SchoolNotice {
+  id: string;
+  title: string;
+  content: string;
+  priority: NoticePriority;
+  authorName: string;
+  authorEmail: string;
+  createdAtISO: string;
+  updatedAtMs: number;
+  pinned?: boolean;
+  active: boolean;
+  targetAudience?: 'all' | 'peb1' | 'peb2';
+}
+
 export interface PendingSyncOperation {
   opId: string;
-  type: 'save_classes' | 'save_users' | 'save_window' | 'save_links';
+  type: 'save_classes' | 'save_users' | 'save_window' | 'save_links' | 'save_notices';
   createdAtMs: number;
   attempts: number;
   lastError?: string;
@@ -249,6 +265,10 @@ export interface SheetRowData {
   emailMunicipal: string;
   responsavel: string;
   telefone: string;
+  consecutiveDays: number;
+  consecutiveTier: 'none' | '3d' | '5d' | '10d';
+  consecutiveSelectedDates: string[];
+  consecutiveFamilyFeedback: string;
 }
 
 export interface UserAccessSessionLog {

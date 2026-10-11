@@ -12,6 +12,8 @@ import { StudentAvatar } from './StudentAvatar';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import {
   getStudentBimesterReport,
+  getStudentConsecutiveAlertInfo,
+  ConsecutiveAlertTier,
   OFFICIAL_BIMESTERS_2027,
   StudentBimesterReportRow,
 } from '../utils/attendanceRules';
@@ -37,7 +39,21 @@ import {
   saveFichasPdfDriveFolderUrl,
   syncLocalPhotoFilesToStudents,
   parseSedTsvIntoClasses,
+  syncGenderDictionaryToGoogleSheet,
 } from '../services/googleSheetsApi';
+import { enqueueGenderDictionaryWrite } from '../services/syncQueueManager';
+import {
+  GENDER_SHEET_TAB_NAME,
+  GenderCode,
+  NameGenderEntry,
+  getStoredNameGenderEntries,
+  saveStoredNameGenderEntries,
+  resolvePersonGender,
+  resolveGuardianRelationshipInfo,
+  getStudentGenderLabel,
+  extractFirstNameKey,
+  normalizePersonNameKey,
+} from '../utils/genderDictionary';
 
 interface PlanilhaGoogleScreenProps {
   classes: ClassGroup[];
@@ -73,7 +89,15 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     | 'dias_letivos'
     | 'turmas'
     | 'emails_permitidos'
+    | 'consulta_genero'
   >('faltas_consecutivas');
+  const [genderEntries, setGenderEntries] = useState<NameGenderEntry[]>(() =>
+    getStoredNameGenderEntries()
+  );
+  const [newGenderName, setNewGenderName] = useState('');
+  const [newGenderCode, setNewGenderCode] = useState<GenderCode>('F');
+  const [genderSearchQuery, setGenderSearchQuery] = useState('');
+  const [genderTestSimulatorName, setGenderTestSimulatorName] = useState('MARIA SILVA (AVÓ)');
   const [consecShowAllStudents, setConsecShowAllStudents] = useState(false);
   const [selectedBimesterId, setSelectedBimesterId] = useState<
     '1bim' | '2bim' | '3bim' | '4bim' | '5bim' | 'anual'
@@ -90,7 +114,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   );
   const [filterTurma, setFilterTurma] = useState('all');
   const [filterTurno, setFilterTurno] = useState<'all' | 'Manhã' | 'Tarde'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'com_faltas' | 'com_atestado' | 'alerta'>('all');
+  const [filterStatus, setFilterStatus] = useState<
+    | 'all'
+    | 'com_faltas'
+    | 'com_atestado'
+    | 'alerta'
+    | 'consec_all'
+    | 'consec_3d'
+    | 'consec_5d'
+    | 'consec_10d'
+  >('all');
+  const [consecTierFilter, setConsecTierFilter] = useState<'all' | '3d' | '5d' | '10d'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Google Sheets & Drive OAuth states
@@ -165,18 +199,24 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       selectedDates: string[];
       familyFeedback: string;
       reportedAt: string;
+      consecInfo: ReturnType<typeof getStudentConsecutiveAlertInfo>;
     }> = [];
     const q = searchQuery.toLowerCase().trim();
 
     classesToSync.forEach((cls) => {
       if (filterTurma !== 'all' && cls.name !== filterTurma) return;
       cls.students.forEach((st) => {
+        const consecInfo = getStudentConsecutiveAlertInfo(st);
         const alert = st.consecutiveAbsenceAlert;
-        const dates = alert?.selectedDates || [];
-        const hasAlert = Boolean(alert?.active && dates.length > 0);
+        const dates =
+          consecInfo.selectedDates.length > 0
+            ? consecInfo.selectedDates
+            : alert?.selectedDates || [];
+        const hasAlert = Boolean(consecInfo.tier !== 'none' || (alert?.active && dates.length > 0));
         const hasFeedback = Boolean(alert?.familyFeedback && alert.familyFeedback.trim());
 
         if (!consecShowAllStudents && !hasAlert && !hasFeedback) return;
+        if (consecTierFilter !== 'all' && consecInfo.tier !== consecTierFilter) return;
         if (
           q &&
           !st.name.toLowerCase().includes(q) &&
@@ -189,14 +229,15 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           cls,
           student: st,
           selectedDates: dates,
-          familyFeedback: alert?.familyFeedback || '',
+          familyFeedback: alert?.familyFeedback || consecInfo.familyFeedback || '',
           reportedAt: alert?.reportedAt || '',
+          consecInfo,
         });
       });
     });
 
-    return list;
-  }, [classesToSync, filterTurma, searchQuery, consecShowAllStudents]);
+    return list.sort((a, b) => b.consecInfo.days - a.consecInfo.days);
+  }, [classesToSync, filterTurma, searchQuery, consecShowAllStudents, consecTierFilter]);
 
   const handleUpdateSecretariaFeedback = (
     classId: string,
@@ -650,7 +691,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
         filterStatus === 'all' ||
         (filterStatus === 'com_faltas' && r.faltasMes > 0) ||
         (filterStatus === 'com_atestado' && r.faltasJustificadas > 0) ||
-        (filterStatus === 'alerta' && r.frequenciaPercent < minLegal);
+        (filterStatus === 'alerta' && r.frequenciaPercent < minLegal) ||
+        (filterStatus === 'consec_all' && r.consecutiveTier !== 'none') ||
+        (filterStatus === 'consec_3d' && r.consecutiveTier === '3d') ||
+        (filterStatus === 'consec_5d' && r.consecutiveTier === '5d') ||
+        (filterStatus === 'consec_10d' && r.consecutiveTier === '10d');
 
       const matchesSearch =
         q === '' ||
@@ -680,6 +725,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     let estudantesComFaltas = 0;
     let estudantesComAtestados = 0;
     let estudantesEmAlerta = 0;
+    let consec3dCount = 0;
+    let consec5dCount = 0;
+    let consec10dCount = 0;
 
     rows.forEach((r) => {
       const minLegal = r.tipoEnsino === 'EDUCACAO INFANTIL' ? 60 : 75;
@@ -691,6 +739,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       if (r.faltasMes > 0) estudantesComFaltas += 1;
       if (r.faltasJustificadas > 0) estudantesComAtestados += 1;
       if (r.frequenciaPercent < minLegal) estudantesEmAlerta += 1;
+      if (r.consecutiveTier === '3d') consec3dCount += 1;
+      if (r.consecutiveTier === '5d') consec5dCount += 1;
+      if (r.consecutiveTier === '10d') consec10dCount += 1;
     });
 
     const pctPresenca =
@@ -732,6 +783,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       estudantesComFaltas,
       estudantesComAtestados,
       estudantesEmAlerta,
+      consec3dCount,
+      consec5dCount,
+      consec10dCount,
+      consecTotalCount: consec3dCount + consec5dCount + consec10dCount,
       pctPresenca,
       pctFaltasSobreDias,
       pctAtestadosSobreFaltas,
@@ -1371,6 +1426,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             label: `Acessos (${permittedEmailsList.length})`,
             icon: 'verified_user',
           },
+          {
+            id: 'consulta_genero',
+            label: `Consulta Gênero M/F (${genderEntries.length})`,
+            icon: 'wc',
+          },
         ].map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -1412,29 +1472,113 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 Faltas Consecutivas (PEB I) &amp; Devolutiva da Família
               </h2>
               <p className="text-[0.82rem] text-[#6e6e73]">
-                Estudantes sinalizados pelo(a) professor(a) PEB I com faltas seguidas. Clique no WhatsApp para falar com a família e registre a devolutiva na coluna da frente.
+                Estudantes sinalizados pelo(a) professor(a) PEB I com faltas seguidas (marcas de 3, 5 e 10 dias). Clique no WhatsApp para falar com a família e registre a devolutiva na coluna da frente.
               </p>
             </div>
 
-            <div className="ios-segmented shrink-0 self-start sm:self-center">
-              <button
-                type="button"
-                onClick={() => setConsecShowAllStudents(false)}
-                className={`ios-segmented-item px-3.5 py-1.5 text-[0.78rem] ${
-                  !consecShowAllStudents ? 'ios-segmented-item-active' : ''
-                }`}
-              >
-                Com Aviso ({consecutiveAbsenceRows.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setConsecShowAllStudents(true)}
-                className={`ios-segmented-item px-3.5 py-1.5 text-[0.78rem] ${
-                  consecShowAllStudents ? 'ios-segmented-item-active' : ''
-                }`}
-              >
-                Todos os Alunos
-              </button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-center">
+              <div className="ios-segmented">
+                {(
+                  [
+                    { id: 'all', label: 'Todos Níveis' },
+                    { id: '3d', label: '🟡 3+ Dias' },
+                    { id: '5d', label: '🟠 5+ Dias' },
+                    { id: '10d', label: '🔴 10+ Dias' },
+                  ] as const
+                ).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setConsecTierFilter(t.id)}
+                    className={`ios-segmented-item px-2.5 py-1.5 text-[0.74rem] ${
+                      consecTierFilter === t.id ? 'ios-segmented-item-active' : ''
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="ios-segmented">
+                <button
+                  type="button"
+                  onClick={() => setConsecShowAllStudents(false)}
+                  className={`ios-segmented-item px-3 py-1.5 text-[0.76rem] ${
+                    !consecShowAllStudents ? 'ios-segmented-item-active' : ''
+                  }`}
+                >
+                  Com Aviso ({consecutiveAbsenceRows.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConsecShowAllStudents(true)}
+                  className={`ios-segmented-item px-3 py-1.5 text-[0.76rem] ${
+                    consecShowAllStudents ? 'ios-segmented-item-active' : ''
+                  }`}
+                >
+                  Todos os Alunos
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Legenda Intuitiva do Código de Cores (3, 5 e 10 Dias Consecutivos) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            <div
+              onClick={() => setConsecTierFilter(consecTierFilter === '3d' ? 'all' : '3d')}
+              className={`p-3 rounded-2xl border-l-4 border-l-[#f59e0b] border border-[#f59e0b]/30 bg-[#fffbeb] flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                consecTierFilter === '3d' ? 'ring-2 ring-[#f59e0b]' : 'hover:bg-[#fef3c7]/70'
+              }`}
+            >
+              <div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#f59e0b] text-white font-black text-[0.68rem] uppercase">
+                  Marca de 3 Dias (3 a 4d)
+                </span>
+                <p className="text-[0.76rem] font-bold text-[#92400e] mt-1">
+                  Atenção Preventiva • Contato WhatsApp Secretaria
+                </p>
+              </div>
+              <span className="material-symbols-outlined text-[22px] text-[#d97706]">
+                schedule
+              </span>
+            </div>
+
+            <div
+              onClick={() => setConsecTierFilter(consecTierFilter === '5d' ? 'all' : '5d')}
+              className={`p-3 rounded-2xl border-l-4 border-l-[#ea580c] border border-[#ea580c]/30 bg-[#fff7ed] flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                consecTierFilter === '5d' ? 'ring-2 ring-[#ea580c]' : 'hover:bg-[#ffedd5]/70'
+              }`}
+            >
+              <div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#ea580c] text-white font-black text-[0.68rem] uppercase">
+                  Marca de 5 Dias (5 a 9d)
+                </span>
+                <p className="text-[0.76rem] font-bold text-[#9a3412] mt-1">
+                  Busca Ativa Urgente • Convocar Responsável
+                </p>
+              </div>
+              <span className="material-symbols-outlined text-[22px] text-[#ea580c]">
+                warning
+              </span>
+            </div>
+
+            <div
+              onClick={() => setConsecTierFilter(consecTierFilter === '10d' ? 'all' : '10d')}
+              className={`p-3 rounded-2xl border-l-4 border-l-[#e11d48] border border-[#e11d48]/35 bg-[#fff1f2] flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                consecTierFilter === '10d' ? 'ring-2 ring-[#e11d48]' : 'hover:bg-[#ffe4e6]/70'
+              }`}
+            >
+              <div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#be123c] text-white font-black text-[0.68rem] uppercase">
+                  Marca de 10+ Dias (10d+)
+                </span>
+                <p className="text-[0.76rem] font-bold text-[#9f1239] mt-1">
+                  Risco Crítico de Evasão • Acionar Gestão / Conselho
+                </p>
+              </div>
+              <span className="material-symbols-outlined text-[22px] text-[#be123c]">
+                gpp_maybe
+              </span>
             </div>
           </div>
 
@@ -1444,117 +1588,169 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 verified
               </span>
               <h3 className="text-[1rem] font-bold text-[#1d1d1f]">
-                Nenhum estudante com aviso de faltas consecutivas no momento
+                Nenhum estudante com aviso de faltas consecutivas neste filtro
               </h3>
               <p className="text-[0.82rem] text-[#6e6e73] max-w-md mx-auto">
                 Assim que o(a) professor(a) PEB I selecionar os dias de falta seguida de um aluno na tela "Faltas Seguidas", ele aparecerá aqui instantaneamente para contato da secretaria.
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-[0.82rem] border-collapse min-w-[880px]">
-                <thead className="bg-[#f5f5f7] text-[#6e6e73] font-bold uppercase tracking-wider text-[0.68rem]">
+            <div className="overflow-x-auto border border-black/[0.06] rounded-2xl">
+              <table className="w-full text-left text-[0.82rem] border-collapse min-w-[940px]">
+                <thead className="bg-[#003440] text-white font-bold uppercase tracking-wider text-[0.68rem]">
                   <tr>
-                    <th className="py-3 px-4 rounded-l-xl">Turma &amp; Professor(a) PEB I</th>
+                    <th className="py-3 px-4">Turma &amp; Professor(a) PEB I</th>
                     <th className="py-3 px-4">Estudante</th>
-                    <th className="py-3 px-4">Dias Faltosos (Até 4 Anteriores)</th>
+                    <th className="py-3 px-4 text-center">Nível de Alerta (3 / 5 / 10 Dias)</th>
+                    <th className="py-3 px-4">Dias Faltosos Registrados</th>
                     <th className="py-3 px-4">Contato Família (WhatsApp)</th>
-                    <th className="py-3 px-4 rounded-r-xl w-[36%]">
+                    <th className="py-3 px-4 w-[32%]">
                       Devolutiva da Secretaria (Feedback da Família)
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black/[0.04]">
-                  {consecutiveAbsenceRows.map(({ cls, student, selectedDates, familyFeedback }, rIdx) => {
-                    const waLinks = buildWhatsAppLinksFromPhoneString(
-                      student.telefones || student.guardianPhone,
-                      student.name,
-                      `Olá, família de ${student.name}! Aqui é da secretaria da EMEB Prof. Joaquim Candelário de Freitas. O(A) professor(a) informou que a criança faltou nos dias ${
-                        selectedDates.join(', ') || 'recentes'
-                      }. Está tudo bem com o(a) estudante?`
-                    );
+                <tbody className="divide-y divide-black/[0.05]">
+                  {consecutiveAbsenceRows.map(
+                    ({ cls, student, selectedDates, familyFeedback, consecInfo }, rIdx) => {
+                      const waLinks = buildWhatsAppLinksFromPhoneString(
+                        student.telefones || student.guardianPhone,
+                        student.name,
+                        `Olá, família de ${student.name}! Aqui é da secretaria da EMEB Prof. Joaquim Candelário de Freitas. O(A) professor(a) informou que a criança faltou nos dias ${
+                          selectedDates.join(', ') || 'recentes'
+                        }. Está tudo bem com o(a) estudante?`
+                      );
 
-                    return (
-                      <tr key={`${cls.id}-${student.id}-${rIdx}`} className="hover:bg-[#fbfbfd]">
-                        <td className="py-3.5 px-4">
-                          <span className="font-bold text-[#1d1d1f] block">
-                            {cls.name} ({cls.shift.replace('Turno ', '')})
-                          </span>
-                          <span className="text-[0.74rem] text-[#6e6e73]">
-                            Prof(a): {cls.teacherFirstName || cls.teacherName || 'PEB I'}
-                          </span>
-                        </td>
+                      const rowColorClass =
+                        consecInfo.tier === '10d'
+                          ? 'bg-[#fff1f2] hover:bg-[#ffe4e6]/80 border-l-4 border-l-[#e11d48]'
+                          : consecInfo.tier === '5d'
+                          ? 'bg-[#fff7ed] hover:bg-[#ffedd5]/80 border-l-4 border-l-[#ea580c]'
+                          : consecInfo.tier === '3d'
+                          ? 'bg-[#fffbeb] hover:bg-[#fef3c7]/80 border-l-4 border-l-[#f59e0b]'
+                          : 'bg-white hover:bg-[#fbfbfd]';
 
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <StudentAvatar student={student} size="sm" />
-                            <div>
-                              <span className="font-bold text-[#1d1d1f] block">
-                                Nº {student.number.toString().padStart(2, '0')} • {student.name}
-                              </span>
-                              <span className="text-[0.73rem] text-[#6e6e73]">
-                                Mãe: {student.filiacao1 || student.guardianName || '—'}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="py-3.5 px-4">
-                          {selectedDates.length > 0 ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff3b30]/12 text-[#ff3b30] font-semibold text-[0.78rem]">
-                              <span className="material-symbols-outlined text-[15px]">
-                                event_busy
-                              </span>
-                              <span>
-                                {selectedDates.join(', ')} ({selectedDates.length}{' '}
-                                {selectedDates.length === 1 ? 'dia' : 'dias'})
-                              </span>
+                      return (
+                        <tr
+                          key={`${cls.id}-${student.id}-${rIdx}`}
+                          className={`transition-colors ${rowColorClass}`}
+                        >
+                          <td className="py-3.5 px-4">
+                            <span className="font-bold text-[#1d1d1f] block">
+                              {cls.name} ({cls.shift.replace('Turno ', '')})
                             </span>
-                          ) : (
-                            <span className="text-[0.75rem] text-[#86868b]">Sem dias marcados</span>
-                          )}
-                        </td>
+                            <span className="text-[0.74rem] text-[#6e6e73]">
+                              Prof(a): {cls.teacherFirstName || cls.teacherName || 'PEB I'}
+                            </span>
+                          </td>
 
-                        <td className="py-3.5 px-4">
-                          {waLinks.length > 0 ? (
-                            <div className="flex flex-col items-start gap-1">
-                              {waLinks.map((ph, idx) => (
-                                <a
-                                  key={idx}
-                                  href={ph.waUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#25D366]/14 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-mono font-semibold text-[0.76rem] transition-colors cursor-pointer"
-                                >
-                                  <span className="material-symbols-outlined text-[15px]">chat</span>
-                                  <span>{ph.display}</span>
-                                </a>
-                              ))}
+                          <td
+                            className="py-3.5 px-4 cursor-pointer"
+                            onClick={() => onOpenStudentGrid?.(cls.id, student.id)}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <StudentAvatar student={student} size="sm" />
+                              <div>
+                                <span className="font-bold text-[#1d1d1f] hover:text-[#0071e3] block">
+                                  Nº {student.number.toString().padStart(2, '0')} • {student.name}
+                                </span>
+                                <span className="text-[0.73rem] text-[#6e6e73]">
+                                  Mãe: {student.filiacao1 || student.guardianName || '—'}
+                                </span>
+                              </div>
                             </div>
-                          ) : (
-                            <span className="text-[0.75rem] text-[#86868b]">Sem telefone</span>
-                          )}
-                        </td>
+                          </td>
 
-                        {/* Coluna da Frente: Devolutiva da Secretaria / Feedback da Família (Salva automaticamente) */}
-                        <td className="py-3.5 px-4">
-                          <input
-                            type="text"
-                            value={familyFeedback}
-                            onChange={(e) =>
-                              handleUpdateSecretariaFeedback(
-                                cls.id,
-                                student.id,
-                                e.target.value
-                              )
-                            }
-                            placeholder="Digite aqui o retorno da família p/ o(a) professor(a)..."
-                            className="w-full min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] focus:bg-[#eaf6ef]/60 text-[#1d1d1f] font-medium text-[0.82rem] placeholder:text-[#86868b] focus:outline-none transition-colors"
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          <td className="py-3.5 px-4 text-center">
+                            {consecInfo.tier !== 'none' ? (
+                              <div className="inline-flex flex-col items-center gap-0.5">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-black text-[0.72rem] uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">
+                                    {consecInfo.icon}
+                                  </span>
+                                  <span>{consecInfo.shortBadge}</span>
+                                </span>
+                                <span className="text-[0.66rem] font-bold text-[#41484b]">
+                                  {consecInfo.actionRequired}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[0.74rem] text-[#86868b] font-semibold">
+                                Sem Alerta (&lt;3d)
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            {selectedDates.length > 0 ? (
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[0.76rem] tabular-nums ${
+                                  consecInfo.tier === '10d'
+                                    ? 'bg-[#be123c]/15 text-[#be123c]'
+                                    : consecInfo.tier === '5d'
+                                    ? 'bg-[#ea580c]/15 text-[#c2410c]'
+                                    : 'bg-[#f59e0b]/20 text-[#92400e]'
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-[15px]">
+                                  event_busy
+                                </span>
+                                <span>
+                                  {selectedDates.join(', ')} ({selectedDates.length}{' '}
+                                  {selectedDates.length === 1 ? 'dia' : 'dias'})
+                                </span>
+                              </span>
+                            ) : (
+                              <span className="text-[0.75rem] text-[#86868b]">
+                                {consecInfo.days > 0
+                                  ? `${consecInfo.days} faltas seguidas no mês`
+                                  : 'Sem dias marcados'}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            {waLinks.length > 0 ? (
+                              <div className="flex flex-col items-start gap-1">
+                                {waLinks.map((ph, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={ph.waUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#25D366]/14 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-mono font-semibold text-[0.76rem] transition-colors cursor-pointer"
+                                  >
+                                    <span className="material-symbols-outlined text-[15px]">chat</span>
+                                    <span>{ph.display}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[0.75rem] text-[#86868b]">Sem telefone</span>
+                            )}
+                          </td>
+
+                          {/* Coluna da Frente: Devolutiva da Secretaria / Feedback da Família (Salva automaticamente) */}
+                          <td className="py-3.5 px-4">
+                            <input
+                              type="text"
+                              value={familyFeedback}
+                              onChange={(e) =>
+                                handleUpdateSecretariaFeedback(
+                                  cls.id,
+                                  student.id,
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Digite aqui o retorno da família p/ o(a) professor(a)..."
+                              className="w-full min-h-[40px] px-3.5 py-2 rounded-xl bg-white/90 border border-black/[0.08] focus:bg-[#eaf6ef]/60 text-[#1d1d1f] font-medium text-[0.82rem] placeholder:text-[#86868b] focus:outline-none transition-colors"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    }
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2089,6 +2285,80 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             </div>
           </div>
 
+          {/* Barra de Alertas Visuais de Faltas Consecutivas (Marcas de 3, 5 e 10 Dias) na Grade de Dados */}
+          <div className="p-3.5 rounded-2xl bg-[#f8faf9] border border-[#c0c8cb] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-[20px] text-[#ba1a1a]">
+                notification_important
+              </span>
+              <div>
+                <span className="text-[0.78rem] font-black text-[#003440] uppercase tracking-tight block">
+                  Sistema de Alertas Visuais na Grade de Dados — Faltas Consecutivas (3, 5 e 10 Dias)
+                </span>
+                <span className="text-[0.72rem] text-[#41484b] font-semibold">
+                  Clique em uma faixa de cor abaixo para filtrar automaticamente na tabela os estudantes por nível de gravidade:
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setFilterStatus(filterStatus === 'consec_3d' ? 'all' : 'consec_3d')
+                }
+                className={`px-3 py-1.5 rounded-xl font-black text-[0.74rem] flex items-center gap-1.5 border cursor-pointer transition-all ${
+                  filterStatus === 'consec_3d'
+                    ? 'bg-[#f59e0b] text-white border-[#d97706] shadow-xs ring-2 ring-[#f59e0b]/40'
+                    : 'bg-[#fffbeb] text-[#92400e] border-[#f59e0b]/50 hover:bg-[#fef3c7]'
+                }`}
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
+                <span>3+ Dias • Atenção ({stageStats.consec3dCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setFilterStatus(filterStatus === 'consec_5d' ? 'all' : 'consec_5d')
+                }
+                className={`px-3 py-1.5 rounded-xl font-black text-[0.74rem] flex items-center gap-1.5 border cursor-pointer transition-all ${
+                  filterStatus === 'consec_5d'
+                    ? 'bg-[#ea580c] text-white border-[#c2410c] shadow-xs ring-2 ring-[#ea580c]/40'
+                    : 'bg-[#fff7ed] text-[#9a3412] border-[#ea580c]/50 hover:bg-[#ffedd5]'
+                }`}
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-[#ea580c]" />
+                <span>5+ Dias • Busca Ativa ({stageStats.consec5dCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setFilterStatus(filterStatus === 'consec_10d' ? 'all' : 'consec_10d')
+                }
+                className={`px-3 py-1.5 rounded-xl font-black text-[0.74rem] flex items-center gap-1.5 border cursor-pointer transition-all ${
+                  filterStatus === 'consec_10d'
+                    ? 'bg-[#be123c] text-white border-[#9f1239] shadow-xs ring-2 ring-[#be123c]/40'
+                    : 'bg-[#fff1f2] text-[#9f1239] border-[#e11d48]/50 hover:bg-[#ffe4e6]'
+                }`}
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-[#e11d48]" />
+                <span>10+ Dias • Crítico ({stageStats.consec10dCount})</span>
+              </button>
+
+              {filterStatus.startsWith('consec_') && (
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus('all')}
+                  className="px-2.5 py-1.5 rounded-xl bg-[#003440] text-white font-bold text-[0.72rem] cursor-pointer"
+                >
+                  Limpar Filtro
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Filter Controls: Turma, Turno, Filtro de Faltas/Atestados, Busca por Estudante/RA */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
             <select
@@ -2122,7 +2392,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#003440] font-bold rounded-xl border border-[#c0c8cb] text-[0.9rem] focus:outline-none"
             >
               <option value="all">📋 Todos os Estudantes ({stageStats.totalEstudantes})</option>
-              <option value="com_faltas">🔴 Somente Estudantes com Faltas</option>
+              <option value="consec_all">🚨 Em Alerta de Faltas Seguidas (3, 5 ou 10+ dias)</option>
+              <option value="consec_3d">🟡 Marca de 3+ Dias Consecutivos (Atenção)</option>
+              <option value="consec_5d">🟠 Marca de 5+ Dias Consecutivos (Busca Ativa)</option>
+              <option value="consec_10d">🔴 Marca de 10+ Dias Consecutivos (Crítico)</option>
+              <option value="com_faltas">🔴 Somente Estudantes com Faltas no Mês</option>
               <option value="com_atestado">🏥 Somente Estudantes com Atestado</option>
               <option value="alerta">⚠️ Em Alerta Legal (&lt;60% Ed. Inf. / &lt;75% Fund.)</option>
             </select>
@@ -2138,13 +2412,16 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
           {/* Detailed Nominal Table with Quantity & Percentage for Every Student */}
           <div className="border-2 border-[#c0c8cb] rounded-2xl overflow-x-auto max-h-[560px] shadow-2xs">
-            <table className="w-full text-left text-[0.82rem] border-collapse min-w-[1150px]">
+            <table className="w-full text-left text-[0.82rem] border-collapse min-w-[1260px]">
               <thead className="bg-[#003440] text-white sticky top-0 z-10 font-extrabold uppercase tracking-tight">
                 <tr>
                   <th className="py-3 px-2.5">Segmento / Etapa</th>
                   <th className="py-3 px-2.5">Turma / Turno</th>
                   <th className="py-3 px-2.5 text-center">Nº</th>
                   <th className="py-3 px-3">Nome Nominal do(a) Estudante</th>
+                  <th className="py-3 px-2.5 text-center bg-[#5c1919]">
+                    Alerta Faltas Seguidas (3 / 5 / 10d)
+                  </th>
                   <th className="py-3 px-2.5 text-center">RA Oficial</th>
                   <th className="py-3 px-3">Filiação 1 (Nome da Mãe)</th>
                   <th className="py-3 px-3">Filiação 2 (Nome do Pai)</th>
@@ -2170,18 +2447,25 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 {filteredFrequenciaRows.slice(0, 250).map((row, idx) => {
                   const minLegal = row.tipoEnsino === 'EDUCACAO INFANTIL' ? 60 : 75;
                   const isLegalAlert = row.frequenciaPercent < minLegal;
+                  const rowAlertStyle =
+                    row.consecutiveTier === '10d'
+                      ? 'bg-[#fff1f2] hover:bg-[#ffe4e6] border-l-4 border-l-[#e11d48]'
+                      : row.consecutiveTier === '5d'
+                      ? 'bg-[#fff7ed] hover:bg-[#ffedd5] border-l-4 border-l-[#ea580c]'
+                      : row.consecutiveTier === '3d'
+                      ? 'bg-[#fffbeb] hover:bg-[#fef3c7] border-l-4 border-l-[#f59e0b]'
+                      : isLegalAlert
+                      ? 'bg-[#fff8f7] hover:bg-[#c3e5f4]/35'
+                      : idx % 2 === 0
+                      ? 'bg-white hover:bg-[#c3e5f4]/35'
+                      : 'bg-[#f9faf8] hover:bg-[#c3e5f4]/35';
+
                   return (
                   <tr
                     key={row.id}
                     onClick={() => onOpenStudentGrid?.(row.classId, row.studentId)}
                     title="Clique para abrir a Grade de Dados Interativa (48 Campos SED) deste(a) estudante"
-                    className={`border-b border-[#edeeec] cursor-pointer hover:bg-[#c3e5f4]/35 transition-colors ${
-                      isLegalAlert
-                        ? 'bg-[#fff8f7]'
-                        : idx % 2 === 0
-                        ? 'bg-white'
-                        : 'bg-[#f9faf8]'
-                    }`}
+                    className={`border-b border-[#edeeec] cursor-pointer transition-colors ${rowAlertStyle}`}
                   >
                     <td className="py-2.5 px-2.5">
                       <span
@@ -2253,6 +2537,45 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                           </a>
                         )}
                       </div>
+                    </td>
+
+                    {/* Alerta Visual de Faltas Consecutivas (3, 5 e 10 dias) */}
+                    <td className="py-2.5 px-2.5 text-center">
+                      {row.consecutiveTier === '10d' ? (
+                        <div className="inline-flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#be123c] text-white font-black text-[0.7rem] uppercase tabular-nums shadow-2xs">
+                            <span className="material-symbols-outlined text-[13px]">gpp_maybe</span>
+                            <span>10+ DIAS ({row.consecutiveDays}d)</span>
+                          </span>
+                          <span className="text-[0.64rem] font-bold text-[#9f1239] mt-0.5">
+                            Evasão Crítica • Conselho
+                          </span>
+                        </div>
+                      ) : row.consecutiveTier === '5d' ? (
+                        <div className="inline-flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ea580c] text-white font-black text-[0.7rem] uppercase tabular-nums shadow-2xs">
+                            <span className="material-symbols-outlined text-[13px]">warning</span>
+                            <span>5+ DIAS ({row.consecutiveDays}d)</span>
+                          </span>
+                          <span className="text-[0.64rem] font-bold text-[#9a3412] mt-0.5">
+                            Busca Ativa Urgente
+                          </span>
+                        </div>
+                      ) : row.consecutiveTier === '3d' ? (
+                        <div className="inline-flex flex-col items-center">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f59e0b] text-white font-black text-[0.7rem] uppercase tabular-nums shadow-2xs">
+                            <span className="material-symbols-outlined text-[13px]">schedule</span>
+                            <span>3+ DIAS ({row.consecutiveDays}d)</span>
+                          </span>
+                          <span className="text-[0.64rem] font-bold text-[#92400e] mt-0.5">
+                            Atenção • Contato Família
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[0.68rem]">
+                          Regular (&lt;3d)
+                        </span>
+                      )}
                     </td>
 
                     <td className="py-2.5 px-2.5 text-center font-mono text-[0.76rem] text-[#41484b]">
@@ -2385,8 +2708,8 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               {/* Sticky Summary Footer Row with Totals & Percentages */}
               <tfoot className="bg-[#003440] text-white font-black text-[0.8rem] sticky bottom-0">
                 <tr>
-                  <td colSpan={6} className="py-3 px-3">
-                    TOTAL CONSOLIDADO ({stageStats.totalEstudantes} ESTUDANTES EXIBIDOS)
+                  <td colSpan={7} className="py-3 px-3">
+                    TOTAL CONSOLIDADO ({stageStats.totalEstudantes} ESTUDANTES EXIBIDOS • {stageStats.consecTotalCount} EM ALERTA 3/5/10 DIAS)
                   </td>
                   <td className="py-3 px-2 text-center">—</td>
                   <td className="py-3 px-2.5 text-center">
@@ -2687,6 +3010,364 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       </td>
                     </tr>
                   ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* NOVA ABA: CONSULTA DE GÊNERO (COLUNA 1: NOME MANUAL | COLUNA 2: M OU F) PARA DAR GÊNERO EM TODO O APP */}
+      {activeTab === 'consulta_genero' && (
+        <section className="card-welcoming bg-white rounded-3xl p-5 space-y-5 animate-gentle-fade">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#003440]/10 pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#005035] text-white font-black text-[0.68rem] uppercase tracking-wider">
+                  Aba no Banco de Dados: {GENDER_SHEET_TAB_NAME}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#eaf6ef] text-[#005035] border border-[#005035]/20 font-extrabold text-[0.68rem]">
+                  Coluna A: Nome • Coluna B: M ou F
+                </span>
+              </div>
+              <h2 className="text-[1.25rem] sm:text-[1.45rem] font-black text-[#003440]">
+                Planilha de Consulta de Gênero (Estudante, Pai/Mãe, Tio/Tia, Avô/Avó, Vizinho/Vizinha)
+              </h2>
+              <p className="text-[0.82rem] text-[#41484b] max-w-3xl">
+                Coloque manualmente os nomes na <strong>1ª coluna (Coluna A)</strong> e <strong>M ou F na 2ª coluna (Coluna B)</strong>. O aplicativo consulta automaticamente esta aba para flexionar o gênero em todas as telas: <strong>O/A Estudante, Pai/Mãe, Tio/Tia, Avô/Avó, Vizinho/Vizinha, Irmão/Irmã, Padrasto/Madrasta e Professor/Professora</strong>.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                disabled={isSyncingCloud}
+                onClick={async () => {
+                  setIsSyncingCloud(true);
+                  try {
+                    // Harvest any new student/guardian names from classes into the dictionary
+                    const nextMap = new Map<string, NameGenderEntry>();
+                    genderEntries.forEach((item) => {
+                      const k = normalizePersonNameKey(item.name);
+                      if (k) nextMap.set(k, item);
+                    });
+                    classesToSync.forEach((cls) => {
+                      cls.students.forEach((st) => {
+                        const stFirst = extractFirstNameKey(st.estudante || st.name);
+                        if (stFirst && !nextMap.has(stFirst)) {
+                          nextMap.set(stFirst, {
+                            name: stFirst,
+                            gender: resolvePersonGender(st.estudante || st.name, st.genero),
+                          });
+                        }
+                        const f1First = extractFirstNameKey(st.filiacao1);
+                        if (f1First && !nextMap.has(f1First)) {
+                          nextMap.set(f1First, {
+                            name: f1First,
+                            gender: resolvePersonGender(st.filiacao1, 'F'),
+                          });
+                        }
+                        const f2First = extractFirstNameKey(st.filiacao2);
+                        if (f2First && !nextMap.has(f2First)) {
+                          nextMap.set(f2First, {
+                            name: f2First,
+                            gender: resolvePersonGender(st.filiacao2, 'M'),
+                          });
+                        }
+                      });
+                    });
+                    const mergedList = Array.from(nextMap.values()).sort((a, b) =>
+                      a.name.localeCompare(b.name, 'pt-BR')
+                    );
+                    saveStoredNameGenderEntries(mergedList);
+                    setGenderEntries(mergedList);
+                    enqueueGenderDictionaryWrite(mergedList, classesToSync);
+                    const ok = await syncGenderDictionaryToGoogleSheet(classesToSync, mergedList);
+                    setStatusMessage({
+                      type: ok ? 'success' : 'info',
+                      text: ok
+                        ? `Aba '${GENDER_SHEET_TAB_NAME}' gravada na Planilha Google e no Firebase com ${mergedList.length} nomes (Coluna A: Nome | Coluna B: M ou F)!`
+                        : `Dicionário salvo no Firebase (${mergedList.length} nomes). Na fila automática para a Planilha Google.`,
+                    });
+                  } catch (e: any) {
+                    setStatusMessage({
+                      type: 'error',
+                      text: e?.message || 'Erro ao sincronizar aba de gênero.',
+                    });
+                  } finally {
+                    setIsSyncingCloud(false);
+                  }
+                }}
+                className="px-4 min-h-[42px] rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.8rem] flex items-center gap-2 shadow-sm cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
+                <span>Gravar Aba '{GENDER_SHEET_TAB_NAME}' no Google Sheets</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Painel Rápido: Inserir Nome Manualmente (Coluna 1) + M ou F (Coluna 2) + Simulador de Vínculo Familiar */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-7 bg-[#f5f7f6] p-4 rounded-2xl border border-[#003440]/15 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[0.76rem] font-black uppercase tracking-wider text-[#003440]">
+                  Adicionar ou Atualizar Nome Manualmente na Aba
+                </span>
+                <span className="text-[0.7rem] font-bold text-[#005035]">
+                  Efeito imediato em todo o App
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <div className="flex-1">
+                  <label className="block text-[0.68rem] font-extrabold uppercase text-[#5a676b] mb-1">
+                    1ª Coluna (Coluna A): Nome ou Primeiro Nome
+                  </label>
+                  <input
+                    type="text"
+                    value={newGenderName}
+                    onChange={(e) => setNewGenderName(e.target.value.toUpperCase())}
+                    placeholder="Ex.: DARCI, JURACI, ARIEL, MARIA (AVÓ), JOÃO (TIO)..."
+                    className="w-full min-h-[42px] px-3.5 rounded-xl bg-white border border-[#c0c8cb] text-[0.85rem] font-bold text-[#003440] focus:outline-none focus:border-[#005035]"
+                  />
+                </div>
+                <div className="w-full sm:w-40">
+                  <label className="block text-[0.68rem] font-extrabold uppercase text-[#5a676b] mb-1">
+                    2ª Coluna (Coluna B): M ou F
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5 bg-white p-1 rounded-xl border border-[#c0c8cb] min-h-[42px]">
+                    <button
+                      type="button"
+                      onClick={() => setNewGenderCode('F')}
+                      className={`rounded-lg font-black text-[0.82rem] transition-all cursor-pointer ${
+                        newGenderCode === 'F'
+                          ? 'bg-[#b3261e] text-white shadow-xs'
+                          : 'text-[#5a676b] hover:bg-[#f3f4f2]'
+                      }`}
+                    >
+                      F (Fem.)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewGenderCode('M')}
+                      className={`rounded-lg font-black text-[0.82rem] transition-all cursor-pointer ${
+                        newGenderCode === 'M'
+                          ? 'bg-[#003440] text-white shadow-xs'
+                          : 'text-[#5a676b] hover:bg-[#f3f4f2]'
+                      }`}
+                    >
+                      M (Masc.)
+                    </button>
+                  </div>
+                </div>
+                <div className="sm:pt-5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cleanKey = normalizePersonNameKey(newGenderName);
+                      if (!cleanKey) return;
+                      const updated = [
+                        ...genderEntries.filter(
+                          (item) => normalizePersonNameKey(item.name) !== cleanKey
+                        ),
+                        { name: cleanKey, gender: newGenderCode },
+                      ].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+                      saveStoredNameGenderEntries(updated);
+                      setGenderEntries(updated);
+                      setNewGenderName('');
+                      enqueueGenderDictionaryWrite(updated, classesToSync);
+                    }}
+                    className="w-full sm:w-auto px-4 min-h-[42px] rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-black text-[0.8rem] cursor-pointer shrink-0"
+                  >
+                    Salvar M/F
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Simulador ao Vivo de Concordância de Gênero & Parentesco */}
+            <div className="lg:col-span-5 bg-[#eaf6ef]/70 p-4 rounded-2xl border border-[#005035]/20 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[0.74rem] font-black uppercase tracking-wider text-[#005035]">
+                  Teste de Consulta Automática (Parentesco &amp; Estudante)
+                </span>
+                <span className="text-[0.68rem] font-bold text-[#003440] bg-white px-2 py-0.5 rounded-md border border-[#003440]/10">
+                  Tempo Real
+                </span>
+              </div>
+              <input
+                type="text"
+                value={genderTestSimulatorName}
+                onChange={(e) => setGenderTestSimulatorName(e.target.value.toUpperCase())}
+                placeholder="Digite ex.: CARLOS (TIO), SANDRA (VIZINHA), HELENA..."
+                className="w-full min-h-[38px] px-3 rounded-xl bg-white border border-[#005035]/30 text-[0.82rem] font-bold text-[#003440]"
+              />
+              {(() => {
+                const simRel = resolveGuardianRelationshipInfo(
+                  genderTestSimulatorName,
+                  'responsavel'
+                );
+                const simStudent = getStudentGenderLabel({
+                  name: simRel.cleanName,
+                  estudante: simRel.cleanName,
+                });
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[0.74rem]">
+                    <span
+                      className={`px-2.5 py-1 rounded-lg font-black ${
+                        simRel.gender === 'F'
+                          ? 'bg-[#ffdad6] text-[#93000a]'
+                          : 'bg-[#d3e4ff] text-[#001c38]'
+                      }`}
+                    >
+                      Gênero na Planilha: {simRel.gender} ({simStudent.label})
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-white font-bold text-[#003440] border border-[#003440]/15">
+                      Estudante: {simStudent.estudanteTitle} ({simStudent.matriculadoTerm})
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-[#005035] text-white font-black">
+                      Vínculo Familiar: {simRel.roleLabel}
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Barra de Busca e Contadores M / F */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[0.82rem] font-bold text-[#41484b]">
+                Total de nomes mapeados: <strong>{genderEntries.length}</strong>
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-[#ffdad6]/60 text-[#93000a] font-black text-[0.72rem]">
+                F (Feminino): {genderEntries.filter((e) => e.gender === 'F').length}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-[#d3e4ff]/70 text-[#001c38] font-black text-[0.72rem]">
+                M (Masculino): {genderEntries.filter((e) => e.gender === 'M').length}
+              </span>
+            </div>
+            <div className="relative w-full sm:w-80">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#71787b] text-[18px]">
+                search
+              </span>
+              <input
+                type="text"
+                value={genderSearchQuery}
+                onChange={(e) => setGenderSearchQuery(e.target.value)}
+                placeholder="Buscar nome na Coluna A..."
+                className="w-full min-h-[40px] pl-9 pr-3 rounded-xl bg-[#f3f4f2] border border-[#c0c8cb] text-[0.82rem] font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
+              />
+            </div>
+          </div>
+
+          {/* Tabela Oficial da Aba Consulta_Genero_Nomes_2027 (Coluna A: Nome | Coluna B: M ou F) */}
+          <div className="border-2 border-[#003440]/20 rounded-2xl overflow-x-auto max-h-[560px]">
+            <table className="w-full text-left border-collapse min-w-[760px]">
+              <thead className="sticky top-0 z-10 bg-[#003440] text-white text-[0.72rem] uppercase tracking-wider">
+                <tr>
+                  <th className="py-3 px-3 font-extrabold border-r border-white/15 w-16 text-center">
+                    Linha
+                  </th>
+                  <th className="py-3 px-4 font-extrabold border-r border-white/15">
+                    Coluna A — NOME (Estudante / Responsável / Educador)
+                  </th>
+                  <th className="py-3 px-4 font-extrabold border-r border-white/15 w-48 text-center">
+                    Coluna B — GÊNERO (M ou F)
+                  </th>
+                  <th className="py-3 px-4 font-extrabold">
+                    Concordância Automática no App (Estudante • Família • Parentesco)
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#edeeec] text-[0.82rem]">
+                {genderEntries
+                  .filter((item) =>
+                    !genderSearchQuery.trim()
+                      ? true
+                      : item.name
+                          .toLowerCase()
+                          .includes(genderSearchQuery.trim().toLowerCase())
+                  )
+                  .map((item, idx) => {
+                    const isF = item.gender === 'F';
+                    return (
+                      <tr
+                        key={item.name}
+                        className={
+                          idx % 2 === 0
+                            ? 'bg-white hover:bg-[#eaf6ef]/40'
+                            : 'bg-[#f8faf9] hover:bg-[#eaf6ef]/40'
+                        }
+                      >
+                        <td className="py-2.5 px-3 font-mono font-bold text-center text-[#71787b] border-r border-[#edeeec]">
+                          {idx + 2}
+                        </td>
+                        <td className="py-2.5 px-4 font-black text-[#003440] border-r border-[#edeeec]">
+                          {item.name}
+                        </td>
+                        <td className="py-2 px-4 text-center border-r border-[#edeeec]">
+                          <div className="inline-flex items-center gap-1 bg-[#f3f4f2] p-1 rounded-xl border border-[#c0c8cb]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = genderEntries.map((entry) =>
+                                  entry.name === item.name
+                                    ? { ...entry, gender: 'F' as GenderCode }
+                                    : entry
+                                );
+                                saveStoredNameGenderEntries(updated);
+                                setGenderEntries(updated);
+                                enqueueGenderDictionaryWrite(updated, classesToSync);
+                              }}
+                              className={`px-3 py-1 rounded-lg font-black text-[0.75rem] cursor-pointer transition-all ${
+                                isF
+                                  ? 'bg-[#b3261e] text-white shadow-2xs'
+                                  : 'text-[#5a676b] hover:bg-white'
+                              }`}
+                            >
+                              F
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = genderEntries.map((entry) =>
+                                  entry.name === item.name
+                                    ? { ...entry, gender: 'M' as GenderCode }
+                                    : entry
+                                );
+                                saveStoredNameGenderEntries(updated);
+                                setGenderEntries(updated);
+                                enqueueGenderDictionaryWrite(updated, classesToSync);
+                              }}
+                              className={`px-3 py-1 rounded-lg font-black text-[0.75rem] cursor-pointer transition-all ${
+                                !isF
+                                  ? 'bg-[#003440] text-white shadow-2xs'
+                                  : 'text-[#5a676b] hover:bg-white'
+                              }`}
+                            >
+                              M
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-4 text-[0.78rem] font-semibold text-[#374346]">
+                          {isF ? (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-md bg-[#ffdad6]/60 text-[#93000a] font-black">
+                                A Estudante
+                              </span>
+                              <span>• Mãe • Tia • Avó • Vizinha • Irmã • Madrasta • Professora</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-md bg-[#d3e4ff]/80 text-[#001c38] font-black">
+                                O Estudante
+                              </span>
+                              <span>• Pai • Tio • Avô • Vizinho • Irmão • Padrasto • Professor</span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
