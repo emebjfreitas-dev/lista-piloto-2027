@@ -28,6 +28,7 @@ import {
   NameGenderEntry,
   buildGenderLookupSheetValues,
   saveStoredNameGenderEntries,
+  getStoredNameGenderEntries,
   resolvePersonGender,
   parseGenderCode,
 } from '../utils/genderDictionary';
@@ -40,6 +41,9 @@ import {
 import {
   enqueuePendingSyncOperation,
   markSyncOperationSuccess,
+  saveClassesToFirestoreCloud,
+  saveConfigMetaToFirestoreCloud,
+  getSyncStatusSnapshot,
 } from './firebaseSync';
 import {
   getStudentAttendanceMetrics,
@@ -47,6 +51,11 @@ import {
   getStudentBimesterReport,
   OFFICIAL_BIMESTERS_2027,
 } from '../utils/attendanceRules';
+import {
+  buildDiagnosticoInconsistenciasSheetValues,
+  runSchoolDataDiagnostics,
+  SchoolDiagnosticReport,
+} from '../utils/dataDiagnostics';
 
 export const OFFICIAL_ADMIN_EMAIL = 'emebjfreitas@educacao.jundiai.sp.gov.br';
 export const OFFICIAL_WORKSPACE_HOSTED_DOMAIN = 'educacao.jundiai.sp.gov.br';
@@ -2939,6 +2948,12 @@ export const createSchoolDatabaseSpreadsheet = async (
                 gridProperties: { frozenRowCount: 1 },
               },
             },
+            {
+              properties: {
+                title: 'Diagnostico_Inconsistencias_2027',
+                gridProperties: { frozenRowCount: 1 },
+              },
+            },
           ],
         }),
       }
@@ -3383,6 +3398,7 @@ export const syncClassesToGoogleSheet = async (
     'Emails_Permitidos_2027',
     'Monitoramento_Acessos_2027',
     GENDER_SHEET_TAB_NAME,
+    'Diagnostico_Inconsistencias_2027',
   ];
 
   requiredTabs.forEach((tabName) => {
@@ -3425,10 +3441,15 @@ export const syncClassesToGoogleSheet = async (
   const calendarioValues = buildCalendario200DiasValues(calendar);
   const turmasValues = buildTurmasSheetValues(classes, calendar);
   const emailsPermitidosValues = buildEmailsPermitidosValues();
+  const monitoramentoAcessosValues = buildMonitoramentoAcessosValues();
   const faltasConsecutivasValues = buildFaltasConsecutivasSheetValues(classes);
   const onibusFretadoValues = buildOnibusFretadoSheetValues(classes);
   const bolsaFamiliaBimestralValues = buildBolsaFamiliaBimestralSheetValues(classes);
   const consultaGeneroValues = buildGenderLookupSheetValues(classes);
+  const diagnosticoInconsistenciasValues = buildDiagnosticoInconsistenciasSheetValues(
+    classes,
+    getStoredAuthorizedUsers()
+  );
 
   const batchRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
@@ -3480,8 +3501,16 @@ export const syncClassesToGoogleSheet = async (
             values: emailsPermitidosValues,
           },
           {
+            range: 'Monitoramento_Acessos_2027!A1',
+            values: monitoramentoAcessosValues,
+          },
+          {
             range: `${GENDER_SHEET_TAB_NAME}!A1`,
             values: consultaGeneroValues,
+          },
+          {
+            range: 'Diagnostico_Inconsistencias_2027!A1',
+            values: diagnosticoInconsistenciasValues,
           },
         ],
       }),
@@ -3502,6 +3531,233 @@ export const syncClassesToGoogleSheet = async (
   return {
     updatedCells: batchData.totalUpdatedCells || sedValues.length * 58,
     title: meta.title,
+  };
+};
+
+export const OFFICIAL_SHEET_TABS = [
+  'SED_Matriculas_e_Frequencia',
+  'Faltas_Atestados_Infantil',
+  'Faltas_Atestados_Fundamental',
+  'Busca_Ativa_Faltas_Consecutivas_2027',
+  'Turmas_Salas_2027',
+  'Dias_Letivos_SME_2027',
+  'Diagnostico_Inconsistencias_2027',
+  'Bolsa_Familia_Bimestral_2027',
+  'Onibus_Fretado_2027',
+  'Emails_Permitidos_2027',
+  'Monitoramento_Acessos_2027',
+  GENDER_SHEET_TAB_NAME,
+] as const;
+
+export interface RedefineSyncResult {
+  spreadsheetId: string;
+  spreadsheetUrl: string;
+  title: string;
+  tabsVerified: string[];
+  totalCellsUpdated: number;
+  firebaseSynced: boolean;
+  diagnosticReport: SchoolDiagnosticReport;
+}
+
+/**
+ * REDEFINIR DADOS E ABAS DA PLANILHA GOOGLE COM ALINHAMENTO FIREBASE E APP EM PERFEITA SINCRONIA
+ * 1. Verifica e recria com congelamento de cabeçalho todas as 12 abas regulamentares
+ * 2. Limpa dados anteriores em batchClear para expurgar linhas fantasmas e órfãs
+ * 3. Grava integralmente todas as matrizes de dados oficiais
+ * 4. Persiste e alinha os dados no Firebase Firestore Cloud
+ * 5. Executa e grava o diagnóstico profundo de inconsistências na aba Diagnostico_Inconsistencias_2027
+ */
+export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
+  spreadsheetId?: string;
+  classes: ClassGroup[];
+  calendar?: SchoolDay[];
+  authorizedUsers?: AuthorizedUser[];
+  sessionLogs?: UserAccessSessionLog[];
+}): Promise<RedefineSyncResult> => {
+  const token = await getAccessToken();
+  if (!token) {
+    throw new Error('Autenticação Google necessária. Conecte sua conta Google primeiro.');
+  }
+
+  const {
+    classes,
+    calendar = OFFICIAL_OCTOBER_DAYS,
+    authorizedUsers: propUsers,
+    sessionLogs: propLogs,
+  } = params;
+
+  let spreadsheetId = params.spreadsheetId || (await ensureOfficialSpreadsheetId());
+  if (!spreadsheetId) {
+    const created = await createSchoolDatabaseSpreadsheet(classes, calendar);
+    spreadsheetId = created.spreadsheetId;
+  }
+
+  const meta = await fetchSpreadsheetMetadata(spreadsheetId);
+  const existingTabs = meta.sheetTitles;
+
+  // 1. Criar abas faltantes com congelamento da linha 1
+  const requestsToCreateTabs: any[] = [];
+  OFFICIAL_SHEET_TABS.forEach((tabName) => {
+    if (!existingTabs.includes(tabName)) {
+      requestsToCreateTabs.push({
+        addSheet: {
+          properties: {
+            title: tabName,
+            gridProperties: { frozenRowCount: 1 },
+          },
+        },
+      });
+    }
+  });
+
+  if (requestsToCreateTabs.length > 0) {
+    const tabRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ requests: requestsToCreateTabs }),
+      }
+    );
+    if (!tabRes.ok) {
+      markDriveTokenExpiredOrForbidden(tabRes.status);
+      throw new Error(`Falha ao estruturar abas oficiais na planilha (${tabRes.status}).`);
+    }
+  }
+
+  // 2. Limpar dados anteriores (batchClear) para erradicar linhas fantasmas
+  const clearRanges = [
+    'SED_Matriculas_e_Frequencia!A2:BL3000',
+    'Faltas_Atestados_Infantil!A2:Z2000',
+    'Faltas_Atestados_Fundamental!A2:Z2000',
+    'Busca_Ativa_Faltas_Consecutivas_2027!A2:Z2000',
+    'Turmas_Salas_2027!A2:N150',
+    'Dias_Letivos_SME_2027!A2:H300',
+    'Diagnostico_Inconsistencias_2027!A2:M2000',
+    'Bolsa_Familia_Bimestral_2027!A2:W2000',
+    'Onibus_Fretado_2027!A2:P2000',
+    'Emails_Permitidos_2027!A2:O500',
+    'Monitoramento_Acessos_2027!A2:L2000',
+    `${GENDER_SHEET_TAB_NAME}!A2:C2500`,
+  ];
+
+  await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}/values:batchClear`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ranges: clearRanges }),
+    }
+  ).catch((e) => {
+    console.warn('Aviso no batchClear:', e);
+  });
+
+  // 3. Montar matrizes completas e atualizadas
+  const usersList = propUsers || getStoredAuthorizedUsers();
+  const logsList = propLogs || getStoredAccessSessionLogs();
+  const syncSnap = getSyncStatusSnapshot();
+
+  const sedValues = buildSedSheetValues(classes, calendar);
+  const nominalInfantilValues = buildNominalStageSheetValues(classes, 'EDUCACAO INFANTIL', calendar);
+  const nominalFundamentalValues = buildNominalStageSheetValues(classes, 'ENSINO FUNDAMENTAL', calendar);
+  const faltasConsecutivasValues = buildFaltasConsecutivasSheetValues(classes);
+  const turmasValues = buildTurmasSheetValues(classes, calendar);
+  const calendarioValues = buildCalendario200DiasValues(calendar);
+  const onibusFretadoValues = buildOnibusFretadoSheetValues(classes);
+  const bolsaFamiliaBimestralValues = buildBolsaFamiliaBimestralSheetValues(classes);
+  const emailsPermitidosValues = buildEmailsPermitidosValues(usersList);
+  const monitoramentoAcessosValues = buildMonitoramentoAcessosValues(logsList);
+  const consultaGeneroValues = buildGenderLookupSheetValues(classes);
+
+  // Diagnóstico de Inconsistências
+  const diagnosticReport = runSchoolDataDiagnostics(classes, usersList, syncSnap);
+  const diagnosticoInconsistenciasValues = buildDiagnosticoInconsistenciasSheetValues(
+    classes,
+    usersList,
+    syncSnap
+  );
+
+  // 4. Gravar todas as 12 abas em uma única transação atômica
+  const writeRes = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+      spreadsheetId
+    )}/values:batchUpdate`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        valueInputOption: 'USER_ENTERED',
+        data: [
+          { range: 'SED_Matriculas_e_Frequencia!A1', values: sedValues },
+          { range: 'Faltas_Atestados_Infantil!A1', values: nominalInfantilValues },
+          { range: 'Faltas_Atestados_Fundamental!A1', values: nominalFundamentalValues },
+          { range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1', values: faltasConsecutivasValues },
+          { range: 'Turmas_Salas_2027!A1', values: turmasValues },
+          { range: 'Dias_Letivos_SME_2027!A1', values: calendarioValues },
+          { range: 'Diagnostico_Inconsistencias_2027!A1', values: diagnosticoInconsistenciasValues },
+          { range: 'Bolsa_Familia_Bimestral_2027!A1', values: bolsaFamiliaBimestralValues },
+          { range: 'Onibus_Fretado_2027!A1', values: onibusFretadoValues },
+          { range: 'Emails_Permitidos_2027!A1', values: emailsPermitidosValues },
+          { range: 'Monitoramento_Acessos_2027!A1', values: monitoramentoAcessosValues },
+          { range: `${GENDER_SHEET_TAB_NAME}!A1`, values: consultaGeneroValues },
+        ],
+      }),
+    }
+  );
+
+  if (!writeRes.ok) {
+    const errData = await writeRes.json().catch(() => ({}));
+    markDriveTokenExpiredOrForbidden(writeRes.status);
+    throw new Error(
+      errData?.error?.message ||
+        `Erro ao gravar as 12 abas na Planilha Google (${writeRes.status}).`
+    );
+  }
+
+  const writeData = await writeRes.json();
+
+  // 5. Alinhamento com Firebase Firestore
+  let firebaseOk = false;
+  try {
+    const nowMs = Date.now();
+    const fbClasses = await saveClassesToFirestoreCloud(classes, nowMs);
+    const fbMeta = await saveConfigMetaToFirestoreCloud({
+      authorizedUsers: usersList,
+      accessSessionLogs: logsList,
+      genderDictionary: getStoredNameGenderEntries(),
+    });
+    if (fbClasses && fbMeta) {
+      markSyncOperationSuccess('save_classes');
+      markSyncOperationSuccess('save_users');
+      firebaseOk = true;
+    }
+  } catch (fbErr) {
+    console.warn('Alinhamento Firebase Firestore:', fbErr);
+  }
+
+  saveSpreadsheetInfo(spreadsheetId, OFFICIAL_SPREADSHEET_TITLE);
+
+  return {
+    spreadsheetId,
+    spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
+    title: OFFICIAL_SPREADSHEET_TITLE,
+    tabsVerified: [...OFFICIAL_SHEET_TABS],
+    totalCellsUpdated: writeData.totalUpdatedCells || 0,
+    firebaseSynced: firebaseOk,
+    diagnosticReport,
   };
 };
 

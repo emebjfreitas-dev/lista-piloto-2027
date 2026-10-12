@@ -57,6 +57,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       icon: 'monitoring',
     },
     {
+      id: 'mapa_estudantes',
+      label: 'Mapa de Trajetos',
+      shortLabel: 'Mapa KM',
+      icon: 'distance',
+    },
+    {
       id: 'bolsa_familia',
       label: 'Bolsa Família',
       shortLabel: 'Bolsa',

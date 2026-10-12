@@ -25,7 +25,10 @@ import { OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
 import { QuadroAvisosCard } from './QuadroAvisosCard';
-import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
+import {
+  getStudentCumulativeOccurrences,
+  triggerConsecutiveAbsencePushNotification,
+} from '../services/pushNotificationService';
 
 type ViewMode = 'grid' | 'compact' | 'table';
 type StatusFilter =
@@ -167,6 +170,35 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   // Strict numerical ordering by Nº da chamada (1, 2, 3...)
   const orderedStudents = useMemo(() => {
     return [...classGroup.students].sort((a, b) => a.number - b.number);
+  }, [classGroup.students]);
+
+  const [pushNotifiedStudentId, setPushNotifiedStudentId] = useState<string | null>(null);
+  const [isConsecutiveBannerDismissed, setIsConsecutiveBannerDismissed] = useState(false);
+
+  // Estudantes ativos da turma que excederam 3 faltas consecutivas (3+ dias seguidos)
+  const studentsExceedingThreeConsecutive = useMemo(() => {
+    return classGroup.students.filter((s) => {
+      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+      if (
+        sit.includes('BXTR') ||
+        sit.includes('TRANSF') ||
+        sit.includes('REMAN') ||
+        sit.includes('RM')
+      ) {
+        return false;
+      }
+      const occs = getStudentCumulativeOccurrences(s);
+      const latestOcc = occs.length > 0 ? occs[occs.length - 1] : undefined;
+      const streak = Math.max(
+        latestOcc?.selectedDates?.length || 0,
+        s.consecutiveAbsenceAlert?.active
+          ? Math.max(3, s.consecutiveAbsenceAlert?.selectedDates?.length || 0)
+          : (s.totalAbsencesMonth || 0) >= 3 && (s.justifiedAbsences || 0) === 0
+          ? s.totalAbsencesMonth || 0
+          : 0
+      );
+      return streak >= 3;
+    });
   }, [classGroup.students]);
 
   // Complete Top Class Summary (Resumo da Alta da Turma: Ativos, Feminino, Masculino, Transferidos, Remanejados, Presença e Faltas)
@@ -483,7 +515,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 {classSummary.ativos}
               </span>
               <span className="text-[0.72rem] font-semibold text-[#6e6e73] tabular-nums">
-                de {classSummary.totalMatriculados} matr.
+                de {classSummary.totalMatriculados} matriculados
               </span>
             </div>
           </div>
@@ -491,15 +523,15 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           {/* 2. Composição por Gênero (Meninas / Meninos) */}
           <div className="bg-[#f5f5f7] rounded-2xl p-3.5 flex flex-col justify-between h-full">
             <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
-              Meninas · Meninos
+              Feminino · Masculino
             </span>
             <div className="flex items-baseline gap-2 mt-1 tabular-nums">
-              <span className="text-[1.45rem] font-extrabold text-[#8f2d56] leading-none">
-                {classSummary.feminino}F
+              <span className="text-[1.4rem] font-extrabold text-[#8f2d56] leading-none">
+                {classSummary.feminino} <span className="text-[0.72rem] font-bold">Meninas</span>
               </span>
               <span className="text-[#c7c7cc]">·</span>
-              <span className="text-[1.45rem] font-extrabold text-[#004e64] leading-none">
-                {classSummary.masculino}M
+              <span className="text-[1.4rem] font-extrabold text-[#004e64] leading-none">
+                {classSummary.masculino} <span className="text-[0.72rem] font-bold">Meninos</span>
               </span>
             </div>
           </div>
@@ -517,14 +549,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             }`}
           >
             <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
-              Movimentados (BXTR / RM)
+              Transferidos e Remanejados
             </span>
             <div className="flex items-baseline gap-1.5 mt-1 tabular-nums">
               <span className="text-[1.45rem] font-extrabold text-[#1d1d1f] leading-none">
                 {classSummary.transferidos + classSummary.remanejados}
               </span>
               <span className="text-[0.7rem] font-semibold text-[#6e6e73]">
-                ({classSummary.transferidos} transf. · {classSummary.remanejados} rem.)
+                ({classSummary.transferidos} transferidos · {classSummary.remanejados} remanejados)
               </span>
             </div>
           </div>
@@ -569,7 +601,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               </span>
               <span className="text-[0.7rem] font-semibold text-[#6e6e73]">
                 {classSummary.semFichaEscaneadaCount > 0
-                  ? `pendente(s) · ${classSummary.comFichaEscaneadaCount} ok`
+                  ? `pendente(s) · ${classSummary.comFichaEscaneadaCount} em dia`
                   : '100% escaneadas'}
               </span>
             </div>
@@ -607,7 +639,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             type="text"
             value={searchStudent}
             onChange={(e) => setSearchStudent(e.target.value)}
-            placeholder="Buscar por Nº, nome, RA, mãe ou pai..."
+            placeholder="Buscar estudante por Nº, nome, RA, mãe, pai, avó, tio..."
             className="w-full min-h-[40px] pl-10 pr-8 rounded-xl bg-[#767680]/[0.09] border border-transparent text-[0.86rem] font-medium text-[#1c1c1e] placeholder:text-[#8e8e93] focus:outline-none focus:bg-white focus:border-[#005035]/40 transition-all"
           />
           {searchStudent && (
@@ -688,7 +720,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   statusFilter === 'movimentados' ? 'ios-segmented-item-active' : ''
                 }`}
               >
-                Transf./Reman. ({classSummary.transferidos + classSummary.remanejados})
+                Transferidos e Remanejados ({classSummary.transferidos + classSummary.remanejados})
               </button>
             )}
             {userRole === 'admin' && classSummary.alertaLegalCount > 0 && (
@@ -701,39 +733,62 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     : 'text-[#ba1a1a]'
                 }`}
               >
-                Alerta &lt;{minLegalPresence}% ({classSummary.alertaLegalCount})
+                Abaixo de {minLegalPresence}% ({classSummary.alertaLegalCount})
               </button>
             )}
           </div>
+
+          {/* Botão de Gerenciamento Fino: Expandir / Recolher Todos os Resumos Simultaneamente */}
+          {viewMode !== 'table' && (
+            <button
+              type="button"
+              onClick={() =>
+                setExpandedStudentId((prev) => (prev === '__ALL__' ? null : '__ALL__'))
+              }
+              title="Expandir ou recolher o resumo de todos os estudantes da turma ao mesmo tempo"
+              className={`min-h-[34px] px-3 py-1 rounded-full font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer transition-all border ${
+                expandedStudentId === '__ALL__'
+                  ? 'bg-[#003440] text-white border-[#003440] shadow-2xs'
+                  : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border-black/[0.06]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">
+                {expandedStudentId === '__ALL__' ? 'unfold_less' : 'unfold_more'}
+              </span>
+              <span>
+                {expandedStudentId === '__ALL__' ? 'Recolher Resumos' : 'Expandir Todos'}
+              </span>
+            </button>
+          )}
 
           {/* Seletor de Múltiplas Opções de Visualização (Preferência do Usuário) */}
           <div className="ios-segmented" role="group" aria-label="Modo de visualização">
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              title="Visualização em Cards Completos"
+              title="Visualização em Cartões Completos"
               className={`ios-segmented-item flex items-center gap-1 ${
                 viewMode === 'grid' ? 'ios-segmented-item-active' : ''
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">grid_view</span>
-              <span className="hidden sm:inline">Cards</span>
+              <span className="hidden sm:inline">Cartões</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('compact')}
-              title="Visualização em Lista Compacta iOS"
+              title="Visualização em Lista Compacta"
               className={`ios-segmented-item flex items-center gap-1 ${
                 viewMode === 'compact' ? 'ios-segmented-item-active' : ''
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">view_agenda</span>
-              <span className="hidden sm:inline">Compacto</span>
+              <span className="hidden sm:inline">Lista</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              title="Visualização em Tabela Nominal"
+              title="Visualização em Tabela Completa"
               className={`ios-segmented-item flex items-center gap-1 ${
                 viewMode === 'table' ? 'ios-segmented-item-active' : ''
               }`}
@@ -744,6 +799,151 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Banner de Alerta no Topo da Grade de Dados quando Estudantes Excedem 3 Faltas Consecutivas */}
+      {studentsExceedingThreeConsecutive.length > 0 && !isConsecutiveBannerDismissed && (
+        <section className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-[#fff7ed] via-[#fff1f2] to-[#fff7ed] border-2 border-[#ea580c]/40 shadow-sm flex flex-col gap-3.5 animate-gentle-fade">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-[#ea580c] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                <span className="material-symbols-outlined text-[22px]">notification_important</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#ea580c] text-white text-[0.66rem] font-black uppercase tracking-wider">
+                    ⚠️ ALERTA NA GRADE DE DADOS · FALTAS CONSECUTIVAS
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-white/90 border border-[#ea580c]/30 font-mono font-black text-[0.72rem] text-[#c2410c] tabular-nums">
+                    {studentsExceedingThreeConsecutive.length} {studentsExceedingThreeConsecutive.length === 1 ? 'ESTUDANTE' : 'ESTUDANTES'}
+                  </span>
+                </div>
+                <h3 className="text-[1.02rem] sm:text-[1.15rem] font-black text-[#1d1d1f] tracking-tight leading-snug mt-1">
+                  Ação Sugerida: Contato de Busca Ativa
+                </h3>
+                <p className="text-[0.78rem] sm:text-[0.82rem] text-[#431407] font-medium leading-relaxed mt-0.5">
+                  Estudantes desta turma ultrapassaram o limite regulamentar de 3 faltas consecutivas. Recomendada ação imediata de <strong>Contato de Busca Ativa</strong> com as famílias para registrar motivo e restabelecer a frequência regular.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsConsecutiveBannerDismissed(true)}
+              className="text-[#86868b] hover:text-[#1d1d1f] p-1 rounded-lg shrink-0 self-start sm:self-auto cursor-pointer"
+              title="Ocultar banner temporariamente"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+
+          {/* Lista de Estudantes da Turma com Faltas Consecutivas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+            {studentsExceedingThreeConsecutive.map((stud) => {
+              const occs = getStudentCumulativeOccurrences(stud);
+              const latestOcc = occs.length > 0 ? occs[occs.length - 1] : undefined;
+              const streak = Math.max(
+                latestOcc?.selectedDates?.length || 0,
+                stud.consecutiveAbsenceAlert?.active
+                  ? Math.max(3, stud.consecutiveAbsenceAlert?.selectedDates?.length || 0)
+                  : (stud.totalAbsencesMonth || 0) >= 3 && (stud.justifiedAbsences || 0) === 0
+                  ? stud.totalAbsencesMonth || 0
+                  : 0
+              );
+              const g1 = resolveGuardianRelationshipInfo(
+                stud.filiacao1 || stud.guardianName,
+                'filiacao1',
+                stud.notes
+              );
+              const waLinks = buildWhatsAppLinksFromPhoneString(
+                stud.telefones || stud.guardianPhone,
+                stud.name,
+                `Olá${g1.nomeLimpo ? ` ${g1.nomeLimpo}` : ''}! Somos da EMEB Prof. Joaquim Candelário de Freitas. Notamos que o(a) estudante ${stud.name} acumulou ${streak} faltas consecutivas. Gostaríamos de saber como a família está e de que forma a escola pode auxiliar para garantir o retorno aos estudos com tranquilidade.`
+              );
+
+              return (
+                <div
+                  key={`banner-student-${stud.id}`}
+                  className="bg-white/95 rounded-2xl p-3 border border-[#ea580c]/25 shadow-2xs flex flex-col justify-between gap-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-[#1d1d1f] text-white text-[0.68rem] font-black flex items-center justify-center shrink-0 tabular-nums">
+                          {stud.number}
+                        </span>
+                        <h4 className="text-[0.84rem] font-bold text-[#1d1d1f] truncate">
+                          {stud.name}
+                        </h4>
+                      </div>
+                      <span className="text-[0.68rem] text-[#6e6e73] block mt-0.5 truncate">
+                        {g1.parentesco}: {g1.nomeLimpo || stud.guardianName || 'Não informado'}
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-[#ea580c] text-white font-mono font-black text-[0.7rem] tabular-nums shrink-0">
+                      {streak}d seguidos
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-black/[0.05]">
+                    {waLinks.length > 0 ? (
+                      <a
+                        href={waLinks[0].waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-h-[30px] px-2.5 py-1 rounded-xl bg-[#005035] hover:bg-[#003d29] text-white text-[0.72rem] font-extrabold flex items-center justify-center gap-1 cursor-pointer transition-all"
+                        title="Abrir WhatsApp oficial para Contato de Busca Ativa"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">chat</span>
+                        <span>Contato Busca Ativa</span>
+                      </a>
+                    ) : (
+                      <span className="text-[0.68rem] text-[#86868b] font-semibold italic flex-1">
+                        Sem telefone
+                      </span>
+                    )}
+
+                    {onOpenStudentGrid && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenStudentGrid(stud)}
+                        className="px-2.5 py-1 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-[0.72rem] font-bold flex items-center gap-1 cursor-pointer"
+                        title="Abrir Grade de Dados deste estudante"
+                      >
+                        <span>Ficha</span>
+                        <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await triggerConsecutiveAbsencePushNotification(
+                          stud,
+                          classGroup.name,
+                          streak,
+                          `Contato de Busca Ativa sugerido com ${g1.parentesco}`
+                        );
+                        setPushNotifiedStudentId(stud.id);
+                        setTimeout(() => setPushNotifiedStudentId(null), 3000);
+                      }}
+                      className={`p-1.5 rounded-xl border cursor-pointer transition-colors ${
+                        pushNotifiedStudentId === stud.id
+                          ? 'bg-[#eaf6ef] text-[#005035] border-[#005035]/30'
+                          : 'bg-[#f5f5f7] text-[#c2410c] border-[#ea580c]/30 hover:bg-[#ffedd5]'
+                      }`}
+                      title="Disparar notificação push imediata para a equipe escolar"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">
+                        {pushNotifiedStudentId === stud.id ? 'check' : 'notifications_active'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* MODO 1: CARDS EM ORDEM NUMÉRICA DA TURMA (Padrão iOS Apple) */}
       {viewMode === 'grid' && (
@@ -809,7 +1009,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               'filiacao2',
               student.notes
             );
-            const isExpanded = expandedStudentId === student.id;
+            const isExpanded =
+              expandedStudentId === '__ALL__' || expandedStudentId === student.id;
 
             return (
               <div
@@ -817,7 +1018,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 onClick={() => {
                   if (onOpenStudentGrid) onOpenStudentGrid(student);
                 }}
-                title={`Toque no card para abrir o perfil e os 48 campos SED de ${studentGenderInfo.estudanteTerm}`}
+                title={`Toque no cartão para abrir a Ficha Completa (48 dados SED) de ${studentGenderInfo.estudanteTerm}`}
                 className={`card-welcoming rounded-3xl p-4 flex flex-col justify-between gap-3 cursor-pointer select-none transition-all duration-300 ease-out h-full min-h-[246px] ${cardColorClasses}`}
               >
                 {/* Faixa Superior Destacada para Estudantes Não Ativos (Nova Coloração) */}
@@ -837,9 +1038,9 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       </span>
                       <span>
                         {isTransferred
-                          ? `NÃO ${studentGenderInfo.ativoTerm.toUpperCase()} • ${studentGenderInfo.transferidoTerm.toUpperCase()} (BXTR)`
+                          ? `${studentGenderInfo.transferidoTerm.toUpperCase()} (Baixa de Matrícula)`
                           : isRemanejado
-                          ? `NÃO ${studentGenderInfo.ativoTerm.toUpperCase()} • ${studentGenderInfo.remanejadoTerm.toUpperCase()}`
+                          ? `${studentGenderInfo.remanejadoTerm.toUpperCase()} de Turma`
                           : `NÃO ${studentGenderInfo.ativoTerm.toUpperCase()} • ${sit}`}
                       </span>
                     </span>
@@ -904,8 +1105,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           }}
                           title={
                             isExpanded
-                              ? 'Recolher prévia rápida'
-                              : 'Visualização prévia e expansão fluida de dados'
+                              ? 'Recolher resumo rápido'
+                              : 'Abrir resumo rápido sem sair da tela'
                           }
                           className={`h-6 px-2 rounded-full font-extrabold text-[0.62rem] flex items-center gap-0.5 transition-all cursor-pointer border ${
                             isExpanded
@@ -920,7 +1121,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           >
                             expand_more
                           </span>
-                          <span>{isExpanded ? 'Fechar' : 'Prévia'}</span>
+                          <span>{isExpanded ? 'Fechar' : 'Resumo'}</span>
                         </button>
                       </div>
                     </div>
@@ -974,7 +1175,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       )}
                       {student.deficiencia && (
                         <span className="px-2 py-0.5 rounded-md bg-[#f5f3ff] text-[#5b21b6] font-bold text-[0.63rem] truncate max-w-[140px]">
-                          AEE
+                          Educação Especial (AEE)
                         </span>
                       )}
                       {student.rotaOnibus && (
@@ -1057,10 +1258,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   >
                     <div className="flex items-center justify-between border-b border-black/[0.06] pb-1.5">
                       <span className="font-black uppercase tracking-wider text-[0.65rem] text-[#003440]">
-                        Prévia Proporcional • {studentGenderInfo.estudanteTitle}
+                        Resumo Rápido • {studentGenderInfo.estudanteTitle}
                       </span>
                       <span className="font-mono font-bold text-[0.66rem] text-[#005035]">
-                        Presença: {m.presencas}/{m.diasLetivosMatriculados}d ({m.frequenciaPercent}%)
+                        Presença: {m.presencas} de {m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
                       </span>
                     </div>
 
@@ -1086,7 +1287,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     {(student.logradouro || student.bairro || student.nis) && (
                       <div className="bg-white p-2 rounded-xl border border-black/[0.05] text-[0.68rem] text-[#374346] flex flex-wrap items-center justify-between gap-1">
                         <span className="truncate">
-                          📍 {student.logradouro || 'End. não inf.'}
+                          📍 {student.logradouro || 'Endereço não informado'}
                           {student.numeroResidencia ? `, ${student.numeroResidencia}` : ''}
                           {student.bairro ? ` • ${student.bairro}` : ''}
                         </span>
@@ -1108,7 +1309,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
                         className="px-2.5 py-1 rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.67rem] flex items-center gap-1 cursor-pointer"
                       >
-                        <span>Expandir 48 Colunas SED</span>
+                        <span>Ver Ficha Completa (48 Dados)</span>
                         <span className="material-symbols-outlined text-[13px]">
                           open_in_full
                         </span>
@@ -1200,7 +1401,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               'filiacao2',
               student.notes
             );
-            const isExpanded = expandedStudentId === student.id;
+            const isExpanded =
+              expandedStudentId === '__ALL__' || expandedStudentId === student.id;
 
             return (
               <div
@@ -1262,12 +1464,12 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         </span>
                         {isTransferred && (
                           <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.64rem] font-black uppercase">
-                            NÃO {studentGenderInfo.ativoTerm.toUpperCase()} • {studentGenderInfo.transferidoTerm.toUpperCase()} (BXTR)
+                            {studentGenderInfo.transferidoTerm.toUpperCase()} (Baixa de Matrícula)
                           </span>
                         )}
                         {isRemanejado && (
                           <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.64rem] font-black uppercase">
-                            NÃO {studentGenderInfo.ativoTerm.toUpperCase()} • {studentGenderInfo.remanejadoTerm.toUpperCase()}
+                            {studentGenderInfo.remanejadoTerm.toUpperCase()} de Turma
                           </span>
                         )}
                       </div>
@@ -1299,7 +1501,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       >
                         expand_more
                       </span>
-                      <span>{isExpanded ? 'Recolher' : 'Prévia'}</span>
+                      <span>{isExpanded ? 'Recolher' : 'Resumo'}</span>
                     </button>
 
                     {onOpenStudentPdf && (
@@ -1365,21 +1567,21 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         {guardian2Info.cleanName}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
                         <span className="text-[0.64rem] font-extrabold uppercase text-[#5a676b] block">
                           Frequência ({studentGenderInfo.estudanteTitle})
                         </span>
                         <span className="font-mono font-bold text-[#005035]">
-                          {m.presencas}/{m.diasLetivosMatriculados}d ({m.frequenciaPercent}%) • Faltas: {m.faltas}
+                          {m.presencas} de {m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%) • Faltas: {m.faltas}
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
-                        className="px-2.5 py-1 rounded-lg bg-[#003440] text-white font-bold text-[0.68rem] cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#003440] text-white font-bold text-[0.68rem] cursor-pointer shrink-0"
                       >
-                        48 Col.
+                        Ficha Completa
                       </button>
                     </div>
                   </div>
@@ -1399,20 +1601,20 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <span className="material-symbols-outlined text-[17px] text-[#ba1a1a]">
                 notification_important
               </span>
-              <span>Código de Cores — Faltas Consecutivas na Tabela:</span>
+              <span>Código de Cores — Faltas Seguidas na Tabela:</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fffbeb] text-[#92400e] border border-[#f59e0b]/40 font-black">
                 <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
-                <span>3+ Dias (Atenção)</span>
+                <span>3+ Dias Seguidos (Atenção)</span>
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff7ed] text-[#9a3412] border border-[#ea580c]/40 font-black">
                 <span className="w-2 h-2 rounded-full bg-[#ea580c]" />
-                <span>5+ Dias (Busca Ativa)</span>
+                <span>5+ Dias Seguidos (Busca Ativa)</span>
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff1f2] text-[#9f1239] border border-[#e11d48]/40 font-black">
                 <span className="w-2 h-2 rounded-full bg-[#e11d48]" />
-                <span>10+ Dias (Evasão Crítica)</span>
+                <span>10+ Dias Seguidos (Evasão Crítica)</span>
               </span>
             </div>
           </div>
@@ -1421,14 +1623,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-extrabold uppercase tracking-wider text-[0.68rem]">
               <tr>
                 <th className="py-3 px-3 text-center">Nº</th>
-                <th className="py-3 px-3">Estudante (M/F) &amp; Ficha Informativa</th>
-                <th className="py-3 px-2.5 text-center">Alerta Faltas Seguidas (3 / 5 / 10d)</th>
-                <th className="py-3 px-2.5">RA</th>
+                <th className="py-3 px-3">Estudante &amp; Ficha Informativa (PDF)</th>
+                <th className="py-3 px-2.5 text-center">Alerta Faltas Seguidas (3 / 5 / 10 dias)</th>
+                <th className="py-3 px-2.5">Registro (RA)</th>
                 <th className="py-3 px-3">Filiação 1 (Mãe / Pai / Avó / Tia...)</th>
                 <th className="py-3 px-3">Filiação 2 (Pai / Mãe / Avô / Tio...)</th>
                 <th className="py-3 px-2.5">Telefone / E-mail</th>
-                <th className="py-3 px-2.5 text-center">Presença Total</th>
-                <th className="py-3 px-2.5 text-center">Falta Total</th>
+                <th className="py-3 px-2.5 text-center">Presença no Mês</th>
+                <th className="py-3 px-2.5 text-center">Faltas no Mês</th>
                 <th className="py-3 px-2.5 text-center">Situação</th>
               </tr>
             </thead>
@@ -1557,7 +1759,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         </div>
                       ) : (
                         <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[0.66rem]">
-                          Regular (&lt;3d)
+                          Em dia (sem alerta)
                         </span>
                       )}
                     </td>
@@ -1566,13 +1768,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     </td>
                     <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
                       <span className="text-[0.63rem] font-black uppercase text-[#005035] block">
-                        {guardian1Info.shortRoleLabel} ({guardian1Info.gender})
+                        {guardian1Info.roleLabel}
                       </span>
                       <span>{guardian1Info.cleanName}</span>
                     </td>
                     <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
                       <span className="text-[0.63rem] font-black uppercase text-[#003440] block">
-                        {guardian2Info.shortRoleLabel} ({guardian2Info.gender})
+                        {guardian2Info.roleLabel}
                       </span>
                       <span>{guardian2Info.cleanName}</span>
                     </td>
@@ -1585,7 +1787,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       </div>
                     </td>
                     <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#005035]">
-                      {m.presencas}/{m.diasLetivosMatriculados}d ({m.frequenciaPercent}%)
+                      {m.presencas}/{m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
                     </td>
                     <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#ba1a1a]">
                       {m.faltas} ({pctFalta}%)
@@ -1603,7 +1805,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         }`}
                       >
                         {isTransferred
-                          ? `${studentGenderInfo.transferidoTerm.toUpperCase()} (BXTR)`
+                          ? studentGenderInfo.transferidoTerm.toUpperCase()
                           : isRemanejado
                           ? studentGenderInfo.remanejadoTerm.toUpperCase()
                           : studentGenderInfo.ativoTerm.toUpperCase()}
@@ -1779,7 +1981,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                               {preset.label}
                             </span>
                             <span className="px-1.5 py-0.5 rounded bg-[#003440]/10 text-[#003440] font-mono font-bold text-[0.66rem]">
-                              {preset.columnIds.length} col.
+                              {preset.columnIds.length} colunas
                             </span>
                           </div>
                           <p className="text-[0.68rem] text-[#5a676b] line-clamp-2 leading-snug">

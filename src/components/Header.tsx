@@ -158,6 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
     (currentScreen === 'detalhes' && userRole !== 'usuario') ||
     currentScreen === 'bolsa_familia' ||
     currentScreen === 'dias_letivos' ||
+    currentScreen === 'mapa_estudantes' ||
     currentScreen === 'planilha' ||
     currentScreen === 'usuarios_acesso';
 
@@ -169,6 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
     if (currentScreen === 'bolsa_familia') return 'Bolsa Família';
     if (currentScreen === 'dias_letivos') return '200 Dias Letivos';
     if (currentScreen === 'resumo') return 'Fechamento Mensal';
+    if (currentScreen === 'mapa_estudantes') return 'Mapa de Trajetos & KM';
     if (currentScreen === 'planilha') return 'Sincronização Nuvem';
     if (currentScreen === 'usuarios_acesso') return 'Professores & Acessos';
     return 'Lista Piloto 2027';
@@ -267,6 +269,18 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 Resumo Mensal
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChangeScreen('mapa_estudantes')}
+                className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                  currentScreen === 'mapa_estudantes'
+                    ? 'bg-[#0071e3] text-white font-semibold shadow-2xs'
+                    : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                }`}
+              >
+                Mapa de Trajetos
               </button>
 
               {isAdmin && (

@@ -175,6 +175,12 @@ export const evaluateAttendanceLaunchWindow = (
   statusDescription: string;
   currentDateFormatted: string;
   windowRuleDescription: string;
+  windowPhase: 'pre_window' | 'closing_soon' | 'last_day' | 'next_month_closing' | 'override_open';
+  closingDateFormatted: string;
+  daysRemaining: number;
+  urgencyLevel: 'info' | 'warning' | 'urgent';
+  targetMonthName: string;
+  nextWindowOpenDateFormatted: string;
 } => {
   const dateObj = config.simulatedDateISO
     ? new Date(`${config.simulatedDateISO}T12:00:00`)
@@ -184,6 +190,12 @@ export const evaluateAttendanceLaunchWindow = (
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth(); // 0..11
   const dayOfMonth = dateObj.getDate();
+
+  const MONTH_NAMES_PT = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  const targetMonthName = MONTH_NAMES_PT[month] || 'Mês Atual';
 
   // Compute all weekday school days (Mon-Fri) in this month
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -195,6 +207,24 @@ export const evaluateAttendanceLaunchWindow = (
       schoolDaysInMonth.push(d);
     }
   }
+
+  // Next month's first two school days
+  const nextMonthYear = month === 11 ? year + 1 : year;
+  const nextMonthIndex = (month + 1) % 12;
+  const daysInNextMonth = new Date(nextMonthYear, nextMonthIndex + 1, 0).getDate();
+  const nextMonthSchoolDays: number[] = [];
+  for (let d = 1; d <= daysInNextMonth; d++) {
+    const dt = new Date(nextMonthYear, nextMonthIndex, d);
+    const dow = dt.getDay();
+    if (dow >= 1 && dow <= 5) {
+      nextMonthSchoolDays.push(d);
+    }
+  }
+
+  const firstTwoSchoolDaysNextMonth = nextMonthSchoolDays.slice(0, 2);
+  const secondSchoolDayNextMonth = firstTwoSchoolDaysNextMonth[1] || 2;
+  const finalDeadlineDate = new Date(nextMonthYear, nextMonthIndex, secondSchoolDayNextMonth);
+  const closingDateFormatted = finalDeadlineDate.toLocaleDateString('pt-BR');
 
   const firstTwoSchoolDays = schoolDaysInMonth.slice(0, 2);
   const lastSchoolDay =
@@ -210,17 +240,43 @@ export const evaluateAttendanceLaunchWindow = (
   const isAllowedToLaunch =
     isWithinCalendarWindow || config.exceptionalOverrideOpen;
 
+  // Next window open date (last school day of current month)
+  const nextOpenDate = new Date(year, month, lastSchoolDay);
+  const nextWindowOpenDateFormatted = nextOpenDate.toLocaleDateString('pt-BR');
+
+  let windowPhase: 'pre_window' | 'closing_soon' | 'last_day' | 'next_month_closing' | 'override_open' = 'pre_window';
+  let urgencyLevel: 'info' | 'warning' | 'urgent' = 'info';
+  let daysRemaining = 0;
   let reasonLabel = '';
-  if (isLastSchoolDayOfMonth) {
-    reasonLabel = `Aberto Automaticamente: Último Dia Letivo do Mês (${currentDateFormatted})`;
+
+  if (config.exceptionalOverrideOpen) {
+    windowPhase = 'override_open';
+    urgencyLevel = 'info';
+    daysRemaining = 1;
+    reasonLabel = 'Aberto Excepcionalmente pela Gestão na aba Acessos';
   } else if (isFirstTwoSchoolDaysOfNextMonth) {
-    reasonLabel = `Aberto Automaticamente: 2 Primeiros Dias Letivos do Mês (${currentDateFormatted})`;
-  } else if (config.exceptionalOverrideOpen) {
-    reasonLabel = `Aberto Excepcionalmente pela Direção na Aba Acessos`;
+    windowPhase = 'next_month_closing';
+    const isVeryLastDay = dayOfMonth === firstTwoSchoolDays[1];
+    daysRemaining = isVeryLastDay ? 0 : 1;
+    urgencyLevel = isVeryLastDay ? 'urgent' : 'warning';
+    reasonLabel = isVeryLastDay
+      ? `ÚLTIMO DIA: Encerramento do fechamento de ${MONTH_NAMES_PT[(month + 11) % 12]} hoje!`
+      : `Janela aberta: 1º dia letivo do mês. Prazo final encerra amanhã (dia ${String(secondSchoolDayNextMonth).padStart(2, '0')}).`;
+  } else if (isLastSchoolDayOfMonth) {
+    windowPhase = 'last_day';
+    daysRemaining = 2; // last school day + 2 next month days
+    urgencyLevel = 'warning';
+    reasonLabel = `Aberto Hoje (${currentDateFormatted}): Último Dia Letivo do Mês de ${targetMonthName}`;
+  } else if (dayOfMonth >= lastSchoolDay - 3 && dayOfMonth < lastSchoolDay) {
+    windowPhase = 'closing_soon';
+    daysRemaining = lastSchoolDay - dayOfMonth;
+    urgencyLevel = 'warning';
+    reasonLabel = `Atenção: Faltam ${daysRemaining} dia(s) para o fechamento de ${targetMonthName} (abre em ${nextWindowOpenDateFormatted})`;
   } else {
-    reasonLabel = `Fechado Hoje (${currentDateFormatted}) — Abre no último dia letivo (dia ${String(
-      lastSchoolDay
-    ).padStart(2, '0')}) e nos 2 primeiros dias letivos do próximo mês`;
+    windowPhase = 'pre_window';
+    daysRemaining = Math.max(1, lastSchoolDay - dayOfMonth);
+    urgencyLevel = 'info';
+    reasonLabel = `Fechado Hoje (${currentDateFormatted}) — Abre no último dia letivo (${nextWindowOpenDateFormatted}) e nos 2 primeiros dias letivos do próximo mês (${closingDateFormatted})`;
   }
 
   return {
@@ -234,6 +290,12 @@ export const evaluateAttendanceLaunchWindow = (
     currentDateFormatted,
     windowRuleDescription:
       'Liberado apenas no último dia letivo do mês e nos 2 primeiros dias letivos do mês seguinte (ou abertura excepcional na aba Acessos).',
+    windowPhase,
+    closingDateFormatted,
+    daysRemaining,
+    urgencyLevel,
+    targetMonthName,
+    nextWindowOpenDateFormatted,
   };
 };
 

@@ -78,6 +78,7 @@ export interface ConsecutiveAbsenceOccurrence {
   familyFeedback?: string;
   feedbackUpdatedAt?: string;
   feedbackReadByTeacher?: boolean;
+  monthLabel?: string;
 }
 
 export interface ConsecutiveAbsenceAlert {
@@ -333,5 +334,6 @@ export type ScreenType =
   | 'bolsa_familia'
   | 'dias_letivos'
   | 'resumo'
+  | 'mapa_estudantes'
   | 'planilha'
   | 'usuarios_acesso';

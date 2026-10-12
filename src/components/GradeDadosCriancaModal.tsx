@@ -6,7 +6,10 @@ import {
   getStudentGenderLabel,
   resolveGuardianRelationshipInfo,
 } from '../utils/genderDictionary';
-import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
+import {
+  getStudentCumulativeOccurrences,
+  triggerConsecutiveAbsencePushNotification,
+} from '../services/pushNotificationService';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import {
   findPhotoInDiscoveredCache,
@@ -28,6 +31,7 @@ interface GradeDadosCriancaModalProps {
   onSaveStudent: (updatedStudent: Student) => void;
   onOpenPhotoModal?: (student: Student) => void;
   onOpenStudentPdf?: (student: Student) => void;
+  onNavigateToConsecutiveAbsences?: () => void;
 }
 
 type GridCategory = 'todos' | 'escolar' | 'pessoal' | 'familia' | 'endereco';
@@ -59,60 +63,60 @@ function isConsecutiveDaysBadgeLabel(
 
 const SED_GRID_FIELDS: SedFieldDef[] = [
   // Escolar & Matrícula
-  { key: 'tipoEnsino', label: '1. TIPO DE ENSINO', category: 'escolar', placeholder: 'EDUCACAO INFANTIL / ENSINO FUNDAMENTAL' },
-  { key: 'serie', label: '2. SÉRIE', category: 'escolar', placeholder: '1, 2, 3, 4, 5' },
-  { key: 'numeroChamada', label: '3. Nº CHAMADA', category: 'escolar', placeholder: '1' },
-  { key: 'estudante', label: '4. ESTUDANTE (NOME OFICIAL)', category: 'escolar' },
-  { key: 'ra', label: '5. RA (REGISTRO DO ESTUDANTE)', category: 'escolar' },
-  { key: 'digRa', label: '6. DIG. RA', category: 'escolar' },
-  { key: 'ufRa', label: '7. UF RA', category: 'escolar', placeholder: 'SP' },
-  { key: 'tipoAlocacao', label: '9. TIPO ALOCAÇÃO', category: 'escolar', placeholder: 'REGULAR' },
-  { key: 'situacao', label: '10. SITUAÇÃO MATRÍCULA', category: 'escolar', placeholder: 'ATIVO / BXTR' },
-  { key: 'dataMovimentacao', label: '11. DATA MOVIMENTAÇÃO (SAÍDA)', category: 'escolar', placeholder: 'DD/MM/AAAA' },
-  { key: 'categoriaProfissionalCenso', label: '12. CATEGORIA PROFISSIONAL CENSO', category: 'escolar' },
-  { key: 'posDataCenso', label: '14. PÓS DATA CENSO', category: 'escolar', placeholder: 'NÃO / SIM' },
-  { key: 'turma', label: '15. TURMA', category: 'escolar' },
-  { key: 'periodo', label: '16. PERÍODO', category: 'escolar', placeholder: 'MANHÃ / TARDE' },
-  { key: 'dataMatriculaSed', label: '17. DATA DE MATRÍCULA (SED)', category: 'escolar', placeholder: 'DD/MM/AAAA' },
-  { key: 'procedenciaEscolar', label: '18. PROCEDÊNCIA ESCOLAR', category: 'escolar' },
-  { key: 'irmaos', label: '19. IRMÃOS NA ESCOLA', category: 'escolar' },
-  { key: 'arquivo', label: '21. ARQUIVO PASSIVO / PASTA', category: 'escolar' },
-  { key: 'sucessaoEscolar', label: '48. SUCESSÃO ESCOLAR', category: 'escolar' },
+  { key: 'tipoEnsino', label: '1. Etapa de Ensino', category: 'escolar', placeholder: 'Educação Infantil / Ensino Fundamental' },
+  { key: 'serie', label: '2. Série / Ano Escolar', category: 'escolar', placeholder: '1, 2, 3, 4, 5' },
+  { key: 'numeroChamada', label: '3. Número de Chamada', category: 'escolar', placeholder: '1' },
+  { key: 'estudante', label: '4. Nome Oficial do(a) Estudante', category: 'escolar' },
+  { key: 'ra', label: '5. Registro do Estudante (RA)', category: 'escolar' },
+  { key: 'digRa', label: '6. Dígito do RA', category: 'escolar' },
+  { key: 'ufRa', label: '7. Estado Emissor do RA (UF)', category: 'escolar', placeholder: 'SP' },
+  { key: 'tipoAlocacao', label: '9. Tipo de Alocação na Turma', category: 'escolar', placeholder: 'REGULAR' },
+  { key: 'situacao', label: '10. Situação da Matrícula (Ativo / Transferido)', category: 'escolar', placeholder: 'ATIVO / TRANSFERIDO (BXTR)' },
+  { key: 'dataMovimentacao', label: '11. Data de Transferência ou Saída', category: 'escolar', placeholder: 'DD/MM/AAAA' },
+  { key: 'categoriaProfissionalCenso', label: '12. Categoria Profissional (Censo Escolar)', category: 'escolar' },
+  { key: 'posDataCenso', label: '14. Matrícula Após o Censo Escolar', category: 'escolar', placeholder: 'NÃO / SIM' },
+  { key: 'turma', label: '15. Turma Oficial', category: 'escolar' },
+  { key: 'periodo', label: '16. Turno (Manhã / Tarde)', category: 'escolar', placeholder: 'MANHÃ / TARDE' },
+  { key: 'dataMatriculaSed', label: '17. Data de Matrícula na SED', category: 'escolar', placeholder: 'DD/MM/AAAA' },
+  { key: 'procedenciaEscolar', label: '18. Escola de Origem (Procedência)', category: 'escolar' },
+  { key: 'irmaos', label: '19. Irmãos Matriculados na Escola', category: 'escolar' },
+  { key: 'arquivo', label: '21. Número da Pasta / Arquivo Passivo', category: 'escolar' },
+  { key: 'sucessaoEscolar', label: '48. Sucessão Escolar (Próxima Etapa)', category: 'escolar' },
 
   // Pessoal & Saúde
-  { key: 'dataNascimento', label: '8. DATA DE NASCIMENTO', category: 'pessoal', placeholder: 'DD/MM/AAAA' },
-  { key: 'deficiencia', label: '13. DEFICIÊNCIA / AEE', category: 'pessoal', placeholder: 'Ex: AUTISTA INFANTIL' },
-  { key: 'idade', label: '20. IDADE', category: 'pessoal' },
-  { key: 'nomeSocial', label: '24. NOME SOCIAL', category: 'pessoal' },
-  { key: 'genero', label: '25. GÊNERO', category: 'pessoal', placeholder: 'FEMININO / MASCULINO' },
-  { key: 'tipoSanguineo', label: '26. TIPO SANGUÍNEO', category: 'pessoal', placeholder: 'O+, A+, B+, AB+...' },
-  { key: 'racaCor', label: '27. RAÇA/COR', category: 'pessoal', placeholder: 'BRANCA, PARDA, PRETA...' },
-  { key: 'nacionalidade', label: '28. NACIONALIDADE', category: 'pessoal', placeholder: 'BRASILEIRA' },
-  { key: 'paisOrigem', label: '29. PAÍS DE ORIGEM', category: 'pessoal', placeholder: 'BRASIL' },
-  { key: 'municipioNascimento', label: '30. MUNICÍPIO DE NASCIMENTO', category: 'pessoal', placeholder: 'JUNDIAI - SP' },
-  { key: 'cpf', label: '31. CPF', category: 'pessoal', placeholder: '000.000.000-00' },
-  { key: 'rg', label: '32. RG', category: 'pessoal' },
-  { key: 'dataEmissaoRg', label: '33. DATA EMISSÃO RG', category: 'pessoal' },
-  { key: 'cartaoSus', label: '34. CARTÃO SUS (CNS)', category: 'pessoal' },
-  { key: 'nis', label: '35. NIS (AUXÍLIO / BOLSA)', category: 'pessoal' },
+  { key: 'dataNascimento', label: '8. Data de Nascimento', category: 'pessoal', placeholder: 'DD/MM/AAAA' },
+  { key: 'deficiencia', label: '13. Educação Especial / Deficiência (AEE)', category: 'pessoal', placeholder: 'Ex: Transtorno do Espectro Autista' },
+  { key: 'idade', label: '20. Idade Atual', category: 'pessoal' },
+  { key: 'nomeSocial', label: '24. Nome Social', category: 'pessoal' },
+  { key: 'genero', label: '25. Gênero (Feminino / Masculino)', category: 'pessoal', placeholder: 'FEMININO / MASCULINO' },
+  { key: 'tipoSanguineo', label: '26. Tipo Sanguíneo e Fator RH', category: 'pessoal', placeholder: 'O+, A+, B+, AB+...' },
+  { key: 'racaCor', label: '27. Raça / Cor Declarada', category: 'pessoal', placeholder: 'BRANCA, PARDA, PRETA...' },
+  { key: 'nacionalidade', label: '28. Nacionalidade', category: 'pessoal', placeholder: 'BRASILEIRA' },
+  { key: 'paisOrigem', label: '29. País de Origem', category: 'pessoal', placeholder: 'BRASIL' },
+  { key: 'municipioNascimento', label: '30. Cidade de Nascimento', category: 'pessoal', placeholder: 'JUNDIAI - SP' },
+  { key: 'cpf', label: '31. Número do CPF', category: 'pessoal', placeholder: '000.000.000-00' },
+  { key: 'rg', label: '32. Número do RG (Identidade)', category: 'pessoal' },
+  { key: 'dataEmissaoRg', label: '33. Data de Emissão do RG', category: 'pessoal' },
+  { key: 'cartaoSus', label: '34. Cartão Nacional de Saúde (SUS)', category: 'pessoal' },
+  { key: 'nis', label: '35. Número de Identificação Social (NIS / Bolsa Família)', category: 'pessoal' },
 
   // Família & Contatos
-  { key: 'filiacao1', label: '22. FILIAÇÃO 1 (MÃE / RESP.)', category: 'familia' },
-  { key: 'filiacao2', label: '23. FILIAÇÃO 2 (PAI / RESP.)', category: 'familia' },
-  { key: 'telefones', label: '43. TELEFONES DE CONTATO', category: 'familia', placeholder: '(11) 90000-0000' },
-  { key: 'emailGoogle', label: '44. E-MAIL GOOGLE', category: 'familia' },
-  { key: 'emailMicrosoft', label: '45. E-MAIL MICROSOFT', category: 'familia' },
-  { key: 'emailMunicipal', label: '46. E-MAIL MUNICIPAL (ESTUDANTE)', category: 'familia' },
+  { key: 'filiacao1', label: '22. Filiação 1 (Mãe / Pai / Avó / Tia / Responsável)', category: 'familia' },
+  { key: 'filiacao2', label: '23. Filiação 2 (Pai / Mãe / Avô / Tio / Responsável)', category: 'familia' },
+  { key: 'telefones', label: '43. Telefones e WhatsApp da Família', category: 'familia', placeholder: '(11) 90000-0000' },
+  { key: 'emailGoogle', label: '44. E-mail Educacional Google', category: 'familia' },
+  { key: 'emailMicrosoft', label: '45. E-mail Educacional Microsoft', category: 'familia' },
+  { key: 'emailMunicipal', label: '46. E-mail Institucional do(a) Estudante', category: 'familia' },
 
   // Endereço & Transporte
-  { key: 'cep', label: '36. CEP', category: 'endereco', placeholder: '13.214-000' },
-  { key: 'logradouro', label: '37. LOGRADOURO (RUA / AV.)', category: 'endereco' },
-  { key: 'numeroResidencia', label: '38. N. RESIDÊNCIA', category: 'endereco' },
-  { key: 'complemento', label: '39. COMPLEMENTO', category: 'endereco' },
-  { key: 'bairro', label: '40. BAIRRO', category: 'endereco' },
-  { key: 'cidade', label: '41. CIDADE', category: 'endereco', placeholder: 'JUNDIAI' },
-  { key: 'uf', label: '42. UF', category: 'endereco', placeholder: 'SP' },
-  { key: 'rotaOnibus', label: '47. ROTA DE ÔNIBUS ESCOLAR', category: 'endereco', placeholder: 'Ex: ROTA 04 - JARDIM BÚFALO' },
+  { key: 'cep', label: '36. Código Postal (CEP)', category: 'endereco', placeholder: '13.214-000' },
+  { key: 'logradouro', label: '37. Endereço (Rua / Avenida)', category: 'endereco' },
+  { key: 'numeroResidencia', label: '38. Número da Residência', category: 'endereco' },
+  { key: 'complemento', label: '39. Complemento (Casa / Bloco / Apto)', category: 'endereco' },
+  { key: 'bairro', label: '40. Bairro', category: 'endereco' },
+  { key: 'cidade', label: '41. Cidade', category: 'endereco', placeholder: 'JUNDIAI' },
+  { key: 'uf', label: '42. Estado (UF)', category: 'endereco', placeholder: 'SP' },
+  { key: 'rotaOnibus', label: '47. Transporte Escolar / Rota de Ônibus', category: 'endereco', placeholder: 'Ex: ROTA 04 - JARDIM BÚFALO' },
 ];
 
 export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
@@ -128,12 +132,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   onSaveStudent,
   onOpenPhotoModal,
   onOpenStudentPdf,
+  onNavigateToConsecutiveAbsences,
 }) => {
   const [draft, setDraft] = useState<Student | null>(student);
   const [activeCategory, setActiveCategory] = useState<GridCategory>('todos');
   const [searchField, setSearchField] = useState('');
   const [editingKey, setEditingKey] = useState<keyof Student | null>(null);
   const [savedBanner, setSavedBanner] = useState(false);
+  const [pushAlertSent, setPushAlertSent] = useState(false);
   const [showAllSedFields, setShowAllSedFields] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [portraitFallbackIdx, setPortraitFallbackIdx] = useState(0);
@@ -338,7 +344,67 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   const totalUniqueConsecutiveDaysYear = Array.from(
     new Set(cumulativeOccurrences.flatMap((o) => o.selectedDates))
   ).length;
-  const isConsecutiveRisk = currentConsecutiveDaysCount >= 3;
+
+  const effectiveConsecutiveDays = Math.max(
+    currentConsecutiveDaysCount,
+    draft.consecutiveAbsenceAlert?.active
+      ? Math.max(3, draft.consecutiveAbsenceAlert.selectedDates?.length || 0)
+      : (draft.totalAbsencesMonth || 0) >= 3 && (draft.justifiedAbsences || 0) === 0
+      ? draft.totalAbsencesMonth || 0
+      : 0
+  );
+  const isConsecutiveRisk = effectiveConsecutiveDays >= 3;
+  const exceedsThreeConsecutive = effectiveConsecutiveDays >= 3;
+
+  const datesList =
+    latestConsecutiveOccurrence?.selectedDates && latestConsecutiveOccurrence.selectedDates.length > 0
+      ? latestConsecutiveOccurrence.selectedDates.join(', ')
+      : draft.consecutiveAbsenceAlert?.selectedDates && draft.consecutiveAbsenceAlert.selectedDates.length > 0
+      ? draft.consecutiveAbsenceAlert.selectedDates.join(', ')
+      : 'Datas registradas no lançamento mensal';
+
+  const guardian1Info = resolveGuardianRelationshipInfo(
+    draft.filiacao1 || draft.guardianName,
+    'filiacao1',
+    draft.notes
+  );
+
+  const hasFamilyFeedback = Boolean(
+    latestConsecutiveOccurrence?.familyFeedback?.trim() ||
+      draft.consecutiveAbsenceAlert?.familyFeedback?.trim()
+  );
+  const familyFeedbackText =
+    latestConsecutiveOccurrence?.familyFeedback?.trim() ||
+    draft.consecutiveAbsenceAlert?.familyFeedback?.trim() ||
+    '';
+
+  const buscaAtivaMessage = `Olá${
+    guardian1Info.nomeLimpo ? ` ${guardian1Info.nomeLimpo}` : ''
+  }! Somos da equipe pedagógica da EMEB Prof. Joaquim Candelário de Freitas. Notamos a ausência do(a) estudante ${draft.name} nas últimas aulas (${effectiveConsecutiveDays} faltas seguidas). Gostaríamos de conversar para saber se está tudo bem com a família e como a escola pode apoiar o retorno seguro aos estudos. Aguardamos seu contato!`;
+
+  const buscaAtivaWaLinks = buildWhatsAppLinksFromPhoneString(
+    draft.telefones || draft.guardianPhone,
+    draft.name,
+    buscaAtivaMessage
+  );
+
+  const primaryPhoneDigits = (draft.telefones || draft.guardianPhone || '').replace(/\D/g, '');
+
+  const handleSendPushAlert = async () => {
+    if (!draft) return;
+    try {
+      await triggerConsecutiveAbsencePushNotification(
+        draft,
+        className,
+        effectiveConsecutiveDays,
+        `Contato imediato de Busca Ativa sugerido com ${guardian1Info.parentesco} (${guardian1Info.nomeLimpo || draft.guardianName || 'Responsável'})`
+      );
+      setPushAlertSent(true);
+      setTimeout(() => setPushAlertSent(false), 4500);
+    } catch {
+      // ignore
+    }
+  };
 
   const handleFieldChange = (key: keyof Student, value: string) => {
     if (!canEdit) return;
@@ -485,6 +551,132 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
         {/* Main Organic & Visual Profile Layout */}
         <div className="overflow-y-auto flex-1 p-5 sm:p-7 space-y-6">
+          {/* BANNER DE ALERTA NO TOPO DA GRADE DE DADOS — EXCEDEU 3 FALTAS CONSECUTIVAS */}
+          {exceedsThreeConsecutive && (
+            <div className="rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-[#fff7ed] via-[#fff1f2] to-[#fef2f2] border-2 border-[#ea580c]/50 shadow-md flex flex-col gap-3.5 animate-gentle-fade">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#ea580c] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                    <span className="material-symbols-outlined text-[22px]">notification_important</span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#ea580c] text-white text-[0.66rem] font-black uppercase tracking-wider">
+                        ⚠️ ALERTA DE FREQUÊNCIA · EXCEDEU 3 FALTAS CONSECUTIVAS
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-white/90 border border-[#ea580c]/30 font-mono font-black text-[0.72rem] text-[#c2410c] tabular-nums">
+                        {effectiveConsecutiveDays} DIAS SEGUIDOS
+                      </span>
+                    </div>
+                    <h2 className="text-[1.05rem] sm:text-[1.18rem] font-black text-[#1d1d1f] tracking-tight leading-snug mt-1">
+                      Ação Sugerida: Contato de Busca Ativa com a Família
+                    </h2>
+                    <p className="text-[0.78rem] sm:text-[0.82rem] text-[#431407] font-medium leading-relaxed mt-0.5">
+                      O(A) estudante acumulou <strong className="font-extrabold">{effectiveConsecutiveDays} faltas consecutivas</strong> sem justificativa legal. Pelo protocolo de Busca Ativa da SME Jundiaí, é prioritário o acolhimento imediato com os responsáveis para averiguar motivos e restabelecer o vínculo escolar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informações Resumidas do Contato */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[0.75rem]">
+                <div className="bg-white/80 rounded-xl p-2.5 border border-[#ea580c]/15">
+                  <span className="text-[0.65rem] font-bold uppercase text-[#86868b] block">Datas de Ausência</span>
+                  <span className="font-mono font-bold text-[#1d1d1f] block mt-0.5 truncate" title={datesList}>
+                    {datesList}
+                  </span>
+                </div>
+                <div className="bg-white/80 rounded-xl p-2.5 border border-[#ea580c]/15">
+                  <span className="text-[0.65rem] font-bold uppercase text-[#86868b] block">Responsável Principal</span>
+                  <span className="font-bold text-[#1d1d1f] block mt-0.5 truncate" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
+                    {guardian1Info.parentesco}: {guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}
+                  </span>
+                </div>
+                <div className="bg-white/80 rounded-xl p-2.5 border border-[#ea580c]/15">
+                  <span className="text-[0.65rem] font-bold uppercase text-[#86868b] block">Status do Acompanhamento</span>
+                  <span className={`font-bold block mt-0.5 truncate ${hasFamilyFeedback ? 'text-[#005035]' : 'text-[#ea580c]'}`}>
+                    {hasFamilyFeedback ? `Feedback: "${familyFeedbackText}"` : 'Pendente de contato'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra de Ações Rápidas de Busca Ativa */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#ea580c]/20">
+                {buscaAtivaWaLinks.length > 0 ? (
+                  buscaAtivaWaLinks.map((link, idx) => (
+                    <a
+                      key={`wa-btn-${idx}`}
+                      href={link.waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#005035] hover:bg-[#003d29] text-white font-extrabold text-[0.78rem] flex items-center justify-center gap-1.5 shadow-2xs transition-all hover:scale-[1.01] cursor-pointer"
+                      title={`Abrir WhatsApp com mensagem preenchida de Busca Ativa para ${link.display}`}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">chat</span>
+                      <span>Contato de Busca Ativa ({link.display})</span>
+                    </a>
+                  ))
+                ) : (
+                  <span className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#6e6e73] text-white font-bold text-[0.78rem] flex items-center gap-1.5 opacity-80">
+                    <span className="material-symbols-outlined text-[17px]">chat</span>
+                    <span>Sem Telefone Cadastrado</span>
+                  </span>
+                )}
+
+                {primaryPhoneDigits && (
+                  <a
+                    href={`tel:${primaryPhoneDigits}`}
+                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#f5f5f7] border border-black/10 text-[#1d1d1f] font-bold text-[0.76rem] flex items-center justify-center gap-1 transition-all cursor-pointer"
+                    title="Realizar ligação telefônica para o responsável"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-[#005035]">call</span>
+                    <span>Ligar</span>
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSendPushAlert}
+                  className={`min-h-[38px] px-3.5 py-1.5 rounded-xl font-bold text-[0.76rem] flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                    pushAlertSent
+                      ? 'bg-[#eaf6ef] text-[#005035] border-[#005035]/30'
+                      : 'bg-white hover:bg-[#f5f5f7] text-[#c2410c] border-[#ea580c]/30'
+                  }`}
+                  title="Disparar notificação push imediata para a equipe escolar e coordenação"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {pushAlertSent ? 'check_circle' : 'notifications_active'}
+                  </span>
+                  <span>
+                    {pushAlertSent
+                      ? '✓ Notificação Push Enviada à Equipe!'
+                      : 'Disparar Notificação Push'}
+                  </span>
+                </button>
+
+                {onNavigateToConsecutiveAbsences && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onNavigateToConsecutiveAbsences();
+                    }}
+                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#f5f5f7] border border-black/10 text-[#1d1d1f] font-bold text-[0.76rem] flex items-center justify-center gap-1 transition-all cursor-pointer ml-auto"
+                    title="Ir para a aba de Faltas Seguidas para registrar ocorrência ou feedback oficial"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-[#003440]">
+                      history_edu
+                    </span>
+                    <span>Ficha de Faltas Seguidas</span>
+                    <span className="material-symbols-outlined text-[15px] text-[#8e8e93]">
+                      arrow_forward
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
             {/* COLUNA ESQUERDA (5 cols): RETRATO GIGANTE DO ESTUDANTE */}
             <div className="md:col-span-5 flex flex-col">
@@ -637,14 +829,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                   <div className="rounded-2xl bg-[#f5f5f7] p-3">
                     <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#86868b] block">
-                      Frequência Mês
+                      Frequência no Mês
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-[0.98rem] sm:text-[1.05rem] font-extrabold text-[#005035] tabular-nums">
                         {metrics.frequenciaPercent}%
                       </span>
                       <span className="text-[0.7rem] font-semibold text-[#6e6e73] tabular-nums">
-                        ({metrics.faltas}f)
+                        ({metrics.faltas} {metrics.faltas === 1 ? 'falta' : 'faltas'})
                       </span>
                     </div>
                   </div>
@@ -689,7 +881,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                             : 'text-[#1d1d1f]'
                         }`}
                       >
-                        {currentConsecutiveDaysCount}d
+                        {currentConsecutiveDaysCount} {currentConsecutiveDaysCount === 1 ? 'dia' : 'dias'}
                       </span>
                       <span className="text-[0.68rem] font-semibold text-[#6e6e73] tabular-nums truncate">
                         {currentConsecutiveDaysCount >= 10
@@ -698,7 +890,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           ? 'alerta 5+d'
                           : isConsecutiveRisk
                           ? 'atenção 3+d'
-                          : 'sem risco'}
+                          : 'em dia'}
                       </span>
                     </div>
                   </div>

@@ -18,6 +18,7 @@ export interface ConsecutiveAlertInfo {
   badgeTextClass: string;
   badgeBorderClass: string;
   iconName: string;
+  icon: string;
 }
 
 /**
@@ -85,6 +86,7 @@ export const getStudentConsecutiveAlertInfo = (student: Student): ConsecutiveAle
       badgeTextClass: 'text-white',
       badgeBorderClass: 'border-[#881337]',
       iconName: 'crisis_alert',
+      icon: 'crisis_alert',
     };
   }
 
@@ -105,6 +107,7 @@ export const getStudentConsecutiveAlertInfo = (student: Student): ConsecutiveAle
       badgeTextClass: 'text-white',
       badgeBorderClass: 'border-[#c2410c]',
       iconName: 'notification_important',
+      icon: 'notification_important',
     };
   }
 
@@ -125,6 +128,7 @@ export const getStudentConsecutiveAlertInfo = (student: Student): ConsecutiveAle
       badgeTextClass: 'text-[#451a03]',
       badgeBorderClass: 'border-[#d97706]',
       iconName: 'warning',
+      icon: 'warning',
     };
   }
 
@@ -144,6 +148,7 @@ export const getStudentConsecutiveAlertInfo = (student: Student): ConsecutiveAle
     badgeTextClass: 'text-[#71787b]',
     badgeBorderClass: 'border-[#c0c8cb]',
     iconName: 'check_circle',
+    icon: 'check_circle',
   };
 };
 

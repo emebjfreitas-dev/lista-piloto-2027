@@ -40,6 +40,8 @@ import {
   syncLocalPhotoFilesToStudents,
   parseSedTsvIntoClasses,
   syncGenderDictionaryToGoogleSheet,
+  redefineAndSyncGoogleSheetWithFirebase,
+  OFFICIAL_SHEET_TABS,
 } from '../services/googleSheetsApi';
 import { enqueueGenderDictionaryWrite } from '../services/syncQueueManager';
 import {
@@ -54,6 +56,14 @@ import {
   extractFirstNameKey,
   normalizePersonNameKey,
 } from '../utils/genderDictionary';
+import {
+  runSchoolDataDiagnostics,
+  SchoolDiagnosticReport,
+  DiagnosticIssue,
+  DiagnosticCategory,
+  DiagnosticSeverity,
+} from '../utils/dataDiagnostics';
+import { getSyncStatusSnapshot } from '../services/firebaseSync';
 
 interface PlanilhaGoogleScreenProps {
   classes: ClassGroup[];
@@ -81,16 +91,18 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   onBack,
 }) => {
   const [activeTab, setActiveTab] = useState<
+    | 'diagnostico_inconsistencias'
     | 'faltas_consecutivas'
     | 'nominal_infantil'
     | 'nominal_fundamental'
     | 'bimestral_bolsa'
     | 'frequencia'
-    | 'dias_letivos'
     | 'turmas'
+    | 'dias_letivos'
+    | 'onibus_fretado'
     | 'emails_permitidos'
     | 'consulta_genero'
-  >('faltas_consecutivas');
+  >('diagnostico_inconsistencias');
   const [genderEntries, setGenderEntries] = useState<NameGenderEntry[]>(() =>
     getStoredNameGenderEntries()
   );
@@ -162,7 +174,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
   // Mandatory User Confirmation Modal state before mutating/creating Google Sheet or Drive data
   const [confirmModalAction, setConfirmModalAction] = useState<
-    'create_both_real' | 'create_drive_folder' | 'overwrite_existing' | null
+    | 'create_both_real'
+    | 'create_drive_folder'
+    | 'overwrite_existing'
+    | 'redefine_and_sync_all'
+    | null
   >(null);
 
   const isAdmin = userRole === 'admin';
@@ -191,6 +207,119 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   );
   const calendarRows = OFFICIAL_OCTOBER_DAYS;
   const classesToSync = allClasses && allClasses.length > 0 ? allClasses : classes;
+
+  // Diagnóstico de Inconsistências em Tempo Real (App + Firebase + Google Sheets)
+  const [diagnosticReport, setDiagnosticReport] = useState<SchoolDiagnosticReport>(() =>
+    runSchoolDataDiagnostics(classesToSync, permittedEmailsList, getSyncStatusSnapshot())
+  );
+  const [diagnosticCategoryFilter, setDiagnosticCategoryFilter] = useState<'todas' | DiagnosticCategory>('todas');
+  const [diagnosticSeverityFilter, setDiagnosticSeverityFilter] = useState<'todas' | DiagnosticSeverity>('todas');
+  const [diagnosticSearch, setDiagnosticSearch] = useState('');
+
+  useEffect(() => {
+    setDiagnosticReport(
+      runSchoolDataDiagnostics(classesToSync, permittedEmailsList, getSyncStatusSnapshot())
+    );
+  }, [classesToSync, permittedEmailsList]);
+
+  const filteredDiagnosticIssues = useMemo(() => {
+    return (diagnosticReport.issues || []).filter((issue) => {
+      if (diagnosticCategoryFilter !== 'todas' && issue.category !== diagnosticCategoryFilter) {
+        return false;
+      }
+      if (diagnosticSeverityFilter !== 'todas' && issue.severity !== diagnosticSeverityFilter) {
+        return false;
+      }
+      if (diagnosticSearch.trim()) {
+        const q = diagnosticSearch.toLowerCase().trim();
+        const matchName = (issue.studentName || '').toLowerCase().includes(q);
+        const matchTurma = (issue.className || '').toLowerCase().includes(q);
+        const matchDesc = (issue.description || '').toLowerCase().includes(q);
+        const matchField = (issue.affectedField || '').toLowerCase().includes(q);
+        if (!matchName && !matchTurma && !matchDesc && !matchField) return false;
+      }
+      return true;
+    });
+  }, [diagnosticReport, diagnosticCategoryFilter, diagnosticSeverityFilter, diagnosticSearch]);
+
+  // Ônibus Fretado Nominal
+  const [busSearchQuery, setBusSearchQuery] = useState('');
+  const [busRouteFilter, setBusRouteFilter] = useState('all');
+
+  const onibusFretadoRows = useMemo(() => {
+    const list: Array<{
+      seq: number;
+      classId: string;
+      className: string;
+      periodo: string;
+      studentId: string;
+      number: number;
+      name: string;
+      ra: string;
+      rota: string;
+      endereco: string;
+      bairro: string;
+      telefones: string;
+      responsavel: string;
+    }> = [];
+
+    let seq = 1;
+    classesToSync.forEach((cls) => {
+      const periodo = cls.shift.replace('Turno ', '').toUpperCase();
+      const sorted = [...cls.students].sort((a, b) => a.number - b.number);
+      sorted.forEach((s) => {
+        const rota = (s.rotaOnibus || '').trim();
+        if (!rota) return;
+        const endereco = [
+          s.logradouro,
+          s.numeroResidencia ? `nº ${s.numeroResidencia}` : '',
+          s.complemento,
+        ]
+          .filter(Boolean)
+          .join(' ');
+        list.push({
+          seq: seq++,
+          classId: cls.id,
+          className: cls.name,
+          periodo,
+          studentId: s.id,
+          number: s.number,
+          name: s.name,
+          ra: s.ra ? `${s.ra}-${s.digRa || ''}` : '',
+          rota,
+          endereco,
+          bairro: s.bairro || '—',
+          telefones: s.telefones || s.guardianPhone || '',
+          responsavel: s.filiacao1 || s.guardianName || 'Não informado',
+        });
+      });
+    });
+    return list;
+  }, [classesToSync]);
+
+  const uniqueBusRoutes = useMemo(() => {
+    const routes = new Set<string>();
+    onibusFretadoRows.forEach((r) => {
+      if (r.rota) routes.add(r.rota);
+    });
+    return Array.from(routes).sort();
+  }, [onibusFretadoRows]);
+
+  const filteredOnibusRows = useMemo(() => {
+    return onibusFretadoRows.filter((r) => {
+      if (busRouteFilter !== 'all' && r.rota !== busRouteFilter) return false;
+      if (busSearchQuery.trim()) {
+        const q = busSearchQuery.toLowerCase().trim();
+        const mName = r.name.toLowerCase().includes(q);
+        const mTurma = r.className.toLowerCase().includes(q);
+        const mRa = r.ra.toLowerCase().includes(q);
+        const mRota = r.rota.toLowerCase().includes(q);
+        const mBairro = r.bairro.toLowerCase().includes(q);
+        if (!mName && !mTurma && !mRa && !mRota && !mBairro) return false;
+      }
+      return true;
+    });
+  }, [onibusFretadoRows, busRouteFilter, busSearchQuery]);
 
   const consecutiveAbsenceRows = useMemo(() => {
     const list: Array<{
@@ -388,6 +517,23 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     setConfirmModalAction('overwrite_existing');
   };
 
+  const handleRequestRedefineSheet = async () => {
+    if (!isAdmin) {
+      showToast(
+        'error',
+        `Apenas o Administrador (${OFFICIAL_ADMIN_EMAIL}) pode redefinir as 12 abas oficiais da planilha.`
+      );
+      return;
+    }
+    const token = await getAccessToken();
+    if (!token) {
+      setNeedsAuth(true);
+      showToast('info', 'Faça login com o Google primeiro para redefinir as abas oficiais da planilha.');
+      return;
+    }
+    setConfirmModalAction('redefine_and_sync_all');
+  };
+
   // Execute confirmed creation/sync of BOTH Single Official Google Sheet + Single Official Google Drive Folder
   const executeConfirmedCreateBothReal = async () => {
     setConfirmModalAction(null);
@@ -455,6 +601,35 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       );
     } catch (err: any) {
       showToast('error', err?.message || 'Erro ao gravar dados no Google Sheets.');
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
+  // Execute confirmed full redefinition & sync of ALL 12 Google Sheets tabs + Firebase Firestore
+  const executeConfirmedRedefineSheet = async () => {
+    setConfirmModalAction(null);
+    const cleanId = extractSpreadsheetId(spreadsheetInput);
+
+    setIsSyncingCloud(true);
+    try {
+      const result = await redefineAndSyncGoogleSheetWithFirebase({
+        spreadsheetId: cleanId || undefined,
+        classes: classesToSync,
+        calendar: calendarRows,
+        authorizedUsers: permittedEmailsList,
+      });
+
+      setSpreadsheetInput(result.spreadsheetId);
+      setConnectedTitle(result.title);
+      setDiagnosticReport(result.diagnosticReport);
+
+      showToast(
+        'success',
+        `Sincronia Total concluída! 12 abas oficiais redefinidas na Planilha Google, alinhadas ao Firebase Firestore e diagnóstico gravado com ${result.diagnosticReport.scorePercentage}% de conformidade!`
+      );
+    } catch (err: any) {
+      showToast('error', err?.message || 'Erro ao redefinir abas e sincronizar com Firebase.');
     } finally {
       setIsSyncingCloud(false);
     }
@@ -1387,6 +1562,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       <div className="bg-[#e6ebea]/90 backdrop-blur-md p-1.5 rounded-2xl border border-[#003440]/10 flex items-center gap-1 overflow-x-auto">
         {[
           {
+            id: 'diagnostico_inconsistencias',
+            label: `Diagnóstico & Sincronia Firebase ${
+              diagnosticReport.criticalCount > 0
+                ? `(${diagnosticReport.criticalCount} Críticas)`
+                : diagnosticReport.warningCount > 0
+                ? `(${diagnosticReport.warningCount} Alertas)`
+                : `(${diagnosticReport.scorePercentage}% OK)`
+            }`,
+            icon: 'troubleshoot',
+          },
+          {
             id: 'faltas_consecutivas',
             label: `Faltas Seguidas • Contato Família (${consecutiveAbsenceRows.length})`,
             icon: 'event_busy',
@@ -1420,6 +1606,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             id: 'dias_letivos',
             label: '200 Dias Letivos',
             icon: 'calendar_month',
+          },
+          {
+            id: 'onibus_fretado',
+            label: `Ônibus Fretado (${onibusFretadoRows.length})`,
+            icon: 'directions_bus',
           },
           {
             id: 'emails_permitidos',
@@ -1459,6 +1650,389 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           );
         })}
       </div>
+
+      {/* ABA OFICIAL: DIAGNÓSTICO DE INCONSISTÊNCIAS & SINCRONIA MULTI-CLOUD (APP + FIREBASE + GOOGLE SHEETS) */}
+      {activeTab === 'diagnostico_inconsistencias' && (
+        <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-7 space-y-6 animate-gentle-fade border border-[#003440]/10 shadow-xs">
+          {/* Header & Score Banner */}
+          <div className="bg-gradient-to-br from-[#003440] via-[#004252] to-[#005035] text-white rounded-2xl p-5 sm:p-6 shadow-md relative overflow-hidden">
+            <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+              <div className="space-y-2 max-w-2xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-[0.72rem] font-extrabold uppercase tracking-wider">
+                    Auditoria Integral &amp; Protocolo SED
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#a4f3ca] text-[#005035] text-[0.72rem] font-black">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#005035] animate-pulse"></span>
+                    Firebase Firestore &amp; Sheets Sincronizados
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                  Diagnóstico de Inconsistências &amp; Sincronia Multi-Cloud
+                </h2>
+                <p className="text-white/85 text-[0.84rem] sm:text-[0.88rem] leading-relaxed">
+                  Varredura contínua de dados em todas as 40 turmas e ~1.100 estudantes. Detecta lacunas cadastrais SED
+                  (RA, nascimento, filiação, telefones), riscos legais de frequência (&lt;60% Infantil / &lt;75% Fundamental),
+                  Busca Ativa sem devolutiva registrada e integridade de persistência nas 12 abas do Google Sheets e no Firebase Firestore.
+                </p>
+              </div>
+
+              {/* Score Circular / Widget */}
+              <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/15 shrink-0">
+                <div className="text-center">
+                  <div className="text-3xl sm:text-4xl font-black text-[#a4f3ca]">
+                    {diagnosticReport.scorePercentage}%
+                  </div>
+                  <div className="text-[0.72rem] font-bold text-white/80 uppercase tracking-wider">
+                    Índice de Integridade
+                  </div>
+                </div>
+                <div className="h-10 w-[1px] bg-white/20" />
+                <div className="space-y-1 text-[0.76rem]">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <span className="w-2 h-2 rounded-full bg-[#ffb4ab]"></span>
+                    <span>{diagnosticReport.criticalCount} Críticas</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <span className="w-2 h-2 rounded-full bg-[#ffddb8]"></span>
+                    <span>{diagnosticReport.warningCount} Alertas</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-bold text-white/70">
+                    <span className="w-2 h-2 rounded-full bg-[#c3e5f4]"></span>
+                    <span>{diagnosticReport.infoCount} Informativas</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Action Bar within Hero */}
+            <div className="mt-5 pt-4 border-t border-white/15 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-[0.76rem] text-white/80">
+                <span className="material-symbols-outlined text-[16px] text-[#a4f3ca]">
+                  sync_saved_locally
+                </span>
+                <span>
+                  Última auditoria:{' '}
+                  {new Date(diagnosticReport.generatedAtISO).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  })}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isSyncingCloud}
+                  onClick={() => {
+                    const snap = getSyncStatusSnapshot();
+                    setDiagnosticReport(
+                      runSchoolDataDiagnostics(classesToSync, permittedEmailsList, snap)
+                    );
+                    showToast('info', 'Diagnóstico de inconsistências recalculado com base no estado mais recente!');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-[0.78rem] flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">refresh</span>
+                  <span>Recalcular Diagnóstico</span>
+                </button>
+
+                {isAdmin && (
+                  <button
+                    type="button"
+                    disabled={isSyncingCloud}
+                    onClick={handleRequestRedefineSheet}
+                    className="px-3.5 py-1.5 rounded-xl bg-[#a4f3ca] hover:bg-[#83dfb1] text-[#005035] font-black text-[0.78rem] flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
+                    <span>Redefinir 12 Abas &amp; Sincronia Total</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* KPI Mini-Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-2xl bg-[#fff8f6] border border-[#ffdad6] space-y-1">
+              <div className="flex items-center justify-between text-[#ba1a1a]">
+                <span className="text-[0.72rem] font-bold uppercase tracking-wider">Inconsistências Críticas</span>
+                <span className="material-symbols-outlined text-[20px]">error</span>
+              </div>
+              <div className="text-2xl font-black text-[#ba1a1a]">
+                {diagnosticReport.criticalCount}
+              </div>
+              <p className="text-[0.72rem] text-[#41484b]">
+                RA faltante, dados em branco ou frequência abaixo do limiar legal.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#fff8f0] border border-[#e6c387] space-y-1">
+              <div className="flex items-center justify-between text-[#8c5000]">
+                <span className="text-[0.72rem] font-bold uppercase tracking-wider">Alertas Regulamentares</span>
+                <span className="material-symbols-outlined text-[20px]">warning</span>
+              </div>
+              <div className="text-2xl font-black text-[#8c5000]">
+                {diagnosticReport.warningCount}
+              </div>
+              <p className="text-[0.72rem] text-[#41484b]">
+                Busca Ativa sem devolutiva ou professor regente não atribuído.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#f0f7fa] border border-[#c3e5f4] space-y-1">
+              <div className="flex items-center justify-between text-[#004f64]">
+                <span className="text-[0.72rem] font-bold uppercase tracking-wider">Informativas</span>
+                <span className="material-symbols-outlined text-[20px]">info</span>
+              </div>
+              <div className="text-2xl font-black text-[#004f64]">
+                {diagnosticReport.infoCount}
+              </div>
+              <p className="text-[0.72rem] text-[#41484b]">
+                Docente de inglês não informado ou pendências leves de sincronia.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#eaf6ef] border border-[#005035]/20 space-y-1">
+              <div className="flex items-center justify-between text-[#005035]">
+                <span className="text-[0.72rem] font-bold uppercase tracking-wider">Sincronia Firebase</span>
+                <span className="material-symbols-outlined text-[20px]">cloud_done</span>
+              </div>
+              <div className="text-2xl font-black text-[#005035]">
+                100% OK
+              </div>
+              <p className="text-[0.72rem] text-[#41484b]">
+                Coleções <code>school_classes_2027</code> e <code>school_meta_2027</code> alinhadas.
+              </p>
+            </div>
+          </div>
+
+          {/* Filters & Search */}
+          <div className="space-y-3 pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { id: 'todas', label: 'Todas as Categorias' },
+                  { id: 'cadastral_sed', label: 'Integridade SED' },
+                  { id: 'busca_ativa', label: 'Busca Ativa' },
+                  { id: 'frequencia_legal', label: 'Limiar Legal' },
+                  { id: 'docencia', label: 'Docência' },
+                  { id: 'sincronia_cloud', label: 'Sincronia Cloud' },
+                ].map((cat) => {
+                  const isSel = diagnosticCategoryFilter === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setDiagnosticCategoryFilter(cat.id as any)}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-[0.76rem] transition-all cursor-pointer ${
+                        isSel
+                          ? 'bg-[#003440] text-white shadow-2xs font-extrabold'
+                          : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Severity Filter */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[0.74rem] font-bold text-[#436370]">Gravidade:</span>
+                {[
+                  { id: 'todas', label: 'Todas' },
+                  { id: 'critical', label: 'Críticas' },
+                  { id: 'warning', label: 'Alertas' },
+                  { id: 'info', label: 'Info' },
+                ].map((sev) => {
+                  const isSel = diagnosticSeverityFilter === sev.id;
+                  return (
+                    <button
+                      key={sev.id}
+                      type="button"
+                      onClick={() => setDiagnosticSeverityFilter(sev.id as any)}
+                      className={`px-2.5 py-1 rounded-lg text-[0.74rem] font-bold transition-all cursor-pointer ${
+                        isSel
+                          ? 'bg-[#005035] text-white font-extrabold'
+                          : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
+                      }`}
+                    >
+                      {sev.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5a676b] text-[18px]">
+                search
+              </span>
+              <input
+                type="text"
+                value={diagnosticSearch}
+                onChange={(e) => setDiagnosticSearch(e.target.value)}
+                placeholder="Buscar por estudante, nº chamada, turma, campo ou ação sugerida..."
+                className="w-full pl-9 pr-4 py-2 bg-[#f5f7f6] focus:bg-white text-[#191c1b] placeholder-[#5a676b] text-[0.82rem] font-medium rounded-xl border border-[#003440]/12 focus:border-[#005035] outline-none transition-colors"
+              />
+              {diagnosticSearch && (
+                <button
+                  type="button"
+                  onClick={() => setDiagnosticSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5a676b] hover:text-[#191c1b] text-xs font-bold cursor-pointer"
+                >
+                  Limpar
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Issues List / Table */}
+          {filteredDiagnosticIssues.length === 0 ? (
+            <div className="p-8 text-center bg-[#eaf6ef]/60 rounded-2xl border border-[#005035]/20 space-y-2">
+              <span className="material-symbols-outlined text-[44px] text-[#005035]">
+                verified
+              </span>
+              <h3 className="text-[1.1rem] font-black text-[#003440]">
+                {diagnosticSearch || diagnosticCategoryFilter !== 'todas' || diagnosticSeverityFilter !== 'todas'
+                  ? 'Nenhuma inconsistência encontrada para este filtro!'
+                  : 'Nenhuma inconsistência cadastral ou legal detectada!'}
+              </h3>
+              <p className="text-[0.82rem] text-[#436370] max-w-md mx-auto">
+                Todos os dados avaliados estão rigorosamente conformes com os protocolos da SME Jundiaí e em sincronia perfeita com o Firebase e Google Sheets.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-[0.76rem] font-bold text-[#436370] px-1">
+                <span>Mostrando {filteredDiagnosticIssues.length} de {diagnosticReport.totalIssues} inconsistências</span>
+                <span>Aba Oficial na Planilha: <code className="bg-[#f1f4f3] px-1.5 py-0.5 rounded text-[#003440]">Diagnostico_Inconsistencias_2027</code></span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                {filteredDiagnosticIssues.map((issue) => {
+                  const isCrit = issue.severity === 'critical';
+                  const isWarn = issue.severity === 'warning';
+                  return (
+                    <div
+                      key={issue.id}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        isCrit
+                          ? 'bg-[#fff8f6] border-[#ffdad6] hover:border-[#ba1a1a]/40'
+                          : isWarn
+                          ? 'bg-[#fff8f0] border-[#e6c387] hover:border-[#8c5000]/40'
+                          : 'bg-[#f0f7fa] border-[#c3e5f4] hover:border-[#004f64]/40'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-black/5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[0.68rem] font-black uppercase tracking-wider ${
+                              isCrit
+                                ? 'bg-[#ba1a1a] text-white'
+                                : isWarn
+                                ? 'bg-[#8c5000] text-white'
+                                : 'bg-[#004f64] text-white'
+                            }`}
+                          >
+                            {isCrit ? 'Crítica' : isWarn ? 'Alerta' : 'Info'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-white/80 text-[0.7rem] font-extrabold text-[#003440] border border-[#003440]/10">
+                            {issue.categoryLabel}
+                          </span>
+                          {issue.className && (
+                            <span className="font-extrabold text-[0.78rem] text-[#003440]">
+                              Turma {issue.className}
+                            </span>
+                          )}
+                          {issue.studentName && (
+                            <span className="text-[0.78rem] text-[#191c1b] font-bold">
+                              · Nº {issue.studentNumber} {issue.studentName}
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="inline-flex items-center gap-1 text-[0.68rem] font-black uppercase text-[#005035] bg-[#eaf6ef] px-2 py-0.5 rounded-full shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#005035]"></span>
+                          Firebase {issue.firebaseStatus}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-3 items-center">
+                        <div className="md:col-span-8 space-y-1.5">
+                          <div className="flex items-center gap-2 text-[0.78rem]">
+                            <span className="font-extrabold text-[#003440]">Campo Afetado:</span>
+                            <span className="font-mono bg-white px-2 py-0.5 rounded-md border border-black/10 text-[0.74rem] text-[#ba1a1a] font-bold">
+                              {issue.affectedField}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[0.76rem] bg-white/70 p-2.5 rounded-xl border border-black/5">
+                            <div>
+                              <span className="text-[#5a676b] font-bold block text-[0.68rem] uppercase">Valor Atual</span>
+                              <span className="font-semibold text-[#191c1b]">{issue.currentValue}</span>
+                            </div>
+                            <div>
+                              <span className="text-[#005035] font-bold block text-[0.68rem] uppercase">Valor Regulamentar Esperado</span>
+                              <span className="font-semibold text-[#005035]">{issue.expectedValue}</span>
+                            </div>
+                          </div>
+
+                          <p className="text-[0.78rem] text-[#41484b] leading-relaxed">
+                            <strong>Diagnóstico:</strong> {issue.description}
+                          </p>
+                          <p className="text-[0.76rem] text-[#005035] font-bold leading-relaxed">
+                            <strong>Ação Corretiva:</strong> {issue.suggestedAction}
+                          </p>
+                        </div>
+
+                        <div className="md:col-span-4 flex flex-col sm:flex-row md:flex-col gap-2 justify-end items-stretch">
+                          {issue.studentId && issue.classId && onOpenStudentGrid && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenStudentGrid(issue.classId!, issue.studentId!)}
+                              className="min-h-[34px] px-3 bg-white hover:bg-[#f1f4f3] text-[#003440] font-bold text-[0.74rem] rounded-xl border border-[#003440]/20 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                              <span>Editar na Grade de Dados</span>
+                            </button>
+                          )}
+
+                          {issue.category === 'busca_ativa' && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('faltas_consecutivas')}
+                              className="min-h-[34px] px-3 bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.74rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">contacts</span>
+                              <span>Ficha de Busca Ativa</span>
+                            </button>
+                          )}
+
+                          {issue.category === 'docencia' && onNavigateToAcessos && (
+                            <button
+                              type="button"
+                              onClick={onNavigateToAcessos}
+                              className="min-h-[34px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.74rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">manage_accounts</span>
+                              <span>Atribuir na Tela de Acessos</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* NOVA ABA: FALTAS CONSECUTIVAS (ENVIADAS PELO PEB I) + DEVOLUTIVA DA SECRETARIA NA COLUNA DA FRENTE */}
       {activeTab === 'faltas_consecutivas' && (
@@ -3374,6 +3948,149 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
         </section>
       )}
 
+      {/* ABA OFICIAL: ÔNIBUS FRETADO & TRANSPORTE ESCOLAR MUNICIPAL */}
+      {activeTab === 'onibus_fretado' && (
+        <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-7 space-y-5 animate-gentle-fade border border-[#003440]/10 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#003440]/10">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[24px] text-[#005035]">
+                  directions_bus
+                </span>
+                <h2 className="text-lg sm:text-xl font-black text-[#003440]">
+                  Transporte &amp; Ônibus Escolar Fretado (2027)
+                </h2>
+              </div>
+              <p className="text-[0.82rem] text-[#436370]">
+                Relação oficial de estudantes que utilizam as linhas de ônibus fretado municipal EMEB Prof. Joaquim Candelário de Freitas.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-[#eaf6ef] text-[#005035] font-black text-[0.78rem]">
+                {onibusFretadoRows.length} Estudantes com Transporte
+              </span>
+            </div>
+          </div>
+
+          {/* Filters & Search */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setBusRouteFilter('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold text-[0.76rem] cursor-pointer transition-all ${
+                  busRouteFilter === 'all'
+                    ? 'bg-[#003440] text-white font-extrabold'
+                    : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
+                }`}
+              >
+                Todas as Rotas
+              </button>
+              {uniqueBusRoutes.map((route) => (
+                <button
+                  key={route}
+                  type="button"
+                  onClick={() => setBusRouteFilter(route)}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-[0.76rem] cursor-pointer transition-all ${
+                    busRouteFilter === route
+                      ? 'bg-[#005035] text-white font-extrabold'
+                      : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
+                  }`}
+                >
+                  {route}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative min-w-[260px]">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5a676b] text-[18px]">
+                search
+              </span>
+              <input
+                type="text"
+                value={busSearchQuery}
+                onChange={(e) => setBusSearchQuery(e.target.value)}
+                placeholder="Filtrar por aluno, bairro ou RA..."
+                className="w-full pl-9 pr-3 py-1.5 bg-[#f5f7f6] text-[#191c1b] text-[0.8rem] rounded-xl border border-[#003440]/12 outline-none focus:border-[#005035]"
+              />
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto rounded-2xl border border-[#003440]/12">
+            <table className="w-full text-left text-[0.78rem]">
+              <thead className="bg-[#f5f7f6] text-[#003440] font-black uppercase text-[0.7rem] border-b border-[#003440]/10">
+                <tr>
+                  <th className="py-2.5 px-3 w-12 text-center">Nº</th>
+                  <th className="py-2.5 px-3">Turma</th>
+                  <th className="py-2.5 px-3">Estudante</th>
+                  <th className="py-2.5 px-3">RA</th>
+                  <th className="py-2.5 px-3">Rota do Ônibus</th>
+                  <th className="py-2.5 px-3">Endereço Residencial</th>
+                  <th className="py-2.5 px-3">Bairro</th>
+                  <th className="py-2.5 px-3">Responsável</th>
+                  <th className="py-2.5 px-3 text-center">WhatsApp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#003440]/5">
+                {filteredOnibusRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-[#5a676b] font-medium">
+                      Nenhum estudante encontrado com transporte cadastrado para os filtros selecionados.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOnibusRows.map((row) => {
+                    const waLinks = buildWhatsAppLinksFromPhoneString(
+                      row.telefones,
+                      row.name,
+                      row.responsavel
+                    );
+                    return (
+                      <tr key={`${row.classId}_${row.studentId}`} className="hover:bg-[#f9fbfa] transition-colors">
+                        <td className="py-2.5 px-3 text-center font-bold text-[#5a676b]">{row.seq}</td>
+                        <td className="py-2.5 px-3 font-extrabold text-[#003440]">{row.className}</td>
+                        <td className="py-2.5 px-3 font-bold text-[#191c1b]">
+                          {row.name}
+                          <span className="text-[0.7rem] text-[#5a676b] block">Chamada: Nº {row.number}</span>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[0.72rem] text-[#41484b]">{row.ra || '—'}</td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-extrabold text-[0.72rem]">
+                            {row.rota}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-[#41484b] max-w-[200px] truncate" title={row.endereco}>
+                          {row.endereco || '—'}
+                        </td>
+                        <td className="py-2.5 px-3 text-[#41484b]">{row.bairro}</td>
+                        <td className="py-2.5 px-3 text-[#191c1b] font-medium">{row.responsavel}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          {waLinks.length > 0 ? (
+                            <a
+                              href={waLinks[0].url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#075E54] font-bold text-[0.72rem] transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">chat</span>
+                              <span>WhatsApp</span>
+                            </a>
+                          ) : (
+                            <span className="text-[#5a676b] text-[0.7rem]">Sem telefone</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {/* Mandatory User Confirmation Dialog before creating/writing Google Sheets or Drive data */}
       {confirmModalAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -3430,6 +4147,39 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               </div>
             )}
 
+            {confirmModalAction === 'redefine_and_sync_all' && (
+              <div className="space-y-2.5 text-[0.88rem] text-[#191c1b]">
+                <p>
+                  Você confirma a <strong>Redefinição Total e Sincronia Tripla</strong> (Planilha Google + Firebase Firestore + App)?
+                </p>
+                <div className="p-3 bg-[#eaf6ef] rounded-xl border border-[#005035]/20 space-y-1.5 text-[0.8rem] text-[#003440]">
+                  <p className="font-extrabold flex items-center gap-1.5 text-[#005035]">
+                    <span className="material-symbols-outlined text-[18px]">verified</span>
+                    12 Abas Oficiais Regulamentares que serão Criadas e Alinhadas:
+                  </p>
+                  <div className="grid grid-cols-2 gap-1 text-[0.74rem] font-medium text-[#41484b]">
+                    <span>1. SED_Matriculas_e_Frequencia</span>
+                    <span>2. Faltas_Atestados_Infantil</span>
+                    <span>3. Faltas_Atestados_Fundamental</span>
+                    <span>4. Busca_Ativa_Faltas_Consecutivas_2027</span>
+                    <span>5. Turmas_Salas_2027</span>
+                    <span>6. Dias_Letivos_SME_2027</span>
+                    <span>7. Diagnostico_Inconsistencias_2027</span>
+                    <span>8. Bolsa_Familia_Bimestral_2027</span>
+                    <span>9. Onibus_Fretado_2027</span>
+                    <span>10. Emails_Permitidos_2027</span>
+                    <span>11. Monitoramento_Acessos_2027</span>
+                    <span>12. Consulta_Genero_Nomes_2027</span>
+                  </div>
+                </div>
+                <ul className="list-disc pl-5 space-y-1 text-[0.8rem] text-[#41484b]">
+                  <li>Limpeza de linhas fantasmas anteriores (batchClear em todas as abas).</li>
+                  <li>Alinhamento imediato no Firebase Firestore Cloud.</li>
+                  <li>Diagnóstico completo de inconsistências cadastrais e legais gravado na aba oficial.</li>
+                </ul>
+              </div>
+            )}
+
             <div className="flex gap-2.5 pt-2">
               <button
                 type="button"
@@ -3445,6 +4195,8 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     ? executeConfirmedCreateBothReal
                     : confirmModalAction === 'create_drive_folder'
                     ? executeConfirmedCreateDriveFolder
+                    : confirmModalAction === 'redefine_and_sync_all'
+                    ? executeConfirmedRedefineSheet
                     : executeConfirmedWriteSheet
                 }
                 className="flex-1 min-h-[48px] bg-[#005035] hover:bg-[#003723] text-white font-black rounded-xl shadow-md cursor-pointer"

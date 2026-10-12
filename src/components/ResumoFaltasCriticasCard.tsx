@@ -7,6 +7,7 @@ import {
 } from '../types';
 import { StudentAvatar } from './StudentAvatar';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
+import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 
 export interface CriticalAbsenceItem {
   cls: ClassGroup;
@@ -470,9 +471,8 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 <span className="text-[0.68rem] font-semibold text-[#6e6e73] block">
                   Ocorrências no Ano
                 </span>
-                <span className="text-[1.35rem] font-bold text-[#1d1d1f] font-mono tabular-nums">
-                  {selectedDetailItem.occurrences.length || 1}x (
-                  {selectedDetailItem.totalConsecutiveDaysYear}d)
+                <span className="text-[1.25rem] font-bold text-[#1d1d1f] font-mono tabular-nums">
+                  {selectedDetailItem.occurrences.length || 1}x ({selectedDetailItem.totalConsecutiveDaysYear} dias)
                 </span>
               </div>
 
@@ -480,9 +480,9 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 <span className="text-[0.68rem] font-semibold text-[#6e6e73] block">
                   Faltas no Mês
                 </span>
-                <span className="text-[1.35rem] font-bold text-[#1d1d1f] font-mono tabular-nums">
-                  {selectedDetailItem.student.totalAbsencesMonth || 0}f ·{' '}
-                  {selectedDetailItem.student.justifiedAbsences || 0}at
+                <span className="text-[1.15rem] font-bold text-[#1d1d1f] font-mono tabular-nums">
+                  {selectedDetailItem.student.totalAbsencesMonth || 0} faltas ·{' '}
+                  {selectedDetailItem.student.justifiedAbsences || 0} atest.
                 </span>
               </div>
             </div>
@@ -490,7 +490,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             {/* Contato Rápido com a Família (WhatsApp Direto) */}
             <div className="bg-[#f5f5f7] rounded-2xl p-3.5 space-y-1.5">
               <span className="text-[0.72rem] font-semibold text-[#6e6e73] block">
-                Responsável Legal &amp; Contato Direto
+                Responsável Familiar &amp; Contato Direto
               </span>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[0.85rem] font-bold text-[#1d1d1f]">
@@ -514,7 +514,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   }
                   const waNumber = digits.startsWith('55') ? digits : `55${digits}`;
                   const waHref = `https://wa.me/${waNumber}?text=${encodeURIComponent(
-                    `Olá, família de ${selectedDetailItem.student.name}! Aqui é da EMEB Prof. Joaquim Candelário de Freitas. Notamos ${selectedDetailItem.consecutiveDaysCount} faltas seguidas recentes. Está tudo bem com a criança?`
+                    `Olá, família de ${selectedDetailItem.student.name}! Aqui é da EMEB Prof. Joaquim Candelário de Freitas. Notamos ${selectedDetailItem.consecutiveDaysCount} faltas seguidas recentes. Está tudo bem com o(a) estudante?`
                   )}`;
                   return (
                     <a
@@ -544,8 +544,8 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   </p>
                   <p className="text-[0.76rem] text-[#6e6e73]">
                     {userRole === 'peb2'
-                      ? 'Aguardando seleção dos dias específicos pelo(a) professor(a) PEB I ou retorno da secretaria.'
-                      : 'Clique em "Gerenciar em Faltas Seguidas" abaixo para apontar os dias exatos ou registrar o feedback da família.'}
+                      ? 'Aguardando seleção dos dias específicos pelo(a) professor(a) regente ou retorno da secretaria.'
+                      : 'Clique em "Gerenciar em Faltas Seguidas" abaixo para apontar os dias exatos ou registrar o retorno da família.'}
                   </p>
                 </div>
               ) : (
@@ -603,7 +603,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   }}
                   className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.8rem] cursor-pointer transition-colors"
                 >
-                  Ver Grade SED (48 Campos)
+                  Ficha Completa (48 Dados)
                 </button>
               )}
 
@@ -617,7 +617,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   }}
                   className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.8rem] cursor-pointer transition-colors"
                 >
-                  Ficha Escaneada
+                  Ficha PDF Escaneada
                 </button>
               )}
 

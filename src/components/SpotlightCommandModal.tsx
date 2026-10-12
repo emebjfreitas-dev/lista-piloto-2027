@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ClassGroup, Student, UserRole } from '../types';
+import { ClassGroup, Student, UserRole, ScreenType } from '../types';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
+import {
+  getStudentGenderLabel,
+  resolveGuardianRelationshipInfo,
+} from '../utils/genderDictionary';
 
 interface SpotlightCommandModalProps {
   isOpen: boolean;
@@ -15,16 +19,7 @@ interface SpotlightCommandModalProps {
     diasLetivosMes: number
   ) => void;
   onOpenStudentPdf: (student: Student, className: string) => void;
-  onNavigateToScreen: (
-    screen:
-      | 'turmas'
-      | 'detalhes'
-      | 'frequencia_mensal'
-      | 'faltas_consecutivas'
-      | 'bolsa_familia'
-      | 'planilha'
-      | 'usuarios_acesso'
-  ) => void;
+  onNavigateToScreen: (screen: ScreenType) => void;
 }
 
 export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
@@ -252,6 +247,16 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
               >
                 Faltas Consecutivas
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigateToScreen('mapa_estudantes');
+                  onClose();
+                }}
+                className="px-3 py-1 rounded-full bg-[#0071e3]/10 hover:bg-[#0071e3] text-[#0071e3] hover:text-white text-[0.74rem] font-bold transition-colors cursor-pointer"
+              >
+                Mapa de Trajetos &amp; KM
+              </button>
               {userRole === 'admin' && (
                 <button
                   type="button"
@@ -327,6 +332,12 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
               <div className="space-y-1">
                 {matchingStudents.map((item, idx) => {
                   const isSelected = idx === selectedIndex;
+                  const gStudent = getStudentGenderLabel(item.student);
+                  const gGuardian = resolveGuardianRelationshipInfo(
+                    item.student.filiacao1 || item.student.guardianName,
+                    'filiacao1',
+                    item.student.notes
+                  );
                   return (
                     <div
                       key={`${item.cls.id}-${item.student.id}`}
@@ -353,12 +364,21 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                             <span className="font-extrabold text-[0.88rem] text-[#1d1d1f] truncate">
                               {item.student.name}
                             </span>
+                            <span
+                              className={`px-1.5 py-0.5 rounded font-extrabold text-[0.62rem] ${
+                                gStudent.code === 'F'
+                                  ? 'bg-[#ffdad6]/60 text-[#93000a]'
+                                  : 'bg-[#d3e4ff]/75 text-[#001c38]'
+                              }`}
+                            >
+                              {gStudent.estudanteTitle}
+                            </span>
                             <span className="px-2 py-0.5 rounded-md bg-black/[0.06] text-[#1d1d1f] font-bold text-[0.66rem]">
                               {item.cls.name}
                             </span>
                             {item.consecutiveCount >= 3 && (
                               <span className="px-2 py-0.5 rounded-full bg-[#ff3b30]/12 text-[#ff3b30] font-extrabold text-[0.65rem] tabular-nums">
-                                {item.consecutiveCount}d seguidos
+                                {item.consecutiveCount} dias seguidos
                               </span>
                             )}
                             {item.student.rotaOnibus && (
@@ -369,7 +389,9 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                           </div>
                           <div className="text-[0.72rem] text-[#6e6e73] truncate tabular-nums mt-0.5">
                             RA {item.student.ra}-{item.student.digRa}
-                            {item.student.filiacao1 ? ` · Mãe: ${item.student.filiacao1}` : ''}
+                            {gGuardian.cleanName !== '—'
+                              ? ` · ${gGuardian.shortRoleLabel}: ${gGuardian.cleanName}`
+                              : ''}
                           </div>
                         </div>
                       </div>
@@ -392,12 +414,12 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                             picture_as_pdf
                           </span>
                           <span className="hidden sm:inline">
-                            {item.hasPdf ? 'PDF' : 'Sem PDF'}
+                            {item.hasPdf ? 'Ficha PDF' : 'Sem PDF'}
                           </span>
                         </button>
 
                         <span className="px-2.5 py-1.5 rounded-xl bg-white border border-black/[0.08] text-[#1d1d1f] font-bold text-[0.7rem] flex items-center gap-1">
-                          <span>Perfil</span>
+                          <span>Ficha Completa</span>
                           <span className="material-symbols-outlined text-[14px]">
                             open_in_full
                           </span>

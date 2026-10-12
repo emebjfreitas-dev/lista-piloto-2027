@@ -81,14 +81,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     const cleanEmail = authenticatedEmail.trim().toLowerCase();
     if (!cleanEmail) {
       await logoutGoogle();
-      setErrorMsg('Selecione sua conta institucional Google Workspace.');
+      setErrorMsg('Por favor, selecione sua conta de e-mail institucional da escola.');
       return;
     }
 
     if (!isValidInstitutionalEmail(cleanEmail)) {
       await logoutGoogle();
       setErrorMsg(
-        `Acesso restrito a contas ${INSTITUTIONAL_EMAIL_DOMAIN} (${cleanEmail} recusado).`
+        `Acesso exclusivo para contas da rede municipal (${INSTITUTIONAL_EMAIL_DOMAIN}). A conta "${cleanEmail}" é pessoal e não possui autorização de acesso.`
       );
       return;
     }
@@ -130,14 +130,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     if (!registeredUser) {
       await logoutGoogle();
       setErrorMsg(
-        `O e-mail ${cleanEmail} não consta na lista de acessos autorizados da EMEB.`
+        `O e-mail "${cleanEmail}" é institucional, mas ainda não está cadastrado na equipe desta escola. Entre em contato com a secretaria da EMEB para liberação.`
       );
       return;
     }
 
     if (!registeredUser.active) {
       await logoutGoogle();
-      setErrorMsg(`O acesso de ${cleanEmail} encontra-se suspenso.`);
+      setErrorMsg(`O acesso de "${cleanEmail}" encontra-se suspenso.`);
       return;
     }
 
@@ -187,7 +187,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         setUnauthorizedHost(currentHostname);
         setAuthTab('rapido');
         setErrorMsg(
-          `Domínio "${currentHostname}" aguardando liberação no Firebase. Use o Acesso Rápido Institucional abaixo para entrar imediatamente.`
+          `Domínio "${currentHostname}" aguardando liberação no Firebase. Use a Lista de Docentes abaixo para entrar imediatamente.`
         );
       } else if (
         code === 'auth/popup-blocked' ||
@@ -196,18 +196,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       ) {
         setAuthTab('rapido');
         setErrorMsg(
-          'Pop-up bloqueado pelo navegador. Selecione ou digite seu e-mail institucional abaixo para entrar sem pop-up:'
+          'Pop-up bloqueado pelo navegador. Toque na Lista de Docentes abaixo para entrar com seu perfil da escola:'
         );
       } else if (code === 'auth/popup-closed-by-user') {
         setAuthTab('rapido');
-        setErrorMsg('Janela fechada. Você também pode entrar pelo Acesso Rápido abaixo:');
+        setErrorMsg('Janela de login fechada. Você também pode tocar na Lista de Docentes abaixo:');
       } else if (code === 'auth/cancelled-popup-request') {
         // ignore duplicate click
       } else {
         setUnauthorizedHost(currentHostname);
         setAuthTab('rapido');
         setErrorMsg(
-          `Pop-up indisponível em "${currentHostname}". Selecione seu perfil institucional abaixo para acessar:`
+          `Pop-up indisponível em "${currentHostname}". Selecione seu perfil na Lista de Docentes abaixo para acessar:`
         );
       }
     } finally {
@@ -220,7 +220,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setErrorMsg(null);
     let trimmed = fallbackEmailInput.trim().toLowerCase();
     if (!trimmed) {
-      setErrorMsg('Informe ou selecione seu e-mail institucional.');
+      setErrorMsg('Informe ou selecione seu e-mail institucional da escola.');
       return;
     }
     if (!trimmed.includes('@')) {
@@ -317,7 +317,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </div>
         )}
 
-        {/* iOS Segmented Mode Switcher: Google OAuth vs Acesso Direto */}
+        {/* iOS Segmented Mode Switcher: Google vs Lista de Educadores */}
         <div className="w-full bg-[#e8e8ed]/90 p-1 rounded-full grid grid-cols-2 gap-1">
           <button
             type="button"
@@ -331,7 +331,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 : 'text-[#6e6e73] hover:text-[#1d1d1f]'
             }`}
           >
-            Conta Google
+            E-mail da Escola (Google)
           </button>
           <button
             type="button"
@@ -345,7 +345,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 : 'text-[#6e6e73] hover:text-[#1d1d1f]'
             }`}
           >
-            Acesso Direto EMEB
+            Lista de Docentes
           </button>
         </div>
 
@@ -385,17 +385,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </div>
         )}
 
-        {/* TAB 1: Login Oficial Google Workspace */}
+        {/* TAB 1: Login Oficial Google da Escola */}
         {authTab === 'google' ? (
-          <div className="w-full space-y-4">
+          <div className="w-full space-y-3.5">
             <button
               type="button"
               onClick={handleWorkspaceLogin}
               disabled={loading}
-              className="w-full h-[54px] bg-[#1d1d1f] hover:bg-black text-white rounded-2xl px-4 flex items-center justify-center gap-3 cursor-pointer ios-spring-btn shadow-[0_4px_14px_rgba(0,0,0,0.12)] disabled:opacity-60"
+              className="w-full min-h-[58px] py-2.5 bg-[#1d1d1f] hover:bg-black text-white rounded-2xl px-4 flex items-center justify-center gap-3 cursor-pointer ios-spring-btn shadow-[0_4px_14px_rgba(0,0,0,0.12)] disabled:opacity-60 transition-all hover:scale-[1.01]"
+              title="Entrar com a conta Google institucional da escola (@educacao.jundiai.sp.gov.br)"
             >
-              <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0">
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 shadow-xs">
+                <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"
@@ -414,16 +415,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   />
                 </svg>
               </div>
-              <span className="font-semibold text-[0.9rem] tracking-tight text-white">
-                {loading ? 'Autenticando...' : 'Continuar com Google Workspace'}
-              </span>
+              <div className="text-left min-w-0">
+                <span className="font-extrabold text-[0.92rem] tracking-tight text-white block leading-tight">
+                  {loading ? 'Conectando...' : 'Entrar com o E-mail da Escola'}
+                </span>
+                <span className="text-[0.68rem] text-white/70 block leading-tight font-medium mt-0.5 truncate">
+                  Conta oficial Google da Educação
+                </span>
+              </div>
             </button>
 
-            <div className="pt-1 flex items-center justify-between text-[0.72rem] text-[#86868b] px-1">
-              <span>Domínio exclusivo</span>
-              <span className="font-mono text-[#1d1d1f] font-medium">
-                {INSTITUTIONAL_EMAIL_DOMAIN}
-              </span>
+            {/* Texto de Apoio para Extremo Leigos */}
+            <div className="bg-[#f5f5f7] rounded-2xl p-3 text-left space-y-1 border border-black/[0.04]">
+              <div className="flex items-center gap-1.5 text-[#0066cc] font-bold text-[0.72rem]">
+                <span className="material-symbols-outlined text-[15px]">verified_user</span>
+                <span>Acesso Seguro e Oficial</span>
+              </div>
+              <p className="text-[0.72rem] text-[#6e6e73] leading-relaxed">
+                Educador(a) ou gestor(a): toque no botão acima e selecione o seu e-mail da escola (terminado em <span className="font-mono font-semibold text-[#1d1d1f]">@educacao.jundiai.sp.gov.br</span>). O acesso é automático e direto.
+              </p>
             </div>
           </div>
         ) : (
@@ -476,7 +486,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                           ? 'Admin · Todas as Turmas'
                           : u.role === 'usuario'
                           ? `PEB I · ${u.assignedClassName}`
-                          : `PEB II · ${u.subject || 'Especialista'}`}
+                          : `PEB II · ${u.subjectName || 'Especialista'}`}
                       </p>
                     </div>
                   </div>

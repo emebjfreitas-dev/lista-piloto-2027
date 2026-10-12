@@ -9,6 +9,7 @@ import {
 import { evaluateAttendanceLaunchWindow } from '../services/db';
 import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
 import { QuadroAvisosCard } from './QuadroAvisosCard';
+import { LembretePrazoFrequenciaCard } from './LembretePrazoFrequenciaCard';
 
 interface MinhasTurmasScreenProps {
   classes: ClassGroup[];
@@ -188,7 +189,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                     picture_as_pdf
                   </span>
                   <span>
-                    {missingScannedFichasSummary.totalMissing} s/ Ficha PDF ({missingScannedFichasSummary.classesWithMissing} turmas)
+                    {missingScannedFichasSummary.totalMissing} sem Ficha PDF ({missingScannedFichasSummary.classesWithMissing} turmas)
                   </span>
                 </span>
               )}
@@ -209,7 +210,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   onClick={() => onChangeRole('admin')}
                   className="px-3 py-1 rounded-full bg-[#1d1d1f] text-white font-bold text-[0.72rem] cursor-pointer"
                 >
-                  Admin
+                  Gestão (Admin)
                 </button>
                 <button
                   type="button"
@@ -217,7 +218,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   className="px-2.5 py-1 rounded-full hover:bg-white text-[#1d1d1f] font-semibold text-[0.72rem] cursor-pointer"
                   title="Simular visão de Professora Regente PEB I"
                 >
-                  Simular PEB I
+                  Visão Regente (PEB I)
                 </button>
                 <button
                   type="button"
@@ -225,7 +226,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   className="px-2.5 py-1 rounded-full hover:bg-white text-[#1d1d1f] font-semibold text-[0.72rem] cursor-pointer"
                   title="Simular visão de Especialista PEB II"
                 >
-                  Simular PEB II
+                  Visão Especialista (PEB II)
                 </button>
               </div>
 
@@ -233,11 +234,11 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                 value={assignedClassId}
                 onChange={(e) => onChangeAssignedClassId(e.target.value)}
                 aria-label="Selecionar turma para simulação PEB I"
-                className="h-[34px] px-2.5 rounded-full bg-[#f5f5f7] border border-black/[0.06] text-[#1d1d1f] font-semibold text-[0.74rem] cursor-pointer max-w-[165px] truncate"
+                className="h-[34px] px-2.5 rounded-full bg-[#f5f5f7] border border-black/[0.06] text-[#1d1d1f] font-semibold text-[0.74rem] cursor-pointer max-w-[175px] truncate"
               >
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
-                    PEB I: {c.name}
+                    Regente: {c.name}
                   </option>
                 ))}
               </select>
@@ -249,7 +250,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   className="h-[34px] px-3 rounded-full bg-[#0071e3]/10 hover:bg-[#0071e3]/18 text-[#0066cc] font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer transition-colors"
                 >
                   <span className="material-symbols-outlined text-[16px]">edit_calendar</span>
-                  <span className="hidden sm:inline">200 Dias &amp; Links</span>
+                  <span className="hidden sm:inline">200 Dias &amp; Pastas Drive</span>
                 </button>
               )}
 
@@ -280,7 +281,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               2
             </span>
             <p className="text-[0.75rem] text-[#1d1d1f] font-medium leading-tight">
-              <strong className="font-bold">Prévia Rápida:</strong> Use o botão <span className="text-[#0066cc] font-bold">Prévia</span> no estudante para expandir sem sair da tela.
+              <strong className="font-bold">Resumo Rápido:</strong> Use o botão <span className="text-[#0066cc] font-bold">Resumo</span> no estudante para expandir sem sair da tela.
             </p>
           </div>
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-[#f5f5f7]/80">
@@ -293,6 +294,17 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Sistema de Lembretes Automáticos de Prazos de Encerramento da Frequência Mensal (Integrado com attendanceWindowConfig) */}
+      <LembretePrazoFrequenciaCard
+        attendanceWindowConfig={attendanceWindowConfig}
+        userRole={userRole}
+        classes={classes}
+        assignedClassId={assignedClassId}
+        assignedClassIds={assignedClassIds}
+        onOpenMonthlyAttendance={onSelectClassForMonthlyAttendance}
+        onNavigateToAcessos={onNavigateToAcessos}
+      />
 
       {/* Quadro de Avisos Institucional (Gestão publica / edita e todos os educadores visualizam no Login e Início) */}
       <QuadroAvisosCard
@@ -364,7 +376,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar turma, professor(a) regente, especialista ou Classe SED..."
+              placeholder="Buscar turma, professor(a) regente, especialista ou código SED..."
               className="w-full min-h-[44px] sm:min-h-[48px] pl-10 pr-9 bg-white text-[#1d1d1f] text-[0.86rem] sm:text-[0.92rem] rounded-xl sm:rounded-2xl border border-black/[0.08] focus:border-[#0071e3] focus:outline-none shadow-2xs font-medium placeholder:text-[#86868b]"
             />
             {searchTerm && (
@@ -431,7 +443,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                           {cls.name}
                         </h2>
                         <span className="font-mono font-bold text-[0.75rem] text-[#005035] bg-[#eaf6ef] px-2 py-0.5 rounded-md tabular-nums shrink-0">
-                          {cls.presenceRate}%
+                          {cls.presenceRate}% pres.
                         </span>
                       </div>
                       <p className="text-[0.74rem] text-[#6e6e73] font-medium mt-0.5 truncate">
@@ -440,7 +452,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                       </p>
                       <p className="text-[0.75rem] font-semibold text-[#0066cc] truncate mt-0.5 min-h-[1.125rem]">
                         {cls.teacherName
-                          ? `${cls.teacherPronoun || 'PROF.'}: ${cls.teacherName}`
+                          ? `${cls.teacherPronoun || 'PROFESSORA'}: ${cls.teacherName}`
                           : 'Regente Institucional'}
                       </p>
                     </div>
@@ -448,7 +460,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                       <span className="font-semibold text-[#1d1d1f]">{cls.totalStudents} estudantes</span>
                       <span aria-hidden="true" className="text-[#d2d2d7]">·</span>
                       <span className={cls.monthlyAbsences > 0 ? 'text-[#ff3b30] font-semibold' : 'text-[#1d8338]'}>
-                        {cls.monthlyAbsences} faltas
+                        {cls.monthlyAbsences} faltas no mês
                       </span>
                       {(() => {
                         const missingCount = cls.students.filter(
@@ -461,7 +473,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                         if (missingCount === 0) return null;
                         return (
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-[#fff2f2] border border-[#ff3b30]/30 text-[#ff3b30] text-[0.65rem] font-semibold">
-                            <span>{missingCount} s/ PDF</span>
+                            <span>{missingCount} sem PDF</span>
                           </span>
                         );
                       })()}
@@ -492,7 +504,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                           Ver Estudantes
                         </span>
                         <span className="block text-[0.66rem] text-white/70 font-normal leading-tight mt-0.5 truncate">
-                          {cls.totalStudents} fichas
+                          {cls.totalStudents} fichas completas
                         </span>
                       </div>
                     </div>
@@ -518,7 +530,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                               Faltas do Mês
                             </span>
                             <span className="block text-[0.66rem] text-white/80 font-normal leading-tight mt-0.5 truncate">
-                              Auto-sync
+                              Salva automático
                             </span>
                           </div>
                         </div>
@@ -542,7 +554,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                               Faltas do Mês
                             </span>
                             <span className="block text-[0.65rem] text-[#86868b] font-normal leading-tight mt-0.5 truncate">
-                              No fecho mensal
+                              Abre no fecho mensal
                             </span>
                           </div>
                         </div>

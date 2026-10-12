@@ -362,7 +362,43 @@ export function buildContextualPushNotices(
       });
     });
 
-    // 2. Prazo / Pendência de observação pedagógica ou estudantes com faltas elevadas
+    // 2. Alerta imediato de Busca Ativa quando estudante excede 3 faltas consecutivas
+    activeStudents.forEach((s) => {
+      const occs = getStudentCumulativeOccurrences(s);
+      const latestOcc = occs.length > 0 ? occs[occs.length - 1] : undefined;
+      const streak = Math.max(
+        latestOcc?.selectedDates?.length || 0,
+        s.consecutiveAbsenceAlert?.active
+          ? Math.max(3, s.consecutiveAbsenceAlert?.selectedDates?.length || 0)
+          : (s.totalAbsencesMonth || 0) >= 3 && (s.justifiedAbsences || 0) === 0
+          ? s.totalAbsencesMonth || 0
+          : 0
+      );
+      if (streak >= 3) {
+        const hasFeedback = Boolean(
+          latestOcc?.familyFeedback?.trim() ||
+            s.consecutiveAbsenceAlert?.familyFeedback?.trim()
+        );
+        const datesStr =
+          latestOcc?.selectedDates && latestOcc.selectedDates.length > 0
+            ? ` (${latestOcc.selectedDates.join(', ')})`
+            : '';
+        dynamicNotices.push({
+          id: `auto_busca_ativa_3d_${cls.id}_${s.id}`,
+          title: `Busca Ativa • ${s.name.split(' ')[0]} (${streak} Faltas Seguidas)`,
+          body: hasFeedback
+            ? `Estudante da turma ${cls.name} excedeu 3 faltas consecutivas${datesStr}. Retorno da família já registrado.`
+            : `Estudante da turma ${cls.name} excedeu 3 faltas consecutivas${datesStr}. Sugerida ação imediata de Contato de Busca Ativa com os responsáveis.`,
+          category: 'busca_ativa',
+          targetClassId: cls.id,
+          targetScreen: 'faltas_consecutivas',
+          createdAt: latestOcc?.reportedAt || 'Alerta Ativo',
+          authorName: 'Busca Ativa Escolar',
+        });
+      }
+    });
+
+    // 3. Prazo / Pendência de observação pedagógica ou estudantes com faltas elevadas
     const highAbsenceUnjustified = activeStudents.filter(
       (s) => (s.totalAbsencesMonth || 0) >= 4 && (s.justifiedAbsences || 0) === 0
     );
@@ -391,4 +427,40 @@ export function buildContextualPushNotices(
     ...item,
     read: readIds.includes(item.id),
   }));
+}
+
+/**
+ * Dispara notificação push instantânea (Web Push via Service Worker + banner Apple)
+ * para toda a equipe escolar quando um estudante exceder 3 faltas consecutivas.
+ */
+export async function triggerConsecutiveAbsencePushNotification(
+  student: {
+    id: string;
+    name: string;
+    turma?: string;
+    filiacao1?: string;
+    guardianName?: string;
+    guardianPhone?: string;
+    telefones?: string;
+  },
+  className: string,
+  consecutiveDays: number,
+  customActionText?: string
+): Promise<PushNoticeItem> {
+  const shortName = student.name.split(' ')[0];
+  const notice: Omit<PushNoticeItem, 'id' | 'createdAt'> = {
+    title: `🚨 Busca Ativa Urgente • ${shortName} (${consecutiveDays} Faltas Seguidas)`,
+    body: `${student.name} excedeu 3 faltas consecutivas na turma ${className}. ${
+      customActionText || 'Sugerida ação de Contato de Busca Ativa com os responsáveis.'
+    }`,
+    category: 'busca_ativa',
+    targetClassId: student.turma || 'all',
+    targetScreen: 'faltas_consecutivas',
+    authorName: 'Coordenação / Busca Ativa EMEB Candelário',
+  };
+
+  return triggerPushNotification(notice, {
+    showBanner: true,
+    saveToFeed: true,
+  });
 }

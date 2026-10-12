@@ -533,6 +533,7 @@ export const getStudentGenderLabel = (
   remanejadoTerm: 'Remanejada' | 'Remanejado';
   matriculadoTerm: 'Matriculada' | 'Matriculado';
   ativoTerm: 'Ativa' | 'Ativo';
+  doEstudante: 'da Estudante' | 'do Estudante';
 } => {
   const code = resolveStudentGender(student);
   if (code === 'F') {
@@ -547,6 +548,7 @@ export const getStudentGenderLabel = (
       remanejadoTerm: 'Remanejada',
       matriculadoTerm: 'Matriculada',
       ativoTerm: 'Ativa',
+      doEstudante: 'da Estudante',
     };
   }
   return {
@@ -560,6 +562,7 @@ export const getStudentGenderLabel = (
     remanejadoTerm: 'Remanejado',
     matriculadoTerm: 'Matriculado',
     ativoTerm: 'Ativo',
+    doEstudante: 'do Estudante',
   };
 };
 
@@ -606,6 +609,8 @@ export const resolveGuardianRelationshipInfo = (
   shortRoleLabel: string;
   cleanName: string;
   badgeText: string;
+  parentesco: string;
+  nomeLimpo: string;
 } => {
   if (!rawGuardianName || !rawGuardianName.trim() || rawGuardianName.trim() === '—') {
     const fallbackGender: GenderCode = slotDefault === 'filiacao2' ? 'M' : 'F';
@@ -621,6 +626,8 @@ export const resolveGuardianRelationshipInfo = (
       shortRoleLabel: slotDefault === 'filiacao2' ? 'Pai' : 'Mãe',
       cleanName: 'Não informado',
       badgeText: `${fallbackRole}`,
+      parentesco: fallbackRole,
+      nomeLimpo: 'Não informado',
     };
   }
 
@@ -692,6 +699,8 @@ export const resolveGuardianRelationshipInfo = (
     shortRoleLabel,
     cleanName: cleanName || rawGuardianName.trim(),
     badgeText: `${shortRoleLabel} (${gender})`,
+    parentesco: roleLabel,
+    nomeLimpo: cleanName || rawGuardianName.trim(),
   };
 };
 

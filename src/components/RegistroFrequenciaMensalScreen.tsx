@@ -505,7 +505,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between gap-1">
               <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#ff3b30] truncate">
-                Faltas ({selectedMonthName.slice(0, 3)})
+                Faltas ({selectedMonthName})
               </span>
               <span className="px-1.5 py-0.5 rounded-md bg-[#ff3b30]/12 text-[#ff3b30] font-mono text-[0.64rem] font-semibold shrink-0">
                 {detailedIndicators.pctFaltaTurma}%
@@ -516,12 +516,12 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 {liveClassMetrics.totalFaltasTurma}
               </span>
               <span className="text-[0.68rem] sm:text-[0.74rem] font-semibold text-[#6e6e73] tabular-nums truncate ml-1">
-                {detailedIndicators.countWithFaltas} aluno(s)
+                {detailedIndicators.countWithFaltas} {detailedIndicators.countWithFaltas === 1 ? 'estudante' : 'estudantes'}
               </span>
             </div>
             <div className="flex items-center justify-between text-[0.65rem] sm:text-[0.7rem] font-medium text-[#6e6e73] mt-2 pt-1.5 border-t border-black/[0.06]">
-              <span>S/ atest: {detailedIndicators.faltasSemAtestadoTurma}</span>
-              <span>C/ atest: {liveClassMetrics.totalAtestadosTurma}</span>
+              <span>Sem atestado: {detailedIndicators.faltasSemAtestadoTurma}</span>
+              <span>Com atestado: {liveClassMetrics.totalAtestadosTurma}</span>
             </div>
           </div>
 
@@ -529,7 +529,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between gap-1">
               <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#0066cc] truncate">
-                Atestados
+                Atestados Médicos
               </span>
               <span className="px-1.5 py-0.5 rounded-md bg-[#0071e3]/12 text-[#0066cc] font-mono text-[0.64rem] font-semibold shrink-0">
                 {detailedIndicators.pctAtestadosSobreFaltas}%
@@ -540,7 +540,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 {liveClassMetrics.totalAtestadosTurma}
               </span>
               <span className="text-[0.68rem] sm:text-[0.74rem] font-semibold text-[#6e6e73] tabular-nums truncate ml-1">
-                {detailedIndicators.countWithAtestados} aluno(s)
+                {detailedIndicators.countWithAtestados} {detailedIndicators.countWithAtestados === 1 ? 'estudante' : 'estudantes'}
               </span>
             </div>
             <div className="w-full h-1.5 rounded-full bg-black/[0.08] overflow-hidden mt-2">
@@ -555,10 +555,10 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
             <div className="flex items-center justify-between gap-1">
               <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#6e6e73] truncate">
-                Assiduidade
+                Assiduidade Legal
               </span>
               <span className="px-1.5 py-0.5 rounded-md bg-black/[0.06] text-[#1d1d1f] font-mono text-[0.64rem] font-semibold shrink-0">
-                ≥{minLegalPresence}%
+                Mín. {minLegalPresence}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
@@ -567,7 +567,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   {detailedIndicators.countZeroFaltas}
                 </span>
                 <span className="text-[0.68rem] font-medium text-[#6e6e73] ml-1">
-                  100% pres.
+                  sem faltas
                 </span>
               </div>
               <span
@@ -577,7 +577,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     : 'bg-[#28cd41]/15 text-[#1d8338]'
                 }`}
               >
-                {detailedIndicators.countBelowLegal} &lt;{minLegalPresence}%
+                {detailedIndicators.countBelowLegal} abaixo de {minLegalPresence}%
               </span>
             </div>
             <div className="text-[0.65rem] sm:text-[0.68rem] font-medium text-[#86868b] mt-2 pt-1.5 border-t border-black/[0.06] truncate">
@@ -596,7 +596,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               type="text"
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
-              placeholder="Buscar por Nº da chamada ou nome do estudante..."
+              placeholder="Buscar por Nº da chamada ou nome do(a) estudante..."
               className="w-full min-h-[40px] pl-10 pr-8 bg-[#f1f5f9] text-[#0f172a] text-[0.86rem] rounded-xl border border-transparent focus:border-[#006644]/40 focus:bg-white focus:outline-none font-medium placeholder:text-[#64748b]"
             />
             {searchName && (
@@ -660,7 +660,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">grid_view</span>
-                <span>Cards</span>
+                <span>Cartões</span>
               </button>
             </div>
           </div>
@@ -751,7 +751,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         }`}
                       >
                         <span>Presença: {m.frequenciaPercent}%</span>
-                        <span className="opacity-75">({m.presencas}/{m.diasLetivosMatriculados}d)</span>
+                        <span className="opacity-75">({m.presencas} de {m.diasLetivosMatriculados} dias)</span>
                       </span>
 
                       <span
@@ -761,8 +761,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                             : 'bg-[#f1f5f9] text-[#64748b]'
                         }`}
                       >
-                        <span>Falta: {pctFalta}%</span>
-                        <span>({m.faltas}F · {m.atestados}A)</span>
+                        <span>Faltas: {m.faltas} ({pctFalta}%)</span>
+                        <span>· Atestados: {m.atestados}</span>
                       </span>
                     </div>
                   </div>
@@ -783,7 +783,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         Faltas
                       </span>
                       <span className="text-[0.6rem] sm:text-[0.65rem] font-mono font-medium text-[#86868b] tabular-nums block truncate">
-                        máx {m.diasLetivosMatriculados}d
+                        máx {m.diasLetivosMatriculados} dias
                       </span>
                     </div>
 
@@ -837,7 +837,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         Atestados
                       </span>
                       <span className="text-[0.6rem] sm:text-[0.65rem] font-mono font-medium text-[#86868b] tabular-nums block truncate">
-                        {m.faltas === 0 ? '0 faltas' : `de ${m.faltas}F`}
+                        {m.faltas === 0 ? '0 faltas' : `de ${m.faltas} faltas`}
                       </span>
                     </div>
 

@@ -58,6 +58,7 @@ import { RegistroFrequenciaMensalScreen } from './components/RegistroFrequenciaM
 import { FaltasConsecutivasScreen } from './components/FaltasConsecutivasScreen';
 import { DiasLetivosScreen } from './components/DiasLetivosScreen';
 import { ResumoMensalScreen } from './components/ResumoMensalScreen';
+import { MapaEstudantesScreen } from './components/MapaEstudantesScreen';
 import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
 import { UsuariosAcessoScreen } from './components/UsuariosAcessoScreen';
 import { ListasNominaisScreen } from './components/ListasNominaisScreen';
@@ -140,7 +141,8 @@ export default function App() {
     if (effectiveInitialRole === 'usuario') {
       return savedScreen === 'frequencia_mensal' ||
         savedScreen === 'faltas_consecutivas' ||
-        savedScreen === 'resumo'
+        savedScreen === 'resumo' ||
+        savedScreen === 'mapa_estudantes'
         ? savedScreen
         : 'detalhes';
     }
@@ -712,7 +714,7 @@ export default function App() {
   const triggerDebouncedSheetWrite = (
     updatedClass: ClassGroup,
     nextClasses: ClassGroup[],
-    category: Exclude<SyncQueueTaskCategory, 'users_access'> = 'attendance',
+    category: Exclude<SyncQueueTaskCategory, 'users_access' | 'gender_dictionary'> = 'attendance',
     studentId?: string,
     description?: string
   ) => {
@@ -1021,6 +1023,7 @@ export default function App() {
       dias_letivos: '4. 200 Dias',
       usuarios_acesso: '5. Acessos',
       resumo: 'Resumo Mensal',
+      mapa_estudantes: 'Mapa de Trajetos & KM',
     };
 
     const currentLog = accessSessionLogs.find((l) => l.id === activeSessionIdRef.current);
@@ -1596,6 +1599,30 @@ export default function App() {
           />
         )}
 
+        {currentScreen === 'mapa_estudantes' && (
+          <MapaEstudantesScreen
+            classes={userRole === 'admin' || userRole === 'peb2' ? classes : visibleClasses}
+            userRole={userRole}
+            selectedClassId={selectedClass.id}
+            onOpenStudentGrid={(student, classId, className, diasLetivosMes) =>
+              setGridModalData({
+                student,
+                classId,
+                className,
+                diasLetivosMes,
+              })
+            }
+            onOpenStudentPdf={(student, className) =>
+              setPdfModalData({ student, className })
+            }
+            onNavigateToTurma={(cls) => {
+              setSelectedClass(cls);
+              setCurrentScreen('detalhes');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
         {currentScreen === 'planilha' && (
           <PlanilhaGoogleScreen
             classes={visibleClasses}
@@ -1755,6 +1782,11 @@ export default function App() {
         onOpenStudentPdf={(student) => {
           const clsName = gridModalData?.className || selectedClass.name;
           setPdfModalData({ student, className: clsName });
+        }}
+        onNavigateToConsecutiveAbsences={() => {
+          setGridModalData(null);
+          setCurrentScreen('faltas_consecutivas');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
 
