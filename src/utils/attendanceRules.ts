@@ -652,3 +652,54 @@ export const getClassAttendanceMetrics = (
     alunosComRecorteParcial,
   };
 };
+
+/**
+ * Performant deep comparison between previous and incoming class lists to detect real data updates
+ * without triggering unnecessary re-renders or spamming Firebase/API
+ */
+export const haveClassesChanged = (
+  prev: ClassGroup[],
+  next: ClassGroup[]
+): boolean => {
+  if (prev === next) return false;
+  if (!prev || !next) return true;
+  if (prev.length !== next.length) return true;
+
+  for (let i = 0; i < prev.length; i++) {
+    const cp = prev[i];
+    const cn = next[i];
+    if (!cp || !cn) return true;
+    if (
+      cp.id !== cn.id ||
+      cp.students.length !== cn.students.length ||
+      cp.presenceRate !== cn.presenceRate ||
+      cp.monthlyAbsences !== cn.monthlyAbsences
+    ) {
+      return true;
+    }
+
+    for (let j = 0; j < cp.students.length; j++) {
+      const sp = cp.students[j];
+      const sn = cn.students[j];
+      if (!sp || !sn) return true;
+      if (
+        sp.id !== sn.id ||
+        sp.status !== sn.status ||
+        sp.totalAbsencesMonth !== sn.totalAbsencesMonth ||
+        sp.justifiedAbsences !== sn.justifiedAbsences ||
+        sp.diasLetivosRecorte !== sn.diasLetivosRecorte ||
+        sp.name !== sn.name ||
+        sp.ra !== sn.ra ||
+        sp.notes !== sn.notes ||
+        sp.photoDriveId !== sn.photoDriveId ||
+        sp.photo !== sn.photo ||
+        sp.fichaPdfDriveId !== sn.fichaPdfDriveId ||
+        Boolean(sp.consecutiveAbsenceAlert?.active) !== Boolean(sn.consecutiveAbsenceAlert?.active)
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+

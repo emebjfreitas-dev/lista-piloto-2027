@@ -3451,6 +3451,57 @@ export const syncClassesToGoogleSheet = async (
     getStoredAuthorizedUsers()
   );
 
+  const sedConfig = getSedExternalImportConfig();
+  const isSedExternal = sedConfig.isExternalImport;
+
+  const dataToUpdate: Array<{ range: string; values: any[][] }> = [
+    ...(isSedExternal ? [] : [{ range: 'SED_Matriculas_e_Frequencia!A1', values: sedValues }]),
+    {
+      range: 'Faltas_Atestados_Infantil!A1',
+      values: nominalInfantilValues,
+    },
+    {
+      range: 'Faltas_Atestados_Fundamental!A1',
+      values: nominalFundamentalValues,
+    },
+    {
+      range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1',
+      values: faltasConsecutivasValues,
+    },
+    {
+      range: 'Onibus_Fretado_2027!A1',
+      values: onibusFretadoValues,
+    },
+    {
+      range: 'Bolsa_Familia_Bimestral_2027!A1',
+      values: bolsaFamiliaBimestralValues,
+    },
+    {
+      range: 'Dias_Letivos_SME_2027!A1',
+      values: calendarioValues,
+    },
+    {
+      range: 'Turmas_Salas_2027!A1',
+      values: turmasValues,
+    },
+    {
+      range: 'Emails_Permitidos_2027!A1',
+      values: emailsPermitidosValues,
+    },
+    {
+      range: 'Monitoramento_Acessos_2027!A1',
+      values: monitoramentoAcessosValues,
+    },
+    {
+      range: `${GENDER_SHEET_TAB_NAME}!A1`,
+      values: consultaGeneroValues,
+    },
+    {
+      range: 'Diagnostico_Inconsistencias_2027!A1',
+      values: diagnosticoInconsistenciasValues,
+    },
+  ];
+
   const batchRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       spreadsheetId
@@ -3463,56 +3514,7 @@ export const syncClassesToGoogleSheet = async (
       },
       body: JSON.stringify({
         valueInputOption: 'USER_ENTERED',
-        data: [
-          {
-            range: 'Faltas_Atestados_Infantil!A1',
-            values: nominalInfantilValues,
-          },
-          {
-            range: 'Faltas_Atestados_Fundamental!A1',
-            values: nominalFundamentalValues,
-          },
-          {
-            range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1',
-            values: faltasConsecutivasValues,
-          },
-          {
-            range: 'Onibus_Fretado_2027!A1',
-            values: onibusFretadoValues,
-          },
-          {
-            range: 'Bolsa_Familia_Bimestral_2027!A1',
-            values: bolsaFamiliaBimestralValues,
-          },
-          {
-            range: 'SED_Matriculas_e_Frequencia!A1',
-            values: sedValues,
-          },
-          {
-            range: 'Dias_Letivos_SME_2027!A1',
-            values: calendarioValues,
-          },
-          {
-            range: 'Turmas_Salas_2027!A1',
-            values: turmasValues,
-          },
-          {
-            range: 'Emails_Permitidos_2027!A1',
-            values: emailsPermitidosValues,
-          },
-          {
-            range: 'Monitoramento_Acessos_2027!A1',
-            values: monitoramentoAcessosValues,
-          },
-          {
-            range: `${GENDER_SHEET_TAB_NAME}!A1`,
-            values: consultaGeneroValues,
-          },
-          {
-            range: 'Diagnostico_Inconsistencias_2027!A1',
-            values: diagnosticoInconsistenciasValues,
-          },
-        ],
+        data: dataToUpdate,
       }),
     }
   );
@@ -3549,6 +3551,71 @@ export const OFFICIAL_SHEET_TABS = [
   GENDER_SHEET_TAB_NAME,
 ] as const;
 
+export const SED_EXTERNAL_IMPORT_KEY = 'emeb_candelario_sed_external_import_active_2027';
+export const SED_EXTERNAL_SOURCE_URL_KEY = 'emeb_candelario_sed_external_source_url_2027';
+
+export const getSedExternalImportConfig = (): {
+  isExternalImport: boolean;
+  externalSourceUrl: string;
+  defaultFormula: string;
+} => {
+  const raw = localStorage.getItem(SED_EXTERNAL_IMPORT_KEY);
+  // Default to true because user confirmed SED_Matriculas_e_Frequencia is an import from another sheet
+  const isExternal = raw === null ? true : raw !== 'false';
+  const externalSourceUrl = localStorage.getItem(SED_EXTERNAL_SOURCE_URL_KEY) || '';
+  const formulaUrl =
+    externalSourceUrl || 'https://docs.google.com/spreadsheets/d/SEU_ID_DA_PLANILHA_SED/edit';
+  const defaultFormula = `=IMPORTRANGE("${formulaUrl}"; "SED_Matriculas!A1:BL2500")`;
+  return {
+    isExternalImport: isExternal,
+    externalSourceUrl,
+    defaultFormula,
+  };
+};
+
+export const saveSedExternalImportConfig = (
+  isExternal: boolean,
+  externalSourceUrl?: string
+): void => {
+  localStorage.setItem(SED_EXTERNAL_IMPORT_KEY, isExternal ? 'true' : 'false');
+  if (externalSourceUrl !== undefined) {
+    localStorage.setItem(SED_EXTERNAL_SOURCE_URL_KEY, externalSourceUrl.trim());
+  }
+};
+
+export const detectSedHasExternalFormula = async (
+  spreadsheetId: string,
+  token: string
+): Promise<{ hasFormula: boolean; formula?: string }> => {
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}/values/${encodeURIComponent('SED_Matriculas_e_Frequencia!A1:B2')}?valueRenderOption=FORMULA`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) return { hasFormula: false };
+    const data = await res.json();
+    const rows: string[][] = data.values || [];
+    for (const row of rows) {
+      for (const cell of row) {
+        const str = String(cell || '').trim();
+        if (
+          str.startsWith('=') &&
+          (str.toUpperCase().includes('IMPORTRANGE') ||
+            str.toUpperCase().includes('QUERY') ||
+            str.toUpperCase().includes('FILTER'))
+        ) {
+          return { hasFormula: true, formula: str };
+        }
+      }
+    }
+    return { hasFormula: false };
+  } catch {
+    return { hasFormula: false };
+  }
+};
+
 export interface RedefineSyncResult {
   spreadsheetId: string;
   spreadsheetUrl: string;
@@ -3557,7 +3624,10 @@ export interface RedefineSyncResult {
   totalCellsUpdated: number;
   firebaseSynced: boolean;
   diagnosticReport: SchoolDiagnosticReport;
+  updatedClasses?: ClassGroup[];
+  isSedExternalImport?: boolean;
 }
+
 
 /**
  * REDEFINIR DADOS E ABAS DA PLANILHA GOOGLE COM ALINHAMENTO FIREBASE E APP EM PERFEITA SINCRONIA
@@ -3573,6 +3643,7 @@ export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
   calendar?: SchoolDay[];
   authorizedUsers?: AuthorizedUser[];
   sessionLogs?: UserAccessSessionLog[];
+  preserveSedImportRange?: boolean;
 }): Promise<RedefineSyncResult> => {
   const token = await getAccessToken();
   if (!token) {
@@ -3584,6 +3655,7 @@ export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
     calendar = OFFICIAL_OCTOBER_DAYS,
     authorizedUsers: propUsers,
     sessionLogs: propLogs,
+    preserveSedImportRange,
   } = params;
 
   let spreadsheetId = params.spreadsheetId || (await ensureOfficialSpreadsheetId());
@@ -3595,7 +3667,31 @@ export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
   const meta = await fetchSpreadsheetMetadata(spreadsheetId);
   const existingTabs = meta.sheetTitles;
 
-  // 1. Criar abas faltantes com congelamento da linha 1
+  // 1. Detectar se SED_Matriculas_e_Frequencia é importação de outra planilha (IMPORTRANGE ou config)
+  const sedConfig = getSedExternalImportConfig();
+  let formulaCheck: { hasFormula: boolean; formula?: string } = { hasFormula: false };
+  if (existingTabs.includes('SED_Matriculas_e_Frequencia')) {
+    formulaCheck = await detectSedHasExternalFormula(spreadsheetId, token);
+  }
+  const isSedExternal =
+    preserveSedImportRange !== undefined
+      ? preserveSedImportRange
+      : sedConfig.isExternalImport || formulaCheck.hasFormula;
+
+  // 2. Se a aba SED é importada de outra planilha, LER os dados atuais dela primeiro para ter as turmas atualizadas!
+  let effectiveClasses = classes;
+  if (existingTabs.includes('SED_Matriculas_e_Frequencia')) {
+    try {
+      const readRes = await readClassesFromGoogleSheet(spreadsheetId, classes);
+      if (readRes.rowsRead > 0 && readRes.updatedClasses.length > 0) {
+        effectiveClasses = readRes.updatedClasses;
+      }
+    } catch (e) {
+      console.warn('Aviso ao ler dados da aba SED importada na redefinição:', e);
+    }
+  }
+
+  // 3. Criar abas faltantes com congelamento da linha 1
   const requestsToCreateTabs: any[] = [];
   OFFICIAL_SHEET_TABS.forEach((tabName) => {
     if (!existingTabs.includes(tabName)) {
@@ -3630,9 +3726,10 @@ export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
     }
   }
 
-  // 2. Limpar dados anteriores (batchClear) para erradicar linhas fantasmas
+  // 4. Limpar dados anteriores (batchClear) para erradicar linhas fantasmas
+  // REGRA CRÍTICA: Se SED_Matriculas_e_Frequencia é importada de outra planilha (IMPORTRANGE), NUNCA apagar!
   const clearRanges = [
-    'SED_Matriculas_e_Frequencia!A2:BL3000',
+    ...(isSedExternal ? [] : ['SED_Matriculas_e_Frequencia!A2:BL3000']),
     'Faltas_Atestados_Infantil!A2:Z2000',
     'Faltas_Atestados_Fundamental!A2:Z2000',
     'Busca_Ativa_Faltas_Consecutivas_2027!A2:Z2000',
@@ -3646,48 +3743,65 @@ export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
     `${GENDER_SHEET_TAB_NAME}!A2:C2500`,
   ];
 
-  await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
-      spreadsheetId
-    )}/values:batchClear`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ranges: clearRanges }),
-    }
-  ).catch((e) => {
-    console.warn('Aviso no batchClear:', e);
-  });
+  if (clearRanges.length > 0) {
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}/values:batchClear`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ranges: clearRanges }),
+      }
+    ).catch((e) => {
+      console.warn('Aviso no batchClear:', e);
+    });
+  }
 
-  // 3. Montar matrizes completas e atualizadas
+  // 5. Montar matrizes completas e atualizadas a partir dos dados efetivos
   const usersList = propUsers || getStoredAuthorizedUsers();
   const logsList = propLogs || getStoredAccessSessionLogs();
   const syncSnap = getSyncStatusSnapshot();
 
-  const sedValues = buildSedSheetValues(classes, calendar);
-  const nominalInfantilValues = buildNominalStageSheetValues(classes, 'EDUCACAO INFANTIL', calendar);
-  const nominalFundamentalValues = buildNominalStageSheetValues(classes, 'ENSINO FUNDAMENTAL', calendar);
-  const faltasConsecutivasValues = buildFaltasConsecutivasSheetValues(classes);
-  const turmasValues = buildTurmasSheetValues(classes, calendar);
+  const sedValues = buildSedSheetValues(effectiveClasses, calendar);
+  const nominalInfantilValues = buildNominalStageSheetValues(effectiveClasses, 'EDUCACAO INFANTIL', calendar);
+  const nominalFundamentalValues = buildNominalStageSheetValues(effectiveClasses, 'ENSINO FUNDAMENTAL', calendar);
+  const faltasConsecutivasValues = buildFaltasConsecutivasSheetValues(effectiveClasses);
+  const turmasValues = buildTurmasSheetValues(effectiveClasses, calendar);
   const calendarioValues = buildCalendario200DiasValues(calendar);
-  const onibusFretadoValues = buildOnibusFretadoSheetValues(classes);
-  const bolsaFamiliaBimestralValues = buildBolsaFamiliaBimestralSheetValues(classes);
+  const onibusFretadoValues = buildOnibusFretadoSheetValues(effectiveClasses);
+  const bolsaFamiliaBimestralValues = buildBolsaFamiliaBimestralSheetValues(effectiveClasses);
   const emailsPermitidosValues = buildEmailsPermitidosValues(usersList);
   const monitoramentoAcessosValues = buildMonitoramentoAcessosValues(logsList);
-  const consultaGeneroValues = buildGenderLookupSheetValues(classes);
+  const consultaGeneroValues = buildGenderLookupSheetValues(effectiveClasses);
 
   // Diagnóstico de Inconsistências
-  const diagnosticReport = runSchoolDataDiagnostics(classes, usersList, syncSnap);
+  const diagnosticReport = runSchoolDataDiagnostics(effectiveClasses, usersList, syncSnap);
   const diagnosticoInconsistenciasValues = buildDiagnosticoInconsistenciasSheetValues(
-    classes,
+    effectiveClasses,
     usersList,
     syncSnap
   );
 
-  // 4. Gravar todas as 12 abas em uma única transação atômica
+  // 6. Gravar abas analíticas (se SED for importada de outra planilha, NÃO sobrescrever A1 da SED!)
+  const batchDataUpdates: Array<{ range: string; values: any[][] }> = [
+    ...(isSedExternal ? [] : [{ range: 'SED_Matriculas_e_Frequencia!A1', values: sedValues }]),
+    { range: 'Faltas_Atestados_Infantil!A1', values: nominalInfantilValues },
+    { range: 'Faltas_Atestados_Fundamental!A1', values: nominalFundamentalValues },
+    { range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1', values: faltasConsecutivasValues },
+    { range: 'Turmas_Salas_2027!A1', values: turmasValues },
+    { range: 'Dias_Letivos_SME_2027!A1', values: calendarioValues },
+    { range: 'Diagnostico_Inconsistencias_2027!A1', values: diagnosticoInconsistenciasValues },
+    { range: 'Bolsa_Familia_Bimestral_2027!A1', values: bolsaFamiliaBimestralValues },
+    { range: 'Onibus_Fretado_2027!A1', values: onibusFretadoValues },
+    { range: 'Emails_Permitidos_2027!A1', values: emailsPermitidosValues },
+    { range: 'Monitoramento_Acessos_2027!A1', values: monitoramentoAcessosValues },
+    { range: `${GENDER_SHEET_TAB_NAME}!A1`, values: consultaGeneroValues },
+  ];
+
   const writeRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
       spreadsheetId
@@ -3700,20 +3814,7 @@ export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
       },
       body: JSON.stringify({
         valueInputOption: 'USER_ENTERED',
-        data: [
-          { range: 'SED_Matriculas_e_Frequencia!A1', values: sedValues },
-          { range: 'Faltas_Atestados_Infantil!A1', values: nominalInfantilValues },
-          { range: 'Faltas_Atestados_Fundamental!A1', values: nominalFundamentalValues },
-          { range: 'Busca_Ativa_Faltas_Consecutivas_2027!A1', values: faltasConsecutivasValues },
-          { range: 'Turmas_Salas_2027!A1', values: turmasValues },
-          { range: 'Dias_Letivos_SME_2027!A1', values: calendarioValues },
-          { range: 'Diagnostico_Inconsistencias_2027!A1', values: diagnosticoInconsistenciasValues },
-          { range: 'Bolsa_Familia_Bimestral_2027!A1', values: bolsaFamiliaBimestralValues },
-          { range: 'Onibus_Fretado_2027!A1', values: onibusFretadoValues },
-          { range: 'Emails_Permitidos_2027!A1', values: emailsPermitidosValues },
-          { range: 'Monitoramento_Acessos_2027!A1', values: monitoramentoAcessosValues },
-          { range: `${GENDER_SHEET_TAB_NAME}!A1`, values: consultaGeneroValues },
-        ],
+        data: batchDataUpdates,
       }),
     }
   );
@@ -3723,17 +3824,17 @@ export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
     markDriveTokenExpiredOrForbidden(writeRes.status);
     throw new Error(
       errData?.error?.message ||
-        `Erro ao gravar as 12 abas na Planilha Google (${writeRes.status}).`
+        `Erro ao gravar as abas na Planilha Google (${writeRes.status}).`
     );
   }
 
   const writeData = await writeRes.json();
 
-  // 5. Alinhamento com Firebase Firestore
+  // 7. Alinhamento com Firebase Firestore
   let firebaseOk = false;
   try {
     const nowMs = Date.now();
-    const fbClasses = await saveClassesToFirestoreCloud(classes, nowMs);
+    const fbClasses = await saveClassesToFirestoreCloud(effectiveClasses, nowMs);
     const fbMeta = await saveConfigMetaToFirestoreCloud({
       authorizedUsers: usersList,
       accessSessionLogs: logsList,
@@ -3758,6 +3859,8 @@ export const redefineAndSyncGoogleSheetWithFirebase = async (params: {
     totalCellsUpdated: writeData.totalUpdatedCells || 0,
     firebaseSynced: firebaseOk,
     diagnosticReport,
+    updatedClasses: effectiveClasses,
+    isSedExternalImport: isSedExternal,
   };
 };
 

@@ -259,17 +259,19 @@ export const Header: React.FC<HeaderProps> = ({
                 Faltas Consecutivas
               </button>
 
-              <button
-                type="button"
-                onClick={() => onChangeScreen('resumo')}
-                className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
-                  currentScreen === 'resumo'
-                    ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                    : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
-                }`}
-              >
-                Resumo Mensal
-              </button>
+              {userRole === 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => onChangeScreen('resumo')}
+                  className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                    currentScreen === 'resumo'
+                      ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
+                      : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                  }`}
+                >
+                  Resumo Mensal
+                </button>
+              )}
 
               <button
                 type="button"

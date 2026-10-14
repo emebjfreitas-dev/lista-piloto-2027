@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ClassGroup, Student, UserRole } from '../types';
 import { MONTHLY_SCHOOL_DAYS_2027 } from '../data/mockData';
 import {
@@ -7,11 +7,10 @@ import {
 } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
 
-interface ResumoMensalScreenProps {
+export interface ResumoMensalScreenProps {
   currentClass: ClassGroup;
   allClasses: ClassGroup[];
   userRole?: UserRole;
-  initialTab?: 'resumo_turma' | 'metricas_uso';
   onSelectClass: (cls: ClassGroup) => void;
   onSaveNotes?: (notes: string) => void;
   onOpenMonthlyLaunchForClass?: (cls: ClassGroup) => void;
@@ -35,7 +34,7 @@ export interface ClassUsageMetricItem {
   lastUpdateLabel: string;
 }
 
-interface EvaluatedStudentMonth {
+interface EvaluatedStudentSnapshot {
   student: Student;
   cls: ClassGroup;
   diasLetivos: number;
@@ -51,20 +50,19 @@ interface EvaluatedStudentMonth {
   consecutiveAlertDays: number;
   consecutiveAlertTier: 'none' | '3d' | '5d' | '10d';
   alertLabel: string;
-  hasFamilyFeedback: boolean;
   familyFeedback?: string;
 }
 
-const getStudentMonthSnapshot = (
+const computeStudentSnapshot = (
   student: Student,
   cls: ClassGroup,
   monthName: string,
-  defaultMonthDays: number
-): EvaluatedStudentMonth => {
+  defaultDays: number
+): EvaluatedStudentSnapshot => {
   const configuredDays =
     (cls.monthlySchoolDays && cls.monthlySchoolDays[monthName]) ||
     (monthName === 'Outubro' ? cls.classesHeld : undefined) ||
-    defaultMonthDays;
+    defaultDays;
 
   const explicit = student.monthlyAttendanceByMonth?.[monthName];
   let diasLetivos = configuredDays;
@@ -72,44 +70,33 @@ const getStudentMonthSnapshot = (
   let atestados = 0;
 
   if (explicit) {
-    diasLetivos = Math.max(
-      1,
-      Math.min(configuredDays, explicit.diasLetivosRecorte || configuredDays)
-    );
+    diasLetivos = Math.max(1, Math.min(configuredDays, explicit.diasLetivosRecorte || configuredDays));
     faltas = Math.max(0, Math.min(diasLetivos, explicit.faltas || 0));
     atestados = Math.max(0, Math.min(faltas, explicit.atestados || 0));
   } else if (monthName === 'Outubro') {
-    diasLetivos = Math.max(
-      1,
-      Math.min(configuredDays, student.diasLetivosRecorte || configuredDays)
-    );
+    diasLetivos = Math.max(1, Math.min(configuredDays, student.diasLetivosRecorte || configuredDays));
     faltas = Math.max(0, Math.min(diasLetivos, student.totalAbsencesMonth || 0));
     atestados = Math.max(0, Math.min(faltas, student.justifiedAbsences || 0));
   } else {
     const baseFaltas = student.totalAbsencesMonth || 0;
     const baseAtest = Math.min(baseFaltas, student.justifiedAbsences || 0);
-    const monthIndex = MONTHLY_SCHOOL_DAYS_2027.findIndex((m) => m.month === monthName);
+    const mIdx = MONTHLY_SCHOOL_DAYS_2027.findIndex((m) => m.month === monthName);
     if (baseFaltas >= 4) {
-      faltas = Math.min(configuredDays, Math.max(1, baseFaltas - (monthIndex % 2)));
+      faltas = Math.min(configuredDays, Math.max(1, baseFaltas - (mIdx % 2)));
       atestados = Math.min(faltas, baseAtest);
     } else if (baseFaltas > 0) {
-      faltas =
-        (student.number + monthIndex) % 2 === 0
-          ? baseFaltas
-          : Math.max(0, baseFaltas - 1);
+      faltas = (student.number + mIdx) % 2 === 0 ? baseFaltas : Math.max(0, baseFaltas - 1);
       atestados = Math.min(faltas, baseAtest);
     }
   }
 
   const presencas = Math.max(0, diasLetivos - faltas);
-  const frequenciaPercent =
-    diasLetivos > 0 ? Math.round((presencas / diasLetivos) * 100) : 100;
+  const frequenciaPercent = diasLetivos > 0 ? Math.round((presencas / diasLetivos) * 100) : 100;
   const isInfantil = isStudentEducacaoInfantil(student, cls.name);
   const minLegalPercent = isInfantil ? 60 : 75;
   const isBelowLegal = frequenciaPercent < minLegalPercent;
 
   const alertInfo = getStudentConsecutiveAlertInfo(student);
-  const hasConsecutiveAlert = alertInfo.tier !== 'none';
 
   return {
     student,
@@ -123,11 +110,10 @@ const getStudentMonthSnapshot = (
     minLegalPercent,
     isInfantil,
     isBelowLegal,
-    hasConsecutiveAlert,
+    hasConsecutiveAlert: alertInfo.tier !== 'none',
     consecutiveAlertDays: alertInfo.days,
     consecutiveAlertTier: alertInfo.tier,
     alertLabel: alertInfo.label,
-    hasFamilyFeedback: alertInfo.hasFamilyFeedback,
     familyFeedback: alertInfo.familyFeedback,
   };
 };
@@ -135,30 +121,29 @@ const getStudentMonthSnapshot = (
 export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   currentClass,
   allClasses,
-  userRole = 'admin',
   onSelectClass,
   onSaveNotes,
   onOpenMonthlyLaunchForClass,
   onOpenReportPrint,
   onNavigateToSheet,
 }) => {
+  // Slicers de controle analítico
   const [selectedMonthName, setSelectedMonthName] = useState<string>('Outubro');
-  const [scopeFilter, setScopeFilter] = useState<'all_classes' | string>(() =>
-    userRole === 'usuario' ? currentClass.id : 'all_classes'
-  );
-  const [shiftFilter, setShiftFilter] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
+  const [scopeFilter, setScopeFilter] = useState<'all_classes' | string>('all_classes');
   const [segmentFilter, setSegmentFilter] = useState<'all' | 'infantil' | 'fundamental'>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeSearchFilter, setActiveSearchFilter] = useState<
-    'all_alerts' | 'below_mec' | 'consecutive' | 'all_students'
+  const [shiftFilter, setShiftFilter] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
+
+  // Filtros operacionais de estudantes em busca ativa
+  const [searchQuery, setSearchQuery] = useState('');
+  const [alertFilterMode, setAlertFilterMode] = useState<
+    'all_alerts' | 'below_mec' | 'consecutive' | 'no_certificate' | 'all'
   >('all_alerts');
 
-  const [pedagogicalNotes, setPedagogicalNotes] = useState(
-    currentClass.pedagogicalNotes || ''
-  );
+  // Despacho da gestão escolar
+  const [pedagogicalNotes, setPedagogicalNotes] = useState(currentClass.pedagogicalNotes || '');
   const [notesSavedFeedback, setNotesSavedFeedback] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setPedagogicalNotes(currentClass.pedagogicalNotes || '');
   }, [currentClass.id, currentClass.pedagogicalNotes]);
 
@@ -169,24 +154,24 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
     [selectedMonthName]
   );
 
-  // Turmas no escopo selecionado pelos slicers
-  const scopedClasses = useMemo(() => {
+  // Turmas no escopo
+  const filteredClasses = useMemo(() => {
     return allClasses.filter((cls) => {
       if (scopeFilter !== 'all_classes' && cls.id !== scopeFilter) return false;
       const shiftClean = cls.shift.toUpperCase().includes('MANH') ? 'MANHÃ' : 'TARDE';
       if (shiftFilter !== 'all' && shiftClean !== shiftFilter) return false;
       const isInf =
-        cls.name.toUpperCase().startsWith('GRUPO') ||
-        cls.name.toUpperCase().startsWith('G');
+        cls.name.toUpperCase().startsWith('GRUPO') || cls.name.toUpperCase().startsWith('G');
       if (segmentFilter === 'infantil' && !isInf) return false;
       if (segmentFilter === 'fundamental' && isInf) return false;
       return true;
     });
   }, [allClasses, scopeFilter, shiftFilter, segmentFilter]);
 
-  // Consolidação analítica estilo Power BI
-  const powerBiData = useMemo(() => {
-    const classBars: Array<{
+  // Agregações analíticas Power BI
+  const kpiData = useMemo(() => {
+    const classMetrics: Array<{
+      cls: ClassGroup;
       classId: string;
       className: string;
       shortName: string;
@@ -201,24 +186,23 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       totalSemAtestado: number;
       belowLegalCount: number;
       consecutiveAlertsCount: number;
-      clsRef: ClassGroup;
     }> = [];
 
-    const allStudentsEvaluated: EvaluatedStudentMonth[] = [];
+    const evaluatedStudents: EvaluatedStudentSnapshot[] = [];
 
-    let sumDiasMatriculados = 0;
-    let sumPresencas = 0;
-    let sumFaltas = 0;
-    let sumAtestados = 0;
-    let sumBelowLegal = 0;
-    let sumBelowInfantil = 0;
-    let sumBelowFundamental = 0;
-    let sumConsecutiveAlerts = 0;
-    let sumTier3d = 0;
-    let sumTier5d = 0;
-    let sumTier10d = 0;
+    let totalDiasLetivosMatriculados = 0;
+    let totalPresencas = 0;
+    let totalFaltas = 0;
+    let totalAtestados = 0;
+    let totalBelowLegal = 0;
+    let totalBelowInfantil = 0;
+    let totalBelowFundamental = 0;
+    let totalConsecutiveAlerts = 0;
+    let tier3Count = 0;
+    let tier5Count = 0;
+    let tier10Count = 0;
 
-    scopedClasses.forEach((cls) => {
+    filteredClasses.forEach((cls) => {
       const activeStudents = cls.students.filter((s) => {
         const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
         return !sit.includes('BXTR') && !sit.includes('TRANSF') && !sit.includes('REMAN');
@@ -232,13 +216,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       let clsConsec = 0;
 
       activeStudents.forEach((st) => {
-        const snap = getStudentMonthSnapshot(
-          st,
-          cls,
-          selectedMonthName,
-          monthDef.schoolDays
-        );
-        allStudentsEvaluated.push(snap);
+        const snap = computeStudentSnapshot(st, cls, selectedMonthName, monthDef.schoolDays);
+        evaluatedStudents.push(snap);
 
         clsDias += snap.diasLetivos;
         clsPres += snap.presencas;
@@ -247,38 +226,38 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
         if (snap.isBelowLegal) {
           clsBelow += 1;
-          if (snap.isInfantil) sumBelowInfantil += 1;
-          else sumBelowFundamental += 1;
+          if (snap.isInfantil) totalBelowInfantil += 1;
+          else totalBelowFundamental += 1;
         }
 
         if (snap.hasConsecutiveAlert) {
           clsConsec += 1;
-          if (snap.consecutiveAlertTier === '3d') sumTier3d += 1;
-          else if (snap.consecutiveAlertTier === '5d') sumTier5d += 1;
-          else if (snap.consecutiveAlertTier === '10d') sumTier10d += 1;
+          if (snap.consecutiveAlertTier === '3d') tier3Count += 1;
+          else if (snap.consecutiveAlertTier === '5d') tier5Count += 1;
+          else if (snap.consecutiveAlertTier === '10d') tier10Count += 1;
         }
       });
 
-      sumDiasMatriculados += clsDias;
-      sumPresencas += clsPres;
-      sumFaltas += clsFaltas;
-      sumAtestados += clsAtest;
-      sumBelowLegal += clsBelow;
-      sumConsecutiveAlerts += clsConsec;
+      totalDiasLetivosMatriculados += clsDias;
+      totalPresencas += clsPres;
+      totalFaltas += clsFaltas;
+      totalAtestados += clsAtest;
+      totalBelowLegal += clsBelow;
+      totalConsecutiveAlerts += clsConsec;
 
       const freqRate = clsDias > 0 ? Math.round((clsPres / clsDias) * 100) : 100;
-      const isInfantil =
-        cls.name.toUpperCase().startsWith('GRUPO') ||
-        cls.name.toUpperCase().startsWith('G');
+      const isInf =
+        cls.name.toUpperCase().startsWith('GRUPO') || cls.name.toUpperCase().startsWith('G');
 
-      classBars.push({
+      classMetrics.push({
+        cls,
         classId: cls.id,
         className: cls.name,
         shortName: cls.turmaAbrev || cls.name.replace('GRUPO ', 'G'),
         shift: cls.shift.replace('Turno ', ''),
         teacherName: cls.teacherFirstName || cls.teacherName || 'Regente',
-        isInfantil,
-        minLegalPercent: isInfantil ? 60 : 75,
+        isInfantil: isInf,
+        minLegalPercent: isInf ? 60 : 75,
         activeStudents: activeStudents.length,
         frequencyRate: freqRate,
         totalFaltas: clsFaltas,
@@ -286,190 +265,187 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         totalSemAtestado: Math.max(0, clsFaltas - clsAtest),
         belowLegalCount: clsBelow,
         consecutiveAlertsCount: clsConsec,
-        clsRef: cls,
       });
     });
 
     const overallFrequencyRate =
-      sumDiasMatriculados > 0
-        ? Math.round((sumPresencas / sumDiasMatriculados) * 100)
+      totalDiasLetivosMatriculados > 0
+        ? Math.round((totalPresencas / totalDiasLetivosMatriculados) * 100)
         : 100;
 
-    const sumSemAtestado = Math.max(0, sumFaltas - sumAtestados);
+    const totalSemAtestado = Math.max(0, totalFaltas - totalAtestados);
     const justifiedSharePercent =
-      sumFaltas > 0 ? Math.round((sumAtestados / sumFaltas) * 100) : 0;
+      totalFaltas > 0 ? Math.round((totalAtestados / totalFaltas) * 100) : 0;
 
-    // Meta Legal MEC Média Ponderada
-    const targetLegalPonderada =
-      segmentFilter === 'infantil'
-        ? 60
-        : segmentFilter === 'fundamental'
-        ? 75
-        : 70; // Média estimada do conjunto escolar
-
-    const overallMeetsLegal = overallFrequencyRate >= targetLegalPonderada;
-    const overallMeetsSchoolTarget = overallFrequencyRate >= 85;
+    const targetLegalMec =
+      segmentFilter === 'infantil' ? 60 : segmentFilter === 'fundamental' ? 75 : 70;
 
     return {
-      totalActiveStudents: allStudentsEvaluated.length,
-      sumDiasMatriculados,
-      sumPresencas,
+      totalActiveStudents: evaluatedStudents.length,
+      totalDiasLetivosMatriculados,
+      totalPresencas,
       overallFrequencyRate,
-      targetLegalPonderada,
-      overallMeetsLegal,
-      overallMeetsSchoolTarget,
-      sumFaltas,
-      sumAtestados,
-      sumSemAtestado,
+      targetLegalMec,
+      meetsLegalMec: overallFrequencyRate >= targetLegalMec,
+      meetsSchoolTarget: overallFrequencyRate >= 85,
+      totalFaltas,
+      totalAtestados,
+      totalSemAtestado,
       justifiedSharePercent,
-      sumBelowLegal,
-      sumBelowInfantil,
-      sumBelowFundamental,
-      sumConsecutiveAlerts,
-      sumTier3d,
-      sumTier5d,
-      sumTier10d,
-      classBars,
-      allStudentsEvaluated,
+      totalBelowLegal,
+      totalBelowInfantil,
+      totalBelowFundamental,
+      totalConsecutiveAlerts,
+      tier3Count,
+      tier5Count,
+      tier10Count,
+      classMetrics,
+      evaluatedStudents,
     };
-  }, [scopedClasses, selectedMonthName, monthDef.schoolDays, segmentFilter]);
+  }, [filteredClasses, selectedMonthName, monthDef.schoolDays, segmentFilter]);
 
-  // Lista filtrada de estudantes para o painel de Busca Ativa
-  const displayedStudents = useMemo(() => {
-    let list = powerBiData.allStudentsEvaluated;
+  // Lista de estudantes no painel de intervenção
+  const filteredStudents = useMemo(() => {
+    let list = kpiData.evaluatedStudents;
 
-    if (activeSearchFilter === 'all_alerts') {
-      list = list.filter((i) => i.isBelowLegal || i.hasConsecutiveAlert || i.faltas >= 3);
-    } else if (activeSearchFilter === 'below_mec') {
-      list = list.filter((i) => i.isBelowLegal);
-    } else if (activeSearchFilter === 'consecutive') {
-      list = list.filter((i) => i.hasConsecutiveAlert);
+    if (alertFilterMode === 'all_alerts') {
+      list = list.filter((s) => s.isBelowLegal || s.hasConsecutiveAlert || s.faltas >= 3);
+    } else if (alertFilterMode === 'below_mec') {
+      list = list.filter((s) => s.isBelowLegal);
+    } else if (alertFilterMode === 'consecutive') {
+      list = list.filter((s) => s.hasConsecutiveAlert);
+    } else if (alertFilterMode === 'no_certificate') {
+      list = list.filter((s) => s.semAtestado > 0);
     }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(
-        (i) =>
-          i.student.name.toLowerCase().includes(q) ||
-          i.student.ra?.toLowerCase().includes(q) ||
-          i.cls.name.toLowerCase().includes(q)
+        (s) =>
+          s.student.name.toLowerCase().includes(q) ||
+          s.student.ra?.toLowerCase().includes(q) ||
+          s.cls.name.toLowerCase().includes(q)
       );
     }
 
     return list.sort((a, b) => {
-      // Ordena primeiro por gravidade (alertas críticos no topo), depois alfabético
       if (a.hasConsecutiveAlert && !b.hasConsecutiveAlert) return -1;
       if (!a.hasConsecutiveAlert && b.hasConsecutiveAlert) return 1;
       if (a.isBelowLegal && !b.isBelowLegal) return -1;
       if (!a.isBelowLegal && b.isBelowLegal) return 1;
       return a.student.name.localeCompare(b.student.name, 'pt-BR', { sensitivity: 'base' });
     });
-  }, [powerBiData.allStudentsEvaluated, activeSearchFilter, searchQuery]);
+  }, [kpiData.evaluatedStudents, alertFilterMode, searchQuery]);
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-16 animate-gentle-fade">
-      {/* CABEÇALHO EXECUTIVO POWER BI */}
-      <header className="bg-[#0f172a] text-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-800">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade">
+      {/* CABEÇALHO EXECUTIVO POWER BI (EXCLUSIVO ADMIN / GESTÃO ESCOLAR) */}
+      <section className="bg-[#0b1329] text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-[0.72rem] font-bold text-slate-400">
-              <span className="bg-[#1e293b] text-sky-400 px-2 py-0.5 rounded border border-sky-900/60 uppercase tracking-widest text-[0.66rem]">
-                POWER BI EXECUTIVO
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2 text-[0.7rem] font-bold text-slate-400">
+              <span className="bg-sky-950/80 text-sky-400 px-2.5 py-0.5 rounded border border-sky-800/60 uppercase tracking-widest text-[0.65rem]">
+                DIREÇÃO &amp; COORDENAÇÃO
               </span>
-              <span className="text-slate-500">|</span>
+              <span className="text-slate-600">•</span>
               <span className="text-slate-300">EMEB PROF. JOAQUIM CANDELÁRIO DE FREITAS</span>
-              <span className="text-slate-500">|</span>
-              <span className="text-slate-300">JUNDIAÍ/SP</span>
+              <span className="text-slate-600">•</span>
+              <span className="text-slate-400">JUNDIAÍ/SP</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-              <span>Resumo Mensal — Frequência &amp; Busca Ativa</span>
+
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-sky-400 text-[24px]">
+                query_stats
+              </span>
+              <span>Resumo Mensal — Power BI Executivo</span>
             </h1>
-            <p className="text-[0.78rem] text-slate-400 font-medium">
-              Monitoramento institucional de metas MEC (LDB 9.394/96) e contingenciamento de evasão escolar • Referência:{' '}
-              <span className="text-white font-semibold">{selectedMonthName}/2027 ({monthDef.schoolDays} dias letivos)</span>
+
+            <p className="text-[0.78rem] text-slate-400">
+              Monitoramento institucional de metas MEC (60% Infantil / 75% Fundamental) e busca ativa •{' '}
+              <span className="text-slate-200 font-semibold">
+                {selectedMonthName}/2027 ({monthDef.schoolDays} dias letivos) • {filteredClasses.length} turmas no escopo
+              </span>
             </p>
           </div>
 
-          {/* Ações Executivas Rápidas */}
+          {/* Ações da Gestão */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {onOpenMonthlyLaunchForClass && userRole !== 'peb2' && (
+            {onOpenMonthlyLaunchForClass && (
               <button
                 type="button"
                 onClick={() => onOpenMonthlyLaunchForClass(currentClass)}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-[0.76rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
-                title="Lançamento e Justificativas de Faltas"
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
+                title="Lançamento e abono de faltas"
               >
                 <span className="material-symbols-outlined text-[17px] text-sky-400">
                   edit_calendar
                 </span>
-                <span>Lançar Faltas ({currentClass.name})</span>
+                <span>Faltas da Turma ({currentClass.name})</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={onNavigateToSheet}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-[0.76rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
-              title="Abrir Planilha de Diagnóstico Google"
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
+              title="Abrir sincronização com Planilha Google"
             >
               <span className="material-symbols-outlined text-[17px] text-emerald-400">
-                table_chart
+                cloud_sync
               </span>
-              <span>Sync Google Sheets</span>
+              <span>Sync Sheets</span>
             </button>
 
             <button
               type="button"
               onClick={onOpenReportPrint}
-              className="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-[0.76rem] flex items-center gap-1.5 cursor-pointer transition-all shadow-sm active:scale-[0.98]"
-              title="Imprimir Ata e Relatório Oficial"
+              className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+              title="Gerar ata e relatório executivo impresso"
             >
               <span className="material-symbols-outlined text-[17px]">
                 print
               </span>
-              <span>Imprimir Relatório</span>
+              <span>Ata &amp; Relatório</span>
             </button>
           </div>
         </div>
-      </header>
+      </section>
 
-      {/* BARRA DE SLICERS & SEGMENTAÇÃO DE DADOS (POWER BI CONTROLS) */}
-      <section className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
-        <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-2">
+      {/* BARRA DE SLICERS (POWER BI CONTROLS) */}
+      <section className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs">
+        <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-100 text-[0.72rem] font-bold text-slate-600">
+          <div className="flex items-center gap-1.5 uppercase tracking-wider text-slate-700">
             <span className="material-symbols-outlined text-slate-500 text-[18px]">
-              filter_alt
+              tune
             </span>
-            <span className="text-[0.75rem] font-bold text-slate-700 uppercase tracking-wider">
-              Segmentadores de Dados (Slicers)
-            </span>
+            <span>Segmentadores Executivos (Slicers)</span>
           </div>
-          {(scopeFilter !== 'all_classes' || shiftFilter !== 'all' || segmentFilter !== 'all') && (
+          {(scopeFilter !== 'all_classes' || segmentFilter !== 'all' || shiftFilter !== 'all') && (
             <button
               type="button"
               onClick={() => {
                 setScopeFilter('all_classes');
-                setShiftFilter('all');
                 setSegmentFilter('all');
+                setShiftFilter('all');
               }}
-              className="text-[0.72rem] font-bold text-sky-600 hover:text-sky-800 cursor-pointer flex items-center gap-1"
+              className="text-sky-600 hover:text-sky-800 cursor-pointer flex items-center gap-1"
             >
-              <span className="material-symbols-outlined text-[15px]">clear_all</span>
-              Limpar Filtros
+              <span className="material-symbols-outlined text-[15px]">refresh</span>
+              Restaurar Visão Geral
             </button>
           )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Slicer 1: Mês de Referência */}
-          <div className="space-y-1">
-            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block">
+          {/* Slicer: Mês Letivo */}
+          <div>
+            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Mês Letivo (2027)
             </label>
             <select
               value={selectedMonthName}
               onChange={(e) => setSelectedMonthName(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/70 text-slate-800 font-bold text-[0.8rem] rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
             >
               {MONTHLY_SCHOOL_DAYS_2027.map((m) => (
                 <option key={m.month} value={m.month}>
@@ -479,9 +455,41 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </select>
           </div>
 
-          {/* Slicer 2: Escopo de Turma */}
-          <div className="space-y-1">
-            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block">
+          {/* Slicer: Segmento & Metas MEC */}
+          <div>
+            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+              Segmento • Metas MEC
+            </label>
+            <select
+              value={segmentFilter}
+              onChange={(e) => setSegmentFilter(e.target.value as any)}
+              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+            >
+              <option value="all">Todos os Segmentos (Infantil + Fundamental)</option>
+              <option value="fundamental">Ensino Fundamental (Meta Legal ≥ 75%)</option>
+              <option value="infantil">Educação Infantil (Meta Legal ≥ 60%)</option>
+            </select>
+          </div>
+
+          {/* Slicer: Turno */}
+          <div>
+            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+              Turno Escolar
+            </label>
+            <select
+              value={shiftFilter}
+              onChange={(e) => setShiftFilter(e.target.value as any)}
+              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+            >
+              <option value="all">Manhã + Tarde</option>
+              <option value="MANHÃ">Período Manhã</option>
+              <option value="TARDE">Período Tarde</option>
+            </select>
+          </div>
+
+          {/* Slicer: Turma */}
+          <div>
+            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Recorte de Turma
             </label>
             <select
@@ -494,13 +502,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   if (found) onSelectClass(found);
                 }
               }}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/70 text-slate-800 font-bold text-[0.8rem] rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
             >
-              {userRole !== 'usuario' && (
-                <option value="all_classes">
-                  Todas as Turmas ({allClasses.length} turmas consolidadas)
-                </option>
-              )}
+              <option value="all_classes">
+                Todas as Turmas ({allClasses.length} turmas consolidadas)
+              </option>
               {allClasses.map((c) => (
                 <option key={c.id} value={c.id}>
                   Turma {c.name} — {c.shift.replace('Turno ', '')}
@@ -508,109 +514,77 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               ))}
             </select>
           </div>
-
-          {/* Slicer 3: Etapa / Meta MEC */}
-          <div className="space-y-1">
-            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block">
-              Segmento • Metas MEC
-            </label>
-            <select
-              value={segmentFilter}
-              onChange={(e) => setSegmentFilter(e.target.value as any)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/70 text-slate-800 font-bold text-[0.8rem] rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
-            >
-              <option value="all">Todas as Etapas (Infantil + Fundamental)</option>
-              <option value="fundamental">Ensino Fundamental (Meta Legal ≥ 75%)</option>
-              <option value="infantil">Educação Infantil (Meta Legal ≥ 60%)</option>
-            </select>
-          </div>
-
-          {/* Slicer 4: Turno */}
-          <div className="space-y-1">
-            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block">
-              Turno Escolar
-            </label>
-            <select
-              value={shiftFilter}
-              onChange={(e) => setShiftFilter(e.target.value as any)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/70 text-slate-800 font-bold text-[0.8rem] rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
-            >
-              <option value="all">Manhã + Tarde</option>
-              <option value="MANHÃ">Apenas Manhã</option>
-              <option value="TARDE">Apenas Tarde</option>
-            </select>
-          </div>
         </div>
       </section>
 
-      {/* POWER BI SCORECARD: 4 CARTÕES EXECUTIVOS DE METAS & ALERTAS */}
+      {/* SCORECARD EXECUTIVO: 4 CARTÕES DE METAS & ALERTAS (POWER BI MINIMALISTA) */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* CARD 1: Frequência Global vs Meta MEC */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        {/* CARD 1: Frequência Global vs Metas MEC */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
               Taxa de Frequência Geral
             </span>
             <span
-              className={`inline-flex items-center px-2 py-0.5 rounded text-[0.65rem] font-extrabold uppercase ${
-                powerBiData.overallMeetsSchoolTarget
+              className={`inline-flex items-center px-2 py-0.5 rounded text-[0.65rem] font-bold uppercase ${
+                kpiData.meetsSchoolTarget
                   ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                  : powerBiData.overallMeetsLegal
+                  : kpiData.meetsLegalMec
                   ? 'bg-amber-50 text-amber-800 border border-amber-200'
                   : 'bg-rose-50 text-rose-800 border border-rose-200'
               }`}
             >
-              {powerBiData.overallMeetsSchoolTarget
-                ? 'Meta Superada'
-                : powerBiData.overallMeetsLegal
-                ? 'Legal OK'
-                : 'Abaixo da Meta'}
+              {kpiData.meetsSchoolTarget
+                ? 'Meta Superada (≥85%)'
+                : kpiData.meetsLegalMec
+                ? 'Conforme MEC'
+                : 'Abaixo Meta MEC'}
             </span>
           </div>
 
           <div className="my-3">
             <div className="flex items-baseline gap-2">
               <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
-                {powerBiData.overallFrequencyRate}%
+                {kpiData.overallFrequencyRate}%
               </span>
-              <span className="text-[0.72rem] font-semibold text-slate-500">
-                meta MEC: {powerBiData.targetLegalPonderada}%
+              <span className="text-xs font-semibold text-slate-500">
+                meta MEC: {kpiData.targetLegalMec}%
               </span>
             </div>
 
             {/* Bullet bar executiva */}
-            <div className="w-full bg-slate-100 rounded-full h-2 mt-2 relative overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
               <div
                 className={`h-2 rounded-full transition-all duration-500 ${
-                  powerBiData.overallMeetsSchoolTarget
+                  kpiData.meetsSchoolTarget
                     ? 'bg-emerald-600'
-                    : powerBiData.overallMeetsLegal
+                    : kpiData.meetsLegalMec
                     ? 'bg-amber-500'
                     : 'bg-rose-600'
                 }`}
-                style={{ width: `${Math.min(100, powerBiData.overallFrequencyRate)}%` }}
+                style={{ width: `${Math.min(100, kpiData.overallFrequencyRate)}%` }}
               />
             </div>
           </div>
 
           <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[0.7rem] text-slate-500 font-medium">
-            <span>Presenças: {powerBiData.sumPresencas}</span>
-            <span>Total: {powerBiData.sumDiasMatriculados} dias-aluno</span>
+            <span>Presenças: {kpiData.totalPresencas}</span>
+            <span>Total: {kpiData.totalDiasLetivosMatriculados} dias-aluno</span>
           </div>
         </div>
 
-        {/* CARD 2: Alunos Abaixo da Meta Legal MEC */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        {/* CARD 2: Risco Legal MEC */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
-              Risco Legal MEC (&lt;60% / &lt;75%)
+              Abaixo da Meta Legal MEC
             </span>
             <span
               className={`material-symbols-outlined text-[20px] ${
-                powerBiData.sumBelowLegal === 0 ? 'text-emerald-600' : 'text-rose-600'
+                kpiData.totalBelowLegal === 0 ? 'text-emerald-600' : 'text-rose-600'
               }`}
             >
-              {powerBiData.sumBelowLegal === 0 ? 'verified' : 'gpp_maybe'}
+              {kpiData.totalBelowLegal === 0 ? 'verified' : 'gpp_maybe'}
             </span>
           </div>
 
@@ -618,18 +592,18 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <div className="flex items-baseline gap-2">
               <span
                 className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight tabular-nums ${
-                  powerBiData.sumBelowLegal === 0 ? 'text-slate-900' : 'text-rose-700'
+                  kpiData.totalBelowLegal === 0 ? 'text-slate-900' : 'text-rose-700'
                 }`}
               >
-                {powerBiData.sumBelowLegal}
+                {kpiData.totalBelowLegal}
               </span>
-              <span className="text-[0.72rem] font-semibold text-slate-500">
+              <span className="text-xs font-semibold text-slate-500">
                 estudantes em risco
               </span>
             </div>
             <p className="text-[0.72rem] text-slate-500 mt-1">
-              {powerBiData.totalActiveStudents > 0
-                ? `${((powerBiData.sumBelowLegal / powerBiData.totalActiveStudents) * 100).toFixed(1)}% do corpo discente ativo`
+              {kpiData.totalActiveStudents > 0
+                ? `${((kpiData.totalBelowLegal / kpiData.totalActiveStudents) * 100).toFixed(1)}% do corpo discente`
                 : '0% do total'}
             </p>
           </div>
@@ -637,28 +611,28 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[0.7rem] font-semibold">
             <span className="text-slate-700">
               Fund. (&lt;75%):{' '}
-              <strong className={powerBiData.sumBelowFundamental > 0 ? 'text-rose-700' : 'text-slate-900'}>
-                {powerBiData.sumBelowFundamental}
+              <strong className={kpiData.totalBelowFundamental > 0 ? 'text-rose-700' : 'text-slate-900'}>
+                {kpiData.totalBelowFundamental}
               </strong>
             </span>
             <span className="text-slate-700">
               Infantil (&lt;60%):{' '}
-              <strong className={powerBiData.sumBelowInfantil > 0 ? 'text-amber-700' : 'text-slate-900'}>
-                {powerBiData.sumBelowInfantil}
+              <strong className={kpiData.totalBelowInfantil > 0 ? 'text-amber-700' : 'text-slate-900'}>
+                {kpiData.totalBelowInfantil}
               </strong>
             </span>
           </div>
         </div>
 
         {/* CARD 3: Alertas de Busca Ativa */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
               Alertas de Busca Ativa
             </span>
             <span
               className={`material-symbols-outlined text-[20px] ${
-                powerBiData.sumConsecutiveAlerts === 0 ? 'text-emerald-600' : 'text-amber-600'
+                kpiData.totalConsecutiveAlerts === 0 ? 'text-emerald-600' : 'text-amber-600'
               }`}
             >
               crisis_alert
@@ -669,29 +643,29 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <div className="flex items-baseline gap-2">
               <span
                 className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight tabular-nums ${
-                  powerBiData.sumConsecutiveAlerts === 0 ? 'text-slate-900' : 'text-amber-700'
+                  kpiData.totalConsecutiveAlerts === 0 ? 'text-slate-900' : 'text-amber-700'
                 }`}
               >
-                {powerBiData.sumConsecutiveAlerts}
+                {kpiData.totalConsecutiveAlerts}
               </span>
-              <span className="text-[0.72rem] font-semibold text-slate-500">
-                casos prioritários
+              <span className="text-xs font-semibold text-slate-500">
+                casos críticos
               </span>
             </div>
             <p className="text-[0.72rem] text-slate-500 mt-1">
-              Gatilhos de 3+, 5+ ou 10+ faltas consecutivas
+              Gatilhos de faltas consecutivas (3+, 5+ ou 10+ dias)
             </p>
           </div>
 
           <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[0.68rem] font-semibold">
-            <span className="text-amber-800">3-4d: {powerBiData.sumTier3d}</span>
-            <span className="text-orange-800">5-9d: {powerBiData.sumTier5d}</span>
-            <span className="text-rose-800">10d+: {powerBiData.sumTier10d}</span>
+            <span className="text-amber-800">3-4d: {kpiData.tier3Count}</span>
+            <span className="text-orange-800">5-9d: {kpiData.tier5Count}</span>
+            <span className="text-rose-800">10d+: {kpiData.tier10Count}</span>
           </div>
         </div>
 
         {/* CARD 4: Absenteísmo & Atestados */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
               Absenteísmo &amp; Atestados
@@ -704,60 +678,58 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           <div className="my-3">
             <div className="flex items-baseline gap-2">
               <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
-                {powerBiData.sumFaltas}
+                {kpiData.totalFaltas}
               </span>
-              <span className="text-[0.72rem] font-semibold text-slate-500">
-                faltas registradas
+              <span className="text-xs font-semibold text-slate-500">
+                faltas no mês
               </span>
             </div>
 
-            {/* Proporção visual justificada vs não justificada */}
             <div className="w-full bg-slate-100 rounded-full h-2 mt-2 flex overflow-hidden">
               <div
                 className="bg-emerald-600 h-2 transition-all"
-                style={{ width: `${powerBiData.justifiedSharePercent}%` }}
-                title={`Atestados: ${powerBiData.justifiedSharePercent}%`}
+                style={{ width: `${kpiData.justifiedSharePercent}%` }}
+                title={`Atestados: ${kpiData.justifiedSharePercent}%`}
               />
               <div
                 className="bg-rose-500 h-2 transition-all"
-                style={{ width: `${100 - powerBiData.justifiedSharePercent}%` }}
-                title={`Injustificadas: ${100 - powerBiData.justifiedSharePercent}%`}
+                style={{ width: `${100 - kpiData.justifiedSharePercent}%` }}
+                title={`Injustificadas: ${100 - kpiData.justifiedSharePercent}%`}
               />
             </div>
           </div>
 
           <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[0.7rem] font-semibold">
             <span className="text-emerald-700">
-              Atestados: {powerBiData.sumAtestados} ({powerBiData.justifiedSharePercent}%)
+              Atestados: {kpiData.totalAtestados} ({kpiData.justifiedSharePercent}%)
             </span>
             <span className="text-rose-700">
-              Injustificadas: {powerBiData.sumSemAtestado}
+              Injustificadas: {kpiData.totalSemAtestado}
             </span>
           </div>
         </div>
       </section>
 
-      {/* PAINEL CENTRAL: GRÁFICO SÓBRIO POR TURMA + MATRIZ ANALÍTICA */}
+      {/* PAINEL CENTRAL: GRÁFICO POR TURMA & MATRIZ EXECUTIVA */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Gráfico de Colunas Sóbrio Power BI */}
-        <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
-          <div className="space-y-1">
+        {/* Gráfico de Colunas Power BI */}
+        <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+          <div className="space-y-0.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Desempenho por Turma vs. Metas
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Desempenho por Turma ({selectedMonthName})
               </h2>
-              <span className="text-[0.68rem] text-slate-400 font-medium">
-                Clique na barra para filtrar
+              <span className="text-[0.66rem] text-slate-400 font-medium">
+                Clique na barra para isolar
               </span>
             </div>
-            <p className="text-[0.74rem] text-slate-500">
-              Linha tracejada: Meta institucional de frequência (85%).
+            <p className="text-[0.72rem] text-slate-500">
+              Linha tracejada indica a meta institucional de frequência (85%).
             </p>
           </div>
 
-          {/* Gráfico SVG / Flex Bar Chart */}
           <div className="w-full h-[260px] relative pt-6 pb-8 px-2 flex flex-col justify-end select-none mt-2">
-            {/* Linhas de Referência do Eixo Y */}
+            {/* Linhas de grade e referências */}
             <div className="absolute inset-x-2 top-6 bottom-8 pointer-events-none">
               {[100, 75, 60, 0].map((val) => (
                 <div
@@ -772,7 +744,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </div>
               ))}
 
-              {/* Linha da Meta Escolar (85%) */}
+              {/* Linha Meta 85% */}
               <div
                 className="absolute left-8 right-0 border-t-2 border-dashed border-slate-800 z-10 flex items-center justify-end"
                 style={{ bottom: '85%' }}
@@ -783,37 +755,31 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               </div>
             </div>
 
-            {/* Colunas por Turma */}
+            {/* Colunas */}
             <div className="relative z-20 pl-8 pr-1 h-full flex items-end justify-around gap-2">
-              {powerBiData.classBars.map((entry) => {
+              {kpiData.classMetrics.map((entry) => {
                 const isSelected = scopeFilter === entry.classId;
                 const meetsSchool = entry.frequencyRate >= 85;
                 const meetsMec = entry.frequencyRate >= entry.minLegalPercent;
 
-                const barColor = meetsSchool
-                  ? '#047857' // emerald-700
-                  : meetsMec
-                  ? '#d97706' // amber-600
-                  : '#be123c'; // rose-700
+                const barColor = meetsSchool ? '#047857' : meetsMec ? '#d97706' : '#be123c';
 
                 return (
                   <button
                     key={entry.classId}
                     type="button"
                     onClick={() => {
-                      setScopeFilter((prev) =>
-                        prev === entry.classId ? 'all_classes' : entry.classId
-                      );
-                      onSelectClass(entry.clsRef);
+                      setScopeFilter((prev) => (prev === entry.classId ? 'all_classes' : entry.classId));
+                      onSelectClass(entry.cls);
                     }}
-                    className={`group relative flex-1 h-full flex flex-col justify-end items-center focus:outline-none transition-all ${
+                    className={`group relative flex-1 h-full flex flex-col justify-end items-center focus:outline-none transition-all cursor-pointer ${
                       scopeFilter !== 'all_classes' && !isSelected
                         ? 'opacity-35 hover:opacity-85'
                         : 'opacity-100'
                     }`}
-                    title={`Turma ${entry.className} (${entry.shift}) — Frequência: ${entry.frequencyRate}% • Abaixo da Meta MEC: ${entry.belowLegalCount}`}
+                    title={`Turma ${entry.className} (${entry.shift}) — Frequência: ${entry.frequencyRate}% • Abaixo Meta MEC: ${entry.belowLegalCount}`}
                   >
-                    {/* Tooltip flutuante */}
+                    {/* Tooltip */}
                     <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-30 w-max max-w-[200px] bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shadow-lg text-left text-[0.68rem] space-y-0.5">
                       <p className="font-bold">
                         {entry.className} ({entry.shift})
@@ -823,16 +789,14 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                         Faltas: {entry.totalFaltas} ({entry.totalAtestados} c/ atestado)
                       </p>
                       <p className="text-slate-300">
-                        Risco MEC (&lt;{entry.minLegalPercent}%): {entry.belowLegalCount}
+                        Abaixo Meta MEC (&lt;{entry.minLegalPercent}%): {entry.belowLegalCount}
                       </p>
                     </div>
 
-                    {/* Rótulo percentual */}
                     <span className="text-[10px] font-bold font-mono text-slate-800 tabular-nums mb-1">
                       {entry.frequencyRate}%
                     </span>
 
-                    {/* Barra */}
                     <div className="w-full max-w-[32px] h-full flex items-end justify-center">
                       <div
                         className={`w-full rounded-t-md transition-all duration-300 ${
@@ -845,7 +809,6 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                       />
                     </div>
 
-                    {/* Nome da Turma */}
                     <span
                       className={`absolute -bottom-6 text-[10px] font-bold truncate max-w-[50px] ${
                         isSelected ? 'text-slate-900 underline font-extrabold' : 'text-slate-600'
@@ -865,7 +828,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 <span className="w-2.5 h-2.5 rounded-xs bg-[#047857]" /> ≥85%
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-xs bg-[#d97706]" /> Atenção
+                <span className="w-2.5 h-2.5 rounded-xs bg-[#d97706]" /> Conforme MEC
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-xs bg-[#be123c]" /> Crítico (&lt;MEC)
@@ -875,15 +838,15 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           </div>
         </div>
 
-        {/* Matriz Analítica por Turma */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between">
+        {/* Matriz Consolidada de Turmas */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col justify-between">
           <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Matriz Consolidada de Turmas ({selectedMonthName})
               </h2>
-              <p className="text-[0.74rem] text-slate-500">
-                Métricas diretas de frequência, atestados médicos e contagem de alunos em risco legal.
+              <p className="text-[0.72rem] text-slate-500">
+                Indicadores diretos de matrícula ativa, presença, faltas justificadas e risco legal.
               </p>
             </div>
             {scopeFilter !== 'all_classes' && (
@@ -911,7 +874,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {powerBiData.classBars.map((row) => {
+                {kpiData.classMetrics.map((row) => {
                   const isSelected = scopeFilter === row.classId;
                   const isCompliant = row.frequencyRate >= row.minLegalPercent;
 
@@ -919,10 +882,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                     <tr
                       key={row.classId}
                       onClick={() => {
-                        setScopeFilter((prev) =>
-                          prev === row.classId ? 'all_classes' : row.classId
-                        );
-                        onSelectClass(row.clsRef);
+                        setScopeFilter((prev) => (prev === row.classId ? 'all_classes' : row.classId));
+                        onSelectClass(row.cls);
                       }}
                       className={`cursor-pointer transition-colors ${
                         isSelected ? 'bg-sky-50/70' : 'hover:bg-slate-50/80'
@@ -981,26 +942,26 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         </div>
       </section>
 
-      {/* PAINEL DE OPERAÇÃO: BUSCA ATIVA & ESTUDANTES EM PONTO DE ATENÇÃO */}
+      {/* PAINEL DE OPERAÇÃO: BUSCA ATIVA & ESTUDANTES EM ATENÇÃO */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Tabela de Estudantes em Alerta */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between">
+        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col justify-between">
           <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-amber-600 text-[20px]">
                   contact_support
                 </span>
-                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                  Painel de Busca Ativa &amp; Alertas de Frequência ({displayedStudents.length})
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Painel de Busca Ativa &amp; Alertas de Frequência ({filteredStudents.length})
                 </h2>
               </div>
-              <p className="text-[0.74rem] text-slate-500">
-                Estudantes abaixo da meta legal MEC (&lt;60% Infantil / &lt;75% Fundamental) ou com alertas de faltas consecutivas.
+              <p className="text-[0.72rem] text-slate-500">
+                Alunos abaixo da meta legal MEC (&lt;60% Infantil / &lt;75% Fundamental) ou com alertas de faltas consecutivas.
               </p>
             </div>
 
-            {/* Filtros rápidos e busca */}
+            {/* Campo de Busca & Filtros Rápidos */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
                 <input
@@ -1008,20 +969,19 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar aluno ou RA..."
-                  className="h-8 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-[0.75rem] text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="h-8 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
                 <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">
                   search
                 </span>
               </div>
 
-              {/* Botões de filtro */}
-              <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[0.68rem] font-bold">
+              <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[0.66rem] font-bold">
                 <button
                   type="button"
-                  onClick={() => setActiveSearchFilter('all_alerts')}
+                  onClick={() => setAlertFilterMode('all_alerts')}
                   className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
-                    activeSearchFilter === 'all_alerts'
+                    alertFilterMode === 'all_alerts'
                       ? 'bg-white text-slate-900 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
@@ -1030,9 +990,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveSearchFilter('below_mec')}
+                  onClick={() => setAlertFilterMode('below_mec')}
                   className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
-                    activeSearchFilter === 'below_mec'
+                    alertFilterMode === 'below_mec'
                       ? 'bg-white text-slate-900 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
@@ -1041,9 +1001,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveSearchFilter('consecutive')}
+                  onClick={() => setAlertFilterMode('consecutive')}
                   className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
-                    activeSearchFilter === 'consecutive'
+                    alertFilterMode === 'consecutive'
                       ? 'bg-white text-slate-900 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
@@ -1052,9 +1012,20 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveSearchFilter('all_students')}
+                  onClick={() => setAlertFilterMode('no_certificate')}
                   className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
-                    activeSearchFilter === 'all_students'
+                    alertFilterMode === 'no_certificate'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  S/ Atestado
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAlertFilterMode('all')}
+                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                    alertFilterMode === 'all'
                       ? 'bg-white text-slate-900 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
@@ -1065,16 +1036,16 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </div>
           </div>
 
-          {displayedStudents.length === 0 ? (
+          {filteredStudents.length === 0 ? (
             <div className="p-8 text-center space-y-2">
               <span className="material-symbols-outlined text-4xl text-emerald-600">
                 check_circle
               </span>
               <p className="text-sm font-bold text-slate-800">
-                Nenhuma ocorrência encontrada com estes filtros
+                Nenhum estudante em situação de risco com estes filtros
               </p>
               <p className="text-xs text-slate-500">
-                Todos os estudantes selecionados estão em conformidade neste mês.
+                Todos os estudantes selecionados cumpriram as exigências de frequência.
               </p>
             </div>
           ) : (
@@ -1091,18 +1062,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {displayedStudents.map((item) => (
-                    <tr
-                      key={`${item.cls.id}-${item.student.id}`}
-                      className="hover:bg-slate-50/80 transition-colors"
-                    >
+                  {filteredStudents.map((item) => (
+                    <tr key={`${item.cls.id}-${item.student.id}`} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-2.5 px-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <StudentAvatar
-                            student={item.student}
-                            size="sm"
-                            expandableOnClick={false}
-                          />
+                          <StudentAvatar student={item.student} size="sm" expandableOnClick={false} />
                           <div className="min-w-0">
                             <span className="font-bold text-slate-900 block truncate">
                               {item.student.name}
@@ -1129,11 +1093,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                         )}
                       </td>
                       <td className="py-2.5 px-2 text-center font-mono">
-                        <span
-                          className={`font-black ${
-                            item.isBelowLegal ? 'text-rose-700' : 'text-slate-800'
-                          }`}
-                        >
+                        <span className={`font-black ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-800'}`}>
                           {item.frequenciaPercent}%
                         </span>
                         <span className="text-[0.66rem] text-slate-400 ml-1">
@@ -1158,10 +1118,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                             )}
                             {item.isBelowLegal && (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                                Abaixo Meta MEC
+                                &lt; Meta MEC ({item.minLegalPercent}%)
                               </span>
                             )}
-                            {item.hasFamilyFeedback && (
+                            {item.familyFeedback && (
                               <span
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-semibold bg-slate-100 text-slate-700"
                                 title={item.familyFeedback}
@@ -1171,7 +1131,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                             )}
                           </div>
 
-                          {onOpenMonthlyLaunchForClass && userRole !== 'peb2' && (
+                          {onOpenMonthlyLaunchForClass && (
                             <button
                               type="button"
                               onClick={() => {
@@ -1179,7 +1139,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                 onOpenMonthlyLaunchForClass(item.cls);
                               }}
                               className="px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[0.68rem] font-bold shrink-0 cursor-pointer"
-                              title="Lançar faltas ou justificar com atestado"
+                              title="Lançar faltas ou cadastrar atestado médico"
                             >
                               Justificar
                             </button>
@@ -1194,12 +1154,12 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           )}
         </div>
 
-        {/* Parecer Pedagógico & Despacho Executivo */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-3">
+        {/* Parecer Pedagógico & Despacho da Gestão */}
+        <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
-                Parecer Pedagógico • {currentClass.name}
+                Despacho da Gestão • {currentClass.name}
               </span>
               {notesSavedFeedback && (
                 <span className="text-[0.68rem] font-bold text-emerald-700 flex items-center gap-1">
@@ -1209,10 +1169,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               )}
             </div>
             <h3 className="text-sm font-bold text-slate-900">
-              Despacho &amp; Acompanhamento ({selectedMonthName})
+              Acompanhamento &amp; Despacho ({selectedMonthName})
             </h3>
-            <p className="text-[0.74rem] text-slate-500">
-              Registro formal de busca ativa e intervenções para a Turma {currentClass.name}.
+            <p className="text-[0.72rem] text-slate-500">
+              Parecer executivo da coordenação/direção sobre busca ativa e retenção para a Turma {currentClass.name}.
             </p>
           </div>
 
@@ -1224,7 +1184,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               onSaveNotes?.(e.target.value);
               setNotesSavedFeedback(true);
             }}
-            placeholder="Registre as tratativas de busca ativa, contatos realizados com as famílias, justificativas de atestados e alinhamento com a equipe gestora..."
+            placeholder="Registre aqui as providências da gestão, contatos com famílias, encaminhamentos ao Conselho Tutelar ou justificativas administrativas..."
             className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-[0.8rem] focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:outline-none resize-none leading-relaxed transition-all"
           />
 
@@ -1232,7 +1192,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <span>
               Regente: {currentClass.teacherFirstName || currentClass.teacherName || 'Não atribuído'}
             </span>
-            <span>Gravação instantânea</span>
+            <span>Salvamento em tempo real</span>
           </div>
         </div>
       </section>

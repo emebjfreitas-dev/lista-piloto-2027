@@ -42,6 +42,8 @@ import {
   syncGenderDictionaryToGoogleSheet,
   redefineAndSyncGoogleSheetWithFirebase,
   OFFICIAL_SHEET_TABS,
+  getSedExternalImportConfig,
+  saveSedExternalImportConfig,
 } from '../services/googleSheetsApi';
 import { enqueueGenderDictionaryWrite } from '../services/syncQueueManager';
 import {
@@ -173,6 +175,37 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     type: 'success' | 'error' | 'info';
     text: string;
   } | null>(null);
+
+  const [sedConfig, setSedConfig] = useState(() => getSedExternalImportConfig());
+  const [lastAutoSyncSedAt, setLastAutoSyncSedAt] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('emeb_last_sed_auto_sync_at');
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleAutoSync = () => {
+      try {
+        setLastAutoSyncSedAt(localStorage.getItem('emeb_last_sed_auto_sync_at'));
+      } catch {}
+    };
+    window.addEventListener('storage', handleAutoSync);
+    const interval = window.setInterval(handleAutoSync, 3000);
+    return () => {
+      window.removeEventListener('storage', handleAutoSync);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const handleCopyImportRangeFormula = () => {
+    const formula = sedConfig.defaultFormula;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(formula);
+      showToast('success', 'Fórmula =IMPORTRANGE copiada para a área de transferência!');
+    }
+  };
 
   // Mandatory User Confirmation Modal state before mutating/creating Google Sheet or Drive data
   const [confirmModalAction, setConfirmModalAction] = useState<
@@ -626,9 +659,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       setConnectedTitle(result.title);
       setDiagnosticReport(result.diagnosticReport);
 
+      if (result.updatedClasses && onUpdateAllClasses) {
+        onUpdateAllClasses(result.updatedClasses);
+      }
+      onSyncWithClasses();
+
+      const sedNote = result.isSedExternalImport
+        ? ' (Aba SED preservada como importação externa)'
+        : '';
       showToast(
         'success',
-        `Sincronia Total concluída! 12 abas oficiais redefinidas na Planilha Google, alinhadas ao Firebase Firestore e diagnóstico gravado com ${result.diagnosticReport.scorePercentage}% de conformidade!`
+        `Sincronia Total concluída! Abas oficiais atualizadas na Planilha Google, alinhadas ao Firebase Firestore e diagnóstico gravado com ${result.diagnosticReport.scorePercentage}% de conformidade!${sedNote}`
       );
     } catch (err: any) {
       showToast('error', err?.message || 'Erro ao redefinir abas e sincronizar com Firebase.');
@@ -1596,7 +1637,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           },
           {
             id: 'frequencia',
-            label: 'Base SED (48 Col.)',
+            label: 'Base SED • Importada (48 Col.)',
             icon: 'dataset',
           },
           {
@@ -2714,7 +2755,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 ? 'bg-[#eaf6ef] border-[#a4f3ca] text-[#003723]'
                 : activeTab === 'nominal_fundamental'
                 ? 'bg-[#c3e5f4]/35 border-[#aaccda] text-[#001f29]'
-                : 'bg-[#f3f4f2] border-[#c0c8cb] text-[#003440]'
+                : 'bg-[#f0fdf4] border-[#86efac] text-[#14532d]'
             }`}
           >
             <div>
@@ -2726,6 +2767,18 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     ? 'Aba Oficial Google Sheets: Faltas_Atestados_Fundamental'
                     : 'Aba Oficial Google Sheets: SED_Matriculas_e_Frequencia'}
                 </span>
+                {activeTab === 'frequencia' && (
+                  <>
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#166534] text-white text-[0.75rem] font-black uppercase flex items-center gap-1.5 shadow-xs">
+                      <span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
+                      Importação de Outra Planilha SED
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-white text-[#166534] text-[0.75rem] font-extrabold border border-[#86efac] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[15px] text-[#166534]">sync</span>
+                      Sync Automático Contínuo (App + Firebase)
+                    </span>
+                  </>
+                )}
                 <span className="px-2.5 py-0.5 rounded-full bg-white text-[#003440] text-[0.75rem] font-extrabold border border-[#c0c8cb]">
                   {stageTurmasList.length} Turmas • {stageStats.totalEstudantes} Estudantes Tabulados
                 </span>
@@ -2735,13 +2788,62 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   ? 'Tabulação Nominal de Faltas e Atestados — EDUCAÇÃO INFANTIL (Grupo 04 e Grupo 05)'
                   : activeTab === 'nominal_fundamental'
                   ? 'Tabulação Nominal de Faltas e Atestados — ENSINO FUNDAMENTAL (1º ao 5º Ano)'
-                  : 'Base Geral SED (48 Colunas) — Educação Infantil e Ensino Fundamental'}
+                  : 'Base Geral SED (48 Colunas) — Matrículas Importadas de Outra Planilha'}
               </h2>
               <p className="text-[0.86rem] font-semibold opacity-90 mt-0.5">
-                Relação nominal completa de cada estudante com <strong>Quantidade (Qtd.)</strong> e <strong>Porcentagem (%)</strong> de Presenças, Faltas Totais, Atestados Apresentados (Faltas Justificadas) e Faltas sem Atestado, respeitando o recorte individual da matrícula.
+                {activeTab === 'frequencia'
+                  ? 'Esta aba é alimentada automaticamente pela planilha externa oficial da SED (via =IMPORTRANGE ou exportação da rede). O aplicativo monitora atualizações a cada 6,5 segundos e reflete instantaneamente as novas matrículas, presenças e atestados no Firebase Firestore sem sobrescrever ou quebrar sua fórmula.'
+                  : 'Relação nominal completa de cada estudante com Quantidade (Qtd.) e Porcentagem (%) de Presenças, Faltas Totais, Atestados Apresentados (Faltas Justificadas) e Faltas sem Atestado, respeitando o recorte individual da matrícula.'}
               </p>
             </div>
           </div>
+
+          {/* Dedicated SED External Import Auto-Sync Card */}
+          {activeTab === 'frequencia' && (
+            <div className="p-4 bg-gradient-to-r from-[#f0fdf4] via-[#f7fee7] to-[#ecfdf5] border-2 border-[#86efac] rounded-2xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-sm">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#15803d] text-[24px]">cloud_sync</span>
+                  <h3 className="text-[1.05rem] font-black text-[#14532d]">
+                    Sincronização 100% Automática da SED com o Firebase & Proteção Ativa
+                  </h3>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[0.72rem] font-black uppercase bg-[#15803d] text-white">
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    Auto-Sync Ativo
+                  </span>
+                </div>
+                <p className="text-[0.82rem] font-medium text-[#166534] max-w-3xl leading-relaxed">
+                  🛡️ <strong>Aba Protegida:</strong> Ao redefinir as 12 abas ou salvar dados, a aba <code>SED_Matriculas_e_Frequencia</code> <strong>não é apagada nem sobrescrita</strong>. Ela atua como fonte primária de verdade, alimentando o cálculo automático das outras 11 abas oficiais (Educação Infantil, Ensino Fundamental, Busca Ativa, etc.) e o Firebase Firestore.
+                </p>
+                {lastAutoSyncSedAt && (
+                  <p className="text-[0.75rem] font-bold text-[#15803d] flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                    Última sincronia automática SED ➔ Firebase: {new Date(lastAutoSyncSedAt).toLocaleTimeString('pt-BR')} (verificação contínua em segundo plano)
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleCopyImportRangeFormula}
+                  className="px-3.5 py-2 rounded-xl bg-white border-2 border-[#86efac] text-[#15803d] text-[0.8rem] font-black hover:bg-[#dcfce7] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  title="Copiar fórmula =IMPORTRANGE padrão para colar na célula A1 do Google Sheets"
+                >
+                  <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                  Copiar =IMPORTRANGE
+                </button>
+                <button
+                  type="button"
+                  disabled={isSyncingCloud}
+                  onClick={handleReadFromGoogleSheet}
+                  className="px-4 py-2 rounded-xl bg-[#15803d] text-white text-[0.8rem] font-black hover:bg-[#14532d] transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">sync</span>
+                  {isSyncingCloud ? 'Sincronizando...' : 'Sincronizar SED Agora'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* 5 Summary KPI Cards: Quantidade (Qtd) + Porcentagem (%) for the Selected Stage */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">

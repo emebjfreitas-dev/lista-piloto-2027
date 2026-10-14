@@ -38,7 +38,7 @@ import {
   SyncQueueTaskCategory,
 } from './services/syncQueueManager';
 import { OFFICIAL_OCTOBER_DAYS } from './data/mockData';
-import { getClassAttendanceMetrics } from './utils/attendanceRules';
+import { getClassAttendanceMetrics, haveClassesChanged } from './utils/attendanceRules';
 import {
   getAccessToken,
   getSavedSpreadsheetInfo,
@@ -144,7 +144,6 @@ export default function App() {
     if (effectiveInitialRole === 'usuario') {
       return savedScreen === 'frequencia_mensal' ||
         savedScreen === 'faltas_consecutivas' ||
-        savedScreen === 'resumo' ||
         savedScreen === 'mapa_estudantes'
         ? savedScreen
         : 'detalhes';
@@ -154,6 +153,7 @@ export default function App() {
         savedScreen === 'planilha' ||
         savedScreen === 'dias_letivos' ||
         savedScreen === 'usuarios_acesso' ||
+        savedScreen === 'resumo' ||
         savedScreen === 'login'
       ) {
         return 'turmas';
@@ -542,8 +542,17 @@ export default function App() {
             latestClasses
           );
           if (result.rowsRead > 0) {
-            latestClasses = result.updatedClasses;
-            didMutateClasses = true;
+            const hasChanged = haveClassesChanged(latestClasses, result.updatedClasses);
+            if (hasChanged) {
+              latestClasses = result.updatedClasses;
+              didMutateClasses = true;
+              try {
+                localStorage.setItem(
+                  'emeb_last_sed_auto_sync_at',
+                  new Date().toISOString()
+                );
+              } catch {}
+            }
           }
           // Pull latest authorizedUsers (roles, assigned classes, access counts, durations) from Google Sheet
           const sheetUsers = await readAuthorizedUsersFromGoogleSheet(
@@ -598,8 +607,11 @@ export default function App() {
             photoSync.updatedClasses
           );
           if (photoSync.matchedPhotosCount > 0 || pdfSync.matchedPdfsCount > 0) {
-            latestClasses = pdfSync.updatedClasses;
-            didMutateClasses = true;
+            const hasChanged = haveClassesChanged(latestClasses, pdfSync.updatedClasses);
+            if (hasChanged) {
+              latestClasses = pdfSync.updatedClasses;
+              didMutateClasses = true;
+            }
           }
         }
 
@@ -610,6 +622,8 @@ export default function App() {
             const found = latestClasses.find((c) => c.id === prev.id);
             return found || prev;
           });
+          // Also explicitly persist fresh SED data to Cloud Firestore immediately
+          void saveClassesToFirestoreCloud(latestClasses, Date.now()).catch(() => {});
         }
       } catch (err) {
         console.warn('Auto-sync em segundo plano:', err);
@@ -1585,21 +1599,45 @@ export default function App() {
         )}
 
         {currentScreen === 'resumo' && (
-          <ResumoMensalScreen
-            currentClass={selectedClass}
-            allClasses={userRole === 'admin' || userRole === 'peb2' ? classes : visibleClasses}
-            userRole={userRole}
-            initialTab={userRole === 'admin' ? 'metricas_uso' : 'resumo_turma'}
-            onSelectClass={(cls) => setSelectedClass(cls)}
-            onSaveNotes={handleSaveNotes}
-            onOpenMonthlyLaunchForClass={(cls) => {
-              setSelectedClass(cls);
-              setCurrentScreen('frequencia_mensal');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onOpenReportPrint={() => setIsReportPrintModalOpen(true)}
-            onNavigateToSheet={() => setCurrentScreen('planilha')}
-          />
+          userRole === 'admin' ? (
+            <ResumoMensalScreen
+              currentClass={selectedClass}
+              allClasses={classes}
+              userRole={userRole}
+              onSelectClass={(cls) => setSelectedClass(cls)}
+              onSaveNotes={handleSaveNotes}
+              onOpenMonthlyLaunchForClass={(cls) => {
+                setSelectedClass(cls);
+                setCurrentScreen('frequencia_mensal');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onOpenReportPrint={() => setIsReportPrintModalOpen(true)}
+              onNavigateToSheet={() => setCurrentScreen('planilha')}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs max-w-lg mx-auto my-12 space-y-4 animate-gentle-fade">
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700">
+                <span className="material-symbols-outlined text-[34px]">
+                  lock
+                </span>
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                  Acesso Restrito à Gestão Escolar
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 max-w-sm">
+                  O painel analítico Power BI (Resumo Mensal) é de uso exclusivo da Direção e Coordenação da EMEB.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas')}
+                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-xs"
+              >
+                Voltar à Página Principal
+              </button>
+            </div>
+          )
         )}
 
         {currentScreen === 'mapa_estudantes' && (

@@ -55,6 +55,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       label: 'Resumo Mensal',
       shortLabel: 'Resumo',
       icon: 'monitoring',
+      adminOnly: true,
     },
     {
       id: 'mapa_estudantes',
