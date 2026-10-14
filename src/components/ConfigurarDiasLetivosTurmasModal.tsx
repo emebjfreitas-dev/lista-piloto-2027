@@ -15,6 +15,7 @@ import {
   saveSpreadsheetInfo,
   extractSpreadsheetId,
 } from '../services/googleSheetsApi';
+import { saveClassesToFirestoreCloud } from '../services/firebaseSync';
 
 interface ConfigurarDiasLetivosTurmasModalProps {
   isOpen: boolean;
@@ -180,17 +181,29 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
     );
   };
 
-  const handleSaveAll = () => {
+  const [isSavingFirebase, setIsSavingFirebase] = useState(false);
+
+  const handleSaveAll = async () => {
     const cleanId = extractSpreadsheetId(sheetUrlInput);
     if (cleanId) {
       saveSpreadsheetInfo(cleanId, 'BD_Oficial_EMEB_Joaquim_Candelario_2027');
     }
     savePhotosDriveFolderUrl(drivePhotosUrlInput);
     onSaveClassesConfig(draftClasses);
+
+    setIsSavingFirebase(true);
+    try {
+      await saveClassesToFirestoreCloud(draftClasses, Date.now());
+    } catch (e) {
+      console.warn('Erro ao sincronizar com Firebase Firestore:', e);
+    } finally {
+      setIsSavingFirebase(false);
+    }
+
     setSavedFeedback(true);
     setTimeout(() => {
       setSavedFeedback(false);
-    }, 2500);
+    }, 2800);
   };
 
   const handleCopyText = (key: string, text: string) => {
@@ -476,7 +489,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
           {savedFeedback ? (
             <span className="text-[#005035] font-black text-[0.95rem] flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[22px]">check_circle</span>
-              <span>Configuração salva no banco local e pronta para a Planilha Google!</span>
+              <span>Configuração salva e sincronizada no Firebase Firestore &amp; Planilha Google!</span>
             </span>
           ) : (
             <button
@@ -496,6 +509,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             <button
               type="button"
               onClick={onClose}
+              disabled={isSavingFirebase}
               className="px-4 min-h-[46px] rounded-xl bg-[#edeeec] text-[#41484b] font-bold text-[0.9rem] cursor-pointer"
             >
               Fechar
@@ -503,10 +517,13 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             <button
               type="button"
               onClick={handleSaveAll}
-              className="px-5 min-h-[46px] rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.95rem] flex items-center gap-1.5 shadow-md cursor-pointer"
+              disabled={isSavingFirebase}
+              className="px-5 min-h-[46px] rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.95rem] flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-[20px]">save</span>
-              <span>Salvar Dias Letivos e Links</span>
+              <span className={`material-symbols-outlined text-[20px] ${isSavingFirebase ? 'animate-spin' : ''}`}>
+                {isSavingFirebase ? 'sync' : 'save'}
+              </span>
+              <span>{isSavingFirebase ? 'Salvando no Firebase...' : 'Salvar Dias Letivos no Firebase'}</span>
             </button>
           </div>
         </div>

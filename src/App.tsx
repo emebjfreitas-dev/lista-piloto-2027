@@ -29,7 +29,10 @@ import {
   mergeClassesWithConcurrencyControl,
   getLocalClassesUpdatedAtMs,
 } from './services/db';
-import { subscribeToFirestoreRealtimeState } from './services/firebaseSync';
+import {
+  subscribeToFirestoreRealtimeState,
+  saveClassesToFirestoreCloud,
+} from './services/firebaseSync';
 import {
   SyncQueueManager,
   SyncQueueTaskCategory,
@@ -1658,6 +1661,7 @@ export default function App() {
                 });
               }
             }}
+            onOpenConfigDaysModal={() => setIsConfigDaysModalOpen(true)}
             onNavigateToAcessos={() => setCurrentScreen('usuarios_acesso')}
             onBack={() => setCurrentScreen('turmas')}
           />
@@ -1928,6 +1932,10 @@ export default function App() {
         onSaveClassesConfig={(updatedClasses) => {
           setClasses(updatedClasses);
           saveStoredClasses(updatedClasses);
+          const nowMs = Date.now();
+          saveClassesToFirestoreCloud(updatedClasses, nowMs).catch((err) => {
+            console.warn('Erro ao salvar turmas no Firebase Firestore:', err);
+          });
           const found = updatedClasses.find((c) => c.id === selectedClass.id);
           if (found) setSelectedClass(found);
         }}

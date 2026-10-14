@@ -16,36 +16,53 @@ interface DiasLetivosScreenProps {
 }
 
 export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
+  userRole = 'admin',
+  onOpenConfigDaysModal,
   onNavigateToSheet,
 }) => {
   const savedSheet = getSavedSpreadsheetInfo();
+  const isAdmin = userRole === 'admin';
 
   return (
     <div className="flex flex-col w-full max-w-[1100px] mx-auto space-y-4 pb-12 animate-gentle-fade">
-      <section className="card-welcoming bg-white p-6 sm:p-8 space-y-5">
+      <section className="card-welcoming bg-white p-6 sm:p-8 space-y-5 rounded-3xl border border-[#003440]/10 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0071e3]/10 text-[#0066cc] text-[0.72rem] font-bold uppercase tracking-wider">
-              <span className="material-symbols-outlined text-[15px]">table_chart</span>
-              Gestão Manual Direta na Planilha Oficial
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#005035]/10 text-[#005035] text-[0.72rem] font-bold uppercase tracking-wider">
+              <span className="material-symbols-outlined text-[15px]">calendar_month</span>
+              Calendário Oficial 2027 · SME Jundiaí
             </span>
-            <h1 className="text-[1.45rem] sm:text-[1.75rem] font-bold text-[#1d1d1f] tracking-tight leading-tight">
+            <h1 className="text-[1.45rem] sm:text-[1.75rem] font-black text-[#003440] tracking-tight leading-tight">
               Listagem de Dias Letivos (200 Dias)
             </h1>
-            <p className="text-[0.86rem] text-[#6e6e73] max-w-2xl">
-              A listagem e o controle dos dias letivos de {SCHOOL_NAME} ({CITY_NAME}) são realizados exclusivamente de forma manual na própria Planilha Google oficial (<span className="font-mono font-semibold text-[#1d1d1f]">Dias_Letivos_SME_2027</span>) e sincronizados instantaneamente com o aplicativo.
+            <p className="text-[0.86rem] text-[#436370] max-w-2xl">
+              Controle anual dos 200 dias letivos e meses específicos de {SCHOOL_NAME} ({CITY_NAME}).
+              Totalmente integrado com o estado das turmas no <strong>Firebase Firestore</strong> e na aba oficial <span className="font-mono font-semibold text-[#003440]">Dias_Letivos_SME_2027</span>.
             </p>
           </div>
 
-          <a
-            href={savedSheet.fullUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="min-h-[46px] px-5 py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-[0.84rem] inline-flex items-center justify-center gap-2 shrink-0 transition-all active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[18px]">open_in_new</span>
-            <span>Editar Dias Letivos na Planilha ↗</span>
-          </a>
+          <div className="flex flex-wrap items-center gap-2">
+            {onOpenConfigDaysModal && (
+              <button
+                type="button"
+                onClick={onOpenConfigDaysModal}
+                className="min-h-[46px] px-5 py-2.5 rounded-2xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.84rem] inline-flex items-center justify-center gap-2 shrink-0 transition-all shadow-sm active:scale-95 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">tune</span>
+                <span>Configurar Dias &amp; Meses (Firebase)</span>
+              </button>
+            )}
+
+            <a
+              href={savedSheet.fullUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[46px] px-4 py-2.5 rounded-2xl bg-[#f5f7f6] hover:bg-[#e3e8e6] text-[#003440] font-bold text-[0.82rem] inline-flex items-center justify-center gap-1.5 shrink-0 transition-all border border-[#003440]/15"
+            >
+              <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+              <span>Abrir na Planilha ↗</span>
+            </a>
+          </div>
         </div>
 
         {/* Resumo dos 200 Dias Letivos */}

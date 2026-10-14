@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Brasão e Favicon Oficial EMEB Candelário de Freitas - Jundiaí">
+  <defs>
+    <!-- Gradiente de Fundo Noturno Royal Blue para Contraste Máximo -->
+    <linearGradient id="favBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#002b5c" />
+      <stop offset="100%" stop-color="#00142e" />
+    </linearGradient>
+
+    <!-- Gradiente Ouro Metálico Heráldico de Alta Resolução -->
+    <linearGradient id="favGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff275" />
+      <stop offset="45%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+
+    <!-- Gradiente Azul Celeste Heráldico -->
+    <linearGradient id="favShieldBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+
+    <!-- Gradiente Verde Sinople Heráldico -->
+    <linearGradient id="favShieldGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#14532d" />
+    </linearGradient>
+
+    <!-- Gradiente Prata Heráldica do Rio Jundiaí -->
+    <linearGradient id="favSilver" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#cbd5e1" />
+    </linearGradient>
+
+    <clipPath id="shieldShapeClip">
+      <path d="M16,19 L48,19 L48,38 C48,48 38,54.5 32,56.5 C26,54.5 16,48 16,38 Z" />
+    </clipPath>
+  </defs>
+
+  <!-- Moldura Squircle Institucional com borda dourada para contraste perfeito em abas claras e escuras -->
+  <rect x="1.5" y="1.5" width="61" height="61" rx="14" fill="url(#favBg)" stroke="url(#favGold)" stroke-width="2.5" />
+
+  <!-- Coroa Mural de Jundiaí (5 torres heráldicas com ameias) -->
+  <path d="M15,19 L49,19 L50,11.5 L46,11.5 L46,13.5 L41,13.5 L41,9.5 L35,9.5 L35,13.5 L29,13.5 L29,9.5 L23,9.5 L23,13.5 L18,13.5 L18,11.5 L14,11.5 Z" 
+        fill="url(#favGold)" stroke="#78350f" stroke-width="0.8" stroke-linejoin="round" />
+  <!-- Portas das Torres da Coroa -->
+  <rect x="16.5" y="14.5" width="2" height="3.5" rx="0.5" fill="#451a03" />
+  <rect x="24.5" y="14" width="2.5" height="4" rx="0.5" fill="#451a03" />
+  <rect x="30.5" y="13.5" width="3" height="4.5" rx="0.5" fill="#451a03" />
+  <rect x="37" y="14" width="2.5" height="4" rx="0.5" fill="#451a03" />
+  <rect x="45.5" y="14.5" width="2" height="3.5" rx="0.5" fill="#451a03" />
+
+  <!-- Base e Interior do Escudo -->
+  <g clip-path="url(#shieldShapeClip)">
+    <!-- Chefe Azul Superior -->
+    <rect x="15" y="18" width="34" height="15" fill="url(#favShieldBlue)" />
+
+    <!-- 3 Estrelas Douradas de Jundiaí -->
+    <!-- Estrela Central de Ouro (5 pontas) -->
+    <polygon points="32,20.5 33.6,24.5 38,24.5 34.5,27.2 35.8,31.2 32,28.8 28.2,31.2 29.5,27.2 26,24.5 30.4,24.5" fill="url(#favGold)" />
+    <!-- Estrela Esquerda -->
+    <polygon points="22.5,22.5 23.6,25.2 26.5,25.2 24.2,27 25,29.8 22.5,28.1 20,29.8 20.8,27 18.5,25.2 21.4,25.2" fill="url(#favGold)" />
+    <!-- Estrela Direita -->
+    <polygon points="41.5,22.5 42.6,25.2 45.5,25.2 43.2,27 44,29.8 41.5,28.1 39,29.8 39.8,27 37.5,25.2 40.4,25.2" fill="url(#favGold)" />
+
+    <!-- Campo Sinople Inferior (Verde das Matas de Jundiaí) -->
+    <rect x="15" y="33" width="34" height="24" fill="url(#favShieldGreen)" />
+
+    <!-- Faixa Ondulada Prateada representando o Rio Jundiaí -->
+    <path d="M15,39.5 Q23.5,36 32,39.5 T49,39.5 L49,46 Q40.5,42.5 32,46 T15,46 Z" fill="url(#favSilver)" stroke="#0284c7" stroke-width="0.7" />
+    <path d="M16,42.8 Q24,39.5 32,42.8 T48,42.8" fill="none" stroke="#38bdf8" stroke-width="0.7" />
+
+    <!-- Peixe Jundiá Dourado ("Jundiaí" = Rio dos Jundiás) -->
+    <path d="M24,42.5 C27,39.5 34,39.5 38.5,42.5 L42,40.5 L40.8,42.5 L42,44.5 L38.5,43 C34,45.5 27,45.5 24,42.5 Z" 
+          fill="url(#favGold)" stroke="#78350f" stroke-width="0.8" stroke-linejoin="round" />
+    <circle cx="26.5" cy="42" r="0.8" fill="#451a03" />
+  </g>
+
+  <!-- Contorno Dourado do Escudo Português -->
+  <path d="M16,19 L48,19 L48,38 C48,48 38,54.5 32,56.5 C26,54.5 16,48 16,38 Z" 
+        fill="none" stroke="url(#favGold)" stroke-width="2.2" stroke-linejoin="round" />
+</svg>

@@ -74,6 +74,7 @@ interface PlanilhaGoogleScreenProps {
   onSyncWithClasses: () => void;
   onOpenStudentGrid?: (classId: string, studentId: string) => void;
   onOpenStudentPdf?: (classId: string, studentId: string) => void;
+  onOpenConfigDaysModal?: () => void;
   onNavigateToAcessos?: () => void;
   onBack: () => void;
 }
@@ -87,6 +88,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   onSyncWithClasses,
   onOpenStudentGrid,
   onOpenStudentPdf,
+  onOpenConfigDaysModal,
   onNavigateToAcessos,
   onBack,
 }) => {
@@ -3316,9 +3318,36 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
       {/* Tab 2: Dias Letivos */}
       {activeTab === 'dias_letivos' && (
-        <section className="bg-white rounded-2xl p-4 shadow-sm border border-[#e1e3e1] space-y-3">
-          <div className="border border-[#c0c8cb] rounded-xl overflow-x-auto max-h-[400px]">
-            <table className="w-full text-left text-[0.9rem] border-collapse">
+        <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-7 shadow-xs border border-[#003440]/10 space-y-5 animate-gentle-fade">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#003440]/10">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[24px] text-[#005035]">
+                  calendar_month
+                </span>
+                <h2 className="text-lg sm:text-xl font-black text-[#003440]">
+                  Calendário Escolar Oficial · 200 Dias Letivos (2027)
+                </h2>
+              </div>
+              <p className="text-[0.82rem] text-[#436370]">
+                Aba Oficial na Planilha: <code className="bg-[#f1f4f3] px-1.5 py-0.5 rounded text-[#003440]">Dias_Letivos_SME_2027</code> · Alinhado com o Firebase Firestore.
+              </p>
+            </div>
+
+            {onOpenConfigDaysModal && (
+              <button
+                type="button"
+                onClick={onOpenConfigDaysModal}
+                className="min-h-[44px] px-4 py-2 bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.82rem] rounded-2xl flex items-center gap-2 cursor-pointer shadow-sm shrink-0"
+              >
+                <span className="material-symbols-outlined text-[18px]">tune</span>
+                <span>Configurar 200 Dias Letivos &amp; Meses</span>
+              </button>
+            )}
+          </div>
+
+          <div className="border border-[#c0c8cb] rounded-2xl overflow-x-auto max-h-[420px]">
+            <table className="w-full text-left text-[0.88rem] border-collapse">
               <thead className="bg-[#003440] text-white sticky top-0 font-bold">
                 <tr>
                   <th className="py-2.5 px-3">Data</th>
@@ -4069,7 +4098,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                         <td className="py-2.5 px-3 text-center">
                           {waLinks.length > 0 ? (
                             <a
-                              href={waLinks[0].url}
+                              href={waLinks[0].waUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#075E54] font-bold text-[0.72rem] transition-colors"
