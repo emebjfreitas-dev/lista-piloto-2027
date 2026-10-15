@@ -1612,7 +1612,17 @@ export default function App() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               onOpenReportPrint={() => setIsReportPrintModalOpen(true)}
-              onNavigateToSheet={() => setCurrentScreen('planilha')}
+              onOpenStudentPdf={(student) =>
+                setPdfModalData({ student, className: selectedClass.name })
+              }
+              onOpenStudentGrid={(student) =>
+                setGridModalData({
+                  student,
+                  classId: selectedClass.id,
+                  className: selectedClass.name,
+                  diasLetivosMes: selectedClass.classesHeld || 20,
+                })
+              }
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs max-w-lg mx-auto my-12 space-y-4 animate-gentle-fade">

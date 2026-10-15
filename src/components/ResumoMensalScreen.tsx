@@ -6,6 +6,7 @@ import {
   getStudentConsecutiveAlertInfo,
 } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
+import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 
 export interface ResumoMensalScreenProps {
   currentClass: ClassGroup;
@@ -14,24 +15,10 @@ export interface ResumoMensalScreenProps {
   onSelectClass: (cls: ClassGroup) => void;
   onSaveNotes?: (notes: string) => void;
   onOpenMonthlyLaunchForClass?: (cls: ClassGroup) => void;
-  onOpenReportPrint: () => void;
-  onNavigateToSheet: () => void;
-}
-
-export interface ClassUsageMetricItem {
-  cls: ClassGroup;
-  activeStudentsCount: number;
-  verifiedStudentsCount: number;
-  completionRate: number;
-  classesHeld: number;
-  expectedDaysTarget: number;
-  frequencyRate: number;
-  totalAbsencesMonth: number;
-  consecutiveAlertsCount: number;
-  pendingCount: number;
-  pendingReasons: string[];
-  status: 'atualizado' | 'parcial' | 'pendente';
-  lastUpdateLabel: string;
+  onOpenReportPrint?: () => void;
+  onNavigateToSheet?: () => void;
+  onOpenStudentGrid?: (student: Student) => void;
+  onOpenStudentPdf?: (student: Student) => void;
 }
 
 interface EvaluatedStudentSnapshot {
@@ -123,21 +110,25 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   allClasses,
   onSelectClass,
   onSaveNotes,
-  onOpenMonthlyLaunchForClass,
   onOpenReportPrint,
-  onNavigateToSheet,
+  onOpenStudentGrid,
+  onOpenStudentPdf,
 }) => {
-  // Slicers de controle analítico
+  // Slicers de controle analítico sóbrio
   const [selectedMonthName, setSelectedMonthName] = useState<string>('Outubro');
   const [scopeFilter, setScopeFilter] = useState<'all_classes' | string>('all_classes');
   const [segmentFilter, setSegmentFilter] = useState<'all' | 'infantil' | 'fundamental'>('all');
   const [shiftFilter, setShiftFilter] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
 
-  // Filtros operacionais de estudantes em busca ativa
+  // Filtros operacionais e busca do painel
   const [searchQuery, setSearchQuery] = useState('');
   const [alertFilterMode, setAlertFilterMode] = useState<
     'all_alerts' | 'below_mec' | 'consecutive' | 'no_certificate' | 'all'
   >('all_alerts');
+
+  // Expansão visual detalhada de estudantes (sem sair da tela)
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   // Despacho da gestão escolar
   const [pedagogicalNotes, setPedagogicalNotes] = useState(currentClass.pedagogicalNotes || '');
@@ -168,7 +159,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
     });
   }, [allClasses, scopeFilter, shiftFilter, segmentFilter]);
 
-  // Agregações analíticas Power BI
+  // Agregações analíticas e KPIs MEC
   const kpiData = useMemo(() => {
     const classMetrics: Array<{
       cls: ClassGroup;
@@ -268,6 +259,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       });
     });
 
+    const totalActiveStudents = evaluatedStudents.length;
+
     const overallFrequencyRate =
       totalDiasLetivosMatriculados > 0
         ? Math.round((totalPresencas / totalDiasLetivosMatriculados) * 100)
@@ -280,14 +273,36 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
     const targetLegalMec =
       segmentFilter === 'infantil' ? 60 : segmentFilter === 'fundamental' ? 75 : 70;
 
+    // Cálculo oficial de Permanência Escolar (MEC)
+    // Estudantes sem risco severo de abandono (10+ faltas consecutivas ou frequência < 50%)
+    const severeDropRiskCount = evaluatedStudents.filter(
+      (s) => s.consecutiveAlertTier === '10d' || s.frequenciaPercent < 50
+    ).length;
+
+    const permanenceRate =
+      totalActiveStudents > 0
+        ? Number((((totalActiveStudents - severeDropRiskCount) / totalActiveStudents) * 100).toFixed(1))
+        : 100;
+
+    // Alunos que atingem a frequência mínima exigida por lei (LDB 60% infantil / 75% fundamental)
+    const studentsMeetingMecTargetCount = totalActiveStudents - totalBelowLegal;
+    const studentsMeetingMecTargetPercent =
+      totalActiveStudents > 0
+        ? Math.round((studentsMeetingMecTargetCount / totalActiveStudents) * 100)
+        : 100;
+
     return {
-      totalActiveStudents: evaluatedStudents.length,
+      totalActiveStudents,
       totalDiasLetivosMatriculados,
       totalPresencas,
       overallFrequencyRate,
       targetLegalMec,
       meetsLegalMec: overallFrequencyRate >= targetLegalMec,
       meetsSchoolTarget: overallFrequencyRate >= 85,
+      permanenceRate,
+      severeDropRiskCount,
+      studentsMeetingMecTargetCount,
+      studentsMeetingMecTargetPercent,
       totalFaltas,
       totalAtestados,
       totalSemAtestado,
@@ -337,88 +352,85 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
     });
   }, [kpiData.evaluatedStudents, alertFilterMode, searchQuery]);
 
+  const handleCopyStudentRecord = (item: EvaluatedStudentSnapshot) => {
+    const text = [
+      `REGISTRO OFICIAL - BUSCA ATIVA / FREQUÊNCIA`,
+      `Estudante: ${item.student.name} | RA: ${item.student.ra}-${item.student.digRa || '0'}`,
+      `Turma: ${item.cls.name} (${item.cls.shift})`,
+      `Mês de Referência: ${selectedMonthName}/2027`,
+      `Presenças: ${item.presencas}/${item.diasLetivos} (${item.frequenciaPercent}%)`,
+      `Meta Legal MEC: Mínimo ${item.minLegalPercent}% (${item.isBelowLegal ? 'ABAIXO DA META' : 'CONFORME'})`,
+      `Faltas: ${item.faltas} (${item.atestados} c/ atestado, ${item.semAtestado} injustificadas)`,
+      item.hasConsecutiveAlert ? `Alerta de Busca Ativa: ${item.alertLabel}` : `Sem alerta consecutivo`,
+      item.student.telefones ? `Telefones de Contato: ${item.student.telefones}` : '',
+      item.familyFeedback ? `Retorno Família: ${item.familyFeedback}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    navigator.clipboard?.writeText(text);
+    setCopyFeedback(item.student.id);
+    setTimeout(() => setCopyFeedback(null), 2500);
+  };
+
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade">
-      {/* CABEÇALHO EXECUTIVO POWER BI (EXCLUSIVO ADMIN / GESTÃO ESCOLAR) */}
-      <section className="bg-[#0b1329] text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade text-slate-800">
+      {/* CABEÇALHO EXECUTIVO POWER BI (SÓBRIO, SEM ATALHOS REDUNDANTES) */}
+      <section className="bg-slate-900 text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2 text-[0.7rem] font-bold text-slate-400">
-              <span className="bg-sky-950/80 text-sky-400 px-2.5 py-0.5 rounded border border-sky-800/60 uppercase tracking-widest text-[0.65rem]">
+              <span className="bg-sky-950 text-sky-400 px-2.5 py-0.5 rounded border border-sky-800/60 uppercase tracking-widest text-[0.65rem]">
                 DIREÇÃO &amp; COORDENAÇÃO
               </span>
               <span className="text-slate-600">•</span>
-              <span className="text-slate-300">EMEB PROF. JOAQUIM CANDELÁRIO DE FREITAS</span>
+              <span className="text-slate-300">SECRETARIA DE EDUCAÇÃO DO MUNICÍPIO DE JUNDIAÍ</span>
               <span className="text-slate-600">•</span>
-              <span className="text-slate-400">JUNDIAÍ/SP</span>
+              <span className="text-slate-400">EMEB PROF. JOAQUIM CANDELÁRIO DE FREITAS</span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              <span className="material-symbols-outlined text-sky-400 text-[24px]">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-sky-400 text-[26px]">
                 query_stats
               </span>
               <span>Resumo Mensal — Power BI Executivo</span>
             </h1>
 
             <p className="text-[0.78rem] text-slate-400">
-              Monitoramento institucional de metas MEC (60% Infantil / 75% Fundamental) e busca ativa •{' '}
+              Painel institucional de metas MEC (LDB 60% Infantil / 75% Fundamental) e inteligência de busca ativa •{' '}
               <span className="text-slate-200 font-semibold">
-                {selectedMonthName}/2027 ({monthDef.schoolDays} dias letivos) • {filteredClasses.length} turmas no escopo
+                {selectedMonthName}/2027 ({monthDef.schoolDays} dias letivos) • {filteredClasses.length} turmas consolidadas
               </span>
             </p>
           </div>
 
-          {/* Ações da Gestão */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {onOpenMonthlyLaunchForClass && (
+          {/* Ação Dedicada Exclusiva (Sem atalhos pra outras telas) */}
+          {onOpenReportPrint && (
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => onOpenMonthlyLaunchForClass(currentClass)}
-                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
-                title="Lançamento e abono de faltas"
+                onClick={onOpenReportPrint}
+                className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-xs"
+                title="Emitir relatório executivo e ata oficial"
               >
-                <span className="material-symbols-outlined text-[17px] text-sky-400">
-                  edit_calendar
+                <span className="material-symbols-outlined text-[18px]">
+                  print
                 </span>
-                <span>Faltas da Turma ({currentClass.name})</span>
+                <span>Relatório Executivo</span>
               </button>
-            )}
-
-            <button
-              type="button"
-              onClick={onNavigateToSheet}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
-              title="Abrir sincronização com Planilha Google"
-            >
-              <span className="material-symbols-outlined text-[17px] text-emerald-400">
-                cloud_sync
-              </span>
-              <span>Sync Sheets</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenReportPrint}
-              className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
-              title="Gerar ata e relatório executivo impresso"
-            >
-              <span className="material-symbols-outlined text-[17px]">
-                print
-              </span>
-              <span>Ata &amp; Relatório</span>
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* BARRA DE SLICERS (POWER BI CONTROLS) */}
+      {/* BARRA DE SLICERS (POWER BI - MINIMALISTA E SÓBRIA) */}
       <section className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs">
         <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-100 text-[0.72rem] font-bold text-slate-600">
           <div className="flex items-center gap-1.5 uppercase tracking-wider text-slate-700">
             <span className="material-symbols-outlined text-slate-500 text-[18px]">
               tune
             </span>
-            <span>Segmentadores Executivos (Slicers)</span>
+            <span>Segmentadores Analíticos</span>
           </div>
           {(scopeFilter !== 'all_classes' || segmentFilter !== 'all' || shiftFilter !== 'all') && (
             <button
@@ -428,7 +440,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 setSegmentFilter('all');
                 setShiftFilter('all');
               }}
-              className="text-sky-600 hover:text-sky-800 cursor-pointer flex items-center gap-1"
+              className="text-sky-600 hover:text-sky-800 cursor-pointer flex items-center gap-1 text-[0.7rem] font-semibold"
             >
               <span className="material-symbols-outlined text-[15px]">refresh</span>
               Restaurar Visão Geral
@@ -445,7 +457,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <select
               value={selectedMonthName}
               onChange={(e) => setSelectedMonthName(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
             >
               {MONTHLY_SCHOOL_DAYS_2027.map((m) => (
                 <option key={m.month} value={m.month}>
@@ -463,11 +475,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <select
               value={segmentFilter}
               onChange={(e) => setSegmentFilter(e.target.value as any)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
             >
               <option value="all">Todos os Segmentos (Infantil + Fundamental)</option>
-              <option value="fundamental">Ensino Fundamental (Meta Legal ≥ 75%)</option>
-              <option value="infantil">Educação Infantil (Meta Legal ≥ 60%)</option>
+              <option value="fundamental">Ensino Fundamental (Piso Legal LDB ≥ 75%)</option>
+              <option value="infantil">Educação Infantil (Piso Legal LDB ≥ 60%)</option>
             </select>
           </div>
 
@@ -479,9 +491,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <select
               value={shiftFilter}
               onChange={(e) => setShiftFilter(e.target.value as any)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
             >
-              <option value="all">Manhã + Tarde</option>
+              <option value="all">Todos os Turnos (Manhã + Tarde)</option>
               <option value="MANHÃ">Período Manhã</option>
               <option value="TARDE">Período Tarde</option>
             </select>
@@ -502,7 +514,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   if (found) onSelectClass(found);
                 }
               }}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
             >
               <option value="all_classes">
                 Todas as Turmas ({allClasses.length} turmas consolidadas)
@@ -517,195 +529,253 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         </div>
       </section>
 
-      {/* SCORECARD EXECUTIVO: 4 CARTÕES DE METAS & ALERTAS (POWER BI MINIMALISTA) */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* CARD 1: Frequência Global vs Metas MEC */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
-              Taxa de Frequência Geral
+      {/* BLOCO SCORECARD MEC: KPIS OFICIAIS DE DESEMPENHO (DESIGN MINIMALISTA POWER BI) */}
+      <section className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sky-600 text-[22px]">
+              analytics
             </span>
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded text-[0.65rem] font-bold uppercase ${
-                kpiData.meetsSchoolTarget
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                  : kpiData.meetsLegalMec
-                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                  : 'bg-rose-50 text-rose-800 border border-rose-200'
-              }`}
-            >
-              {kpiData.meetsSchoolTarget
-                ? 'Meta Superada (≥85%)'
-                : kpiData.meetsLegalMec
-                ? 'Conforme MEC'
-                : 'Abaixo Meta MEC'}
-            </span>
-          </div>
-
-          <div className="my-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
-                {kpiData.overallFrequencyRate}%
-              </span>
-              <span className="text-xs font-semibold text-slate-500">
-                meta MEC: {kpiData.targetLegalMec}%
-              </span>
-            </div>
-
-            {/* Bullet bar executiva */}
-            <div className="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
-              <div
-                className={`h-2 rounded-full transition-all duration-500 ${
-                  kpiData.meetsSchoolTarget
-                    ? 'bg-emerald-600'
-                    : kpiData.meetsLegalMec
-                    ? 'bg-amber-500'
-                    : 'bg-rose-600'
-                }`}
-                style={{ width: `${Math.min(100, kpiData.overallFrequencyRate)}%` }}
-              />
+            <div>
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Scorecard Executivo MEC — Indicadores Oficiais de Desempenho
+              </h2>
+              <p className="text-[0.72rem] text-slate-500">
+                Métricas oficiais de permanência escolar, frequência mínima por aluno e proteção contra abandono.
+              </p>
             </div>
           </div>
-
-          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[0.7rem] text-slate-500 font-medium">
-            <span>Presenças: {kpiData.totalPresencas}</span>
-            <span>Total: {kpiData.totalDiasLetivosMatriculados} dias-aluno</span>
-          </div>
+          <span className="text-[0.68rem] font-mono text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 self-start sm:self-auto">
+            {kpiData.totalActiveStudents} estudantes ativos
+          </span>
         </div>
 
-        {/* CARD 2: Risco Legal MEC */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
-              Abaixo da Meta Legal MEC
-            </span>
-            <span
-              className={`material-symbols-outlined text-[20px] ${
-                kpiData.totalBelowLegal === 0 ? 'text-emerald-600' : 'text-rose-600'
-              }`}
-            >
-              {kpiData.totalBelowLegal === 0 ? 'verified' : 'gpp_maybe'}
-            </span>
-          </div>
-
-          <div className="my-3">
-            <div className="flex items-baseline gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+          {/* KPI 1: Taxa de Permanência Escolar */}
+          <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-600">
+                Permanência Escolar
+              </span>
               <span
-                className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight tabular-nums ${
-                  kpiData.totalBelowLegal === 0 ? 'text-slate-900' : 'text-rose-700'
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${
+                  kpiData.permanenceRate >= 95
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-rose-100 text-rose-800'
                 }`}
               >
-                {kpiData.totalBelowLegal}
-              </span>
-              <span className="text-xs font-semibold text-slate-500">
-                estudantes em risco
+                {kpiData.permanenceRate >= 95 ? 'Conforme' : 'Atenção'}
               </span>
             </div>
-            <p className="text-[0.72rem] text-slate-500 mt-1">
-              {kpiData.totalActiveStudents > 0
-                ? `${((kpiData.totalBelowLegal / kpiData.totalActiveStudents) * 100).toFixed(1)}% do corpo discente`
-                : '0% do total'}
+
+            <div className="my-2.5">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
+                  {kpiData.permanenceRate}%
+                </span>
+                <span className="text-[0.68rem] text-slate-500 font-medium">
+                  meta ≥95%
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div
+                  className={`h-1.5 rounded-full ${
+                    kpiData.permanenceRate >= 95 ? 'bg-emerald-600' : 'bg-rose-600'
+                  }`}
+                  style={{ width: `${Math.min(100, kpiData.permanenceRate)}%` }}
+                />
+              </div>
+            </div>
+
+            <p className="text-[0.66rem] text-slate-500 pt-2 border-t border-slate-200/60">
+              {kpiData.severeDropRiskCount === 0
+                ? 'Sem risco de evasão crítica'
+                : `${kpiData.severeDropRiskCount} em risco de evasão`}
             </p>
           </div>
 
-          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[0.7rem] font-semibold">
-            <span className="text-slate-700">
-              Fund. (&lt;75%):{' '}
-              <strong className={kpiData.totalBelowFundamental > 0 ? 'text-rose-700' : 'text-slate-900'}>
-                {kpiData.totalBelowFundamental}
-              </strong>
-            </span>
-            <span className="text-slate-700">
-              Infantil (&lt;60%):{' '}
-              <strong className={kpiData.totalBelowInfantil > 0 ? 'text-amber-700' : 'text-slate-900'}>
-                {kpiData.totalBelowInfantil}
-              </strong>
-            </span>
-          </div>
-        </div>
-
-        {/* CARD 3: Alertas de Busca Ativa */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
-              Alertas de Busca Ativa
-            </span>
-            <span
-              className={`material-symbols-outlined text-[20px] ${
-                kpiData.totalConsecutiveAlerts === 0 ? 'text-emerald-600' : 'text-amber-600'
-              }`}
-            >
-              crisis_alert
-            </span>
-          </div>
-
-          <div className="my-3">
-            <div className="flex items-baseline gap-2">
-              <span
-                className={`text-3xl sm:text-4xl font-extrabold font-mono tracking-tight tabular-nums ${
-                  kpiData.totalConsecutiveAlerts === 0 ? 'text-slate-900' : 'text-amber-700'
-                }`}
-              >
-                {kpiData.totalConsecutiveAlerts}
+          {/* KPI 2: Frequência Mínima por Aluno (Piso LDB) */}
+          <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-600">
+                Alunos no Piso MEC
               </span>
-              <span className="text-xs font-semibold text-slate-500">
-                casos críticos
+              <span className="text-[0.62rem] font-mono text-slate-500 font-bold">
+                {kpiData.studentsMeetingMecTargetCount}/{kpiData.totalActiveStudents}
               </span>
             </div>
-            <p className="text-[0.72rem] text-slate-500 mt-1">
-              Gatilhos de faltas consecutivas (3+, 5+ ou 10+ dias)
+
+            <div className="my-2.5">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
+                  {kpiData.studentsMeetingMecTargetPercent}%
+                </span>
+                <span className="text-[0.68rem] text-slate-500 font-medium">
+                  atingem piso
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div
+                  className="h-1.5 rounded-full bg-sky-600"
+                  style={{ width: `${kpiData.studentsMeetingMecTargetPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <p className="text-[0.66rem] text-slate-500 pt-2 border-t border-slate-200/60 truncate">
+              Média geral escolar: <strong className="text-slate-800">{kpiData.overallFrequencyRate}%</strong>
             </p>
           </div>
 
-          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[0.68rem] font-semibold">
-            <span className="text-amber-800">3-4d: {kpiData.tier3Count}</span>
-            <span className="text-orange-800">5-9d: {kpiData.tier5Count}</span>
-            <span className="text-rose-800">10d+: {kpiData.tier10Count}</span>
-          </div>
-        </div>
-
-        {/* CARD 4: Absenteísmo & Atestados */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
-              Absenteísmo &amp; Atestados
-            </span>
-            <span className="material-symbols-outlined text-[20px] text-sky-600">
-              medical_information
-            </span>
-          </div>
-
-          <div className="my-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
-                {kpiData.totalFaltas}
+          {/* KPI 3: Alunos Abaixo da Meta MEC */}
+          <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-600">
+                Abaixo do Piso MEC
               </span>
-              <span className="text-xs font-semibold text-slate-500">
-                faltas no mês
+              <span
+                className={`material-symbols-outlined text-[18px] ${
+                  kpiData.totalBelowLegal === 0 ? 'text-emerald-600' : 'text-rose-600'
+                }`}
+              >
+                {kpiData.totalBelowLegal === 0 ? 'check_circle' : 'warning'}
               </span>
             </div>
 
-            <div className="w-full bg-slate-100 rounded-full h-2 mt-2 flex overflow-hidden">
-              <div
-                className="bg-emerald-600 h-2 transition-all"
-                style={{ width: `${kpiData.justifiedSharePercent}%` }}
-                title={`Atestados: ${kpiData.justifiedSharePercent}%`}
-              />
-              <div
-                className="bg-rose-500 h-2 transition-all"
-                style={{ width: `${100 - kpiData.justifiedSharePercent}%` }}
-                title={`Injustificadas: ${100 - kpiData.justifiedSharePercent}%`}
-              />
+            <div className="my-2.5">
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className={`text-3xl font-extrabold font-mono tracking-tight tabular-nums ${
+                    kpiData.totalBelowLegal === 0 ? 'text-slate-900' : 'text-rose-700'
+                  }`}
+                >
+                  {kpiData.totalBelowLegal}
+                </span>
+                <span className="text-[0.68rem] text-slate-500 font-medium">
+                  em risco legal
+                </span>
+              </div>
+              <p className="text-[0.66rem] text-slate-500 mt-1">
+                {kpiData.totalActiveStudents > 0
+                  ? `${((kpiData.totalBelowLegal / kpiData.totalActiveStudents) * 100).toFixed(1)}% do total`
+                  : '0%'}
+              </p>
+            </div>
+
+            <div className="text-[0.66rem] pt-2 border-t border-slate-200/60 flex justify-between font-medium">
+              <span className="text-slate-700">Fund: {kpiData.totalBelowFundamental}</span>
+              <span className="text-slate-700">Infantil: {kpiData.totalBelowInfantil}</span>
             </div>
           </div>
 
-          <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[0.7rem] font-semibold">
-            <span className="text-emerald-700">
-              Atestados: {kpiData.totalAtestados} ({kpiData.justifiedSharePercent}%)
-            </span>
-            <span className="text-rose-700">
-              Injustificadas: {kpiData.totalSemAtestado}
-            </span>
+          {/* KPI 4: Atestados & Cobertura Legal */}
+          <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-600">
+                Cobertura Atestados
+              </span>
+              <span className="material-symbols-outlined text-[18px] text-emerald-600">
+                medical_services
+              </span>
+            </div>
+
+            <div className="my-2.5">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
+                  {kpiData.justifiedSharePercent}%
+                </span>
+                <span className="text-[0.68rem] text-slate-500 font-medium">
+                  justificadas
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 flex overflow-hidden">
+                <div
+                  className="bg-emerald-600 h-1.5"
+                  style={{ width: `${kpiData.justifiedSharePercent}%` }}
+                />
+                <div
+                  className="bg-rose-500 h-1.5"
+                  style={{ width: `${100 - kpiData.justifiedSharePercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="text-[0.66rem] pt-2 border-t border-slate-200/60 flex justify-between font-medium">
+              <span className="text-emerald-700">Com atestado: {kpiData.totalAtestados}</span>
+              <span className="text-rose-700">S/ atestado: {kpiData.totalSemAtestado}</span>
+            </div>
+          </div>
+
+          {/* KPI 5: Busca Ativa / Consecutivas */}
+          <div
+            className={`rounded-xl p-4 border flex flex-col justify-between transition-all ${
+              kpiData.totalConsecutiveAlerts > 0
+                ? kpiData.tier10Count > 0
+                  ? 'bg-rose-50/70 border-rose-300 animate-pulse-subtle-rose'
+                  : 'bg-amber-50/70 border-amber-300 animate-pulse-subtle-amber'
+                : 'bg-slate-50/70 border-slate-200/80'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                {kpiData.totalConsecutiveAlerts > 0 && (
+                  <span className="relative flex h-2 w-2">
+                    <span
+                      className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                        kpiData.tier10Count > 0 ? 'bg-rose-500' : 'bg-amber-500'
+                      }`}
+                    />
+                    <span
+                      className={`relative inline-flex rounded-full h-2 w-2 ${
+                        kpiData.tier10Count > 0 ? 'bg-rose-600' : 'bg-amber-600'
+                      }`}
+                    />
+                  </span>
+                )}
+                <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-700">
+                  Busca Ativa (ECA)
+                </span>
+              </div>
+              <span
+                className={`material-symbols-outlined text-[18px] ${
+                  kpiData.totalConsecutiveAlerts === 0
+                    ? 'text-emerald-600'
+                    : kpiData.tier10Count > 0
+                    ? 'text-rose-600'
+                    : 'text-amber-600'
+                }`}
+              >
+                {kpiData.totalConsecutiveAlerts === 0 ? 'verified' : 'crisis_alert'}
+              </span>
+            </div>
+
+            <div className="my-2.5">
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className={`text-3xl font-extrabold font-mono tracking-tight tabular-nums ${
+                    kpiData.totalConsecutiveAlerts === 0
+                      ? 'text-slate-900'
+                      : kpiData.tier10Count > 0
+                      ? 'text-rose-800'
+                      : 'text-amber-800'
+                  }`}
+                >
+                  {kpiData.totalConsecutiveAlerts}
+                </span>
+                <span className="text-[0.68rem] text-slate-600 font-medium">
+                  casos ativos
+                </span>
+              </div>
+              <p className="text-[0.66rem] text-slate-500 mt-1">
+                Faltas consecutivas não abonadas
+              </p>
+            </div>
+
+            <div className="text-[0.66rem] pt-2 border-t border-slate-200/60 flex justify-between font-bold">
+              <span className="text-amber-700">3d: {kpiData.tier3Count}</span>
+              <span className="text-orange-700">5d: {kpiData.tier5Count}</span>
+              <span className="text-rose-700">10d+: {kpiData.tier10Count}</span>
+            </div>
           </div>
         </div>
       </section>
@@ -720,11 +790,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 Desempenho por Turma ({selectedMonthName})
               </h2>
               <span className="text-[0.66rem] text-slate-400 font-medium">
-                Clique na barra para isolar
+                Clique na coluna para isolar
               </span>
             </div>
             <p className="text-[0.72rem] text-slate-500">
-              Linha tracejada indica a meta institucional de frequência (85%).
+              Linha tracejada de referência institucional (meta 85%).
             </p>
           </div>
 
@@ -846,7 +916,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 Matriz Consolidada de Turmas ({selectedMonthName})
               </h2>
               <p className="text-[0.72rem] text-slate-500">
-                Indicadores diretos de matrícula ativa, presença, faltas justificadas e risco legal.
+                Frequência escolar, faltas, cobertura documental e risco legal por turma.
               </p>
             </div>
             {scopeFilter !== 'all_classes' && (
@@ -942,9 +1012,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         </div>
       </section>
 
-      {/* PAINEL DE OPERAÇÃO: BUSCA ATIVA & ESTUDANTES EM ATENÇÃO */}
+      {/* PAINEL DE OPERAÇÃO: BUSCA ATIVA COM EXPANSÃO VISUAL DE DADOS DO ESTUDANTE */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Tabela de Estudantes em Alerta */}
+        {/* Tabela de Estudantes em Alerta com Expansão Detalhada */}
         <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col justify-between">
           <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -957,7 +1027,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </h2>
               </div>
               <p className="text-[0.72rem] text-slate-500">
-                Alunos abaixo da meta legal MEC (&lt;60% Infantil / &lt;75% Fundamental) ou com alertas de faltas consecutivas.
+                Clique na linha do estudante para visualizar a expansão completa de dados e contatos.
               </p>
             </div>
 
@@ -1036,6 +1106,60 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </div>
           </div>
 
+          {/* Cartão de Alerta Imediato para a Gestão Escolar (Pulsação Suave) */}
+          {kpiData.totalConsecutiveAlerts > 0 && (
+            <div
+              className={`mx-4 sm:mx-5 my-3 p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                kpiData.tier10Count > 0
+                  ? 'bg-rose-50/70 border-rose-300 animate-pulse-subtle-rose text-rose-950'
+                  : 'bg-amber-50/70 border-amber-300 animate-pulse-subtle-amber text-amber-950'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span
+                    className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      kpiData.tier10Count > 0 ? 'bg-rose-500' : 'bg-amber-500'
+                    }`}
+                  />
+                  <span
+                    className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                      kpiData.tier10Count > 0 ? 'bg-rose-600' : 'bg-amber-600'
+                    }`}
+                  />
+                </span>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold block">
+                    Atenção Imediata da Gestão: {kpiData.totalConsecutiveAlerts} caso(s) ativo(s) de Busca Ativa (ECA)
+                  </span>
+                  <span className="text-[0.7rem] opacity-80 block truncate">
+                    {kpiData.tier10Count > 0
+                      ? `${kpiData.tier10Count} aluno(s) no gatilho crítico (≥10 faltas consecutivas) exigindo notificação urgente ao Conselho Tutelar.`
+                      : `${kpiData.totalConsecutiveAlerts} estudante(s) com faltas consecutivas sem atestado médico aguardando busca ativa.`}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0 text-[0.66rem] font-bold">
+                {kpiData.tier10Count > 0 && (
+                  <span className="px-2 py-0.5 rounded bg-rose-200/80 text-rose-900 border border-rose-300">
+                    {kpiData.tier10Count} Crítico (10d)
+                  </span>
+                )}
+                {kpiData.tier5Count > 0 && (
+                  <span className="px-2 py-0.5 rounded bg-orange-200/80 text-orange-900 border border-orange-300">
+                    {kpiData.tier5Count} Intermediário (5d)
+                  </span>
+                )}
+                {kpiData.tier3Count > 0 && (
+                  <span className="px-2 py-0.5 rounded bg-amber-200/80 text-amber-900 border border-amber-300">
+                    {kpiData.tier3Count} Preventivo (3d)
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {filteredStudents.length === 0 ? (
             <div className="p-8 text-center space-y-2">
               <span className="material-symbols-outlined text-4xl text-emerald-600">
@@ -1045,11 +1169,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 Nenhum estudante em situação de risco com estes filtros
               </p>
               <p className="text-xs text-slate-500">
-                Todos os estudantes selecionados cumpriram as exigências de frequência.
+                Todos os estudantes selecionados estão em conformidade com as metas.
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto max-h-[360px] overflow-y-auto">
+            <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
               <table className="w-full text-left text-[0.76rem] border-collapse">
                 <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold uppercase text-[0.65rem] sticky top-0 z-10">
                   <tr>
@@ -1057,97 +1181,444 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                     <th className="py-2.5 px-2">Turma</th>
                     <th className="py-2.5 px-2 text-center">Faltas</th>
                     <th className="py-2.5 px-2 text-center">Atestados</th>
-                    <th className="py-2.5 px-2 text-center">% Presença vs Meta</th>
-                    <th className="py-2.5 px-3">Motivo / Ação</th>
+                    <th className="py-2.5 px-2 text-center">% Frequência</th>
+                    <th className="py-2.5 px-3">Situação / Alerta</th>
+                    <th className="py-2.5 px-2 text-center w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.map((item) => (
-                    <tr key={`${item.cls.id}-${item.student.id}`} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-2.5 px-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <StudentAvatar student={item.student} size="sm" expandableOnClick={false} />
-                          <div className="min-w-0">
-                            <span className="font-bold text-slate-900 block truncate">
-                              {item.student.name}
+                  {filteredStudents.map((item) => {
+                    const isExpanded = expandedStudentId === item.student.id;
+                    return (
+                      <React.Fragment key={`${item.cls.id}-${item.student.id}`}>
+                        <tr
+                          onClick={() => setExpandedStudentId(isExpanded ? null : item.student.id)}
+                          className={`cursor-pointer transition-colors ${
+                            isExpanded ? 'bg-sky-50/80 font-medium' : 'hover:bg-slate-50/80'
+                          }`}
+                        >
+                          <td className="py-2.5 px-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <StudentAvatar student={item.student} size="sm" expandableOnClick={false} />
+                              <div className="min-w-0">
+                                <span className="font-bold text-slate-900 block truncate">
+                                  {item.student.name}
+                                </span>
+                                <span className="text-[0.66rem] text-slate-400 block font-mono">
+                                  RA {item.student.ra || 'S/N'}-{item.student.digRa || '0'}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-2 font-medium text-slate-700">
+                            {item.cls.name}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-700">
+                            {item.faltas}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono">
+                            {item.atestados > 0 ? (
+                              <span className="text-emerald-700 font-bold">
+                                {item.atestados}d
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-medium">0</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-mono">
+                            <span className={`font-black ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-800'}`}>
+                              {item.frequenciaPercent}%
                             </span>
-                            <span className="text-[0.66rem] text-slate-400 block font-mono">
-                              RA {item.student.ra || 'S/N'}-{item.student.digRa || '0'}
+                            <span className="text-[0.66rem] text-slate-400 ml-1">
+                              (piso ≥{item.minLegalPercent}%)
                             </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-2 font-medium text-slate-700">
-                        {item.cls.name}
-                      </td>
-                      <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-700">
-                        {item.faltas}
-                      </td>
-                      <td className="py-2.5 px-2 text-center font-mono">
-                        {item.atestados > 0 ? (
-                          <span className="text-emerald-700 font-bold">
-                            {item.atestados}d
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 font-medium">0</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-2 text-center font-mono">
-                        <span className={`font-black ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-800'}`}>
-                          {item.frequenciaPercent}%
-                        </span>
-                        <span className="text-[0.66rem] text-slate-400 ml-1">
-                          (meta ≥{item.minLegalPercent}%)
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-1">
-                            {item.hasConsecutiveAlert && (
-                              <span
-                                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-bold ${
-                                  item.consecutiveAlertTier === '10d'
-                                    ? 'bg-rose-100 text-rose-900 border border-rose-300'
-                                    : item.consecutiveAlertTier === '5d'
-                                    ? 'bg-orange-100 text-orange-900 border border-orange-300'
-                                    : 'bg-amber-100 text-amber-900 border border-amber-300'
-                                }`}
-                              >
-                                {item.alertLabel || `${item.consecutiveAlertDays}d Consecutivas`}
-                              </span>
-                            )}
-                            {item.isBelowLegal && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                                &lt; Meta MEC ({item.minLegalPercent}%)
-                              </span>
-                            )}
-                            {item.familyFeedback && (
-                              <span
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-semibold bg-slate-100 text-slate-700"
-                                title={item.familyFeedback}
-                              >
-                                C/ Retorno Família
-                              </span>
-                            )}
-                          </div>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {item.hasConsecutiveAlert && (
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[0.64rem] font-bold ${
+                                    item.consecutiveAlertTier === '10d'
+                                      ? 'bg-rose-100 text-rose-900 border border-rose-300 animate-pulse-subtle-rose'
+                                      : item.consecutiveAlertTier === '5d'
+                                      ? 'bg-orange-100 text-orange-900 border border-orange-300 animate-pulse-subtle-amber'
+                                      : 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse-subtle-amber'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      item.consecutiveAlertTier === '10d'
+                                        ? 'bg-rose-600 animate-ping'
+                                        : 'bg-amber-600 animate-pulse'
+                                    }`}
+                                  />
+                                  {item.alertLabel || `${item.consecutiveAlertDays}d Consecutivas`}
+                                </span>
+                              )}
+                              {item.isBelowLegal && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                  &lt; Piso MEC ({item.minLegalPercent}%)
+                                </span>
+                              )}
+                              {item.familyFeedback && (
+                                <span
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-semibold bg-slate-100 text-slate-700"
+                                  title={item.familyFeedback}
+                                >
+                                  C/ Retorno
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-2 text-center text-slate-400">
+                            <span className={`material-symbols-outlined text-[18px] transition-transform ${isExpanded ? 'rotate-180 text-sky-600' : ''}`}>
+                              expand_more
+                            </span>
+                          </td>
+                        </tr>
 
-                          {onOpenMonthlyLaunchForClass && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onSelectClass(item.cls);
-                                onOpenMonthlyLaunchForClass(item.cls);
-                              }}
-                              className="px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-[0.68rem] font-bold shrink-0 cursor-pointer"
-                              title="Lançar faltas ou cadastrar atestado médico"
-                            >
-                              Justificar
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        {/* EXPANSÃO VISUAL MELHORADA DO ESTUDANTE (DEDICADA, SEM NAVEGAÇÃO EXTERNA) */}
+                        {isExpanded && (
+                          <tr className="bg-slate-50/90 border-y border-slate-200">
+                            <td colSpan={7} className="p-4 sm:p-5">
+                              <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-4">
+                                {/* Topo da Expansão */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <StudentAvatar student={item.student} size="md" expandableOnClick={false} />
+                                    <div>
+                                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                        <span>{item.student.name}</span>
+                                        <span className="text-[0.68rem] font-normal text-slate-500">
+                                          (Nº {item.student.numeroChamada || item.student.number || '—'})
+                                        </span>
+                                      </h3>
+                                      <p className="text-[0.72rem] text-slate-500 font-mono">
+                                        RA: {item.student.ra || 'S/N'}-{item.student.digRa || '0'} • Turma {item.cls.name} ({item.cls.shift}) • Nasc: {item.student.dataNascimento || '—'} {item.student.idade ? `(${item.student.idade} anos)` : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {onOpenStudentPdf && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onOpenStudentPdf(item.student);
+                                        }}
+                                        className="px-2.5 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all border border-sky-200"
+                                      >
+                                        <span className="material-symbols-outlined text-[15px]">picture_as_pdf</span>
+                                        <span>Ficha PDF</span>
+                                      </button>
+                                    )}
+
+                                    {onOpenStudentGrid && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onOpenStudentGrid(item.student);
+                                        }}
+                                        className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                                      >
+                                        <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                                        <span>Ficha Completa (48 Dados)</span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopyStudentRecord(item);
+                                      }}
+                                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
+                                    >
+                                      <span className="material-symbols-outlined text-[15px]">
+                                        {copyFeedback === item.student.id ? 'check' : 'content_copy'}
+                                      </span>
+                                      <span>{copyFeedback === item.student.id ? 'Copiado!' : 'Copiar Dados'}</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExpandedStudentId(null);
+                                      }}
+                                      className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                                      title="Fechar detalhes"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">close</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Grade de Indicadores Visuais do Aluno */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                                  {/* Visual Gauge de Frequência */}
+                                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
+                                    <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block">
+                                      Balanço de Frequência no Mês
+                                    </span>
+                                    <div className="flex items-baseline justify-between">
+                                      <span className={`text-2xl font-black font-mono ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-900'}`}>
+                                        {item.frequenciaPercent}%
+                                      </span>
+                                      <span className="text-[0.68rem] text-slate-500">
+                                        {item.presencas} presenças em {item.diasLetivos} dias
+                                      </span>
+                                    </div>
+                                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden flex">
+                                      <div
+                                        className="bg-emerald-600 h-2"
+                                        style={{ width: `${item.frequenciaPercent}%` }}
+                                      />
+                                      <div
+                                        className="bg-rose-500 h-2"
+                                        style={{ width: `${100 - item.frequenciaPercent}%` }}
+                                      />
+                                    </div>
+                                    <div className="flex justify-between text-[0.68rem] text-slate-600 pt-1">
+                                      <span>Atestados: <strong className="text-emerald-700">{item.atestados}d</strong></span>
+                                      <span>Sem justificativa: <strong className="text-rose-700">{item.semAtestado}d</strong></span>
+                                    </div>
+                                  </div>
+
+                                  {/* Situação Legal MEC */}
+                                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
+                                    <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block">
+                                      Conformidade Legal MEC (LDB)
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`material-symbols-outlined text-[20px] ${item.isBelowLegal ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                        {item.isBelowLegal ? 'gpp_bad' : 'verified_user'}
+                                      </span>
+                                      <span className={`text-xs font-bold ${item.isBelowLegal ? 'text-rose-800' : 'text-emerald-800'}`}>
+                                        {item.isBelowLegal ? 'Abaixo do Piso Legal' : 'Conforme a LDB'}
+                                      </span>
+                                    </div>
+                                    <p className="text-[0.7rem] text-slate-600">
+                                      {item.isInfantil
+                                        ? 'Educação Infantil: Piso mínimo LDB Art. 31 de 60% de frequência.'
+                                        : 'Ensino Fundamental: Piso mínimo LDB Art. 24 de 75% de frequência.'}
+                                    </p>
+                                    <p className="text-[0.66rem] text-slate-400">
+                                      {item.isBelowLegal
+                                        ? 'Requer acompanhamento pedagógico e intervenção da gestão escolar.'
+                                        : 'Frequência regular dentro dos parâmetros institucionais.'}
+                                    </p>
+                                  </div>
+
+                                  {/* Alerta de Busca Ativa ECA com Pulsação Suave */}
+                                  <div
+                                    className={`p-3.5 rounded-xl border space-y-2 transition-all ${
+                                      item.hasConsecutiveAlert
+                                        ? item.consecutiveAlertTier === '10d'
+                                          ? 'bg-rose-50/80 border-rose-300 animate-pulse-subtle-rose'
+                                          : 'bg-amber-50/80 border-amber-300 animate-pulse-subtle-amber'
+                                        : 'bg-slate-50 border-slate-200/70'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span
+                                        className={`text-[0.66rem] font-bold uppercase tracking-wider block ${
+                                          item.hasConsecutiveAlert
+                                            ? item.consecutiveAlertTier === '10d'
+                                              ? 'text-rose-800'
+                                              : 'text-amber-800'
+                                            : 'text-slate-500'
+                                        }`}
+                                      >
+                                        Protocolo de Busca Ativa
+                                      </span>
+                                      {item.hasConsecutiveAlert && (
+                                        <span className="relative flex h-2 w-2">
+                                          <span
+                                            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                                              item.consecutiveAlertTier === '10d'
+                                                ? 'bg-rose-500'
+                                                : 'bg-amber-500'
+                                            }`}
+                                          />
+                                          <span
+                                            className={`relative inline-flex rounded-full h-2 w-2 ${
+                                              item.consecutiveAlertTier === '10d'
+                                                ? 'bg-rose-600'
+                                                : 'bg-amber-600'
+                                            }`}
+                                          />
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`material-symbols-outlined text-[20px] ${
+                                          item.hasConsecutiveAlert
+                                            ? item.consecutiveAlertTier === '10d'
+                                              ? 'text-rose-600'
+                                              : 'text-amber-600'
+                                            : 'text-emerald-600'
+                                        }`}
+                                      >
+                                        {item.hasConsecutiveAlert ? 'notification_important' : 'task_alt'}
+                                      </span>
+                                      <span
+                                        className={`text-xs font-bold ${
+                                          item.hasConsecutiveAlert
+                                            ? item.consecutiveAlertTier === '10d'
+                                              ? 'text-rose-900'
+                                              : 'text-amber-900'
+                                            : 'text-slate-700'
+                                        }`}
+                                      >
+                                        {item.hasConsecutiveAlert ? item.alertLabel : 'Sem Alerta de Consecutivas'}
+                                      </span>
+                                    </div>
+                                    <p
+                                      className={`text-[0.7rem] ${
+                                        item.hasConsecutiveAlert
+                                          ? item.consecutiveAlertTier === '10d'
+                                            ? 'text-rose-900'
+                                            : 'text-amber-900'
+                                          : 'text-slate-600'
+                                      }`}
+                                    >
+                                      {item.hasConsecutiveAlert
+                                        ? item.consecutiveAlertTier === '10d'
+                                          ? 'Gatilho crítico: Notificação formal ao Conselho Tutelar e Busca Ativa emergencial.'
+                                          : item.consecutiveAlertTier === '5d'
+                                          ? 'Gatilho intermediário: Contato imediato com responsável legal e busca escolar.'
+                                          : 'Gatilho preventivo: Observação atenta da equipe pedagógica.'
+                                        : 'Nenhum ciclo contínuo de faltas não justificadas detectado.'}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Dados Cadastrais, Família e Logística Escolar */}
+                                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[0.72rem]">
+                                  <div>
+                                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                      Telefones &amp; Contato Direto
+                                    </span>
+                                    {(() => {
+                                      const rawPhone = item.student.telefones || item.student.guardianPhone;
+                                      const waList = buildWhatsAppLinksFromPhoneString(
+                                        rawPhone,
+                                        item.student.name,
+                                        `Olá! Somos da Secretaria de Educação de Jundiaí / EMEB Joaquim Candelário de Freitas. Gostaríamos de conversar sobre o acompanhamento escolar de ${item.student.name}.`
+                                      );
+                                      if (!rawPhone || waList.length === 0) {
+                                        return <span className="text-slate-400 italic">Sem telefone cadastrado</span>;
+                                      }
+                                      return (
+                                        <div className="space-y-1">
+                                          <div className="font-semibold text-slate-800 font-mono text-[0.76rem]">
+                                            {rawPhone}
+                                          </div>
+                                          <div className="flex items-center gap-1.5 pt-0.5">
+                                            <a
+                                              href={waList[0].waUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-[0.68rem] transition-colors"
+                                              title={`Abrir WhatsApp: ${waList[0].display}`}
+                                            >
+                                              <span className="material-symbols-outlined text-[13px]">chat</span>
+                                              <span>WhatsApp</span>
+                                            </a>
+                                            <a
+                                              href={`tel:${rawPhone.replace(/\D/g, '')}`}
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[0.68rem] transition-colors"
+                                              title="Ligar"
+                                            >
+                                              <span className="material-symbols-outlined text-[13px]">call</span>
+                                              <span>Ligar</span>
+                                            </a>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+
+                                  <div>
+                                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                      Filiação / Responsável
+                                    </span>
+                                    <span className="font-semibold text-slate-800 truncate block">
+                                      {item.student.filiacao1 || item.student.guardianName || 'Responsável não informado'}
+                                    </span>
+                                    {item.student.filiacao2 && (
+                                      <span className="text-[0.68rem] text-slate-500 truncate block">
+                                        {item.student.filiacao2}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                      Programas Sociais / AEE
+                                    </span>
+                                    <div className="space-y-1">
+                                      <span className="font-semibold text-slate-800 block">
+                                        {item.student.nis ? (
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[0.68rem] font-bold border border-emerald-200">
+                                            Bolsa Família (NIS {item.student.nis})
+                                          </span>
+                                        ) : (
+                                          <span className="text-slate-500">Sem NIS informado</span>
+                                        )}
+                                      </span>
+                                      {item.student.deficiencia && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 text-[0.66rem] font-bold border border-purple-200 block truncate">
+                                          AEE: {item.student.deficiencia}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                      Logística &amp; Endereço
+                                    </span>
+                                    <span className="font-semibold text-slate-800 block">
+                                      {item.student.rotaOnibus ? (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-sky-50 text-sky-800 font-bold text-[0.68rem] border border-sky-200">
+                                          🚌 Ônibus Fretado: {item.student.rotaOnibus}
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-500">Transporte individual</span>
+                                      )}
+                                    </span>
+                                    {(item.student.logradouro || item.student.bairro) && (
+                                      <span className="text-[0.66rem] text-slate-500 block truncate mt-0.5">
+                                        {item.student.logradouro} {item.student.numeroResidencia ? `nº ${item.student.numeroResidencia}` : ''} {item.student.bairro ? `· ${item.student.bairro}` : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Retorno da Família Registrado */}
+                                {item.familyFeedback && (
+                                  <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 text-[0.75rem] text-amber-900 flex items-start gap-2">
+                                    <span className="material-symbols-outlined text-amber-700 text-[18px] shrink-0 mt-0.5">
+                                      feedback
+                                    </span>
+                                    <div>
+                                      <span className="font-bold block">Último retorno da família / justificativa:</span>
+                                      <p className="mt-0.5 text-slate-800">{item.familyFeedback}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1177,7 +1648,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           </div>
 
           <textarea
-            rows={6}
+            rows={7}
             value={pedagogicalNotes}
             onChange={(e) => {
               setPedagogicalNotes(e.target.value);

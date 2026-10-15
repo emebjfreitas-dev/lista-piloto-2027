@@ -10,7 +10,7 @@ import {
   buildCustomClassExportPreview,
   downloadClassCustomXLS,
 } from '../services/db';
-import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
+import { OFFICIAL_OCTOBER_DAYS, SCHOOL_NAME } from '../data/mockData';
 import {
   getStudentAttendanceMetrics,
   getStudentConsecutiveAlertInfo,
@@ -172,34 +172,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     return [...classGroup.students].sort((a, b) => a.number - b.number);
   }, [classGroup.students]);
 
-  const [pushNotifiedStudentId, setPushNotifiedStudentId] = useState<string | null>(null);
-  const [isConsecutiveBannerDismissed, setIsConsecutiveBannerDismissed] = useState(false);
-
-  // Estudantes ativos da turma que excederam 3 faltas consecutivas (3+ dias seguidos)
-  const studentsExceedingThreeConsecutive = useMemo(() => {
-    return classGroup.students.filter((s) => {
-      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
-      if (
-        sit.includes('BXTR') ||
-        sit.includes('TRANSF') ||
-        sit.includes('REMAN') ||
-        sit.includes('RM')
-      ) {
-        return false;
-      }
-      const occs = getStudentCumulativeOccurrences(s);
-      const latestOcc = occs.length > 0 ? occs[occs.length - 1] : undefined;
-      const streak = Math.max(
-        latestOcc?.selectedDates?.length || 0,
-        s.consecutiveAbsenceAlert?.active
-          ? Math.max(3, s.consecutiveAbsenceAlert?.selectedDates?.length || 0)
-          : (s.totalAbsencesMonth || 0) >= 3 && (s.justifiedAbsences || 0) === 0
-          ? s.totalAbsencesMonth || 0
-          : 0
-      );
-      return streak >= 3;
-    });
-  }, [classGroup.students]);
 
   // Complete Top Class Summary (Resumo da Alta da Turma: Ativos, Feminino, Masculino, Transferidos, Remanejados, Presença e Faltas)
   const classSummary = useMemo(() => {
@@ -325,7 +297,276 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       }
       return true;
     });
-  }, [orderedStudents, searchStudent, statusFilter, diasLetivosMes, userRole]);
+  }, [orderedStudents, searchStudent, statusFilter, userRole, diasLetivosMes, minLegalPresence]);
+  const renderStudentDetailedExpansion = (
+    student: Student,
+    m: ReturnType<typeof getStudentAttendanceMetrics>,
+    guardian1Info: ReturnType<typeof resolveGuardianRelationshipInfo>,
+    guardian2Info: ReturnType<typeof resolveGuardianRelationshipInfo>,
+    studentGenderInfo: ReturnType<typeof getStudentGenderLabel>
+  ) => {
+    const waList = buildWhatsAppLinksFromPhoneString(
+      student.telefones || student.guardianPhone,
+      student.name,
+      `Olá! Somos da ${SCHOOL_NAME}. Gostaríamos de conversar sobre o acompanhamento escolar de ${student.name}.`
+    );
+    const hasPdf = Boolean(
+      (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+      (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+    );
+    const isCompliant = m.frequenciaPercent >= minLegalPresence;
+
+    return (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-2xl bg-[#f8faf9] border border-[#003440]/15 p-4 sm:p-5 space-y-3.5 text-[0.74rem] animate-gentle-fade text-[#1d1d1f]"
+      >
+        {/* Cabeçalho da Expansão: Aluno, Matrícula, Idade e Ficha */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-black/[0.06] gap-2.5">
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-xl bg-[#003440] text-white font-mono font-bold text-[0.8rem] flex items-center justify-center shrink-0 tabular-nums">
+              {student.number.toString().padStart(2, '0')}
+            </span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-extrabold text-[0.95rem] text-[#003440]">
+                  {student.name}
+                </span>
+                <span className="text-[0.68rem] font-bold px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035]">
+                  {studentGenderInfo.estudanteTitle}
+                </span>
+                {student.ra && (
+                  <span className="font-mono text-[0.7rem] text-[#436370] bg-white px-2 py-0.5 rounded border border-black/5 tabular-nums">
+                    RA {student.ra}-{student.digRa}
+                  </span>
+                )}
+              </div>
+              <p className="text-[0.72rem] text-[#6e6e73] font-medium mt-0.5">
+                Nascimento: {student.dataNascimento || '—'}{' '}
+                {student.idade ? `(${student.idade} anos)` : ''} · Turma {classGroup.name}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {onOpenStudentPdf && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenStudentPdf(student);
+                }}
+                className={`h-[32px] px-3 rounded-xl font-bold text-[0.72rem] flex items-center gap-1.5 cursor-pointer transition-all ${
+                  hasPdf
+                    ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white shadow-2xs'
+                    : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#ff3b30] hover:text-white border border-[#ff3b30]/30'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">
+                  {hasPdf ? 'picture_as_pdf' : 'warning'}
+                </span>
+                <span>{hasPdf ? 'Abrir Ficha PDF' : 'Sem Ficha PDF'}</span>
+              </button>
+            )}
+
+            {onOpenStudentGrid && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenStudentGrid(student);
+                }}
+                className="h-[32px] px-3 rounded-xl bg-[#003440] hover:bg-[#00222a] text-white font-bold text-[0.72rem] flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                <span>Ficha Completa (48 Dados)</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Grade de 4 Painéis Visuais: Frequência, Filiação/Contatos, Endereço/Transporte e Inclusão */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          {/* Painel 1: Scorecard de Frequência & LDB */}
+          <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#6e6e73]">
+                Frequência no Mês
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded text-[0.64rem] font-bold tabular-nums ${
+                  isCompliant
+                    ? 'bg-[#eaf6ef] text-[#005035]'
+                    : 'bg-[#fff2f2] text-[#ff3b30]'
+                }`}
+              >
+                {isCompliant ? `LDB Conforme (≥${minLegalPresence}%)` : `Abaixo LDB (<${minLegalPresence}%)`}
+              </span>
+            </div>
+
+            <div>
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className={`text-2xl font-black font-mono tracking-tight tabular-nums ${
+                    isCompliant ? 'text-[#005035]' : 'text-[#ba1a1a]'
+                  }`}
+                >
+                  {m.frequenciaPercent}%
+                </span>
+                <span className="text-[0.7rem] text-[#6e6e73] font-medium">
+                  {m.presencas} de {m.diasLetivosMatriculados} dias letivos
+                </span>
+              </div>
+
+              {/* Barra de Progresso Visual */}
+              <div className="w-full bg-[#f2f4f3] rounded-full h-2 mt-2 overflow-hidden flex">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    isCompliant ? 'bg-[#005035]' : 'bg-[#ba1a1a]'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, m.frequenciaPercent))}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between text-[0.68rem] text-[#6e6e73] tabular-nums">
+              <span>Total Faltas: <strong className="text-[#ba1a1a]">{m.faltas}</strong></span>
+              <span>Atestados: <strong className="text-[#005035]">{m.atestados}</strong></span>
+              <span>Sem Just.: <strong className="text-[#c2410c]">{Math.max(0, m.faltas - m.atestados)}</strong></span>
+            </div>
+          </div>
+
+          {/* Painel 2: Núcleo Familiar & Contato Direto */}
+          <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
+            <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#005035]">
+              Família &amp; Contatos
+            </span>
+
+            <div className="space-y-1">
+              <div>
+                <span className="text-[0.62rem] font-extrabold uppercase text-[#6e6e73] block">
+                  {guardian1Info.roleLabel}
+                </span>
+                <span className="font-bold text-[#1d1d1f] block truncate">
+                  {guardian1Info.cleanName}
+                </span>
+              </div>
+              <div>
+                <span className="text-[0.62rem] font-extrabold uppercase text-[#6e6e73] block">
+                  {guardian2Info.roleLabel}
+                </span>
+                <span className="font-bold text-[#1d1d1f] block truncate">
+                  {guardian2Info.cleanName}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between gap-2">
+              {waList.length > 0 ? (
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <a
+                    href={waList[0].waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 h-[28px] px-2.5 rounded-lg bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-[0.7rem] flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                    title={`Abrir conversa no WhatsApp: ${waList[0].display}`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">chat</span>
+                    <span className="truncate">WhatsApp: {waList[0].display}</span>
+                  </a>
+                  <a
+                    href={`tel:${(student.telefones || student.guardianPhone || '').replace(/\D/g, '')}`}
+                    className="h-[28px] px-2 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.7rem] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    title="Discar ligação telefônica"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">call</span>
+                  </a>
+                </div>
+              ) : (
+                <span className="text-[0.68rem] text-[#86868b] italic">Sem telefone cadastrado</span>
+              )}
+            </div>
+          </div>
+
+          {/* Painel 3: Endereço & Logística Escolar */}
+          <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
+            <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#0369a1]">
+              Residência &amp; Transporte
+            </span>
+
+            <div className="space-y-1.5">
+              <div className="text-[0.72rem] text-[#1d1d1f]">
+                <span className="text-[#6e6e73] font-medium block">Endereço Residencial:</span>
+                <span className="font-semibold block line-clamp-2">
+                  {student.logradouro || 'Logradouro não informado'}
+                  {student.numeroResidencia ? `, nº ${student.numeroResidencia}` : ''}
+                  {student.bairro ? ` · ${student.bairro}` : ''}
+                </span>
+                {student.cep && (
+                  <span className="text-[0.66rem] font-mono text-[#6e6e73] block">
+                    CEP: {student.cep}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-1 text-[0.68rem]">
+              {student.rotaOnibus ? (
+                <span className="px-2 py-0.5 rounded-md bg-[#f0f9ff] text-[#0369a1] font-bold">
+                  🚌 {student.rotaOnibus}
+                </span>
+              ) : (
+                <span className="text-[#86868b]">Transporte individual</span>
+              )}
+
+              {student.nis && (
+                <span className="px-1.5 py-0.5 rounded bg-[#eaf6ef] text-[#005035] font-mono font-bold text-[0.64rem]">
+                  NIS {student.nis}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Painel 4: Inclusão, AEE & Situação */}
+          <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
+            <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#5b21b6]">
+              Inclusão (AEE) &amp; Situação
+            </span>
+
+            <div className="space-y-1">
+              <div>
+                <span className="text-[0.62rem] font-extrabold uppercase text-[#6e6e73] block">
+                  Educação Especial / AEE:
+                </span>
+                <span className="font-semibold text-[#1d1d1f] block truncate">
+                  {student.deficiencia || 'Sem registro de deficiência / AEE'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[0.62rem] font-extrabold uppercase text-[#6e6e73] block">
+                  Situação Cadastral:
+                </span>
+                <span className="font-bold text-[#1d1d1f] block">
+                  {student.situacao || 'ATIVO'}
+                  {student.dataMovimentacao ? ` em ${student.dataMovimentacao}` : ''}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-black/[0.05] text-[0.68rem] text-[#6e6e73] truncate">
+              {student.emailMunicipal ? (
+                <span className="font-mono text-[#0066cc] block truncate">
+                  {student.emailMunicipal}
+                </span>
+              ) : (
+                <span>E-mail institucional não gerado</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
@@ -739,27 +980,25 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
 
           {/* Botão de Gerenciamento Fino: Expandir / Recolher Todos os Resumos Simultaneamente */}
-          {viewMode !== 'table' && (
-            <button
-              type="button"
-              onClick={() =>
-                setExpandedStudentId((prev) => (prev === '__ALL__' ? null : '__ALL__'))
-              }
-              title="Expandir ou recolher o resumo de todos os estudantes da turma ao mesmo tempo"
-              className={`min-h-[34px] px-3 py-1 rounded-full font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer transition-all border ${
-                expandedStudentId === '__ALL__'
-                  ? 'bg-[#003440] text-white border-[#003440] shadow-2xs'
-                  : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border-black/[0.06]'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {expandedStudentId === '__ALL__' ? 'unfold_less' : 'unfold_more'}
-              </span>
-              <span>
-                {expandedStudentId === '__ALL__' ? 'Recolher Resumos' : 'Expandir Todos'}
-              </span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() =>
+              setExpandedStudentId((prev) => (prev === '__ALL__' ? null : '__ALL__'))
+            }
+            title="Expandir ou recolher o resumo de todos os estudantes da turma ao mesmo tempo"
+            className={`min-h-[34px] px-3 py-1 rounded-full font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer transition-all border ${
+              expandedStudentId === '__ALL__'
+                ? 'bg-[#003440] text-white border-[#003440] shadow-2xs'
+                : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border-black/[0.06]'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">
+              {expandedStudentId === '__ALL__' ? 'unfold_less' : 'unfold_more'}
+            </span>
+            <span>
+              {expandedStudentId === '__ALL__' ? 'Recolher Resumos' : 'Expandir Todos'}
+            </span>
+          </button>
 
           {/* Seletor de Múltiplas Opções de Visualização (Preferência do Usuário) */}
           <div className="ios-segmented" role="group" aria-label="Modo de visualização">
@@ -799,151 +1038,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
         </div>
       </section>
-
-      {/* Banner de Alerta no Topo da Grade de Dados quando Estudantes Excedem 3 Faltas Consecutivas */}
-      {studentsExceedingThreeConsecutive.length > 0 && !isConsecutiveBannerDismissed && (
-        <section className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-[#fff7ed] via-[#fff1f2] to-[#fff7ed] border-2 border-[#ea580c]/40 shadow-sm flex flex-col gap-3.5 animate-gentle-fade">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-[#ea580c] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                <span className="material-symbols-outlined text-[22px]">notification_important</span>
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#ea580c] text-white text-[0.66rem] font-black uppercase tracking-wider">
-                    ⚠️ ALERTA NA GRADE DE DADOS · FALTAS CONSECUTIVAS
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-white/90 border border-[#ea580c]/30 font-mono font-black text-[0.72rem] text-[#c2410c] tabular-nums">
-                    {studentsExceedingThreeConsecutive.length} {studentsExceedingThreeConsecutive.length === 1 ? 'ESTUDANTE' : 'ESTUDANTES'}
-                  </span>
-                </div>
-                <h3 className="text-[1.02rem] sm:text-[1.15rem] font-black text-[#1d1d1f] tracking-tight leading-snug mt-1">
-                  Ação Sugerida: Contato de Busca Ativa
-                </h3>
-                <p className="text-[0.78rem] sm:text-[0.82rem] text-[#431407] font-medium leading-relaxed mt-0.5">
-                  Estudantes desta turma ultrapassaram o limite regulamentar de 3 faltas consecutivas. Recomendada ação imediata de <strong>Contato de Busca Ativa</strong> com as famílias para registrar motivo e restabelecer a frequência regular.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsConsecutiveBannerDismissed(true)}
-              className="text-[#86868b] hover:text-[#1d1d1f] p-1 rounded-lg shrink-0 self-start sm:self-auto cursor-pointer"
-              title="Ocultar banner temporariamente"
-            >
-              <span className="material-symbols-outlined text-[18px]">close</span>
-            </button>
-          </div>
-
-          {/* Lista de Estudantes da Turma com Faltas Consecutivas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
-            {studentsExceedingThreeConsecutive.map((stud) => {
-              const occs = getStudentCumulativeOccurrences(stud);
-              const latestOcc = occs.length > 0 ? occs[occs.length - 1] : undefined;
-              const streak = Math.max(
-                latestOcc?.selectedDates?.length || 0,
-                stud.consecutiveAbsenceAlert?.active
-                  ? Math.max(3, stud.consecutiveAbsenceAlert?.selectedDates?.length || 0)
-                  : (stud.totalAbsencesMonth || 0) >= 3 && (stud.justifiedAbsences || 0) === 0
-                  ? stud.totalAbsencesMonth || 0
-                  : 0
-              );
-              const g1 = resolveGuardianRelationshipInfo(
-                stud.filiacao1 || stud.guardianName,
-                'filiacao1',
-                stud.notes
-              );
-              const waLinks = buildWhatsAppLinksFromPhoneString(
-                stud.telefones || stud.guardianPhone,
-                stud.name,
-                `Olá${g1.nomeLimpo ? ` ${g1.nomeLimpo}` : ''}! Somos da EMEB Prof. Joaquim Candelário de Freitas. Notamos que o(a) estudante ${stud.name} acumulou ${streak} faltas consecutivas. Gostaríamos de saber como a família está e de que forma a escola pode auxiliar para garantir o retorno aos estudos com tranquilidade.`
-              );
-
-              return (
-                <div
-                  key={`banner-student-${stud.id}`}
-                  className="bg-white/95 rounded-2xl p-3 border border-[#ea580c]/25 shadow-2xs flex flex-col justify-between gap-2"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full bg-[#1d1d1f] text-white text-[0.68rem] font-black flex items-center justify-center shrink-0 tabular-nums">
-                          {stud.number}
-                        </span>
-                        <h4 className="text-[0.84rem] font-bold text-[#1d1d1f] truncate">
-                          {stud.name}
-                        </h4>
-                      </div>
-                      <span className="text-[0.68rem] text-[#6e6e73] block mt-0.5 truncate">
-                        {g1.parentesco}: {g1.nomeLimpo || stud.guardianName || 'Não informado'}
-                      </span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-[#ea580c] text-white font-mono font-black text-[0.7rem] tabular-nums shrink-0">
-                      {streak}d seguidos
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-black/[0.05]">
-                    {waLinks.length > 0 ? (
-                      <a
-                        href={waLinks[0].waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 min-h-[30px] px-2.5 py-1 rounded-xl bg-[#005035] hover:bg-[#003d29] text-white text-[0.72rem] font-extrabold flex items-center justify-center gap-1 cursor-pointer transition-all"
-                        title="Abrir WhatsApp oficial para Contato de Busca Ativa"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">chat</span>
-                        <span>Contato Busca Ativa</span>
-                      </a>
-                    ) : (
-                      <span className="text-[0.68rem] text-[#86868b] font-semibold italic flex-1">
-                        Sem telefone
-                      </span>
-                    )}
-
-                    {onOpenStudentGrid && (
-                      <button
-                        type="button"
-                        onClick={() => onOpenStudentGrid(stud)}
-                        className="px-2.5 py-1 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-[0.72rem] font-bold flex items-center gap-1 cursor-pointer"
-                        title="Abrir Grade de Dados deste estudante"
-                      >
-                        <span>Ficha</span>
-                        <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await triggerConsecutiveAbsencePushNotification(
-                          stud,
-                          classGroup.name,
-                          streak,
-                          `Contato de Busca Ativa sugerido com ${g1.parentesco}`
-                        );
-                        setPushNotifiedStudentId(stud.id);
-                        setTimeout(() => setPushNotifiedStudentId(null), 3000);
-                      }}
-                      className={`p-1.5 rounded-xl border cursor-pointer transition-colors ${
-                        pushNotifiedStudentId === stud.id
-                          ? 'bg-[#eaf6ef] text-[#005035] border-[#005035]/30'
-                          : 'bg-[#f5f5f7] text-[#c2410c] border-[#ea580c]/30 hover:bg-[#ffedd5]'
-                      }`}
-                      title="Disparar notificação push imediata para a equipe escolar"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">
-                        {pushNotifiedStudentId === stud.id ? 'check' : 'notifications_active'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
 
       {/* MODO 1: CARDS EM ORDEM NUMÉRICA DA TURMA (Padrão iOS Apple) */}
       {viewMode === 'grid' && (
@@ -1251,72 +1345,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 </div>
 
                 {/* Visualização Prévia e Expansão de Dados Fluida, Leve e Proporcional (Inline Accordion) */}
-                {isExpanded && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="rounded-2xl bg-[#f3f6f5] border border-[#003440]/15 p-3 space-y-2 text-[0.72rem] animate-gentle-fade"
-                  >
-                    <div className="flex items-center justify-between border-b border-black/[0.06] pb-1.5">
-                      <span className="font-black uppercase tracking-wider text-[0.65rem] text-[#003440]">
-                        Resumo Rápido • {studentGenderInfo.estudanteTitle}
-                      </span>
-                      <span className="font-mono font-bold text-[0.66rem] text-[#005035]">
-                        Presença: {m.presencas} de {m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <div className="bg-white p-2 rounded-xl border border-black/[0.05]">
-                        <span className="text-[0.61rem] font-extrabold uppercase text-[#005035] block">
-                          {guardian1Info.roleLabel}
-                        </span>
-                        <span className="font-bold text-[#1d1d1f] block truncate">
-                          {guardian1Info.cleanName}
-                        </span>
-                      </div>
-                      <div className="bg-white p-2 rounded-xl border border-black/[0.05]">
-                        <span className="text-[0.61rem] font-extrabold uppercase text-[#003440] block">
-                          {guardian2Info.roleLabel}
-                        </span>
-                        <span className="font-bold text-[#1d1d1f] block truncate">
-                          {guardian2Info.cleanName}
-                        </span>
-                      </div>
-                    </div>
-
-                    {(student.logradouro || student.bairro || student.nis) && (
-                      <div className="bg-white p-2 rounded-xl border border-black/[0.05] text-[0.68rem] text-[#374346] flex flex-wrap items-center justify-between gap-1">
-                        <span className="truncate">
-                          📍 {student.logradouro || 'Endereço não informado'}
-                          {student.numeroResidencia ? `, ${student.numeroResidencia}` : ''}
-                          {student.bairro ? ` • ${student.bairro}` : ''}
-                        </span>
-                        {student.nis && (
-                          <span className="px-1.5 py-0.5 rounded bg-[#eaf6ef] text-[#005035] font-mono font-bold text-[0.62rem]">
-                            NIS {student.nis}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[0.66rem] text-[#5a676b]">
-                        Faltas: <strong className="text-[#ba1a1a]">{m.faltas}</strong> • Atestados:{' '}
-                        <strong>{m.atestados}</strong>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
-                        className="px-2.5 py-1 rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.67rem] flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>Ver Ficha Completa (48 Dados)</span>
-                        <span className="material-symbols-outlined text-[13px]">
-                          open_in_full
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {isExpanded &&
+                  renderStudentDetailedExpansion(
+                    student,
+                    m,
+                    guardian1Info,
+                    guardian2Info,
+                    studentGenderInfo
+                  )}
 
                 {/* Botão Moderno e Fácil de Localizar: Abrir PDF da Ficha Informativa */}
                 <div
@@ -1546,46 +1582,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 </div>
 
-                {isExpanded && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="rounded-2xl bg-[#f5f7f6] border border-[#003440]/12 p-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[0.74rem] animate-gentle-fade"
-                  >
-                    <div>
-                      <span className="text-[0.64rem] font-extrabold uppercase text-[#005035] block">
-                        {guardian1Info.roleLabel}
-                      </span>
-                      <span className="font-bold text-[#1d1d1f]">
-                        {guardian1Info.cleanName}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[0.64rem] font-extrabold uppercase text-[#003440] block">
-                        {guardian2Info.roleLabel}
-                      </span>
-                      <span className="font-bold text-[#1d1d1f]">
-                        {guardian2Info.cleanName}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[0.64rem] font-extrabold uppercase text-[#5a676b] block">
-                          Frequência ({studentGenderInfo.estudanteTitle})
-                        </span>
-                        <span className="font-mono font-bold text-[#005035]">
-                          {m.presencas} de {m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%) • Faltas: {m.faltas}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
-                        className="px-2.5 py-1 rounded-lg bg-[#003440] text-white font-bold text-[0.68rem] cursor-pointer shrink-0"
-                      >
-                        Ficha Completa
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {isExpanded &&
+                  renderStudentDetailedExpansion(
+                    student,
+                    m,
+                    guardian1Info,
+                    guardian2Info,
+                    studentGenderInfo
+                  )}
               </div>
             );
           })}
@@ -1680,138 +1684,182 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   ? 'bg-[#fff9f8] hover:bg-[#fff0ee]'
                   : 'hover:bg-[#f4f8f6]';
 
+                const isExpanded =
+                  expandedStudentId === '__ALL__' || expandedStudentId === student.id;
+
                 return (
-                  <tr
-                    key={student.id}
-                    onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
-                    className={`cursor-pointer transition-colors ${rowColorClass}`}
-                  >
-                    <td className="py-2.5 px-3 text-center font-mono font-extrabold text-[#003440]">
-                      {student.number.toString().padStart(2, '0')}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="flex items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <StudentAvatar
-                            student={student}
-                            size="sm"
-                            expandableOnClick={true}
-                          />
-                          <div className="min-w-0">
-                            <span className="font-bold text-[#003440] truncate block">
-                              {student.name}
-                            </span>
-                            <span
-                              className={`inline-block px-1.5 py-0.2 rounded font-extrabold text-[0.61rem] ${
-                                studentGenderInfo.code === 'F'
-                                  ? 'bg-[#ffdad6]/60 text-[#93000a]'
-                                  : 'bg-[#d3e4ff]/75 text-[#001c38]'
-                              }`}
-                            >
-                              {studentGenderInfo.estudanteTitle}
-                            </span>
-                          </div>
-                        </div>
-                        {onOpenStudentPdf && (
+                  <React.Fragment key={student.id}>
+                    <tr
+                      onClick={() =>
+                        setExpandedStudentId((prev) => (prev === student.id ? null : student.id))
+                      }
+                      className={`cursor-pointer transition-colors ${rowColorClass} ${
+                        isExpanded ? 'ring-1 ring-[#003440]/20' : ''
+                      }`}
+                    >
+                      <td className="py-2.5 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"
                             onClick={(e) => {
-                              e.preventDefault();
                               e.stopPropagation();
-                              onOpenStudentPdf(student);
+                              setExpandedStudentId((prev) =>
+                                prev === student.id ? null : student.id
+                              );
                             }}
-                            title={`Abrir PDF da Ficha Informativa (${student.name}.pdf)`}
-                            className={`px-2.5 py-1 rounded-lg font-bold text-[0.7rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
-                              (student.fichaPdfDriveUrl &&
-                                student.fichaPdfDriveUrl.trim().length > 0) ||
-                              (student.fichaPdfDriveId &&
-                                student.fichaPdfDriveId.trim().length > 0)
-                                ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white'
-                                : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#d70015] hover:text-white border border-[#ff3b30]/25'
-                            }`}
+                            title={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
+                            className="p-0.5 rounded hover:bg-black/10 text-[#003440] cursor-pointer"
                           >
-                            <span className="material-symbols-outlined text-[14px]">
-                              picture_as_pdf
+                            <span
+                              className={`material-symbols-outlined text-[16px] transition-transform ${
+                                isExpanded ? 'rotate-180 text-[#0071e3]' : ''
+                              }`}
+                            >
+                              expand_more
                             </span>
-                            <span>Abrir PDF</span>
                           </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-2.5 text-center">
-                      {consecInfo.tier !== 'none' ? (
-                        <div className="inline-flex flex-col items-center">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-black text-[0.68rem] uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
-                          >
-                            <span className="material-symbols-outlined text-[13px]">
-                              {consecInfo.icon}
-                            </span>
-                            <span>{consecInfo.shortBadge}</span>
-                          </span>
-                          <span className="text-[0.63rem] font-semibold text-[#41484b] mt-0.5">
-                            {consecInfo.tier === '10d'
-                              ? 'Evasão Crítica'
-                              : consecInfo.tier === '5d'
-                              ? 'Busca Ativa'
-                              : 'Contato Família'}
+                          <span className="font-mono font-extrabold text-[#003440] text-[0.78rem] tabular-nums">
+                            {student.number.toString().padStart(2, '0')}
                           </span>
                         </div>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[0.66rem]">
-                          Em dia (sem alerta)
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <StudentAvatar
+                              student={student}
+                              size="sm"
+                              expandableOnClick={true}
+                            />
+                            <div className="min-w-0">
+                              <span className="font-bold text-[#003440] truncate block">
+                                {student.name}
+                              </span>
+                              <span
+                                className={`inline-block px-1.5 py-0.2 rounded font-extrabold text-[0.61rem] ${
+                                  studentGenderInfo.code === 'F'
+                                    ? 'bg-[#ffdad6]/60 text-[#93000a]'
+                                    : 'bg-[#d3e4ff]/75 text-[#001c38]'
+                                }`}
+                              >
+                                {studentGenderInfo.estudanteTitle}
+                              </span>
+                            </div>
+                          </div>
+                          {onOpenStudentPdf && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onOpenStudentPdf(student);
+                              }}
+                              title={`Abrir PDF da Ficha Informativa (${student.name}.pdf)`}
+                              className={`px-2.5 py-1 rounded-lg font-bold text-[0.7rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
+                                (student.fichaPdfDriveUrl &&
+                                  student.fichaPdfDriveUrl.trim().length > 0) ||
+                                (student.fichaPdfDriveId &&
+                                  student.fichaPdfDriveId.trim().length > 0)
+                                  ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white'
+                                  : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#d70015] hover:text-white border border-[#ff3b30]/25'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[14px]">
+                                picture_as_pdf
+                              </span>
+                              <span>Abrir PDF</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-2.5 text-center">
+                        {consecInfo.tier !== 'none' ? (
+                          <div className="inline-flex flex-col items-center">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-black text-[0.68rem] uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
+                            >
+                              <span className="material-symbols-outlined text-[13px]">
+                                {consecInfo.icon}
+                              </span>
+                              <span>{consecInfo.shortBadge}</span>
+                            </span>
+                            <span className="text-[0.63rem] font-semibold text-[#41484b] mt-0.5">
+                              {consecInfo.tier === '10d'
+                                ? 'Evasão Crítica'
+                                : consecInfo.tier === '5d'
+                                ? 'Busca Ativa'
+                                : 'Contato Família'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[0.66rem]">
+                            Em dia (sem alerta)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-2.5 font-mono text-[#436370]">
+                        {student.ra}-{student.digRa}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
+                        <span className="text-[0.63rem] font-black uppercase text-[#005035] block">
+                          {guardian1Info.roleLabel}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-2.5 font-mono text-[#436370]">
-                      {student.ra}-{student.digRa}
-                    </td>
-                    <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
-                      <span className="text-[0.63rem] font-black uppercase text-[#005035] block">
-                        {guardian1Info.roleLabel}
-                      </span>
-                      <span>{guardian1Info.cleanName}</span>
-                    </td>
-                    <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
-                      <span className="text-[0.63rem] font-black uppercase text-[#003440] block">
-                        {guardian2Info.roleLabel}
-                      </span>
-                      <span>{guardian2Info.cleanName}</span>
-                    </td>
-                    <td className="py-2.5 px-2.5 font-mono text-[0.72rem]">
-                      <div className="text-[#005035] font-semibold">
-                        {student.telefones || '—'}
-                      </div>
-                      <div className="text-[#5a676b] truncate max-w-[180px]">
-                        {student.emailMunicipal || '—'}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#005035]">
-                      {m.presencas}/{m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
-                    </td>
-                    <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#ba1a1a]">
-                      {m.faltas} ({pctFalta}%)
-                    </td>
-                    <td className="py-2.5 px-2.5 text-center">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-[0.68rem] font-extrabold uppercase ${
-                          isTransferred
-                            ? 'bg-[#b45309] text-white'
+                        <span>{guardian1Info.cleanName}</span>
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
+                        <span className="text-[0.63rem] font-black uppercase text-[#003440] block">
+                          {guardian2Info.roleLabel}
+                        </span>
+                        <span>{guardian2Info.cleanName}</span>
+                      </td>
+                      <td className="py-2.5 px-2.5 font-mono text-[0.72rem]">
+                        <div className="text-[#005035] font-semibold">
+                          {student.telefones || '—'}
+                        </div>
+                        <div className="text-[#5a676b] truncate max-w-[180px]">
+                          {student.emailMunicipal || '—'}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#005035]">
+                        {m.presencas}/{m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
+                      </td>
+                      <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#ba1a1a]">
+                        {m.faltas} ({pctFalta}%)
+                      </td>
+                      <td className="py-2.5 px-2.5 text-center">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[0.68rem] font-extrabold uppercase ${
+                            isTransferred
+                              ? 'bg-[#b45309] text-white'
+                              : isRemanejado
+                              ? 'bg-[#6d28d9] text-white'
+                              : isOtherNonActive
+                              ? 'bg-[#475569] text-white'
+                              : 'bg-[#eaf6ef] text-[#005035]'
+                          }`}
+                        >
+                          {isTransferred
+                            ? studentGenderInfo.transferidoTerm.toUpperCase()
                             : isRemanejado
-                            ? 'bg-[#6d28d9] text-white'
-                            : isOtherNonActive
-                            ? 'bg-[#475569] text-white'
-                            : 'bg-[#eaf6ef] text-[#005035]'
-                        }`}
-                      >
-                        {isTransferred
-                          ? studentGenderInfo.transferidoTerm.toUpperCase()
-                          : isRemanejado
-                          ? studentGenderInfo.remanejadoTerm.toUpperCase()
-                          : studentGenderInfo.ativoTerm.toUpperCase()}
-                      </span>
-                    </td>
-                  </tr>
+                            ? studentGenderInfo.remanejadoTerm.toUpperCase()
+                            : studentGenderInfo.ativoTerm.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-[#f8faf9] border-b border-black/[0.08] animate-gentle-fade">
+                        <td colSpan={10} className="p-3 sm:p-4">
+                          {renderStudentDetailedExpansion(
+                            student,
+                            m,
+                            guardian1Info,
+                            guardian2Info,
+                            studentGenderInfo
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
