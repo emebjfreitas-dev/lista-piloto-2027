@@ -20,11 +20,14 @@ import {
   getStudentGenderLabel,
   resolveGuardianRelationshipInfo,
 } from '../utils/genderDictionary';
+import {
+  resolveStudentCoordinates,
+  calculateTravelEstimates,
+} from '../utils/geoRouting';
 import { StudentAvatar } from './StudentAvatar';
 import { OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
-import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
-import { QuadroAvisosCard } from './QuadroAvisosCard';
+
 import {
   getStudentCumulativeOccurrences,
   triggerConsecutiveAbsencePushNotification,
@@ -61,6 +64,7 @@ interface DetalhesTurmaScreenProps {
   onOpenStudentPdf?: (student: Student) => void;
   onNavigateToBolsaFamilia?: () => void;
   onNavigateToConsecutiveAbsences?: () => void;
+  onNavigateToMap?: (student: Student) => void;
   onNavigateToSheet: () => void;
   onBackToClasses: () => void;
 }
@@ -80,6 +84,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   onOpenStudentPdf,
   onNavigateToBolsaFamilia,
   onNavigateToConsecutiveAbsences,
+  onNavigateToMap,
   onBackToClasses,
 }) => {
   const [searchStudent, setSearchStudent] = useState('');
@@ -488,27 +493,65 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             </div>
           </div>
 
-          {/* Painel 3: Endereço & Logística Escolar */}
+          {/* Painel 3: Endereço & Logística Escolar (Tempo e Percurso até a EMEB Candelário) */}
           <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
-            <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#0369a1]">
-              Residência &amp; Transporte
-            </span>
-
-            <div className="space-y-1.5">
-              <div className="text-[0.72rem] text-[#1d1d1f]">
-                <span className="text-[#6e6e73] font-medium block">Endereço Residencial:</span>
-                <span className="font-semibold block line-clamp-2">
-                  {student.logradouro || 'Logradouro não informado'}
-                  {student.numeroResidencia ? `, nº ${student.numeroResidencia}` : ''}
-                  {student.bairro ? ` · ${student.bairro}` : ''}
-                </span>
-                {student.cep && (
-                  <span className="text-[0.66rem] font-mono text-[#6e6e73] block">
-                    CEP: {student.cep}
-                  </span>
-                )}
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#0369a1]">
+                Residência &amp; Deslocamento
+              </span>
+              {onNavigateToMap && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigateToMap(student);
+                  }}
+                  className="px-2 py-0.5 rounded-md bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0066cc] font-bold text-[0.66rem] flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Ver no mapa georreferenciado interativo com percurso"
+                >
+                  <span className="material-symbols-outlined text-[13px]">map</span>
+                  <span>Ver no Mapa</span>
+                </button>
+              )}
             </div>
+
+            {(() => {
+              const coords = resolveStudentCoordinates(student);
+              const estimates = calculateTravelEstimates(coords.lat, coords.lng);
+              return (
+                <div className="space-y-1.5">
+                  <div className="text-[0.72rem] text-[#1d1d1f]">
+                    <span className="text-[#6e6e73] font-medium block">Endereço Residencial:</span>
+                    <span className="font-semibold block line-clamp-2">
+                      {student.logradouro || 'Logradouro não informado'}
+                      {student.numeroResidencia ? `, nº ${student.numeroResidencia}` : ''}
+                      {student.bairro ? ` · ${student.bairro}` : ''}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[0.66rem] font-mono text-[#6e6e73]">
+                      <span>Lat: {coords.lat.toFixed(5)}</span>
+                      <span>·</span>
+                      <span>Lng: {coords.lng.toFixed(5)}</span>
+                      {student.cep && <span>· CEP: {student.cep}</span>}
+                    </div>
+                  </div>
+
+                  {/* Tempo de Percurso até a EMEB Candelário */}
+                  <div className="p-1.5 rounded-lg bg-[#f0f9ff] border border-sky-100 flex items-center justify-between text-[0.68rem] text-sky-900 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-sky-700">directions_walk</span>
+                      <span>{estimates.walkMinutes} min a pé</span>
+                    </span>
+                    <span className="text-sky-300">|</span>
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-sky-700">directions_car</span>
+                      <span>{estimates.carMinutes} min carro</span>
+                    </span>
+                    <span className="text-sky-300">|</span>
+                    <span className="font-mono font-bold text-sky-800">{estimates.distanceRoadKm} km</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="pt-2 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-1 text-[0.68rem]">
               {student.rotaOnibus ? (
@@ -570,17 +613,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
-      {/* Quadro de Avisos Institucional na tela inicial das Professoras Regentes (PEB I) */}
-      {userRole === 'usuario' && (
-        <QuadroAvisosCard
-          notices={schoolNotices}
-          userRole={userRole}
-          userEmail={userEmail}
-          userName={userName}
-          variant="dashboard"
-          onSaveNotices={onSaveSchoolNotices}
-        />
-      )}
+
 
       {/* Se a professora PEB I tiver 2 ou mais turmas vinculadas, seletor estilo Segmented Control iOS */}
       {userRole === 'usuario' && assignedClasses.length > 1 && onSwitchAssignedClass && (
@@ -850,24 +883,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         </div>
       </section>
 
-      {/* Resumo de Faltas Críticas da Turma (Alertas Visuais de Estudantes que Atingiram o Limiar de Faltas Consecutivas) */}
-      <ResumoFaltasCriticasCard
-        classes={[classGroup]}
-        userRole={userRole}
-        onSelectStudentForConsecutiveScreen={() => {
-          onNavigateToConsecutiveAbsences?.();
-        }}
-        onOpenStudentGrid={
-          onOpenStudentGrid
-            ? (student) => onOpenStudentGrid(student)
-            : undefined
-        }
-        onOpenStudentPdf={
-          onOpenStudentPdf
-            ? (student) => onOpenStudentPdf(student)
-            : undefined
-        }
-      />
+
 
       {/* Barra de Controles iOS: Busca + Filtros de Situação + Múltiplas Opções de Visualização */}
       <section className="bg-white/90 backdrop-blur-md rounded-2xl p-3.5 border border-black/[0.06] flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-2xs">

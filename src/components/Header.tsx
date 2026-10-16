@@ -164,6 +164,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const getScreenTitle = () => {
     if (title) return title;
+    if (currentScreen === 'home') return 'Visão Geral & Home';
     if (currentScreen === 'frequencia_mensal') return 'Faltas do Mês';
     if (currentScreen === 'faltas_consecutivas') return 'Faltas Consecutivas';
     if (currentScreen === 'detalhes') return 'Caderneta da Turma';
@@ -193,7 +194,11 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              onClick={() => onChangeScreen?.('home')}
+              className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
+              title="Ir para a página inicial"
+            >
               <img
                 src={APP_LOGO_URL}
                 alt="EMEB Joaquim Candelário de Freitas"
@@ -202,10 +207,10 @@ export const Header: React.FC<HeaderProps> = ({
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = APP_LOGO_FALLBACK_URL;
                 }}
-                className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0"
+                className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0 group-hover:scale-105 transition-transform"
               />
               <div className="min-w-0">
-                <span className="text-[0.86rem] sm:text-[0.94rem] font-bold tracking-tight text-[#1d1d1f] truncate block leading-tight">
+                <span className="text-[0.86rem] sm:text-[0.94rem] font-bold tracking-tight text-[#1d1d1f] truncate block leading-tight group-hover:text-[#0071e3] transition-colors">
                   {showBackButton ? getScreenTitle() : 'EMEB Candelário de Freitas'}
                 </span>
                 <span className="hidden xl:block text-[0.66rem] font-medium text-[#6e6e73] truncate leading-none mt-0.5">
@@ -221,6 +226,18 @@ export const Header: React.FC<HeaderProps> = ({
               aria-label="Navegação Principal"
               className="hidden lg:flex items-center justify-center gap-1 bg-[#e8e8ed]/85 p-1 rounded-full shrink-0 border border-black/[0.04]"
             >
+              <button
+                type="button"
+                onClick={() => onChangeScreen('home')}
+                className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                  currentScreen === 'home'
+                    ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
+                    : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                }`}
+              >
+                Início
+              </button>
+
               <button
                 type="button"
                 onClick={() => onChangeScreen('turmas')}

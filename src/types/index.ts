@@ -54,6 +54,8 @@ export interface StudentSedData {
   bairro?: string;
   cidade?: string;
   uf?: string;
+  lat?: number;
+  lng?: number;
   telefones?: string;
   emailGoogle?: string;
   emailMicrosoft?: string;
@@ -327,6 +329,7 @@ export interface AttendanceWindowConfig {
 
 export type ScreenType = 
   | 'login'
+  | 'home'
   | 'turmas'
   | 'detalhes'
   | 'frequencia_mensal'

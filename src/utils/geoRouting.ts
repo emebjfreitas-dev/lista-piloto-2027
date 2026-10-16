@@ -44,6 +44,22 @@ export const JUNDIAI_NEIGHBORHOOD_ANCHORS: Record<string, { lat: number; lng: nu
   'CECAP': { lat: -23.1495, lng: -46.9245 },
   'ENGORDADOURO': { lat: -23.1425, lng: -46.9055 },
   'MORADA DAS VINHAS': { lat: -23.1465, lng: -46.9145 },
+  'VILA APARECIDA': { lat: -23.184, lng: -46.889 },
+  'JARDIM DANUBIO': { lat: -23.178, lng: -46.881 },
+  'JARDIM DANÚBIO': { lat: -23.178, lng: -46.881 },
+  'RETIRO': { lat: -23.176, lng: -46.915 },
+  'ELOY CHAVES': { lat: -23.189, lng: -46.975 },
+  'FAZENDA GRANDE': { lat: -23.175, lng: -46.992 },
+  'JARDIM TULIPAS': { lat: -23.161, lng: -46.968 },
+  'CAXAMBU': { lat: -23.145, lng: -46.852 },
+  'COLONIA': { lat: -23.195, lng: -46.865 },
+  'COLÔNIA': { lat: -23.195, lng: -46.865 },
+  'MEDEIROS': { lat: -23.185, lng: -46.998 },
+  'VILA ARENS': { lat: -23.198, lng: -46.882 },
+  'VARJAO': { lat: -23.172, lng: -47.012 },
+  'VARJÃO': { lat: -23.172, lng: -47.012 },
+  'VILA MARINGA': { lat: -23.212, lng: -46.878 },
+  'VILA MARINGÁ': { lat: -23.212, lng: -46.878 },
 };
 
 /**
@@ -140,8 +156,31 @@ export const resolveStudentCoordinates = (
     bairro?: string;
     cidade?: string;
     ra?: string;
+    lat?: number;
+    lng?: number;
   }
 ): { lat: number; lng: number; isApproximate: boolean; fullAddress: string } => {
+  const logr = student.logradouro || 'Logradouro não informado';
+  const num = student.numeroResidencia ? `, nº ${student.numeroResidencia}` : '';
+  const bai = student.bairro ? ` - ${student.bairro}` : '';
+  const cid = student.cidade || 'Jundiaí';
+  const fullAddress = `${logr}${num}${bai}, ${cid} - SP`;
+
+  if (
+    typeof student.lat === 'number' &&
+    typeof student.lng === 'number' &&
+    !isNaN(student.lat) &&
+    !isNaN(student.lng) &&
+    student.lat !== 0 &&
+    student.lng !== 0
+  ) {
+    return {
+      lat: student.lat,
+      lng: student.lng,
+      isApproximate: false,
+      fullAddress,
+    };
+  }
   const cleanBairro = (student.bairro || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -168,16 +207,11 @@ export const resolveStudentCoordinates = (
   const lat = Math.round((anchor.lat + latOffset) * 100000) / 100000;
   const lng = Math.round((anchor.lng + lngOffset) * 100000) / 100000;
 
-  const logr = student.logradouro || 'Logradouro não informado';
-  const num = student.numeroResidencia ? `, nº ${student.numeroResidencia}` : '';
-  const bai = student.bairro ? ` - ${student.bairro}` : '';
-  const cid = student.cidade || 'Jundiaí';
-
   return {
     lat,
     lng,
     isApproximate: true,
-    fullAddress: `${logr}${num}${bai}, ${cid} - SP`,
+    fullAddress,
   };
 };
 

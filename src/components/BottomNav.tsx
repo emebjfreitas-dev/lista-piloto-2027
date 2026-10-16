@@ -32,6 +32,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     hideForPeb2?: boolean;
   }> = [
     {
+      id: 'home',
+      label: 'Início',
+      shortLabel: 'Início',
+      icon: 'home',
+    },
+    {
       id: 'turmas',
       label: userRole === 'usuario' ? selectedClassName || 'Minha Turma' : 'Turmas',
       shortLabel: userRole === 'usuario' ? 'Turma' : 'Turmas',

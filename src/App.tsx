@@ -55,6 +55,7 @@ import {
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { LoginScreen } from './components/LoginScreen';
+import { HomeScreen } from './components/HomeScreen';
 import { MinhasTurmasScreen } from './components/MinhasTurmasScreen';
 import { DetalhesTurmaScreen } from './components/DetalhesTurmaScreen';
 import { RegistroFrequenciaMensalScreen } from './components/RegistroFrequenciaMensalScreen';
@@ -141,26 +142,10 @@ export default function App() {
       return 'login';
     }
     const savedScreen = initialSavedSession.screen;
-    if (effectiveInitialRole === 'usuario') {
-      return savedScreen === 'frequencia_mensal' ||
-        savedScreen === 'faltas_consecutivas' ||
-        savedScreen === 'mapa_estudantes'
-        ? savedScreen
-        : 'detalhes';
+    if (savedScreen && savedScreen !== 'login') {
+      return savedScreen;
     }
-    if (effectiveInitialRole === 'peb2') {
-      if (
-        savedScreen === 'planilha' ||
-        savedScreen === 'dias_letivos' ||
-        savedScreen === 'usuarios_acesso' ||
-        savedScreen === 'resumo' ||
-        savedScreen === 'login'
-      ) {
-        return 'turmas';
-      }
-      return savedScreen || 'turmas';
-    }
-    return savedScreen && savedScreen !== 'login' ? savedScreen : 'turmas';
+    return 'home';
   });
 
   const [classes, setClasses] = useState<ClassGroup[]>(() => initialClasses);
@@ -689,6 +674,7 @@ export default function App() {
     className: string;
     diasLetivosMes: number;
   } | null>(null);
+  const [mapTargetStudentId, setMapTargetStudentId] = useState<string | undefined>(undefined);
 
   // Permission helper (respects role AND the attendance launch window: last school day + 2 first school days of next month, or exceptional override)
   const windowStatus = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
@@ -1014,12 +1000,8 @@ export default function App() {
       setAssignedClassId(targetId);
       const targetClass = classes.find((c) => c.id === targetId) || classes[0];
       if (targetClass) setSelectedClass(targetClass);
-      // PEB I abre direto na sua turma sem precisar entrar no menu de seleção
-      setCurrentScreen('detalhes');
-    } else {
-      // PEB II e ADMIN mantêm a tela de seleção de turmas
-      setCurrentScreen('turmas');
     }
+    setCurrentScreen('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1031,6 +1013,7 @@ export default function App() {
 
     const screenLabelMap: Record<ScreenType, string> = {
       login: 'Login',
+      home: 'Início & Visão Geral',
       turmas: '1. Turmas',
       detalhes: 'Detalhes da Turma',
       frequencia_mensal: '2. Faltas do Mês',
@@ -1353,6 +1336,62 @@ export default function App() {
           />
         )}
 
+        {currentScreen === 'home' && (
+          <HomeScreen
+            userRole={userRole}
+            userEmail={simulatedTeacherEmail || currentUserEmail}
+            userName={currentUserName}
+            classes={classes}
+            assignedClassId={assignedClassId}
+            assignedClassIds={assignedClassIds}
+            attendanceWindowConfig={attendanceWindowConfig}
+            schoolNotices={schoolNotices}
+            onSaveSchoolNotices={handleSaveSchoolNotices}
+            onNavigateToScreen={(targetScreen) => {
+              if (targetScreen === 'turmas' && userRole === 'usuario') {
+                const targetCls = classes.find((c) => c.id === assignedClassId) || classes[0];
+                if (targetCls) setSelectedClass(targetCls);
+                setCurrentScreen('detalhes');
+              } else {
+                setCurrentScreen(targetScreen);
+              }
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectClassForMonthlyAttendance={(cls) => {
+              setSelectedClass(cls);
+              setCurrentScreen('frequencia_mensal');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onSelectStudentForConsecutiveScreen={(classId) => {
+              const cls = classes.find((c) => c.id === classId);
+              if (cls) setSelectedClass(cls);
+              setCurrentScreen('faltas_consecutivas');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onOpenStudentGrid={(student) => {
+              const matchedClass =
+                classes.find((c) => c.students.some((s) => s.id === student.id)) ||
+                selectedClass;
+              setGridModalData({
+                student,
+                classId: matchedClass.id,
+                className: matchedClass.name,
+                diasLetivosMes: matchedClass.classesHeld || 20,
+              });
+            }}
+            onOpenStudentPdf={(student, className) => {
+              setPdfModalData({
+                student,
+                className: className || selectedClass.name,
+              });
+            }}
+            onNavigateToAcessos={() => {
+              setCurrentScreen('usuarios_acesso');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
         {currentScreen === 'usuarios_acesso' && (
           <UsuariosAcessoScreen
             authorizedUsers={authorizedUsers}
@@ -1512,6 +1551,11 @@ export default function App() {
               setCurrentScreen('faltas_consecutivas');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            onNavigateToMap={(student) => {
+              setMapTargetStudentId(student.id);
+              setCurrentScreen('mapa_estudantes');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             onNavigateToSheet={() => setCurrentScreen('planilha')}
             onBackToClasses={() => {
               if (userRole === 'usuario') return;
@@ -1655,6 +1699,7 @@ export default function App() {
             classes={userRole === 'admin' || userRole === 'peb2' ? classes : visibleClasses}
             userRole={userRole}
             selectedClassId={selectedClass.id}
+            initialSelectedStudentId={mapTargetStudentId}
             onOpenStudentGrid={(student, classId, className, diasLetivosMes) =>
               setGridModalData({
                 student,
