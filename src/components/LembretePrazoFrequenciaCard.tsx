@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { AttendanceWindowConfig, ClassGroup, UserRole } from '../types';
 import { evaluateAttendanceLaunchWindow } from '../services/db';
+import {
+  Clock,
+  LockOpen,
+  CalendarCheck,
+  AlertTriangle,
+  Calendar,
+  Settings,
+  Bell,
+  X,
+} from 'lucide-react';
 
 interface LembretePrazoFrequenciaCardProps {
   attendanceWindowConfig: AttendanceWindowConfig;
@@ -55,9 +65,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     return (
       <div className="flex items-center justify-between px-3 py-1.5 rounded-2xl bg-[#f5f5f7] text-[0.72rem] text-[#6e6e73]">
         <div className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[16px] text-[#0071e3]">
-            notifications
-          </span>
+          <Bell className="w-3.5 h-3.5 text-[#0071e3]" />
           <span>Lembrete de prazos minimizado</span>
         </div>
         <button
@@ -119,9 +127,13 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
                 : 'bg-[#0071e3]/10 text-[#0071e3]'
             }`}
           >
-            <span className="material-symbols-outlined text-[24px]">
-              {isUrgent ? 'alarm_on' : isOpen ? 'lock_open' : 'calendar_clock'}
-            </span>
+            {isUrgent ? (
+              <AlertTriangle className="w-5 h-5 text-[#ff3b30]" />
+            ) : isOpen ? (
+              <LockOpen className="w-5 h-5 text-[#005035]" />
+            ) : (
+              <Clock className="w-5 h-5 text-[#0071e3]" />
+            )}
           </div>
 
           <div className="min-w-0">
@@ -177,8 +189,10 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               onClick={() => onOpenMonthlyAttendance(pendingSummary.firstPendingClass || targetClass)}
               className="h-[38px] px-4 rounded-full bg-[#005035] hover:bg-[#003d28] text-white font-extrabold text-[0.78rem] flex items-center gap-1.5 shadow-2xs transition-all active:scale-97 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[17px]">edit_calendar</span>
-              <span>Lançar Frequência Agora</span>
+              <CalendarCheck className="w-4 h-4 text-white" />
+              <span>
+                {userRole === 'usuario' ? 'Lançar Minhas Faltas' : 'Conferir Fechamentos'}
+              </span>
             </button>
           )}
 
@@ -186,23 +200,21 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             <button
               type="button"
               onClick={onNavigateToAcessos}
-              className="h-[38px] px-3.5 rounded-full bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] font-bold text-[0.75rem] flex items-center gap-1.5 border border-black/[0.08] shadow-2xs cursor-pointer transition-colors"
+              title="Configurar Janela de Lançamento e Prazos"
+              className="h-[38px] px-3 rounded-full bg-white/80 hover:bg-white text-[#1d1d1f] font-bold text-[0.74rem] flex items-center gap-1.5 border border-black/[0.08] transition-all cursor-pointer shadow-2xs"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#0071e3]">
-                settings_suggest
-              </span>
-              <span>Ajustar Janela</span>
+              <Settings className="w-3.5 h-3.5 text-[#6e6e73]" />
+              <span>Ajustar Prazos</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={() => setIsDismissed(true)}
-            aria-label="Minimizar lembrete"
-            className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.1] text-[#6e6e73] flex items-center justify-center cursor-pointer transition-colors"
-            title="Minimizar lembrete"
+            title="Dispensar lembrete temporariamente"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:bg-black/[0.05] transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[16px]">close</span>
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>

@@ -75,6 +75,7 @@ import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
 import { ConfigurarDiasLetivosTurmasModal } from './components/ConfigurarDiasLetivosTurmasModal';
 import { SpotlightCommandModal } from './components/SpotlightCommandModal';
+import { Toaster, toast } from 'sonner';
 
 const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
 
@@ -1221,7 +1222,7 @@ export default function App() {
   };
 
   const handleQuickSyncDriveNow = async () => {
-    try {
+    const syncPromise = (async () => {
       const spreadsheetId = await ensureOfficialSpreadsheetId();
       let latestClasses = getStoredClasses();
       if (spreadsheetId) {
@@ -1241,6 +1242,17 @@ export default function App() {
         const found = latestClasses.find((c) => c.id === prev.id);
         return found || prev;
       });
+      return latestClasses;
+    })();
+
+    toast.promise(syncPromise, {
+      loading: 'Sincronizando com Google Sheets & Google Drive...',
+      success: 'Dados sincronizados com sucesso!',
+      error: 'Não foi possível sincronizar no momento. Tente novamente.',
+    });
+
+    try {
+      await syncPromise;
     } catch (e) {
       console.warn('Erro ao sincronizar Drive rapidamente:', e);
     }
@@ -2034,6 +2046,9 @@ export default function App() {
         }}
         onNavigateToSheet={() => setCurrentScreen('planilha')}
       />
+
+      {/* Global Notifications with Sonner (Open-source, light & accessible) */}
+      <Toaster position="top-right" richColors closeButton />
     </div>
   );
 }

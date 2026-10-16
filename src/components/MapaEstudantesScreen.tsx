@@ -11,6 +11,7 @@ import {
 import { getStudentGenderLabel, resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { StudentAvatar } from './StudentAvatar';
+import { toast } from 'sonner';
 
 interface MapaEstudantesScreenProps {
   classes: ClassGroup[];
@@ -475,6 +476,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
   const handleCopyCoords = (lat: number, lng: number) => {
     navigator.clipboard?.writeText(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     setCopiedCoords(true);
+    toast.success('Coordenadas copiadas para a área de transferência!');
     setTimeout(() => setCopiedCoords(false), 2000);
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { NoticePriority, SchoolNotice, UserRole } from '../types';
+import { toast } from 'sonner';
 
 interface QuadroAvisosCardProps {
   notices: SchoolNotice[];
@@ -164,6 +165,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
     setEditingNoticeId(null);
     setTitle('');
     setContent('');
+    toast.success(editingNoticeId ? 'Comunicado atualizado com sucesso!' : 'Comunicado publicado no mural!');
   };
 
   const handleTogglePin = (id: string) => {
@@ -179,6 +181,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
   const handleDeleteNotice = (id: string) => {
     if (!onSaveNotices) return;
     onSaveNotices(notices.filter((n) => n.id !== id));
+    toast.success('Comunicado removido do mural.');
   };
 
   const getPriorityVisuals = (p: NoticePriority) => {

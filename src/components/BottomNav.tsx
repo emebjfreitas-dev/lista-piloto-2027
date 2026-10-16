@@ -1,5 +1,18 @@
 import React from 'react';
 import { ScreenType, UserRole } from '../types';
+import {
+  Home,
+  Users,
+  CalendarCheck,
+  AlertCircle,
+  BarChart2,
+  MapPin,
+  HeartHandshake,
+  Cloud,
+  ShieldCheck,
+  LogOut,
+  LucideIcon,
+} from 'lucide-react';
 
 interface BottomNavProps {
   currentScreen: ScreenType;
@@ -26,7 +39,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     id: ScreenType;
     label: string;
     shortLabel?: string;
-    icon: string;
+    icon: LucideIcon;
     adminOnly?: boolean;
     peb1Only?: boolean;
     hideForPeb2?: boolean;
@@ -35,59 +48,59 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       id: 'home',
       label: 'Início',
       shortLabel: 'Início',
-      icon: 'home',
+      icon: Home,
     },
     {
       id: 'turmas',
       label: userRole === 'usuario' ? selectedClassName || 'Minha Turma' : 'Turmas',
       shortLabel: userRole === 'usuario' ? 'Turma' : 'Turmas',
-      icon: 'groups',
+      icon: Users,
     },
     {
       id: 'frequencia_mensal',
       label: 'Faltas do Mês',
       shortLabel: 'Faltas Mês',
-      icon: 'edit_calendar',
+      icon: CalendarCheck,
       hideForPeb2: true,
     },
     {
       id: 'faltas_consecutivas',
       label: 'Faltas Consecutivas',
       shortLabel: 'Consecutivas',
-      icon: 'event_busy',
+      icon: AlertCircle,
     },
     {
       id: 'resumo',
       label: 'Resumo Mensal',
       shortLabel: 'Resumo',
-      icon: 'monitoring',
+      icon: BarChart2,
       adminOnly: true,
     },
     {
       id: 'mapa_estudantes',
       label: 'Mapa de Trajetos',
       shortLabel: 'Mapa KM',
-      icon: 'distance',
+      icon: MapPin,
     },
     {
       id: 'bolsa_familia',
       label: 'Bolsa Família',
       shortLabel: 'Bolsa',
-      icon: 'family_restroom',
+      icon: HeartHandshake,
       adminOnly: true,
     },
     {
       id: 'planilha',
       label: 'Planilha & Drive',
       shortLabel: 'Nuvem',
-      icon: 'cloud_done',
+      icon: Cloud,
       adminOnly: true,
     },
     {
       id: 'usuarios_acesso',
       label: 'Acessos',
       shortLabel: 'Acessos',
-      icon: 'manage_accounts',
+      icon: ShieldCheck,
       adminOnly: true,
     },
   ];
@@ -118,6 +131,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       >
         {navItems.map((item) => {
           const isActive = getIsActive(item.id);
+          const IconComp = item.icon;
           return (
             <button
               key={item.id}
@@ -135,14 +149,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   isActive ? 'bg-[#0071e3]/12' : 'bg-transparent'
                 }`}
               >
-                <span
-                  className="material-symbols-outlined text-[20px] sm:text-[21px]"
-                  style={
-                    isActive ? { fontVariationSettings: "'FILL' 1, 'wght' 600" } : undefined
-                  }
-                >
-                  {item.icon}
-                </span>
+                <IconComp
+                  className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${
+                    isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'
+                  }`}
+                />
               </div>
 
               <span
@@ -165,7 +176,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             className="group relative flex flex-col items-center justify-center min-w-[48px] sm:min-w-[64px] flex-1 h-full px-1 transition-all duration-150 cursor-pointer select-none active:scale-95 text-[#ff3b30]"
           >
             <div className="flex items-center justify-center w-9 sm:w-10 h-6 rounded-full bg-[#ff3b30]/10 group-hover:bg-[#ff3b30]/20 transition-colors">
-              <span className="material-symbols-outlined text-[19px]">logout</span>
+              <LogOut className="w-4 h-4 stroke-[2]" />
             </div>
             <span className="text-[0.63rem] sm:text-[0.68rem] font-semibold tracking-tight leading-tight mt-0.5 truncate max-w-full whitespace-nowrap text-[#ff3b30]">
               Sair
