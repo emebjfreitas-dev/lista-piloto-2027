@@ -64,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
     lastError: null,
     queue: [],
   });
+  const [showAdminNavDropdown, setShowAdminNavDropdown] = useState(false);
 
   useEffect(() => {
     const unsubSync = subscribeToSyncStatus((snap) => {
@@ -220,19 +221,19 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Zone 2: Global Navigation Links (Centered Symmetrically on Desktop lg+) */}
+          {/* Zone 2: Global Navigation Links (Clean, uncrowded, single-line) */}
           {onChangeScreen && (
             <nav
               aria-label="Navegação Principal"
-              className="hidden lg:flex items-center justify-center gap-1 bg-[#e8e8ed]/85 p-1 rounded-full shrink-0 border border-black/[0.04]"
+              className="hidden lg:flex items-center justify-center gap-1 bg-[#f5f5f7] p-1 rounded-2xl shrink-0 border border-black/[0.04]"
             >
               <button
                 type="button"
                 onClick={() => onChangeScreen('home')}
-                className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
                   currentScreen === 'home'
-                    ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                    : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
+                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                 }`}
               >
                 Início
@@ -241,10 +242,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onChangeScreen('turmas')}
-                className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
                   currentScreen === 'turmas' || currentScreen === 'detalhes'
-                    ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                    : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
+                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                 }`}
               >
                 {userRole === 'usuario' ? 'Minha Turma' : 'Turmas'}
@@ -254,10 +255,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => onChangeScreen('frequencia_mensal')}
-                  className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                  className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
                     currentScreen === 'frequencia_mensal'
-                      ? 'bg-[#0071e3] text-white font-semibold shadow-2xs'
-                      : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                      ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
+                      : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                   }`}
                 >
                   Faltas do Mês
@@ -267,81 +268,113 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onChangeScreen('faltas_consecutivas')}
-                className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
                   currentScreen === 'faltas_consecutivas'
-                    ? 'bg-[#ff3b30] text-white font-semibold shadow-2xs'
-                    : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
+                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                 }`}
               >
                 Faltas Consecutivas
               </button>
 
-              {userRole === 'admin' && (
-                <button
-                  type="button"
-                  onClick={() => onChangeScreen('resumo')}
-                  className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
-                    currentScreen === 'resumo'
-                      ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                      : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
-                  }`}
-                >
-                  Resumo Mensal
-                </button>
-              )}
-
               <button
                 type="button"
                 onClick={() => onChangeScreen('mapa_estudantes')}
-                className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
+                className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
                   currentScreen === 'mapa_estudantes'
-                    ? 'bg-[#0071e3] text-white font-semibold shadow-2xs'
-                    : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
+                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                 }`}
               >
                 Mapa de Trajetos
               </button>
 
               {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => onChangeScreen('bolsa_familia')}
-                  className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
-                    currentScreen === 'bolsa_familia'
-                      ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                      : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
-                  }`}
-                >
-                  Bolsa Família
-                </button>
-              )}
-
-              {isAdmin && (
-                <>
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={() => onChangeScreen('planilha')}
-                    className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
-                      currentScreen === 'planilha'
-                        ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                        : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
+                    onClick={() => setShowAdminNavDropdown((prev) => !prev)}
+                    className={`h-8 px-3 rounded-xl font-medium text-xs flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
+                      ['resumo', 'bolsa_familia', 'planilha', 'usuarios_acesso'].includes(currentScreen) || showAdminNavDropdown
+                        ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
+                        : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                     }`}
                   >
-                    Planilha &amp; Drive
+                    <span>Gestão</span>
+                    <span className="material-symbols-outlined text-[15px]">expand_more</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => onChangeScreen('usuarios_acesso')}
-                    className={`h-[32px] xl:h-[34px] px-3 xl:px-4 rounded-full font-medium text-[0.76rem] xl:text-[0.8rem] transition-all cursor-pointer whitespace-nowrap ${
-                      currentScreen === 'usuarios_acesso'
-                        ? 'bg-[#1d1d1f] text-white font-semibold shadow-2xs'
-                        : 'text-[#1d1d1f]/80 hover:text-[#1d1d1f]'
-                    }`}
-                  >
-                    Acessos
-                  </button>
-                </>
+                  {showAdminNavDropdown && (
+                    <div
+                      className="absolute left-0 mt-1.5 w-52 bg-white rounded-2xl border border-black/[0.08] shadow-lg p-1.5 space-y-0.5 z-50 animate-in fade-in zoom-in-95 duration-100"
+                      onMouseLeave={() => setShowAdminNavDropdown(false)}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAdminNavDropdown(false);
+                          onChangeScreen('resumo');
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer ${
+                          currentScreen === 'resumo'
+                            ? 'bg-[#0071e3]/10 text-[#0071e3] font-semibold'
+                            : 'text-[#1d1d1f] hover:bg-[#f5f5f7]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-[#6e6e73]">bar_chart</span>
+                        <span>Resumo Mensal MEC</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAdminNavDropdown(false);
+                          onChangeScreen('bolsa_familia');
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer ${
+                          currentScreen === 'bolsa_familia'
+                            ? 'bg-[#0071e3]/10 text-[#0071e3] font-semibold'
+                            : 'text-[#1d1d1f] hover:bg-[#f5f5f7]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-[#6e6e73]">volunteer_activism</span>
+                        <span>Bolsa Família &amp; Fretado</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAdminNavDropdown(false);
+                          onChangeScreen('planilha');
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer ${
+                          currentScreen === 'planilha'
+                            ? 'bg-[#0071e3]/10 text-[#0071e3] font-semibold'
+                            : 'text-[#1d1d1f] hover:bg-[#f5f5f7]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-[#6e6e73]">cloud</span>
+                        <span>Planilha &amp; Drive</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAdminNavDropdown(false);
+                          onChangeScreen('usuarios_acesso');
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer ${
+                          currentScreen === 'usuarios_acesso'
+                            ? 'bg-[#0071e3]/10 text-[#0071e3] font-semibold'
+                            : 'text-[#1d1d1f] hover:bg-[#f5f5f7]'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-[#6e6e73]">shield</span>
+                        <span>Controle de Acessos</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </nav>
           )}

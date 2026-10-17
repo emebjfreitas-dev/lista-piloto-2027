@@ -1128,10 +1128,8 @@ export const INITIAL_AUTHORIZED_USERS: AuthorizedUser[] = Array.from(
   };
 });
 
-export const APP_LOGO_URL =
-  'https://jundiai.sp.gov.br/a-cidade/wp-content/uploads/sites/31/2024/11/brasao_tradicional_jundiai_v1656_solitario_2024-1.png';
-export const APP_LOGO_FALLBACK_URL =
-  'https://jundiai.sp.gov.br/a-cidade/wp-content/uploads/sites/31/2024/11/brasao_tradicional_jundiai_v1656_solitario_2024-1.png';
+export const APP_LOGO_URL = '/brasao-jundiai.svg';
+export const APP_LOGO_FALLBACK_URL = '/brasao-jundiai.svg';
 export const SCHOOL_PATRON_WATERMARK_URL =
   'https://live.staticflickr.com/65535/51747624614_48845297df_b.jpg';
 

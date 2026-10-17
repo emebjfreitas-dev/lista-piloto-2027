@@ -406,42 +406,36 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-3.5 sm:space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
           <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#86868b]">
+              <span className="font-semibold text-[#1d1d1f]">{classGroup.name}</span>
               {classGroup.turmaAbrev && (
-                <span className="px-2.5 py-0.5 rounded-lg bg-[#1d1d1f] text-white font-mono text-[0.72rem] font-bold">
-                  {classGroup.turmaAbrev}
-                </span>
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-mono font-bold text-[#1d1d1f]">{classGroup.turmaAbrev}</span>
+                </>
               )}
-              <span className="px-2.5 py-0.5 rounded-full bg-[#0071e3]/10 text-[#0066cc] text-[0.7rem] font-semibold uppercase tracking-wider">
-                {classGroup.shift} • {classGroup.room}
-              </span>
+              <span aria-hidden="true">·</span>
+              <span>{classGroup.shift.replace('Turno ', '')}</span>
+              <span aria-hidden="true">·</span>
+              <span>{classGroup.room}</span>
               {classGroup.classeSedCode && (
-                <span className="px-2.5 py-0.5 rounded-full bg-[#f5f5f7] text-[#6e6e73] font-mono text-[0.7rem] font-semibold">
-                  SED: {classGroup.classeSedCode}
-                </span>
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-mono">SED: {classGroup.classeSedCode}</span>
+                </>
               )}
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f5f5f7] border border-black/[0.06] text-[0.7rem] font-semibold text-[#1d8338]">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    instantSyncStatus === 'syncing'
-                      ? 'bg-[#ff9500] animate-ping'
-                      : 'bg-[#28cd41]'
-                  }`}
-                />
-                <span>
-                  {instantSyncStatus === 'syncing'
-                    ? 'Sincronizando...'
-                    : 'Auto-Sync Instantâneo'}
-                </span>
+              <span aria-hidden="true">·</span>
+              <span className="text-[#005035] font-medium">
+                {instantSyncStatus === 'syncing' ? 'Sincronizando...' : 'Sincronizado'}
               </span>
             </div>
 
             <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
-              <h1 className="text-[1.3rem] sm:text-[1.6rem] font-bold text-[#1d1d1f] tracking-tight">
-                Faltas do Mês • Turma {classGroup.name}
+              <h1 className="text-xl sm:text-2xl font-bold text-[#1d1d1f] tracking-tight">
+                Lançamento de Faltas · {classGroup.name}
               </h1>
-              <span className="text-[0.78rem] sm:text-[0.82rem] font-medium text-[#6e6e73]">
-                {classGroup.pronoun || 'PROF.'} {classGroup.teacherName || 'Regente'} • {detailedIndicators.ativosCount} ativos ({students.length} na base)
+              <span className="text-xs sm:text-sm text-[#6e6e73]">
+                {classGroup.pronoun || 'Prof.'} {classGroup.teacherName || 'Regente'} · {detailedIndicators.ativosCount} ativos
               </span>
             </div>
           </div>

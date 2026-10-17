@@ -183,7 +183,7 @@ const writeSharedState = (patch: Partial<SharedSchoolState>): SharedSchoolState 
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.disable('x-powered-by');
   app.use((_req, res, next) => {

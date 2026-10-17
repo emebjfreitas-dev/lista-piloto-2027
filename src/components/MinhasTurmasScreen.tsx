@@ -7,9 +7,22 @@ import {
   SchoolNotice,
 } from '../types';
 import { evaluateAttendanceLaunchWindow } from '../services/db';
-import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
-import { QuadroAvisosCard } from './QuadroAvisosCard';
-import { LembretePrazoFrequenciaCard } from './LembretePrazoFrequenciaCard';
+import {
+  Search,
+  X,
+  LayoutGrid,
+  Table as TableIcon,
+  Users,
+  CalendarCheck,
+  FileText,
+  Lock,
+  Unlock,
+  Plus,
+  CalendarDays,
+  ChevronRight,
+  Sun,
+  Sunset,
+} from 'lucide-react';
 
 interface MinhasTurmasScreenProps {
   classes: ClassGroup[];
@@ -43,10 +56,6 @@ interface MinhasTurmasScreenProps {
 export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   classes,
   userRole,
-  userEmail,
-  userName,
-  schoolNotices = [],
-  onSaveSchoolNotices,
   assignedClassId,
   assignedClassIds = [],
   attendanceWindowConfig,
@@ -56,10 +65,6 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   onSelectClassForMonthlyAttendance,
   onOpenNewClassModal,
   onOpenConfigDaysModal,
-  onNavigateToAcessos,
-  onSelectStudentForConsecutiveScreen,
-  onOpenStudentGrid,
-  onOpenStudentPdf,
 }) => {
   const [selectedShift, setSelectedShift] = useState<'Todos' | 'Turno Manhã' | 'Turno Tarde'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,10 +82,8 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
     [classes]
   );
 
-  // Alerta Geral: Estudantes sem Ficha Informativa Escaneada (PDF no Drive)
   const missingScannedFichasSummary = useMemo(() => {
     let totalMissing = 0;
-    let totalStudentsCount = 0;
     let classesWithMissing = 0;
     classes.forEach((cls) => {
       if (userRole === 'usuario' && !assignedClassIds.includes(cls.id) && cls.id !== assignedClassId) {
@@ -88,7 +91,6 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
       }
       let classMissing = 0;
       cls.students.forEach((s) => {
-        totalStudentsCount++;
         const hasPdf = Boolean(
           (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
             (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
@@ -100,17 +102,12 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
       });
       if (classMissing > 0) classesWithMissing++;
     });
-    return { totalMissing, totalStudentsCount, classesWithMissing };
+    return { totalMissing, classesWithMissing };
   }, [classes, userRole, assignedClassIds, assignedClassId]);
 
-  // Flexible search for senior teachers (supports G4, Grupo 04, 1A, 1º Ano A, Teacher name, SED code, Specialist)
   const cleanSearch = searchTerm.toLowerCase().replace(/[^a-z0-9]/g, '');
   const rawSearchLower = searchTerm.toLowerCase().trim();
 
-  // Role-based class visibility:
-  // - ADMIN: all 39 classes (full access)
-  // - USUÁRIO (PEB I): ONLY their assigned class(es)
-  // - PEB II: all 39 classes (view-only)
   const allowedClassIdsForUsuario = useMemo(() => {
     const valid = assignedClassIds.filter((id) => id && id !== 'all');
     if (valid.length > 0) return valid;
@@ -118,301 +115,286 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   }, [assignedClassIds, assignedClassId]);
 
   const filteredClasses = useMemo(() => {
-    return classes.filter((c) => {
+    return classes.filter((cls) => {
       if (userRole === 'usuario') {
-        return allowedClassIdsForUsuario.includes(c.id);
+        const isAssigned =
+          allowedClassIdsForUsuario.includes(cls.id) ||
+          allowedClassIdsForUsuario.includes(cls.name) ||
+          cls.id === assignedClassId;
+        if (!isAssigned) return false;
       }
 
-      const matchesShift =
-        selectedShift === 'Todos' || c.shift === selectedShift;
-      const cleanClassName = c.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const cleanRoom = c.room.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const cleanAbrev = (c.turmaAbrev || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (selectedShift !== 'Todos' && cls.shift !== selectedShift) {
+        return false;
+      }
 
-      const matchesAlias =
-        (cleanSearch.startsWith('g4') && cleanClassName.includes('grupo04')) ||
-        (cleanSearch.startsWith('g5') && cleanClassName.includes('grupo05'));
+      if (!searchTerm.trim()) {
+        return true;
+      }
 
-      const matchesTeacherOrSed =
-        rawSearchLower !== '' &&
-        ((c.teacherName || '').toLowerCase().includes(rawSearchLower) ||
-          (c.teacherFirstName || '').toLowerCase().includes(rawSearchLower) ||
-          (c.classeSedCode || '').toLowerCase().includes(rawSearchLower) ||
-          (c.artTeacher || '').toLowerCase().includes(rawSearchLower) ||
-          (c.peTeacher || '').toLowerCase().includes(rawSearchLower) ||
-          (c.englishTeacher || '').toLowerCase().includes(rawSearchLower));
+      const nameNormalized = cls.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const teacherNormalized = (cls.teacherName || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+      const sedNormalized = (cls.classeSedCode || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+      const artNormalized = (cls.artTeacher || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+      const peNormalized = (cls.peTeacher || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+      const englishNormalized = (cls.englishTeacher || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
 
-      const matchesSearch =
-        cleanSearch === '' ||
-        cleanClassName.includes(cleanSearch) ||
-        cleanRoom.includes(cleanSearch) ||
-        cleanAbrev.includes(cleanSearch) ||
-        matchesAlias ||
-        matchesTeacherOrSed;
-
-      return matchesShift && matchesSearch;
+      return (
+        nameNormalized.includes(cleanSearch) ||
+        cls.name.toLowerCase().includes(rawSearchLower) ||
+        (cls.turmaAbrev &&
+          cls.turmaAbrev.toLowerCase().replace(/[^a-z0-9]/g, '').includes(cleanSearch)) ||
+        teacherNormalized.includes(cleanSearch) ||
+        cls.room.toLowerCase().includes(rawSearchLower) ||
+        sedNormalized.includes(cleanSearch) ||
+        artNormalized.includes(cleanSearch) ||
+        peNormalized.includes(cleanSearch) ||
+        englishNormalized.includes(cleanSearch)
+      );
     });
-  }, [classes, userRole, allowedClassIdsForUsuario, selectedShift, cleanSearch, rawSearchLower]);
+  }, [
+    classes,
+    userRole,
+    allowedClassIdsForUsuario,
+    assignedClassId,
+    selectedShift,
+    searchTerm,
+    cleanSearch,
+    rawSearchLower,
+  ]);
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 sm:space-y-5 pb-12 animate-gentle-fade">
-      {/* Barra Executiva Consolidada: Título + Simulador Rápido (Admin) + Status de Janela & Fichas PDF em 1 Bloco Limpo */}
-      <section className="card-welcoming bg-white rounded-3xl p-4 sm:p-5 border border-black/[0.06] space-y-3.5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[0.7rem] font-extrabold uppercase tracking-wider text-[#0066cc]">
-                {userRole === 'usuario'
-                  ? 'Acesso Exclusivo · Ano Letivo 2027'
-                  : `Ano Letivo 2027 · ${classes.length} Turmas Oficiais`}
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-14 animate-gentle-fade text-[#1d1d1f]">
+      {/* Header Institucional Limpo e Enxuto */}
+      <section className="bg-white rounded-3xl p-5 sm:p-6 border border-black/[0.06] shadow-xs space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#86868b]">
+              <span className="font-semibold text-[#1d1d1f]">
+                {userRole === 'usuario' ? 'Área da Professora Regente' : 'Gestão de Turmas'}
               </span>
-              {userRole !== 'peb2' && (
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[0.68rem] font-bold ${
-                    isLaunchButtonOpen
-                      ? 'bg-[#eaf6ef] text-[#005035]'
-                      : 'bg-[#fff9eb] text-[#c93400]'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[13px]">
-                    {isLaunchButtonOpen ? 'lock_open' : 'schedule'}
-                  </span>
-                  <span>
-                    {isLaunchButtonOpen
-                      ? 'Lançamento Aberto'
-                      : `Lançamento: ${windowEval.reasonLabel}`}
-                  </span>
-                </span>
-              )}
+              <span aria-hidden="true">·</span>
+              <span>Ano Letivo 2027</span>
+              <span aria-hidden="true">·</span>
+              <span className="font-mono tabular-nums font-medium">
+                {classes.length} turmas cadastradas
+              </span>
               {missingScannedFichasSummary.totalMissing > 0 && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#fff2f2] text-[#ff3b30] text-[0.68rem] font-extrabold tabular-nums">
-                  <span className="material-symbols-outlined text-[13px]">
-                    picture_as_pdf
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-[#ba1a1a] font-semibold tabular-nums">
+                    {missingScannedFichasSummary.totalMissing} estudantes sem ficha PDF
                   </span>
-                  <span>
-                    {missingScannedFichasSummary.totalMissing} sem Ficha PDF ({missingScannedFichasSummary.classesWithMissing} turmas)
-                  </span>
-                </span>
+                </>
               )}
             </div>
 
-            <h1 className="text-[1.35rem] sm:text-[1.6rem] font-extrabold text-[#1d1d1f] leading-tight tracking-tight mt-0.5">
-              {userRole === 'usuario' ? 'Minha Turma Regente' : 'Quadro Oficial de Turmas'}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f]">
+                {userRole === 'usuario' ? 'Minha Turma' : 'Quadro de Turmas'}
+              </h1>
+              {userRole !== 'peb2' && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6e6e73]">
+                  {isLaunchButtonOpen ? (
+                    <Unlock className="w-3.5 h-3.5 text-[#005035]" />
+                  ) : (
+                    <Lock className="w-3.5 h-3.5 text-[#c93400]" />
+                  )}
+                  <span>{isLaunchButtonOpen ? 'Lançamento aberto' : windowEval.reasonLabel}</span>
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Controles Rápidos do Admin na Mesma Linha */}
+          {/* Ações da Gestão */}
           {userRole === 'admin' && (
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {/* Simulador Compacto de Perfil */}
-              <div className="flex items-center gap-1 bg-[#f5f5f7] p-1 rounded-full border border-black/[0.05]">
+              {/* Simulador de Perfil em Segmented Control Limpo */}
+              <div className="inline-flex items-center p-1 bg-[#f5f5f7] rounded-xl text-xs font-medium">
                 <button
                   type="button"
                   onClick={() => onChangeRole('admin')}
-                  className="px-3 py-1 rounded-full bg-[#1d1d1f] text-white font-bold text-[0.72rem] cursor-pointer"
+                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    userRole === 'admin'
+                      ? 'bg-white text-[#1d1d1f] shadow-xs font-semibold'
+                      : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                  }`}
                 >
-                  Gestão (Admin)
+                  Admin
                 </button>
                 <button
                   type="button"
                   onClick={() => onChangeRole('usuario')}
-                  className="px-2.5 py-1 rounded-full hover:bg-white text-[#1d1d1f] font-semibold text-[0.72rem] cursor-pointer"
-                  title="Simular visão de Professora Regente PEB I"
+                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    (userRole as string) === 'usuario'
+                      ? 'bg-white text-[#1d1d1f] shadow-xs font-semibold'
+                      : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                  }`}
+                  title="Simular visão PEB I"
                 >
-                  Visão Regente (PEB I)
+                  Regente
                 </button>
                 <button
                   type="button"
                   onClick={() => onChangeRole('peb2')}
-                  className="px-2.5 py-1 rounded-full hover:bg-white text-[#1d1d1f] font-semibold text-[0.72rem] cursor-pointer"
-                  title="Simular visão de Especialista PEB II"
+                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    (userRole as string) === 'peb2'
+                      ? 'bg-white text-[#1d1d1f] shadow-xs font-semibold'
+                      : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                  }`}
+                  title="Simular visão PEB II"
                 >
-                  Visão Especialista (PEB II)
+                  Especialista
                 </button>
               </div>
-
-              <select
-                value={assignedClassId}
-                onChange={(e) => onChangeAssignedClassId(e.target.value)}
-                aria-label="Selecionar turma para simulação PEB I"
-                className="h-[34px] px-2.5 rounded-full bg-[#f5f5f7] border border-black/[0.06] text-[#1d1d1f] font-semibold text-[0.74rem] cursor-pointer max-w-[175px] truncate"
-              >
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    Regente: {c.name}
-                  </option>
-                ))}
-              </select>
 
               {onOpenConfigDaysModal && (
                 <button
                   onClick={onOpenConfigDaysModal}
                   type="button"
-                  className="h-[34px] px-3 rounded-full bg-[#0071e3]/10 hover:bg-[#0071e3]/18 text-[#0066cc] font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer transition-colors"
+                  className="h-9 px-3 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[16px]">edit_calendar</span>
-                  <span className="hidden sm:inline">200 Dias &amp; Pastas Drive</span>
+                  <CalendarDays className="w-3.5 h-3.5 text-[#6e6e73]" />
+                  <span className="hidden sm:inline">200 Dias Letivos</span>
                 </button>
               )}
 
               <button
                 type="button"
                 onClick={onOpenNewClassModal}
-                className="h-[34px] px-3 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer"
+                className="h-9 px-3.5 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
               >
-                <span className="material-symbols-outlined text-[16px]">add</span>
-                <span className="hidden sm:inline">Nova Turma</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Nova Turma</span>
               </button>
             </div>
           )}
         </div>
       </section>
 
-      {/* Sistema de Lembretes Automáticos de Prazos de Encerramento da Frequência Mensal (Integrado com attendanceWindowConfig) */}
-      <LembretePrazoFrequenciaCard
-        attendanceWindowConfig={attendanceWindowConfig}
-        userRole={userRole}
-        classes={classes}
-        assignedClassId={assignedClassId}
-        assignedClassIds={assignedClassIds}
-        onOpenMonthlyAttendance={onSelectClassForMonthlyAttendance}
-        onNavigateToAcessos={onNavigateToAcessos}
-      />
-
-      {/* Quadro de Avisos Institucional (Gestão publica / edita e todos os educadores visualizam no Login e Início) */}
-      <QuadroAvisosCard
-        notices={schoolNotices}
-        userRole={userRole}
-        userEmail={userEmail}
-        userName={userName}
-        variant="dashboard"
-        onSaveNotices={onSaveSchoolNotices}
-      />
-
-      {/* Resumo de Faltas Críticas (Busca Ativa Escolar • Limiar de Faltas Consecutivas com Detalhes ao Clicar) */}
-      <ResumoFaltasCriticasCard
-        classes={filteredClasses}
-        userRole={userRole}
-        onSelectStudentForConsecutiveScreen={onSelectStudentForConsecutiveScreen}
-        onOpenStudentGrid={onOpenStudentGrid}
-        onOpenStudentPdf={onOpenStudentPdf}
-      />
-
-      {/* Shift Selector & Search: Responsive Proportions on Mobile, Tablet & Desktop */}
+      {/* Barra de Busca e Filtros de Turno (Direta, Compacta e Intuitiva) */}
       {userRole !== 'usuario' && (
-        <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-3 lg:items-center">
-          <div className="grid grid-cols-3 gap-2 lg:col-span-5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Segmented Filter de Turnos */}
+          <div className="inline-flex items-center p-1 bg-white rounded-2xl border border-black/[0.06] text-xs font-medium shrink-0">
             <button
               onClick={() => setSelectedShift('Todos')}
               type="button"
-              className={`min-h-[44px] sm:min-h-[48px] rounded-xl sm:rounded-2xl px-2.5 py-2 flex items-center justify-center gap-1.5 font-semibold text-[0.8rem] sm:text-[0.86rem] transition-all cursor-pointer border ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                 selectedShift === 'Todos'
-                  ? 'bg-[#1d1d1f] text-white border-[#1d1d1f] shadow-xs'
-                  : 'bg-white text-[#6e6e73] border-black/[0.08] hover:text-[#1d1d1f]'
+                  ? 'bg-[#1d1d1f] text-white font-semibold shadow-xs'
+                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
               }`}
             >
-              <span>Todas ({classes.length})</span>
+              Todas ({classes.length})
             </button>
-
             <button
               onClick={() => setSelectedShift('Turno Manhã')}
               type="button"
-              className={`min-h-[44px] sm:min-h-[48px] rounded-xl sm:rounded-2xl px-2.5 py-2 flex items-center justify-center gap-1.5 font-semibold text-[0.8rem] sm:text-[0.86rem] transition-all cursor-pointer border ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
                 selectedShift === 'Turno Manhã'
-                  ? 'bg-[#1d1d1f] text-white border-[#1d1d1f] shadow-xs'
-                  : 'bg-white text-[#6e6e73] border-black/[0.08] hover:text-[#1d1d1f]'
+                  ? 'bg-[#1d1d1f] text-white font-semibold shadow-xs'
+                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
               }`}
             >
-              <span className="text-[16px]">☀️</span>
+              <Sun className="w-3.5 h-3.5" />
               <span>Manhã ({manhaCount})</span>
             </button>
-
             <button
               onClick={() => setSelectedShift('Turno Tarde')}
               type="button"
-              className={`min-h-[44px] sm:min-h-[48px] rounded-xl sm:rounded-2xl px-2.5 py-2 flex items-center justify-center gap-1.5 font-semibold text-[0.8rem] sm:text-[0.86rem] transition-all cursor-pointer border ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
                 selectedShift === 'Turno Tarde'
-                  ? 'bg-[#1d1d1f] text-white border-[#1d1d1f] shadow-xs'
-                  : 'bg-white text-[#6e6e73] border-black/[0.08] hover:text-[#1d1d1f]'
+                  ? 'bg-[#1d1d1f] text-white font-semibold shadow-xs'
+                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
               }`}
             >
-              <span className="text-[16px]">⛅</span>
+              <Sunset className="w-3.5 h-3.5" />
               <span>Tarde ({tardeCount})</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 lg:col-span-7">
+          {/* Campo de Busca e Alternador de Visão */}
+          <div className="flex items-center gap-2 flex-1 sm:max-w-md">
             <div className="relative flex-1">
-              <span className="material-symbols-outlined absolute left-3.5 text-[#86868b] text-[20px] top-1/2 -translate-y-1/2">
-                search
-              </span>
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b]" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar turma, professor(a) regente, especialista ou código SED..."
-                className="w-full min-h-[44px] sm:min-h-[48px] pl-10 pr-9 bg-white text-[#1d1d1f] text-[0.86rem] sm:text-[0.92rem] rounded-xl sm:rounded-2xl border border-black/[0.08] focus:border-[#0071e3] focus:outline-none shadow-2xs font-medium placeholder:text-[#86868b]"
+                placeholder="Buscar turma, regente ou código SED..."
+                className="w-full h-10 pl-10 pr-9 bg-white text-[#1d1d1f] text-xs sm:text-sm rounded-2xl border border-black/[0.08] focus:border-[#0071e3] focus:outline-none transition-all placeholder:text-[#86868b]"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[20px]">cancel</span>
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Seletor de Opções de Visualização de Turmas (Cartões vs Tabela Executiva) */}
-            <div className="ios-segmented shrink-0" role="group" aria-label="Modo de visualização das turmas">
+            <div className="inline-flex items-center p-1 bg-white rounded-2xl border border-black/[0.06] shrink-0">
               <button
                 type="button"
                 onClick={() => setTurmasViewMode('grid')}
-                title="Visualização em Cartões Completos"
-                className={`ios-segmented-item flex items-center gap-1 ${
-                  turmasViewMode === 'grid' ? 'ios-segmented-item-active' : ''
+                title="Grade de Cartões"
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  turmasViewMode === 'grid'
+                    ? 'bg-[#1d1d1f] text-white'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">grid_view</span>
-                <span className="hidden sm:inline">Cartões</span>
+                <LayoutGrid className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setTurmasViewMode('table')}
-                title="Visualização em Tabela Executiva"
-                className={`ios-segmented-item flex items-center gap-1 ${
-                  turmasViewMode === 'table' ? 'ios-segmented-item-active' : ''
+                title="Tabela de Dados"
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  turmasViewMode === 'table'
+                    ? 'bg-[#1d1d1f] text-white'
+                    : 'text-[#86868b] hover:text-[#1d1d1f]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">table_rows</span>
-                <span className="hidden sm:inline">Tabela</span>
+                <TableIcon className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modo de Visualização 1: Tabela Executiva ou Modo 2: Grade de Cartões */}
+      {/* Exibição: Tabela ou Cartões */}
       {turmasViewMode === 'table' ? (
-        <div className="bg-white rounded-3xl border border-black/[0.06] overflow-x-auto shadow-2xs">
-          <table className="w-full text-left text-[0.8rem] border-collapse min-w-[980px]">
-            <thead className="bg-[#f7f9f8] text-[#1d1d1f] border-b border-black/[0.06] font-extrabold uppercase tracking-wider text-[0.68rem]">
+        <div className="bg-white rounded-3xl border border-black/[0.06] overflow-x-auto shadow-xs">
+          <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+            <thead className="bg-[#fafafc] text-[#86868b] border-b border-black/[0.06] font-semibold uppercase tracking-wider text-[0.66rem]">
               <tr>
                 <th className="py-3 px-4">Turma</th>
                 <th className="py-3 px-3">Turno &amp; Sala</th>
-                <th className="py-3 px-3">Docentes (Regente &amp; Especialistas)</th>
-                <th className="py-3 px-2.5 text-center">Estudantes</th>
-                <th className="py-3 px-2.5 text-center">Frequência</th>
-                <th className="py-3 px-2.5 text-center">Faltas no Mês</th>
-                <th className="py-3 px-3 text-center">Fichas PDF</th>
+                <th className="py-3 px-3">Regente</th>
+                <th className="py-3 px-3 text-center">Estudantes</th>
+                <th className="py-3 px-3 text-center">Frequência</th>
+                <th className="py-3 px-3 text-center">Faltas no Mês</th>
                 <th className="py-3 px-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/[0.05]">
+            <tbody className="divide-y divide-black/[0.04]">
               {filteredClasses.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-[#6e6e73] font-medium">
-                    Nenhuma turma encontrada com a busca "{searchTerm}".
+                  <td colSpan={7} className="py-8 text-center text-[#86868b] font-normal">
+                    Nenhuma turma encontrada.
                   </td>
                 </tr>
               ) : (
@@ -423,24 +405,17 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                     (isInfantil
                       ? cls.name.replace(/^GRUPO\s*0?/i, 'G').replace(/\s+/g, '')
                       : cls.name.replace(/\s*ANO\s*/i, ''));
-                  const missingPdfCount = cls.students.filter(
-                    (s) =>
-                      !(
-                        (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
-                        (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
-                      )
-                  ).length;
 
                   return (
                     <tr
                       key={cls.id}
                       onClick={() => onSelectClassForDetails(cls)}
-                      className="hover:bg-[#f5f8f7] cursor-pointer transition-colors"
+                      className="hover:bg-[#fafafc] cursor-pointer transition-colors"
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
                           <div
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-[0.82rem] shrink-0 ${
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
                               isInfantil
                                 ? 'bg-[#0071e3]/10 text-[#0066cc]'
                                 : 'bg-[#f5f5f7] text-[#1d1d1f]'
@@ -449,84 +424,58 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                             {shortBadge}
                           </div>
                           <div>
-                            <span className="font-bold text-[#1d1d1f] block leading-tight">
+                            <span className="font-semibold text-[#1d1d1f] block">
                               {cls.name}
                             </span>
                             {cls.classeSedCode && (
-                              <span className="text-[0.66rem] font-mono text-[#6e6e73]">
+                              <span className="font-mono text-[0.66rem] text-[#86868b]">
                                 SED: {cls.classeSedCode}
                               </span>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 text-[#6e6e73]">
                         <span className="font-medium text-[#1d1d1f] block">
                           {cls.shift.replace('Turno ', '')}
                         </span>
-                        <span className="text-[0.68rem] text-[#6e6e73]">
-                          {cls.room}
-                        </span>
+                        <span className="text-[0.68rem]">{cls.room}</span>
                       </td>
                       <td className="py-3 px-3">
-                        <div className="text-[0.76rem]">
-                          <span className="font-bold text-[#0066cc] block truncate max-w-[260px]">
-                            {cls.teacherName || 'Regente não atribuído'}
-                          </span>
-                          <span className="text-[0.68rem] text-[#6e6e73] block truncate max-w-[260px]">
-                            {[
-                              cls.artTeacher && `Arte: ${cls.artTeacher}`,
-                              cls.peTeacher && `Ed. Física: ${cls.peTeacher}`,
-                              cls.englishTeacher && `Inglês: ${cls.englishTeacher}`,
-                            ]
-                              .filter(Boolean)
-                              .join(' · ') || 'PEB II não informado'}
-                          </span>
-                        </div>
+                        <span className="font-medium text-[#1d1d1f] block truncate max-w-[220px]">
+                          {cls.teacherName || 'Regente a atribuir'}
+                        </span>
                       </td>
-                      <td className="py-3 px-2.5 text-center font-mono font-bold text-[#1d1d1f] tabular-nums">
+                      <td className="py-3 px-3 text-center font-mono tabular-nums font-medium text-[#1d1d1f]">
                         {cls.totalStudents}
                       </td>
-                      <td className="py-3 px-2.5 text-center font-mono tabular-nums">
-                        <span className="inline-block px-2 py-0.5 rounded-md font-bold text-[#005035] bg-[#eaf6ef]">
-                          {cls.presenceRate}%
-                        </span>
+                      <td className="py-3 px-3 text-center font-mono tabular-nums font-semibold text-[#005035]">
+                        {cls.presenceRate}%
                       </td>
-                      <td className="py-3 px-2.5 text-center font-mono font-bold tabular-nums">
-                        <span className={cls.monthlyAbsences > 0 ? 'text-[#ff3b30]' : 'text-[#1d8338]'}>
+                      <td className="py-3 px-3 text-center font-mono tabular-nums font-medium">
+                        <span className={cls.monthlyAbsences > 0 ? 'text-[#ba1a1a]' : 'text-[#6e6e73]'}>
                           {cls.monthlyAbsences}
                         </span>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        {missingPdfCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#fff2f2] text-[#ff3b30] text-[0.68rem] font-bold tabular-nums">
-                            <span>{missingPdfCount} pendente(s)</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] text-[0.68rem] font-bold">
-                            <span>100% em dia</span>
-                          </span>
-                        )}
                       </td>
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => onSelectClassForDetails(cls)}
-                            className="h-[32px] px-3 rounded-lg bg-[#1d1d1f] hover:bg-black text-white text-[0.74rem] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                            className="h-8 px-3 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors"
                           >
-                            <span>Estudantes</span>
-                            <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+                            <span>Ver Alunos</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                           {userRole !== 'peb2' && isLaunchButtonOpen && (
                             <button
                               type="button"
                               onClick={() => onSelectClassForMonthlyAttendance(cls)}
-                              className="h-[32px] px-2.5 rounded-lg bg-[#0071e3] hover:bg-[#005bb5] text-white text-[0.74rem] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                              title="Lançamento mensal de faltas"
+                              className="h-8 px-2.5 rounded-lg bg-[#1d1d1f] hover:bg-black text-white font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                              title="Lançar faltas do mês"
                             >
-                              <span className="material-symbols-outlined text-[14px]">edit_calendar</span>
-                              <span className="hidden sm:inline">Faltas</span>
+                              <CalendarCheck className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Lançar</span>
                             </button>
                           )}
                         </div>
@@ -539,184 +488,114 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           </table>
         </div>
       ) : (
-        /* List of Classes: 1 col Mobile, 2 cols Tablet (sm/md), 3 cols Laptop (lg), 4 cols Widescreen (2xl) */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5 sm:gap-4 items-stretch">
-        {filteredClasses.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center border border-black/[0.06] sm:col-span-2 lg:col-span-3 2xl:col-span-4">
-            <p className="text-[1rem] font-semibold text-[#6e6e73]">
-              Nenhuma turma encontrada com a busca "{searchTerm}".
-            </p>
-            <button
-              onClick={() => setSearchTerm('')}
-              className="mt-3 px-4 py-2 bg-[#0071e3] text-white font-semibold rounded-full text-[0.86rem] cursor-pointer"
-            >
-              Mostrar Todas as Turmas
-            </button>
-          </div>
-        ) : (
-          filteredClasses.map((cls) => {
-            const isInfantil = cls.name.startsWith('GRUPO');
-            const shortBadge =
-              cls.turmaAbrev ||
-              (isInfantil
-                ? cls.name.replace(/^GRUPO\s*0?/i, 'G').replace(/\s+/g, '')
-                : cls.name.replace(/\s*ANO\s*/i, ''));
-
-            return (
-              <div
-                key={cls.id}
-                className="card-welcoming bg-white p-4 sm:p-5 border border-black/[0.06] flex flex-col justify-between gap-3.5 h-full min-h-[196px]"
+        /* Modo Grade de Cartões Limpos */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 items-stretch">
+          {filteredClasses.length === 0 ? (
+            <div className="bg-white rounded-3xl p-8 text-center border border-black/[0.06] col-span-full">
+              <p className="text-sm font-medium text-[#86868b]">
+                Nenhuma turma encontrada para "{searchTerm}".
+              </p>
+              <button
+                onClick={() => setSearchTerm('')}
+                className="mt-3 px-4 py-2 bg-[#1d1d1f] text-white font-medium rounded-xl text-xs cursor-pointer hover:bg-black transition-colors"
               >
-                {/* Class Details Header */}
+                Limpar Busca
+              </button>
+            </div>
+          ) : (
+            filteredClasses.map((cls) => {
+              const isInfantil = cls.name.startsWith('GRUPO');
+              const shortBadge =
+                cls.turmaAbrev ||
+                (isInfantil
+                  ? cls.name.replace(/^GRUPO\s*0?/i, 'G').replace(/\s+/g, '')
+                  : cls.name.replace(/\s*ANO\s*/i, ''));
+
+              return (
                 <div
-                  onClick={() => {
-                    onSelectClassForDetails(cls);
-                  }}
-                  className="cursor-pointer flex items-start gap-3 min-w-0 group flex-1"
+                  key={cls.id}
+                  className="bg-white rounded-3xl p-4.5 border border-black/[0.06] hover:border-black/[0.12] transition-all flex flex-col justify-between gap-3 shadow-xs"
                 >
                   <div
-                    className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center font-bold text-[0.95rem] sm:text-[1.02rem] tracking-tight shrink-0 transition-transform group-hover:scale-[1.03] ${
-                      isInfantil
-                        ? 'bg-[#0071e3]/10 text-[#0066cc] border border-[#0071e3]/20'
-                        : 'bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08]'
-                    }`}
+                    onClick={() => onSelectClassForDetails(cls)}
+                    className="cursor-pointer group space-y-2.5"
                   >
-                    {shortBadge}
-                  </div>
-
-                  <div className="min-w-0 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <h2 className="text-[1.02rem] sm:text-[1.08rem] font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors leading-tight truncate">
-                          {cls.name}
-                        </h2>
-                        <span className="font-mono font-bold text-[0.75rem] text-[#005035] bg-[#eaf6ef] px-2 py-0.5 rounded-md tabular-nums shrink-0">
-                          {cls.presenceRate}% pres.
-                        </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 transition-transform group-hover:scale-105 ${
+                            isInfantil
+                              ? 'bg-[#0071e3]/10 text-[#0066cc]'
+                              : 'bg-[#f5f5f7] text-[#1d1d1f]'
+                          }`}
+                        >
+                          {shortBadge}
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors truncate">
+                            {cls.name}
+                          </h2>
+                          <p className="text-xs text-[#86868b] truncate">
+                            {cls.shift.replace('Turno ', '')} · {cls.room}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-[0.74rem] text-[#6e6e73] font-medium mt-0.5 truncate">
-                        {cls.shift.replace('Turno ', '')} · {cls.room}
-                        {cls.classeSedCode ? ` · SED ${cls.classeSedCode}` : ''}
-                      </p>
-                      <p className="text-[0.75rem] font-semibold text-[#0066cc] truncate mt-0.5 min-h-[1.125rem]">
-                        {cls.teacherName
-                          ? `${cls.teacherPronoun || 'PROFESSORA'}: ${cls.teacherName}`
-                          : 'Regente Institucional'}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[0.72rem] font-medium text-[#6e6e73] tabular-nums">
-                      <span className="font-semibold text-[#1d1d1f]">{cls.totalStudents} estudantes</span>
-                      <span aria-hidden="true" className="text-[#d2d2d7]">·</span>
-                      <span className={cls.monthlyAbsences > 0 ? 'text-[#ff3b30] font-semibold' : 'text-[#1d8338]'}>
-                        {cls.monthlyAbsences} faltas no mês
-                      </span>
-                      {(() => {
-                        const missingCount = cls.students.filter(
-                          (s) =>
-                            !(
-                              (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
-                              (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
-                            )
-                        ).length;
-                        if (missingCount === 0) return null;
-                        return (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-[#fff2f2] border border-[#ff3b30]/30 text-[#ff3b30] text-[0.65rem] font-semibold">
-                            <span>{missingCount} sem PDF</span>
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Clear, Proportional Action Buttons */}
-                <div
-                  className={`grid ${
-                    userRole === 'peb2' ? 'grid-cols-1' : 'grid-cols-2'
-                  } gap-2 pt-3 border-t border-black/[0.06]`}
-                >
-                  {/* Botão 1: Ver Estudantes (SEMPRE DISPONÍVEL O TEMPO TODO) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelectClassForDetails(cls);
-                    }}
-                    className="w-full min-h-[46px] px-3 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white flex items-center justify-between gap-2 cursor-pointer transition-all active:scale-[0.98]"
-                  >
-                    <div className="flex items-center gap-2 min-w-0 text-left">
-                      <span className="material-symbols-outlined text-[18px] text-white/80 shrink-0">
-                        badge
+                      <span className="font-mono font-bold text-xs text-[#005035] bg-[#eaf6ef] px-2 py-0.5 rounded-md tabular-nums shrink-0">
+                        {cls.presenceRate}%
                       </span>
-                      <div className="min-w-0">
-                        <span className="block font-semibold text-[0.8rem] leading-tight truncate">
-                          Ver Estudantes
-                        </span>
-                        <span className="block text-[0.66rem] text-white/70 font-normal leading-tight mt-0.5 truncate">
-                          {cls.totalStudents} fichas completas
+                    </div>
+
+                    <div className="text-xs text-[#6e6e73] space-y-0.5">
+                      <p className="font-medium text-[#1d1d1f] truncate">
+                        {cls.teacherName || 'Regente não atribuído'}
+                      </p>
+                      <div className="flex items-center gap-2 text-[0.72rem] text-[#86868b]">
+                        <span>{cls.totalStudents} estudantes</span>
+                        <span aria-hidden="true">·</span>
+                        <span className={cls.monthlyAbsences > 0 ? 'text-[#ba1a1a] font-medium' : ''}>
+                          {cls.monthlyAbsences} faltas no mês
                         </span>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-[16px] text-white/70 shrink-0">
-                      chevron_right
-                    </span>
-                  </button>
+                  </div>
 
-                  {/* Botão 2: Faltas do Mês (Apenas para PEB I e Admin — PEB II não exibe tela de frequência) */}
-                  {userRole !== 'peb2' &&
-                    (isLaunchButtonOpen ? (
+                  <div
+                    className={`grid ${
+                      userRole === 'peb2' ? 'grid-cols-1' : 'grid-cols-2'
+                    } gap-2 pt-3 border-t border-black/[0.04]`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onSelectClassForDetails(cls)}
+                      className="h-9 px-3 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <Users className="w-3.5 h-3.5 text-[#6e6e73]" />
+                      <span>Alunos</span>
+                    </button>
+
+                    {userRole !== 'peb2' && (
                       <button
                         type="button"
                         onClick={() => onSelectClassForMonthlyAttendance(cls)}
-                        className="w-full min-h-[46px] px-3 py-2 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white flex items-center justify-between gap-2 cursor-pointer transition-all active:scale-[0.98]"
+                        disabled={!isLaunchButtonOpen}
+                        className={`h-9 px-3 rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                          isLaunchButtonOpen
+                            ? 'bg-[#1d1d1f] hover:bg-black text-white'
+                            : 'bg-[#f5f5f7] text-[#86868b] cursor-not-allowed'
+                        }`}
+                        title={isLaunchButtonOpen ? 'Lançar faltas do mês' : windowEval.reasonLabel}
                       >
-                        <div className="flex items-center gap-2 min-w-0 text-left">
-                          <span className="material-symbols-outlined text-[18px] text-white/90 shrink-0">
-                            edit_calendar
-                          </span>
-                          <div className="min-w-0">
-                            <span className="block font-semibold text-[0.8rem] leading-tight truncate">
-                              Faltas do Mês
-                            </span>
-                            <span className="block text-[0.66rem] text-white/80 font-normal leading-tight mt-0.5 truncate">
-                              Salva automático
-                            </span>
-                          </div>
-                        </div>
-                        <span className="material-symbols-outlined text-[16px] text-white/85 shrink-0">
-                          arrow_forward
-                        </span>
+                        <CalendarCheck className="w-3.5 h-3.5" />
+                        <span>Faltas</span>
                       </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        title="O lançamento de faltas do mês abre no último dia letivo do mês e nos 2 primeiros dias letivos do próximo mês."
-                        className="w-full min-h-[46px] px-3 py-2 rounded-xl bg-[#f5f5f7] text-[#86868b] border border-black/[0.06] flex items-center justify-between gap-2 cursor-not-allowed"
-                      >
-                        <div className="flex items-center gap-2 min-w-0 text-left">
-                          <span className="material-symbols-outlined text-[18px] text-[#86868b] shrink-0">
-                            lock_clock
-                          </span>
-                          <div className="min-w-0">
-                            <span className="block font-semibold text-[0.8rem] text-[#6e6e73] leading-tight truncate">
-                              Faltas do Mês
-                            </span>
-                            <span className="block text-[0.65rem] text-[#86868b] font-normal leading-tight mt-0.5 truncate">
-                              Abre no fecho mensal
-                            </span>
-                          </div>
-                        </div>
-                        <span className="material-symbols-outlined text-[15px] text-[#86868b] shrink-0">
-                          lock
-                        </span>
-                      </button>
-                    ))}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+              );
+            })
+          )}
+        </div>
       )}
     </div>
   );
