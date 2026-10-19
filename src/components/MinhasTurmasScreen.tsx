@@ -514,46 +514,46 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               return (
                 <div
                   key={cls.id}
-                  className="bg-white rounded-3xl p-4.5 border border-black/[0.06] hover:border-black/[0.12] transition-all flex flex-col justify-between gap-3 shadow-xs"
+                  className="bg-white rounded-3xl p-5 border-2 border-slate-200 hover:border-blue-500 transition-all flex flex-col justify-between gap-4 shadow-xs"
                 >
                   <div
                     onClick={() => onSelectClassForDetails(cls)}
-                    className="cursor-pointer group space-y-2.5"
+                    className="cursor-pointer group space-y-3"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 transition-transform group-hover:scale-105 ${
+                          className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 transition-transform group-hover:scale-105 shadow-xs ${
                             isInfantil
-                              ? 'bg-[#0071e3]/10 text-[#0066cc]'
-                              : 'bg-[#f5f5f7] text-[#1d1d1f]'
+                              ? 'bg-blue-100 text-blue-900 border-2 border-blue-200'
+                              : 'bg-slate-100 text-slate-900 border-2 border-slate-200'
                           }`}
                         >
                           {shortBadge}
                         </div>
                         <div className="min-w-0">
-                          <h2 className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors truncate">
+                          <h2 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-blue-700 transition-colors truncate">
                             {cls.name}
                           </h2>
-                          <p className="text-xs text-[#86868b] truncate">
+                          <p className="text-xs sm:text-sm font-bold text-slate-600 truncate">
                             {cls.shift.replace('Turno ', '')} · {cls.room}
                           </p>
                         </div>
                       </div>
 
-                      <span className="font-mono font-bold text-xs text-[#005035] bg-[#eaf6ef] px-2 py-0.5 rounded-md tabular-nums shrink-0">
+                      <span className="font-mono font-black text-sm text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-xl tabular-nums shrink-0 border border-emerald-300">
                         {cls.presenceRate}%
                       </span>
                     </div>
 
-                    <div className="text-xs text-[#6e6e73] space-y-0.5">
-                      <p className="font-medium text-[#1d1d1f] truncate">
-                        {cls.teacherName || 'Regente não atribuído'}
+                    <div className="text-xs sm:text-sm text-slate-700 space-y-1">
+                      <p className="font-bold text-slate-900 truncate">
+                        Prof. {cls.teacherName || 'Regente a atribuir'}
                       </p>
-                      <div className="flex items-center gap-2 text-[0.72rem] text-[#86868b]">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
                         <span>{cls.totalStudents} estudantes</span>
                         <span aria-hidden="true">·</span>
-                        <span className={cls.monthlyAbsences > 0 ? 'text-[#ba1a1a] font-medium' : ''}>
+                        <span className={cls.monthlyAbsences > 0 ? 'text-rose-700 font-bold' : ''}>
                           {cls.monthlyAbsences} faltas no mês
                         </span>
                       </div>
@@ -563,15 +563,15 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   <div
                     className={`grid ${
                       userRole === 'peb2' ? 'grid-cols-1' : 'grid-cols-2'
-                    } gap-2 pt-3 border-t border-black/[0.04]`}
+                    } gap-2.5 pt-3 border-t-2 border-slate-100`}
                   >
                     <button
                       type="button"
                       onClick={() => onSelectClassForDetails(cls)}
-                      className="h-9 px-3 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      className="min-h-[48px] px-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-2xs active:scale-98"
                     >
-                      <Users className="w-3.5 h-3.5 text-[#6e6e73]" />
-                      <span>Alunos</span>
+                      <Users className="w-4 h-4 text-slate-700" />
+                      <span>Ver Alunos</span>
                     </button>
 
                     {userRole !== 'peb2' && (
@@ -579,15 +579,15 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                         type="button"
                         onClick={() => onSelectClassForMonthlyAttendance(cls)}
                         disabled={!isLaunchButtonOpen}
-                        className={`h-9 px-3 rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                        className={`min-h-[48px] px-3.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-2xs active:scale-98 ${
                           isLaunchButtonOpen
-                            ? 'bg-[#1d1d1f] hover:bg-black text-white'
-                            : 'bg-[#f5f5f7] text-[#86868b] cursor-not-allowed'
+                            ? 'bg-slate-900 hover:bg-black text-white'
+                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                         }`}
                         title={isLaunchButtonOpen ? 'Lançar faltas do mês' : windowEval.reasonLabel}
                       >
-                        <CalendarCheck className="w-3.5 h-3.5" />
-                        <span>Faltas</span>
+                        <CalendarCheck className="w-4 h-4" />
+                        <span>Fazer Chamada</span>
                       </button>
                     )}
                   </div>

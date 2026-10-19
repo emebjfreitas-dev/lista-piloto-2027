@@ -65,6 +65,31 @@ export const Header: React.FC<HeaderProps> = ({
     queue: [],
   });
   const [showAdminNavDropdown, setShowAdminNavDropdown] = useState(false);
+  const [textSizePref, setTextSizePref] = useState<'normal' | 'grande' | 'extra'>(() => {
+    try {
+      return (localStorage.getItem('emeb_candelario_text_size_pref') as any) || 'grande';
+    } catch {
+      return 'grande';
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.remove('text-size-normal', 'text-size-grande', 'text-size-extra');
+    document.documentElement.classList.add(`text-size-${textSizePref}`);
+    try {
+      localStorage.setItem('emeb_candelario_text_size_pref', textSizePref);
+    } catch {
+      // ignore
+    }
+  }, [textSizePref]);
+
+  const cycleTextSize = () => {
+    setTextSizePref((curr) => {
+      if (curr === 'normal') return 'grande';
+      if (curr === 'grande') return 'extra';
+      return 'normal';
+    });
+  };
 
   useEffect(() => {
     const unsubSync = subscribeToSyncStatus((snap) => {
@@ -198,11 +223,11 @@ export const Header: React.FC<HeaderProps> = ({
             <div
               onClick={() => onChangeScreen?.('home')}
               className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
-              title="Ir para a página inicial"
+              title="Ir para o Início"
             >
               <img
                 src={APP_LOGO_URL}
-                alt="EMEB Joaquim Candelário de Freitas"
+                alt="Brasão Oficial de Jundiaí"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
@@ -211,82 +236,94 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0 group-hover:scale-105 transition-transform"
               />
               <div className="min-w-0">
-                <span className="text-[0.86rem] sm:text-[0.94rem] font-bold tracking-tight text-[#1d1d1f] truncate block leading-tight group-hover:text-[#0071e3] transition-colors">
-                  {showBackButton ? getScreenTitle() : 'EMEB Candelário de Freitas'}
-                </span>
-                <span className="hidden xl:block text-[0.66rem] font-medium text-[#6e6e73] truncate leading-none mt-0.5">
-                  Plataforma Oficial SED · Ano Letivo 2027
+                <div className="flex items-center gap-2">
+                  <span className="text-[0.88rem] sm:text-[0.98rem] font-bold tracking-tight text-[#1d1d1f] truncate block leading-tight group-hover:text-[#0071e3] transition-colors">
+                    {showBackButton ? getScreenTitle() : 'Candelário Gestão'}
+                  </span>
+                  {!showBackButton && (
+                    <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[0.62rem] font-semibold bg-slate-100 text-slate-700 tracking-wide uppercase border border-slate-200/60">
+                      EMEB Candelário
+                    </span>
+                  )}
+                </div>
+                <span className="hidden xl:block text-[0.65rem] font-medium text-[#6e6e73] truncate leading-none mt-0.5">
+                  Gestão Escolar & Frequência 2027 · Jundiaí/SP
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Zone 2: Global Navigation Links (Clean, uncrowded, single-line) */}
+          {/* Zone 2: Global Navigation Links (Grandes, Legíveis e Alto Contraste) */}
           {onChangeScreen && (
             <nav
               aria-label="Navegação Principal"
-              className="hidden lg:flex items-center justify-center gap-1 bg-[#f5f5f7] p-1 rounded-2xl shrink-0 border border-black/[0.04]"
+              className="hidden lg:flex items-center justify-center gap-1.5 bg-[#f5f5f7] p-1.5 rounded-2xl shrink-0 border border-black/[0.06]"
             >
               <button
                 type="button"
                 onClick={() => onChangeScreen('home')}
-                className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
+                className={`h-10 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   currentScreen === 'home'
-                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
-                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-[#1d1d1f] shadow-xs border border-black/[0.08]'
+                    : 'text-slate-700 hover:text-black hover:bg-white/60'
                 }`}
               >
-                Início
+                <span className="material-symbols-outlined text-[18px]">home</span>
+                <span>Início</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => onChangeScreen('turmas')}
-                className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
+                className={`h-10 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   currentScreen === 'turmas' || currentScreen === 'detalhes'
-                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
-                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-[#1d1d1f] shadow-xs border border-black/[0.08]'
+                    : 'text-slate-700 hover:text-black hover:bg-white/60'
                 }`}
               >
-                {userRole === 'usuario' ? 'Minha Turma' : 'Turmas'}
+                <span className="material-symbols-outlined text-[18px]">groups</span>
+                <span>{userRole === 'usuario' ? 'Meus Alunos' : 'Turmas'}</span>
               </button>
 
               {userRole !== 'peb2' && (
                 <button
                   type="button"
                   onClick={() => onChangeScreen('frequencia_mensal')}
-                  className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
+                  className={`h-10 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                     currentScreen === 'frequencia_mensal'
-                      ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
-                      : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                      ? 'bg-white text-[#1d1d1f] shadow-xs border border-black/[0.08]'
+                      : 'text-slate-700 hover:text-black hover:bg-white/60'
                   }`}
                 >
-                  Faltas do Mês
+                  <span className="material-symbols-outlined text-[18px]">checklist</span>
+                  <span>Fazer Chamada</span>
                 </button>
               )}
 
               <button
                 type="button"
                 onClick={() => onChangeScreen('faltas_consecutivas')}
-                className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
+                className={`h-10 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   currentScreen === 'faltas_consecutivas'
-                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
-                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-[#1d1d1f] shadow-xs border border-black/[0.08]'
+                    : 'text-slate-700 hover:text-black hover:bg-white/60'
                 }`}
               >
-                Faltas Consecutivas
+                <span className="material-symbols-outlined text-[18px]">notification_important</span>
+                <span>Alertas</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => onChangeScreen('mapa_estudantes')}
-                className={`h-8 px-3.5 rounded-xl font-medium text-xs transition-colors cursor-pointer whitespace-nowrap ${
+                className={`h-10 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   currentScreen === 'mapa_estudantes'
-                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
-                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-[#1d1d1f] shadow-xs border border-black/[0.08]'
+                    : 'text-slate-700 hover:text-black hover:bg-white/60'
                 }`}
               >
-                Mapa de Trajetos
+                <span className="material-symbols-outlined text-[18px]">directions_bus</span>
+                <span>Ônibus / Mapa</span>
               </button>
 
               {isAdmin && (
@@ -442,6 +479,21 @@ export const Header: React.FC<HeaderProps> = ({
                   : hasDriveToken
                   ? 'Nuvem Ativa'
                   : 'Sincronizar Drive'}
+              </span>
+            </button>
+
+            {/* Botão de Acessibilidade: Tamanho da Letra (Idosos e Baixa Visão) */}
+            <button
+              type="button"
+              onClick={cycleTextSize}
+              title={`Tamanho da letra atual: ${textSizePref.toUpperCase()}. Toque para alternar para letras maiores.`}
+              aria-label="Ajustar tamanho da letra para idosos"
+              className="h-10 px-3 sm:px-3.5 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-950 border-2 border-amber-400 font-black text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95 shrink-0"
+            >
+              <span className="material-symbols-outlined text-[20px] text-amber-900">format_size</span>
+              <span className="font-extrabold">Letra</span>
+              <span className="text-[0.75rem] bg-amber-300 px-2 py-0.5 rounded-md font-black uppercase text-amber-950">
+                {textSizePref === 'normal' ? 'Normal' : textSizePref === 'grande' ? 'Grande' : 'Extra'}
               </span>
             </button>
 

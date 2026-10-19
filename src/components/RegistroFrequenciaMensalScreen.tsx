@@ -762,32 +762,32 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   </div>
                 </div>
 
-                {/* APENAS OS 2 CONTADORES INTERATIVOS: 1) FALTAS DO MÊS e 2) ATESTADOS */}
-                <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 sm:gap-3 shrink-0 w-full lg:w-auto pt-2 lg:pt-0 border-t lg:border-t-0 border-black/[0.04]">
+                {/* APENAS OS 2 CONTADORES INTERATIVOS: 1) FALTAS DO MÊS e 2) ATESTADOS — GRANDES E NÍTIDOS PARA IDOSOS */}
+                <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 sm:gap-3.5 shrink-0 w-full lg:w-auto pt-2.5 lg:pt-0 border-t lg:border-t-0 border-slate-200">
                   {/* Contador 1: Faltas do Mês */}
                   <div
-                    className={`flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-2xl border transition-colors ${
+                    className={`flex items-center justify-between sm:justify-start gap-2 sm:gap-2.5 px-3 sm:px-3.5 py-2 rounded-2xl border-2 transition-colors ${
                       m.faltas > 0
-                        ? 'bg-[#fff2f2] border-[#ff3b30]/30'
-                        : 'bg-[#f5f5f7] border-black/[0.08]'
+                        ? 'bg-rose-50 border-rose-300'
+                        : 'bg-slate-50 border-slate-300'
                     }`}
                   >
-                    <div className="pr-0.5 sm:pr-1 min-w-0">
-                      <span className="text-[0.6rem] sm:text-[0.65rem] font-bold uppercase tracking-wider text-[#ff3b30] block leading-none truncate">
+                    <div className="pr-1 min-w-0">
+                      <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-rose-800 block leading-tight">
                         Faltas
                       </span>
-                      <span className="text-[0.6rem] sm:text-[0.65rem] font-mono font-medium text-[#86868b] tabular-nums block truncate">
-                        máx {m.diasLetivosMatriculados} dias
+                      <span className="text-[0.72rem] font-bold text-slate-600 tabular-nums block truncate">
+                        máx {m.diasLetivosMatriculados}d
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleDeltaAbsence(student.id, -1)}
                         disabled={!effectiveCanEdit || m.faltas === 0}
                         aria-label={`Diminuir falta de ${student.name}`}
-                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] font-bold text-[1.05rem] flex items-center justify-center shadow-2xs border border-black/[0.1] disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-black text-2xl flex items-center justify-center shadow-xs border-2 border-slate-300 disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         —
                       </button>
@@ -801,8 +801,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onChange={(e) => handleDirectSetAbsence(student.id, e.target.value)}
                         aria-label={`Digitar faltas de ${student.name}`}
                         title="Toque para digitar o número de faltas diretamente"
-                        className={`w-10 sm:w-11 h-8 sm:h-9 rounded-lg text-center font-mono font-extrabold text-[1.05rem] sm:text-[1.16rem] tabular-nums bg-transparent focus:bg-white focus:ring-2 focus:ring-[#ff3b30]/40 focus:outline-none transition-all ${
-                          m.faltas > 0 ? 'text-[#ff3b30]' : 'text-[#1d8338]'
+                        className={`w-12 sm:w-14 h-11 sm:h-12 rounded-xl text-center font-mono font-black text-xl sm:text-2xl tabular-nums bg-white border-2 border-slate-300 focus:border-rose-600 focus:outline-none transition-all ${
+                          m.faltas > 0 ? 'text-rose-700 font-black' : 'text-slate-900'
                         }`}
                       />
 
@@ -811,7 +811,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAbsence(student.id, 1)}
                         disabled={!effectiveCanEdit || isMaxFaltasReached}
                         aria-label={`Adicionar falta para ${student.name}`}
-                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-bold text-[1.05rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         +
                       </button>
@@ -820,28 +820,28 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
                   {/* Contador 2: Atestados */}
                   <div
-                    className={`flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-2xl border transition-colors ${
+                    className={`flex items-center justify-between sm:justify-start gap-2 sm:gap-2.5 px-3 sm:px-3.5 py-2 rounded-2xl border-2 transition-colors ${
                       m.atestados > 0
-                        ? 'bg-[#0071e3]/10 border-[#0071e3]/30'
-                        : 'bg-[#f5f5f7] border-black/[0.08]'
+                        ? 'bg-blue-50 border-blue-300'
+                        : 'bg-slate-50 border-slate-300'
                     }`}
                   >
-                    <div className="pr-0.5 sm:pr-1 min-w-0">
-                      <span className="text-[0.6rem] sm:text-[0.65rem] font-bold uppercase tracking-wider text-[#0066cc] block leading-none truncate">
-                        Atestados
+                    <div className="pr-1 min-w-0">
+                      <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-blue-800 block leading-tight">
+                        Atestado
                       </span>
-                      <span className="text-[0.6rem] sm:text-[0.65rem] font-mono font-medium text-[#86868b] tabular-nums block truncate">
-                        {m.faltas === 0 ? '0 faltas' : `de ${m.faltas} faltas`}
+                      <span className="text-[0.72rem] font-bold text-slate-600 tabular-nums block truncate">
+                        {m.faltas === 0 ? '0 faltas' : `de ${m.faltas}`}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleDeltaAtestado(student.id, -1)}
                         disabled={!effectiveCanEdit || m.atestados === 0}
                         aria-label={`Diminuir atestado de ${student.name}`}
-                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white hover:bg-[#f5f5f7] text-[#0066cc] font-bold text-[1.05rem] flex items-center justify-center shadow-2xs border border-[#0071e3]/25 disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white hover:bg-slate-100 text-blue-900 font-black text-2xl flex items-center justify-center shadow-xs border-2 border-blue-300 disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         —
                       </button>
@@ -855,8 +855,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onChange={(e) => handleDirectSetAtestado(student.id, e.target.value)}
                         aria-label={`Digitar atestados de ${student.name}`}
                         title="Toque para digitar o número de atestados diretamente"
-                        className={`w-10 sm:w-11 h-8 sm:h-9 rounded-lg text-center font-mono font-extrabold text-[1.05rem] sm:text-[1.16rem] tabular-nums bg-transparent focus:bg-white focus:ring-2 focus:ring-[#0071e3]/40 focus:outline-none transition-all ${
-                          m.atestados > 0 ? 'text-[#0066cc]' : 'text-[#86868b]'
+                        className={`w-12 sm:w-14 h-11 sm:h-12 rounded-xl text-center font-mono font-black text-xl sm:text-2xl tabular-nums bg-white border-2 border-slate-300 focus:border-blue-600 focus:outline-none transition-all ${
+                          m.atestados > 0 ? 'text-blue-700 font-black' : 'text-slate-500'
                         }`}
                       />
 
@@ -865,7 +865,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAtestado(student.id, 1)}
                         disabled={!effectiveCanEdit || m.faltas === 0 || isMaxAtestadosReached}
                         aria-label={`Adicionar atestado para ${student.name}`}
-                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-[1.05rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90 transition-transform"
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white font-black text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         +
                       </button>
@@ -970,31 +970,32 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   />
                 </div>
 
-                {/* APENAS OS 2 CONTADORES: FALTAS DO MÊS E ATESTADOS */}
+                {/* APENAS OS 2 CONTADORES: FALTAS DO MÊS E ATESTADOS — GRANDES E NÍTIDOS PARA IDOSOS */}
                 <div className="grid grid-cols-2 gap-2.5 pt-1">
                   {/* 1. Contador Faltas do Mês */}
                   <div
-                    className={`p-2.5 rounded-2xl border flex flex-col justify-between ${
+                    className={`p-3 rounded-2xl border-2 flex flex-col justify-between ${
                       m.faltas > 0
-                        ? 'bg-[#fff1f2] border-[#e11d48]/30'
-                        : 'bg-[#f8fafc] border-black/[0.07]'
+                        ? 'bg-rose-50 border-rose-300'
+                        : 'bg-slate-50 border-slate-300'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[0.7rem] font-extrabold uppercase text-[#be123c]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs sm:text-sm font-black uppercase text-rose-800">
                         Faltas Mês
                       </span>
-                      <span className="font-mono text-[0.66rem] font-bold text-[#64748b]">
+                      <span className="font-mono text-xs font-bold text-slate-600">
                         máx {m.diasLetivosMatriculados}d
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() => handleDeltaAbsence(student.id, -1)}
                         disabled={!effectiveCanEdit || m.faltas === 0}
-                        className="w-10 h-10 rounded-xl bg-white text-[#0f172a] font-black text-[1.25rem] flex items-center justify-center border border-black/[0.1] shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                        aria-label={`Diminuir falta de ${student.name}`}
+                        className="w-12 h-12 rounded-2xl bg-white text-slate-900 font-black text-2xl flex items-center justify-center border-2 border-slate-300 shadow-xs disabled:opacity-25 cursor-pointer active:scale-95"
                       >
                         —
                       </button>
@@ -1007,8 +1008,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => handleDirectSetAbsence(student.id, e.target.value)}
                         aria-label={`Digitar faltas de ${student.name}`}
-                        className={`w-12 h-10 rounded-xl text-center font-mono text-[1.35rem] font-black tabular-nums bg-transparent focus:bg-white focus:ring-2 focus:ring-[#be123c]/40 focus:outline-none ${
-                          m.faltas > 0 ? 'text-[#be123c]' : 'text-[#006644]'
+                        className={`w-14 h-12 rounded-xl text-center font-mono text-2xl font-black tabular-nums bg-white border-2 border-slate-300 focus:border-rose-600 focus:outline-none ${
+                          m.faltas > 0 ? 'text-rose-700' : 'text-slate-900'
                         }`}
                       />
 
@@ -1016,7 +1017,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         type="button"
                         onClick={() => handleDeltaAbsence(student.id, 1)}
                         disabled={!effectiveCanEdit || isMaxFaltasReached}
-                        className="w-10 h-10 rounded-xl bg-[#0b3b49] text-white font-black text-[1.25rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                        aria-label={`Adicionar falta para ${student.name}`}
+                        className="w-12 h-12 rounded-2xl bg-slate-900 text-white font-black text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95"
                       >
                         +
                       </button>
@@ -1025,27 +1027,28 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
                   {/* 2. Contador Atestados */}
                   <div
-                    className={`p-2.5 rounded-2xl border flex flex-col justify-between ${
+                    className={`p-3 rounded-2xl border-2 flex flex-col justify-between ${
                       m.atestados > 0
-                        ? 'bg-[#f0f9ff] border-[#0284c7]/30'
-                        : 'bg-[#f8fafc] border-black/[0.07]'
+                        ? 'bg-blue-50 border-blue-300'
+                        : 'bg-slate-50 border-slate-300'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[0.7rem] font-extrabold uppercase text-[#0369a1]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs sm:text-sm font-black uppercase text-blue-800">
                         Atestados
                       </span>
-                      <span className="font-mono text-[0.66rem] font-bold text-[#64748b]">
+                      <span className="font-mono text-xs font-bold text-slate-600">
                         {m.faltas === 0 ? '0 faltas' : `máx ${m.faltas}`}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() => handleDeltaAtestado(student.id, -1)}
                         disabled={!effectiveCanEdit || m.atestados === 0}
-                        className="w-10 h-10 rounded-xl bg-white text-[#0369a1] font-black text-[1.25rem] flex items-center justify-center border border-[#0284c7]/25 shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                        aria-label={`Diminuir atestado de ${student.name}`}
+                        className="w-12 h-12 rounded-2xl bg-white text-blue-900 font-black text-2xl flex items-center justify-center border-2 border-blue-300 shadow-xs disabled:opacity-25 cursor-pointer active:scale-95"
                       >
                         —
                       </button>
@@ -1058,8 +1061,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => handleDirectSetAtestado(student.id, e.target.value)}
                         aria-label={`Digitar atestados de ${student.name}`}
-                        className={`w-12 h-10 rounded-xl text-center font-mono text-[1.35rem] font-black tabular-nums bg-transparent focus:bg-white focus:ring-2 focus:ring-[#0284c7]/40 focus:outline-none ${
-                          m.atestados > 0 ? 'text-[#0369a1]' : 'text-[#64748b]'
+                        className={`w-14 h-12 rounded-xl text-center font-mono text-2xl font-black tabular-nums bg-white border-2 border-slate-300 focus:border-blue-600 focus:outline-none ${
+                          m.atestados > 0 ? 'text-blue-700' : 'text-slate-500'
                         }`}
                       />
 
@@ -1067,7 +1070,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         type="button"
                         onClick={() => handleDeltaAtestado(student.id, 1)}
                         disabled={!effectiveCanEdit || m.faltas === 0 || isMaxAtestadosReached}
-                        className="w-10 h-10 rounded-xl bg-[#0369a1] text-white font-black text-[1.25rem] flex items-center justify-center shadow-2xs disabled:opacity-30 cursor-pointer active:scale-90"
+                        aria-label={`Adicionar atestado para ${student.name}`}
+                        className="w-12 h-12 rounded-2xl bg-blue-700 text-white font-black text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95"
                       >
                         +
                       </button>

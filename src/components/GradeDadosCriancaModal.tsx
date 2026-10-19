@@ -463,14 +463,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 lg:p-6 bg-black/65 backdrop-blur-md animate-gentle-fade"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-gentle-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#f5f5f7] w-full max-w-4xl lg:max-w-5xl rounded-[32px] shadow-2xl border border-black/[0.08] overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-[#f5f5f7] w-full max-w-4xl rounded-3xl shadow-2xl border border-black/[0.08] overflow-hidden flex flex-col max-h-[90vh]"
       >
-        {/* Top Minimalist Apple Bar + Navegação Anterior / Próximo Estudante */}
-        <div className="px-5 sm:px-7 py-3.5 bg-white/95 backdrop-blur-md border-b border-black/[0.05] flex flex-wrap items-center justify-between gap-2.5">
+        {/* Top Apple-Style Bar + Navegação */}
+        <div className="px-4 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-black/[0.05] flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2 min-w-0">
             <span className="px-3 py-1 rounded-xl bg-[#1d1d1f] text-white font-extrabold text-[0.78rem] tabular-nums">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
@@ -490,24 +490,24 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {onSelectStudent && orderedList.length > 1 && (
-              <div className="flex items-center gap-1 mr-1">
+              <div className="flex items-center gap-1.5 mr-1">
                 <button
                   type="button"
                   disabled={!prevStudent}
                   onClick={() => prevStudent && onSelectStudent(prevStudent)}
                   title={
                     prevStudent
-                      ? `Anterior: Nº ${prevStudent.number.toString().padStart(2, '0')} ${prevStudent.name} (Seta ←)`
+                      ? `Anterior: Nº ${prevStudent.number.toString().padStart(2, '0')} ${prevStudent.name}`
                       : 'Primeiro estudante da turma'
                   }
-                  className="h-9 px-3 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white font-bold text-[0.75rem] flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:pointer-events-none tabular-nums"
+                  className="min-h-[44px] px-3.5 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-900 font-extrabold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-25 disabled:pointer-events-none tabular-nums shadow-xs"
                 >
-                  <span className="material-symbols-outlined text-[16px]">
+                  <span className="material-symbols-outlined text-[20px]">
                     arrow_back
                   </span>
-                  <span className="hidden md:inline">
+                  <span className="hidden sm:inline">
                     {prevStudent
                       ? `Nº ${prevStudent.number.toString().padStart(2, '0')}`
                       : 'Anterior'}
@@ -520,17 +520,17 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   onClick={() => nextStudent && onSelectStudent(nextStudent)}
                   title={
                     nextStudent
-                      ? `Próximo: Nº ${nextStudent.number.toString().padStart(2, '0')} ${nextStudent.name} (Seta →)`
+                      ? `Próximo: Nº ${nextStudent.number.toString().padStart(2, '0')} ${nextStudent.name}`
                       : 'Último estudante da turma'
                   }
-                  className="h-9 px-3 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white font-bold text-[0.75rem] flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:pointer-events-none tabular-nums"
+                  className="min-h-[44px] px-3.5 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-900 font-extrabold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-25 disabled:pointer-events-none tabular-nums shadow-xs"
                 >
-                  <span className="hidden md:inline">
+                  <span className="hidden sm:inline">
                     {nextStudent
                       ? `Nº ${nextStudent.number.toString().padStart(2, '0')}`
                       : 'Próximo'}
                   </span>
-                  <span className="material-symbols-outlined text-[16px]">
+                  <span className="material-symbols-outlined text-[20px]">
                     arrow_forward
                   </span>
                 </button>
@@ -540,10 +540,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="h-9 px-3.5 rounded-full bg-[#f5f5f7] hover:bg-[#ff3b30] text-[#1d1d1f] hover:text-white font-bold text-[0.78rem] flex items-center gap-1 cursor-pointer transition-colors shrink-0"
-              aria-label="Fechar perfil do estudante"
+              className="min-h-[44px] px-4.5 rounded-2xl bg-slate-900 hover:bg-rose-700 text-white font-extrabold text-sm sm:text-base flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 shadow-sm active:scale-95"
+              aria-label="Fechar ficha do estudante"
             >
-              <span className="material-symbols-outlined text-[18px]">close</span>
+              <span className="material-symbols-outlined text-[22px]">close</span>
               <span>Fechar</span>
             </button>
           </div>

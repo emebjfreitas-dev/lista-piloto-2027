@@ -479,14 +479,14 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh]"
+        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-black/[0.08] overflow-hidden flex flex-col max-h-[90vh]"
       >
-        {/* CABEÇALHO SIMÉTRICO: Dados da Criança + Tipo de Vínculo + Ações de Correção/Fechar */}
+        {/* CABEÇALHO SIMÉTRICO: Dados da Criança + Tipo de Vínculo + Ações */}
         <div className="bg-white px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-black/[0.06]">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <StudentAvatar
               student={student}
-              size="md"
+              size="sm"
               className="shrink-0"
             />
             <div className="min-w-0 flex-1">
@@ -501,87 +501,96 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                       : 'bg-[#eaf6ef] text-[#005035]'
                   }`}
                 >
-                  {student.fichaPdfManualLink ? 'Vínculo Manual (ID Fixo)' : 'Vínculo Automático'}
+                  {student.fichaPdfManualLink ? 'Vínculo Manual' : 'Vínculo Automático'}
                 </span>
                 {student.fichaPdfSubfolder && (
                   <span className="text-[0.7rem] text-[#86868b] truncate hidden md:inline">
-                    • Pasta: {student.fichaPdfSubfolder}
+                    • {student.fichaPdfSubfolder}
                   </span>
                 )}
               </div>
 
-              <h3 className="text-[1rem] sm:text-[1.15rem] font-bold text-[#1d1d1f] truncate leading-tight">
+              <h3 className="text-[1rem] sm:text-[1.12rem] font-bold text-[#1d1d1f] truncate leading-tight mt-0.5">
                 {student.name}
               </h3>
-
-              {/* Hyperlink(s) Direto(s) de Telefone para abrir conversa no WhatsApp */}
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                {whatsappLinks.length > 0 ? (
-                  whatsappLinks.map((ph, idx) => (
-                    <a
-                      key={idx}
-                      href={ph.waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={`Conversar no WhatsApp: ${ph.display}`}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#25D366]/12 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-mono font-semibold text-[0.74rem] transition-colors cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">chat</span>
-                      <span>WhatsApp: {ph.display}</span>
-                    </a>
-                  ))
-                ) : (
-                  <span className="text-[0.72rem] text-[#86868b]">
-                    Sem telefone cadastrado
-                  </span>
-                )}
-              </div>
             </div>
           </div>
 
-          {/* Controles de Troca/Remoção de Vínculo e Botão Fechar */}
+          {/* Ações: Abrir no Drive, Trocar, Desvincular e Fechar */}
           <div className="flex items-center gap-2 shrink-0">
+            {driveFileId && (
+              <a
+                href={
+                  student.fichaPdfDriveUrl ||
+                  `https://drive.google.com/file/d/${driveFileId}/view`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-[44px] px-3.5 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                title="Abrir arquivo original da Ficha Informativa no Google Drive em nova aba"
+              >
+                <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                <span>Abrir no Drive</span>
+              </a>
+            )}
+
             <button
               type="button"
               onClick={() => setShowManualLinker(true)}
-              className="min-h-[38px] px-3 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.76rem] flex items-center gap-1 cursor-pointer transition-colors"
-              title="Trocar ou corrigir o arquivo PDF vinculado a este estudante"
+              className="min-h-[44px] px-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors"
+              title="Trocar ou corrigir o arquivo PDF vinculado"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#0071e3]">swap_horiz</span>
-              <span className="hidden sm:inline">Trocar PDF</span>
+              <span className="material-symbols-outlined text-[18px] text-blue-700">swap_horiz</span>
+              <span className="hidden sm:inline">Trocar</span>
             </button>
 
             <button
               type="button"
               onClick={handleUnlinkPdf}
-              className="min-h-[38px] px-3 rounded-full bg-[#fff2f2] hover:bg-[#ffe5e5] text-[#ff3b30] font-semibold text-[0.76rem] flex items-center gap-1 cursor-pointer transition-colors"
+              className="min-h-[44px] px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors"
               title="Desvincular este PDF do estudante"
             >
-              <span className="material-symbols-outlined text-[16px]">link_off</span>
-              <span className="hidden sm:inline">Desvincular</span>
+              <span className="material-symbols-outlined text-[18px]">link_off</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
               aria-label="Fechar visualização da ficha escaneada"
-              className="min-h-[40px] px-4 rounded-full bg-[#1d1d1f] hover:bg-[#ff3b30] text-white font-semibold text-[0.82rem] flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 transition-all shrink-0"
+              className="min-h-[44px] px-4.5 rounded-2xl bg-slate-900 hover:bg-rose-700 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 transition-all shrink-0"
             >
-              <span className="material-symbols-outlined text-[19px]">close</span>
+              <span className="material-symbols-outlined text-[20px]">close</span>
               <span>Fechar</span>
             </button>
           </div>
         </div>
 
         {/* ÁREA PRINCIPAL: Visualização Direta e Limpa do PDF Escaneado */}
-        <div className="flex-1 overflow-y-auto bg-[#f5f5f7] p-2 sm:p-3 flex flex-col items-center justify-center">
-          <div className="w-full h-[78vh] bg-white rounded-2xl overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden bg-[#f5f5f7] p-2 sm:p-3 flex flex-col">
+          <div className="w-full h-[60vh] sm:h-[66vh] bg-white rounded-2xl overflow-hidden flex flex-col border border-black/[0.04]">
             <iframe
               src={embedUrl}
               title={`Ficha Informativa Escaneada de ${student.name}`}
               className="w-full flex-1 border-0"
               allow="autoplay"
             />
+          </div>
+          <div className="pt-2 px-1 flex items-center justify-between text-[0.72rem] text-[#86868b]">
+            <span>Ficha Informativa Oficial Digitalizada · SME Jundiaí</span>
+            {driveFileId && (
+              <a
+                href={
+                  student.fichaPdfDriveUrl ||
+                  `https://drive.google.com/file/d/${driveFileId}/view`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#0071e3] hover:underline font-semibold flex items-center gap-0.5"
+              >
+                <span>Visualizar tela cheia</span>
+                <span className="material-symbols-outlined text-[13px]">arrow_outward</span>
+              </a>
+            )}
           </div>
         </div>
       </div>

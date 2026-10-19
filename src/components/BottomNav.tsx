@@ -137,9 +137,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {/* Barra de Navegação Inferior (Mobile/Tablet) */}
       <nav
         aria-label="Barra de Navegação Inferior"
-        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/90 backdrop-blur-md border-t border-black/[0.06] lg:hidden"
+        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-md border-t-2 border-black/[0.08] lg:hidden shadow-lg"
       >
-        <div className="flex items-center justify-around h-[56px] px-2 max-w-lg mx-auto">
+        <div className="flex items-center justify-around h-[68px] px-1 max-w-lg mx-auto">
           {coreNavItems.map((item) => {
             const isActive = getIsActive(item.id);
             const IconComp = item.icon;
@@ -152,20 +152,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   onChangeScreen(item.id);
                 }}
                 aria-current={isActive ? 'page' : undefined}
-                className={`group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95 ${
-                  isActive ? 'text-[#0071e3]' : 'text-[#86868b] hover:text-[#1d1d1f]'
+                className={`group flex flex-col items-center justify-center flex-1 h-full py-1.5 transition-all cursor-pointer select-none active:scale-95 ${
+                  isActive ? 'text-[#0050c8]' : 'text-slate-700 hover:text-black'
                 }`}
               >
                 <div
-                  className={`flex items-center justify-center w-8 h-6 rounded-full transition-colors ${
-                    isActive ? 'bg-[#0071e3]/10' : 'bg-transparent'
+                  className={`flex items-center justify-center w-10 h-8 rounded-2xl transition-colors ${
+                    isActive ? 'bg-[#0071e3]/15 text-[#0050c8]' : 'bg-transparent text-slate-700'
                   }`}
                 >
-                  <IconComp className="w-4 h-4" />
+                  <IconComp className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <span
-                  className={`text-[0.66rem] tracking-tight leading-none mt-1 truncate ${
-                    isActive ? 'font-semibold text-[#0071e3]' : 'font-normal text-[#86868b]'
+                  className={`text-xs tracking-tight leading-none mt-1 truncate ${
+                    isActive ? 'font-black text-[#0050c8]' : 'font-bold text-slate-700'
                   }`}
                 >
                   {item.label}
@@ -179,24 +179,24 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               type="button"
               onClick={() => setShowMoreMenu((prev) => !prev)}
-              className={`group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95 ${
+              className={`group flex flex-col items-center justify-center flex-1 h-full py-1.5 transition-all cursor-pointer select-none active:scale-95 ${
                 isMoreActive || showMoreMenu
-                  ? 'text-[#0071e3]'
-                  : 'text-[#86868b] hover:text-[#1d1d1f]'
+                  ? 'text-[#0050c8]'
+                  : 'text-slate-700 hover:text-black'
               }`}
             >
               <div
-                className={`flex items-center justify-center w-8 h-6 rounded-full transition-colors ${
-                  isMoreActive || showMoreMenu ? 'bg-[#0071e3]/10' : 'bg-transparent'
+                className={`flex items-center justify-center w-10 h-8 rounded-2xl transition-colors ${
+                  isMoreActive || showMoreMenu ? 'bg-[#0071e3]/15 text-[#0050c8]' : 'bg-transparent text-slate-700'
                 }`}
               >
-                <MoreHorizontal className="w-4 h-4" />
+                <MoreHorizontal className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <span
-                className={`text-[0.66rem] tracking-tight leading-none mt-1 truncate ${
+                className={`text-xs tracking-tight leading-none mt-1 truncate ${
                   isMoreActive || showMoreMenu
-                    ? 'font-semibold text-[#0071e3]'
-                    : 'font-normal text-[#86868b]'
+                    ? 'font-black text-[#0050c8]'
+                    : 'font-bold text-slate-700'
                 }`}
               >
                 Mais
@@ -209,12 +209,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               type="button"
               onClick={onLogout}
-              className="group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95 text-[#86868b] hover:text-[#ba1a1a]"
+              className="group flex flex-col items-center justify-center flex-1 h-full py-1.5 transition-all cursor-pointer select-none active:scale-95 text-slate-700 hover:text-rose-700"
             >
-              <div className="flex items-center justify-center w-8 h-6 rounded-full">
-                <LogOut className="w-4 h-4" />
+              <div className="flex items-center justify-center w-10 h-8 rounded-2xl">
+                <LogOut className="w-5 h-5 sm:w-6 sm:h-6 text-rose-600" />
               </div>
-              <span className="text-[0.66rem] tracking-tight leading-none mt-1 truncate">
+              <span className="text-xs font-bold tracking-tight leading-none mt-1 truncate text-slate-700">
                 Sair
               </span>
             </button>

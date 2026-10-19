@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ClassGroup,
   Student,
@@ -7,6 +7,7 @@ import {
   AttendanceWindowConfig,
   ScreenType,
 } from '../types';
+import { evaluateAttendanceLaunchWindow } from '../services/db';
 import { QuadroAvisosCard } from './QuadroAvisosCard';
 import { LembretePrazoFrequenciaCard } from './LembretePrazoFrequenciaCard';
 import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
@@ -128,44 +129,110 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       ? 'Educador(a) Especialista PEB II'
       : 'Professora Regente PEB I';
 
+  const [currentClock, setCurrentClock] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentClock(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const clockHours = currentClock.getHours();
+  const shiftInfo = useMemo(() => {
+    if (clockHours >= 7 && clockHours < 12) {
+      return {
+        label: 'Turno Manhã',
+        desc: '07h00 às 12h00 · Período Letivo Regular',
+        badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200/60',
+        dotColor: 'bg-emerald-500',
+      };
+    }
+    if (clockHours >= 12 && clockHours < 18) {
+      return {
+        label: 'Turno Tarde',
+        desc: '12h30 às 17h30 · Período Letivo Regular',
+        badgeColor: 'bg-sky-50 text-sky-800 border-sky-200/60',
+        dotColor: 'bg-sky-500',
+      };
+    }
+    return {
+      label: 'Plantão / Administrativo',
+      desc: 'Fora do horário regular de aulas',
+      badgeColor: 'bg-slate-50 text-slate-700 border-slate-200/60',
+      dotColor: 'bg-slate-400',
+    };
+  }, [clockHours]);
+
+  const windowEval = useMemo(
+    () => evaluateAttendanceLaunchWindow(attendanceWindowConfig),
+    [attendanceWindowConfig]
+  );
+
   const todayFormatted = useMemo(() => {
     try {
-      const now = new Date();
-      const str = format(now, "EEEE, d 'de' MMMM", { locale: ptBR });
+      const str = format(currentClock, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
       return str.charAt(0).toUpperCase() + str.slice(1);
     } catch {
       return 'Ano Letivo 2027';
     }
-  }, []);
+  }, [currentClock]);
+
+  const timeFormatted = useMemo(() => {
+    try {
+      return format(currentClock, 'HH:mm:ss');
+    } catch {
+      return '--:--:--';
+    }
+  }, [currentClock]);
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-14 animate-gentle-fade text-[#1d1d1f]">
-      {/* 1. Header Minimalista e Acolhedor */}
-      <section className="bg-white rounded-3xl p-5 sm:p-6 border border-black/[0.06] shadow-xs space-y-3">
+      {/* 1. Header Minimalista com Relógio Dinâmico e Marcadores Inteligentes */}
+      <section className="bg-white rounded-3xl p-5 sm:p-6 border border-black/[0.06] shadow-xs space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
+          <div className="space-y-1.5 min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#86868b]">
               <span>EMEB Prof. Joaquim Candelário de Freitas</span>
               <span aria-hidden="true">·</span>
-              <span>Jundiaí</span>
+              <span>Jundiaí/SP</span>
               <span aria-hidden="true">·</span>
-              <span>{todayFormatted}</span>
+              <span className="font-medium text-[#1d1d1f]">{todayFormatted}</span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f]">
-              Visão Geral Escolar
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f]">
+                Visão Geral Escolar
+              </h1>
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[0.72rem] font-bold border ${shiftInfo.badgeColor}`}>
+                <span className={`w-2 h-2 rounded-full ${shiftInfo.dotColor} animate-pulse`} />
+                <span>{shiftInfo.label}</span>
+              </div>
+            </div>
 
             <p className="text-xs sm:text-sm text-[#6e6e73]">
               Olá, <strong className="text-[#1d1d1f] font-semibold">{userName}</strong> · {userRoleLabel}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 self-start lg:self-auto">
+          {/* Marcador Dinâmico de Hora ao Vivo + Ação Rápida */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div className="px-4 py-2 bg-[#f5f5f7] rounded-2xl border border-black/[0.04] flex items-center gap-2.5 shadow-2xs">
+              <Clock className="w-4 h-4 text-[#0071e3] shrink-0" />
+              <div>
+                <span className="text-[0.62rem] uppercase font-bold tracking-wider text-[#86868b] block leading-none">
+                  Horário Oficial
+                </span>
+                <span className="font-mono text-base sm:text-lg font-bold text-[#1d1d1f] tabular-nums tracking-tight">
+                  {timeFormatted}
+                </span>
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={() => onNavigateToScreen('turmas')}
-              className="h-10 px-4.5 rounded-2xl bg-[#1d1d1f] hover:bg-black text-white font-medium text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98 select-none"
+              className="h-11 px-4.5 rounded-2xl bg-[#1d1d1f] hover:bg-black text-white font-medium text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98 select-none"
             >
               <Users className="w-4 h-4 text-white" />
               <span>{userRole === 'usuario' ? 'Acessar Minha Turma' : 'Quadro de Turmas'}</span>
@@ -173,37 +240,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {/* 4 Indicadores Macro em Linha Limpa */}
+        {/* 4 Marcadores Inteligentes da Escola */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-3 border-t border-black/[0.04]">
-          <div className="bg-[#f5f5f7] rounded-2xl p-3.5 border border-black/[0.03]">
-            <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-[#86868b] block">
-              Total de Turmas
-            </span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-bold font-mono text-[#1d1d1f] tabular-nums">
-                {schoolStats.totalClasses}
+          {/* Marcador Inteligente 1: Janela de Lançamento */}
+          <div className="bg-[#f5f5f7] rounded-2xl p-3.5 border border-black/[0.03] flex flex-col justify-between">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-[#86868b] block">
+                Janela de Frequência
               </span>
-              <span className="text-xs text-[#6e6e73]">ativas</span>
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${
+                  windowEval.isAllowedToLaunch ? 'bg-[#005035]' : 'bg-amber-500'
+                }`}
+              />
+            </div>
+            <div className="mt-2">
+              <span
+                className={`text-sm sm:text-base font-bold truncate block ${
+                  windowEval.isAllowedToLaunch ? 'text-[#005035]' : 'text-amber-800'
+                }`}
+              >
+                {windowEval.isAllowedToLaunch ? 'Liberada para Registro' : 'Aguardando Período'}
+              </span>
+              <span className="text-[0.7rem] text-[#6e6e73] block truncate mt-0.5">
+                {windowEval.reasonLabel || windowEval.statusTitle}
+              </span>
             </div>
           </div>
 
-          <div className="bg-[#f5f5f7] rounded-2xl p-3.5 border border-black/[0.03]">
+          {/* Marcador Inteligente 2: Frequência Geral & Meta LDB */}
+          <div className="bg-[#f5f5f7] rounded-2xl p-3.5 border border-black/[0.03] flex flex-col justify-between">
             <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-[#86868b] block">
-              Estudantes Matriculados
+              Frequência Global
             </span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-2xl font-bold font-mono text-[#1d1d1f] tabular-nums">
-                {schoolStats.totalStudents}
-              </span>
-              <span className="text-xs text-[#6e6e73]">ativos</span>
-            </div>
-          </div>
-
-          <div className="bg-[#f5f5f7] rounded-2xl p-3.5 border border-black/[0.03]">
-            <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-[#86868b] block">
-              Frequência Média
-            </span>
-            <div className="flex items-baseline gap-1 mt-1">
+            <div className="flex items-baseline gap-1 mt-2">
               <span className="text-2xl font-bold font-mono text-[#005035] tabular-nums">
                 {schoolStats.avgPresence}%
               </span>
@@ -211,106 +281,203 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           </div>
 
-          <div className="bg-[#f5f5f7] rounded-2xl p-3.5 border border-black/[0.03]">
-            <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-[#86868b] block">
-              Busca Ativa (ECA)
-            </span>
-            <div className="flex items-baseline gap-1 mt-1">
+          {/* Marcador Inteligente 3: Alertas de Busca Ativa */}
+          <div
+            onClick={() => onNavigateToScreen('faltas_consecutivas')}
+            className="bg-[#f5f5f7] hover:bg-[#fff2f2]/60 rounded-2xl p-3.5 border border-black/[0.03] hover:border-rose-200/60 transition-all cursor-pointer flex flex-col justify-between group"
+            title="Ver relação de estudantes em alerta de Busca Ativa"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-[#86868b] group-hover:text-rose-700 block transition-colors">
+                Busca Ativa (ECA)
+              </span>
+              <ShieldAlert className="w-3.5 h-3.5 text-[#ba1a1a]" />
+            </div>
+            <div className="flex items-baseline gap-1 mt-2">
               <span className="text-2xl font-bold font-mono text-[#ba1a1a] tabular-nums">
                 {schoolStats.criticalConsecutiveCount}
               </span>
-              <span className="text-xs text-[#6e6e73]">alertas</span>
+              <span className="text-xs text-[#6e6e73]">com 3+ faltas seguidas</span>
+            </div>
+          </div>
+
+          {/* Marcador Inteligente 4: Total de Estudantes & Turmas */}
+          <div className="bg-[#f5f5f7] rounded-2xl p-3.5 border border-black/[0.03] flex flex-col justify-between">
+            <span className="text-[0.68rem] font-semibold uppercase tracking-wider text-[#86868b] block">
+              Comunidade Escolar
+            </span>
+            <div className="flex items-baseline gap-1.5 mt-2">
+              <span className="text-2xl font-bold font-mono text-[#1d1d1f] tabular-nums">
+                {schoolStats.totalStudents}
+              </span>
+              <span className="text-xs text-[#6e6e73]">
+                estudantes · {schoolStats.totalClasses} turmas
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. 4 Portas de Entrada / Ações Rápidas */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div
-          onClick={() => onNavigateToScreen('turmas')}
-          className="bg-white rounded-3xl p-4.5 border border-black/[0.06] hover:border-black/[0.14] transition-all cursor-pointer flex flex-col justify-between group active:scale-98 select-none shadow-xs"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center group-hover:bg-[#0071e3] group-hover:text-white transition-colors">
-              <Users className="w-4 h-4" />
-            </div>
-            <ArrowRight className="w-4 h-4 text-[#86868b] group-hover:text-[#1d1d1f] group-hover:translate-x-0.5 transition-all" />
-          </div>
-          <div className="mt-3">
-            <h2 className="text-sm font-bold text-[#1d1d1f]">
-              {userRole === 'usuario' ? 'Minha Turma' : 'Quadro de Turmas'}
-            </h2>
-            <p className="text-xs text-[#86868b] mt-0.5">
-              Relação nominal, turmas e dados cadastrais.
-            </p>
-          </div>
+      {/* 2. As 4 Portas Principais — Grandes, Visíveis e Fáceis de Tocar */}
+      <section className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+            <span className="material-symbols-outlined text-[22px] text-[#0071e3]">touch_app</span>
+            <span>O que você deseja fazer agora? (Toque em um cartão)</span>
+          </h2>
         </div>
 
-        {userRole !== 'peb2' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Cartão 1: Meus Alunos */}
           <div
-            onClick={() => onNavigateToScreen('frequencia_mensal')}
-            className="bg-white rounded-3xl p-4.5 border border-black/[0.06] hover:border-black/[0.14] transition-all cursor-pointer flex flex-col justify-between group active:scale-98 select-none shadow-xs"
+            onClick={() => onNavigateToScreen('turmas')}
+            className="bg-white rounded-3xl p-5 border-2 border-black/[0.08] hover:border-[#0071e3] transition-all cursor-pointer flex flex-col justify-between group active:scale-[0.98] select-none shadow-xs hover:shadow-md"
           >
             <div className="flex items-center justify-between">
-              <div className="w-9 h-9 rounded-xl bg-[#eaf6ef] text-[#005035] flex items-center justify-center group-hover:bg-[#005035] group-hover:text-white transition-colors">
-                <CalendarCheck className="w-4 h-4" />
+              <div className="w-13 h-13 rounded-2xl bg-[#0071e3]/12 text-[#0071e3] flex items-center justify-center group-hover:bg-[#0071e3] group-hover:text-white transition-colors">
+                <Users className="w-7 h-7" />
               </div>
-              <ArrowRight className="w-4 h-4 text-[#86868b] group-hover:text-[#1d1d1f] group-hover:translate-x-0.5 transition-all" />
+              <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold group-hover:bg-[#0071e3]/10 group-hover:text-[#0071e3] transition-colors">
+                Abrir →
+              </span>
             </div>
-            <div className="mt-3">
-              <h2 className="text-sm font-bold text-[#1d1d1f]">Faltas do Mês</h2>
-              <p className="text-xs text-[#86868b] mt-0.5">
-                Lançamento rápido de faltas e atestados.
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                {userRole === 'usuario' ? 'Meus Alunos (Turma)' : 'Lista de Turmas'}
+              </h3>
+              <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                Ver a lista de todos os alunos da sala com foto, chamada e telefone.
               </p>
             </div>
           </div>
-        )}
 
-        <div
-          onClick={() => onNavigateToScreen('mapa_estudantes')}
-          className="bg-white rounded-3xl p-4.5 border border-black/[0.06] hover:border-black/[0.14] transition-all cursor-pointer flex flex-col justify-between group active:scale-98 select-none shadow-xs"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center group-hover:bg-[#0071e3] group-hover:text-white transition-colors">
-              <MapPin className="w-4 h-4" />
+          {/* Cartão 2: Faltas do Mês / Chamada */}
+          {userRole !== 'peb2' && (
+            <div
+              onClick={() => onNavigateToScreen('frequencia_mensal')}
+              className="bg-white rounded-3xl p-5 border-2 border-black/[0.08] hover:border-[#005035] transition-all cursor-pointer flex flex-col justify-between group active:scale-[0.98] select-none shadow-xs hover:shadow-md"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-13 h-13 rounded-2xl bg-[#eaf6ef] text-[#005035] flex items-center justify-center group-hover:bg-[#005035] group-hover:text-white transition-colors">
+                  <CalendarCheck className="w-7 h-7" />
+                </div>
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold group-hover:bg-emerald-200 transition-colors">
+                  Fazer Chamada →
+                </span>
+              </div>
+              <div className="mt-4 space-y-1">
+                <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                  Fazer a Chamada do Mês
+                </h3>
+                <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                  Anotar faltas com botões grandes de mais (+) e menos (—). Salva na hora.
+                </p>
+              </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#86868b] group-hover:text-[#1d1d1f] group-hover:translate-x-0.5 transition-all" />
-          </div>
-          <div className="mt-3">
-            <h2 className="text-sm font-bold text-[#1d1d1f]">Mapa de Trajetos</h2>
-            <p className="text-xs text-[#86868b] mt-0.5">
-              Geolocalização, fotos e distâncias até a escola.
-            </p>
-          </div>
-        </div>
+          )}
 
-        <div
-          onClick={() =>
-            onNavigateToScreen(userRole === 'admin' ? 'resumo' : 'faltas_consecutivas')
-          }
-          className="bg-white rounded-3xl p-4.5 border border-black/[0.06] hover:border-black/[0.14] transition-all cursor-pointer flex flex-col justify-between group active:scale-98 select-none shadow-xs"
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-[#fff2f2] text-[#ba1a1a] flex items-center justify-center group-hover:bg-[#ba1a1a] group-hover:text-white transition-colors">
-              <AlertTriangle className="w-4 h-4" />
+          {/* Cartão 3: Alertas de Faltas / Busca Ativa */}
+          <div
+            onClick={() => onNavigateToScreen('faltas_consecutivas')}
+            className="bg-white rounded-3xl p-5 border-2 border-black/[0.08] hover:border-[#ba1a1a] transition-all cursor-pointer flex flex-col justify-between group active:scale-[0.98] select-none shadow-xs hover:shadow-md"
+          >
+            <div className="flex items-center justify-between">
+              <div className="w-13 h-13 rounded-2xl bg-[#fff2f2] text-[#ba1a1a] flex items-center justify-center group-hover:bg-[#ba1a1a] group-hover:text-white transition-colors">
+                <AlertTriangle className="w-7 h-7" />
+              </div>
+              <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold group-hover:bg-rose-200 transition-colors">
+                Ver Alertas →
+              </span>
             </div>
-            <ArrowRight className="w-4 h-4 text-[#86868b] group-hover:text-[#1d1d1f] group-hover:translate-x-0.5 transition-all" />
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                Alunos com Muitas Faltas
+              </h3>
+              <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                Lista de crianças com 3 ou mais faltas seguidas para acolher a família.
+              </p>
+            </div>
           </div>
-          <div className="mt-3">
-            <h2 className="text-sm font-bold text-[#1d1d1f]">
-              {userRole === 'admin' ? 'Resumo Mensal MEC' : 'Busca Ativa (ECA)'}
-            </h2>
-            <p className="text-xs text-[#86868b] mt-0.5">
-              {userRole === 'admin'
-                ? 'Indicadores consolidados e matriz escolar.'
-                : 'Alertas de 3+, 5+ e 10+ faltas consecutivas.'}
-            </p>
+
+          {/* Cartão 4: Ônibus e Trajetos */}
+          <div
+            onClick={() => onNavigateToScreen('mapa_estudantes')}
+            className="bg-white rounded-3xl p-5 border-2 border-black/[0.08] hover:border-indigo-600 transition-all cursor-pointer flex flex-col justify-between group active:scale-[0.98] select-none shadow-xs hover:shadow-md"
+          >
+            <div className="flex items-center justify-between">
+              <div className="w-13 h-13 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                <MapPin className="w-7 h-7" />
+              </div>
+              <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold group-hover:bg-indigo-200 transition-colors">
+                Consultar →
+              </span>
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-bold text-slate-900 leading-tight">
+                Ônibus Escolar e Endereços
+              </h3>
+              <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                Veja quais crianças vêm de ônibus fretado e a distância até a escola.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 3. Gráfico Executivo Limpo (Recharts) */}
+      {/* 3. Guia de Uso Passo a Passo — Simples e Tranquilizador para Pessoas Idosas */}
+      <section className="bg-amber-50/80 rounded-3xl p-5 sm:p-6 border-2 border-amber-200/90 space-y-3.5 shadow-xs">
+        <div className="flex items-center gap-2.5 text-amber-950">
+          <span className="material-symbols-outlined text-[26px] text-amber-800">help</span>
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+              Instruções Fáceis: Como usar este aplicativo?
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-700 font-medium">
+              Tudo o que você faz é salvo sozinho na mesma hora. Você não precisa ter medo de errar!
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-amber-950 font-medium">
+          <div className="bg-white p-4 rounded-2xl border border-amber-200 flex items-start gap-3 shadow-2xs">
+            <span className="w-8 h-8 rounded-full bg-amber-500 text-white font-extrabold flex items-center justify-center shrink-0 text-sm">
+              1
+            </span>
+            <div>
+              <strong className="block text-slate-900 font-bold mb-0.5 text-base">Fazer a Chamada</strong>
+              <span className="text-slate-700 text-xs sm:text-sm leading-relaxed block">
+                Toque no cartão verde <strong className="text-slate-900">Fazer a Chamada do Mês</strong>. Use o botão <strong className="text-emerald-700 text-base font-black">+</strong> para marcar falta.
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-amber-200 flex items-start gap-3 shadow-2xs">
+            <span className="w-8 h-8 rounded-full bg-amber-500 text-white font-extrabold flex items-center justify-center shrink-0 text-sm">
+              2
+            </span>
+            <div>
+              <strong className="block text-slate-900 font-bold mb-0.5 text-base">Ver Telefones e Fotos</strong>
+              <span className="text-slate-700 text-xs sm:text-sm leading-relaxed block">
+                Toque em <strong className="text-slate-900">Meus Alunos</strong>. Você pode ver as fotos das crianças e abrir o WhatsApp dos pais em 1 toque.
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-amber-200 flex items-start gap-3 shadow-2xs">
+            <span className="w-8 h-8 rounded-full bg-amber-500 text-white font-extrabold flex items-center justify-center shrink-0 text-sm">
+              3
+            </span>
+            <div>
+              <strong className="block text-slate-900 font-bold mb-0.5 text-base">Aumentar a Letra</strong>
+              <span className="text-slate-700 text-xs sm:text-sm leading-relaxed block">
+                Se as letras estiverem pequenas para sua visão, toque no botão amarelo <strong className="text-amber-900">Letra</strong> no topo da tela.
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Gráfico da Frequência */}
       <section className="bg-white rounded-3xl p-5 sm:p-6 border border-black/[0.06] shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>

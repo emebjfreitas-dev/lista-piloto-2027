@@ -1370,11 +1370,33 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     studentGenderInfo
                   )}
 
-                {/* Botão Moderno e Fácil de Localizar: Abrir PDF da Ficha Informativa */}
+                {/* Botões Grandes e Acessíveis para Pessoas Idosas: Ficha Completa e PDF */}
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="pt-1 flex flex-col gap-1.5"
+                  className="pt-2 flex flex-col gap-2"
                 >
+                  {onOpenStudentGrid && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onOpenStudentGrid(student);
+                      }}
+                      className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl font-bold text-xs sm:text-sm bg-slate-900 hover:bg-black text-white flex items-center justify-between gap-2 cursor-pointer transition-all shadow-xs active:scale-98"
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <span className="material-symbols-outlined text-[20px] text-emerald-400 shrink-0">
+                          badge
+                        </span>
+                        <span className="truncate">Ver Ficha Completa do Aluno</span>
+                      </span>
+                      <span className="material-symbols-outlined text-[18px] shrink-0">
+                        chevron_right
+                      </span>
+                    </button>
+                  )}
+
                   {onOpenStudentPdf && (
                     <button
                       type="button"
@@ -1389,17 +1411,17 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           ? `Abrir PDF da Ficha Informativa de ${student.name}`
                           : `Estudante sem ficha: clique para ver o aviso de solicitação à família`
                       }
-                      className={`w-full min-h-[38px] px-3.5 py-2 rounded-xl font-bold text-[0.76rem] flex items-center justify-between gap-2 cursor-pointer transition-all shadow-2xs active:scale-[0.99] ${
+                      className={`w-full min-h-[44px] px-4 py-2 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-all shadow-2xs active:scale-98 ${
                         (student.fichaPdfDriveUrl &&
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white'
-                          : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#d70015] hover:text-white border border-[#ff3b30]/25'
+                          ? 'bg-blue-50 hover:bg-blue-100 text-blue-900 border-2 border-blue-300'
+                          : 'bg-rose-50 hover:bg-rose-100 text-rose-900 border-2 border-rose-300'
                       }`}
                     >
-                      <span className="flex items-center gap-1.5 truncate">
-                        <span className="material-symbols-outlined text-[17px] shrink-0">
+                      <span className="flex items-center gap-2 truncate">
+                        <span className="material-symbols-outlined text-[20px] shrink-0">
                           {(student.fichaPdfDriveUrl &&
                             student.fichaPdfDriveUrl.trim().length > 0) ||
                           (student.fichaPdfDriveId &&
@@ -1412,11 +1434,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                             student.fichaPdfDriveUrl.trim().length > 0) ||
                           (student.fichaPdfDriveId &&
                             student.fichaPdfDriveId.trim().length > 0)
-                            ? 'Abrir Ficha Informativa (PDF)'
-                            : 'Sem Ficha PDF • Pedir à família'}
+                            ? 'Abrir Documento PDF'
+                            : 'Sem PDF • Pedir à Família'}
                         </span>
                       </span>
-                      <span className="material-symbols-outlined text-[15px] shrink-0 opacity-85">
+                      <span className="material-symbols-outlined text-[18px] shrink-0">
                         open_in_new
                       </span>
                     </button>

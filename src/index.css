@@ -43,11 +43,11 @@
   html {
     font-family: var(--font-sans) !important;
     background-color: var(--apple-bg);
-    color: var(--apple-text-primary);
-    font-size: clamp(14.5px, 0.25vw + 14px, 16px);
-    line-height: 1.47059;
-    font-weight: 400;
-    letter-spacing: -0.011em;
+    color: #0f172a;
+    font-size: clamp(17.5px, 0.35vw + 17px, 20px);
+    line-height: 1.55;
+    font-weight: 500;
+    letter-spacing: -0.01em;
     font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -55,21 +55,33 @@
     scroll-behavior: smooth;
   }
 
+  html.text-size-normal {
+    font-size: clamp(16.5px, 0.3vw + 16px, 18.5px);
+  }
+
+  html.text-size-grande {
+    font-size: clamp(19px, 0.45vw + 18.5px, 22px);
+  }
+
+  html.text-size-extra {
+    font-size: clamp(21.5px, 0.55vw + 21px, 25px);
+  }
+
   body,
   .font-sans {
     font-family: var(--font-sans) !important;
     background-color: var(--apple-bg);
-    color: var(--apple-text-primary);
+    color: #0f172a;
     overflow-x: hidden;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   }
 
-  /* Typographic Hierarchy */
+  /* Typographic Hierarchy - Alto Contraste para Idosos */
   h1, h2, h3, h4, h5, h6, .font-display {
     font-family: var(--font-display) !important;
-    color: var(--apple-text-primary);
+    color: #0f172a;
     letter-spacing: -0.022em;
-    line-height: 1.15;
+    line-height: 1.2;
     text-wrap: balance;
   }
 
@@ -99,29 +111,20 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Subtle default border color without overriding semantic alert borders (3d/5d/10d) */
+  /* Subtle default border color */
   .border-2 {
-    border-width: 1px;
+    border-width: 2px;
   }
 
-  /* Apple.com Global Remapping of Legacy Teal/Green Classes to Pure Apple.com Palette */
-  .bg-\[\#003440\],
-  .bg-\[\#0b3b49\] {
-    background-color: #1d1d1f !important;
-  }
-  .hover\:bg-\[\#003440\]:hover,
-  .hover\:bg-\[\#004c5c\]:hover,
-  .hover\:bg-\[\#164e63\]:hover,
-  .hover\:bg-\[\#1e4b58\]:hover {
-    background-color: #000000 !important;
-  }
+  /* High contrast colors for elderly reading */
   .text-\[\#003440\],
   .text-\[\#0b3b49\],
   .text-\[\#0f172a\],
   .text-\[\#191c1b\],
   .text-\[\#111b21\],
-  .text-\[\#1c1c1e\] {
-    color: #1d1d1f !important;
+  .text-\[\#1c1c1e\],
+  .text-\[\#1d1d1f\] {
+    color: #0f172a !important;
   }
   .text-\[\#436370\],
   .text-\[\#374346\],
@@ -130,12 +133,14 @@
   .text-\[\#54656f\],
   .text-\[\#5a676b\],
   .text-\[\#6e777a\] {
-    color: #6e6e73 !important;
+    color: #1e293b !important;
   }
   .text-\[\#71787b\],
   .text-\[\#64748b\],
-  .text-\[\#8e8e93\] {
-    color: #86868b !important;
+  .text-\[\#8e8e93\],
+  .text-\[\#86868b\],
+  .text-\[\#6e6e73\] {
+    color: #334155 !important;
   }
 
   /* Primary Interactive CTAs -> Apple Blue (#0071e3) */

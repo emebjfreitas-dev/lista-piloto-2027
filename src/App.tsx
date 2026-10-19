@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ScreenType,
   ClassGroup,
@@ -689,10 +689,28 @@ export default function App() {
     return false; // 'peb2' is strictly view-only
   };
 
-  const visibleClasses =
-    userRole === 'usuario'
-      ? classes.filter((c) => allowedUsuarioClassIds.includes(c.id))
-      : classes;
+  const visibleClasses = useMemo(() => {
+    if (userRole === 'admin' || userRole === 'peb2') {
+      return classes;
+    }
+    const normalizedAllowed = allowedUsuarioClassIds.map((id) =>
+      String(id || '').trim().toLowerCase()
+    );
+    const filtered = classes.filter((c) => {
+      const cId = String(c.id || '').trim().toLowerCase();
+      const cName = String(c.name || '').trim().toLowerCase();
+      return (
+        normalizedAllowed.includes(cId) ||
+        normalizedAllowed.includes(cName) ||
+        normalizedAllowed.some((allowed) => allowed && cName.includes(allowed))
+      );
+    });
+
+    if (filtered.length === 0) {
+      return classes.length > 0 ? [classes[0]] : classes;
+    }
+    return filtered;
+  }, [userRole, allowedUsuarioClassIds, classes]);
 
   // Screen navigation handlers
   const handleSelectClassForDetails = (cls: ClassGroup) => {

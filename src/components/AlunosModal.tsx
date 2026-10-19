@@ -49,53 +49,61 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
   const savedDriveFolder = getSavedPhotosDriveFolderInfo();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 lg:p-6 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-xl md:max-w-4xl lg:max-w-6xl xl:max-w-[1440px] rounded-2xl shadow-2xl border-2 border-[#003440]/20 p-4 sm:p-5 lg:p-6 overflow-hidden flex flex-col max-h-[93vh]">
-        {/* Header: Mobile + Widescreen adaptive */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b-2 border-[#edeeec]">
-          <div>
-            <div className="flex items-center gap-2 text-[#003440]">
-              <span className="material-symbols-outlined text-[28px]">groups</span>
-              <h3 className="text-[1.2rem] sm:text-[1.45rem] font-black leading-tight">
-                Visualização da Turma & Dados dos Estudantes — {className}
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-gentle-fade"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-black/[0.08] p-4 sm:p-6 overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        {/* Header: Proporcional e Elegante */}
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-black/[0.06] shrink-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[22px] text-[#0071e3]">groups</span>
+              <h3 className="text-base sm:text-lg font-bold text-[#1d1d1f] truncate leading-tight">
+                {className} · Relação de Estudantes
               </h3>
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold tabular-nums">
+                {students.length}
+              </span>
             </div>
-            <p className="text-[0.86rem] sm:text-[0.94rem] text-[#2c373a] font-semibold mt-0.5">
-              {students.length} estudantes cadastrados • Clique no <strong>hyperlink do nome</strong> ou em <strong>Doc PDF</strong> para abrir o documento nominal direto no aplicativo.
+            <p className="text-xs text-[#86868b] mt-0.5 truncate">
+              Selecione o estudante para visualizar detalhes, fotos e Ficha Informativa.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-xl bg-[#f3f4f2] hover:bg-[#e7e8e6] text-[#2c373a] flex items-center justify-center cursor-pointer transition-colors"
-              aria-label="Fechar visualização da turma"
-            >
-              <span className="material-symbols-outlined text-[24px]">close</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            aria-label="Fechar visualização da turma"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="py-3">
+        {/* Search Bar Minimalista */}
+        <div className="py-2.5 shrink-0">
           <div className="relative flex items-center">
-            <span className="material-symbols-outlined absolute left-3.5 text-[#71787b] text-[22px]">
+            <span className="material-symbols-outlined absolute left-3.5 text-[#86868b] text-[20px]">
               search
             </span>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar estudante por nome, número da chamada ou RA..."
-              className="w-full min-h-[48px] pl-11 pr-10 bg-[#f3f4f2] text-[#151a18] font-semibold text-[0.95rem] rounded-xl border-2 border-[#b4c0c4] focus:outline-none focus:bg-white focus:border-[#003440]"
+              placeholder="Buscar por nome, nº da chamada ou RA..."
+              className="w-full h-10 pl-10 pr-9 bg-[#f5f5f7] text-[#1d1d1f] font-medium text-xs sm:text-sm rounded-xl border border-black/[0.06] focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-3 text-[#71787b] hover:text-[#151a18] cursor-pointer"
+                className="absolute right-3 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[20px]">cancel</span>
+                <span className="material-symbols-outlined text-[18px]">cancel</span>
               </button>
             )}
           </div>
