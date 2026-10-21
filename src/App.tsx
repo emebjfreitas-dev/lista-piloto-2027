@@ -935,20 +935,32 @@ export default function App() {
   };
 
   const handleBack = () => {
-    if (userRole === 'usuario') {
-      setCurrentScreen('detalhes');
+    if (currentScreen === 'frequencia_mensal') {
+      setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    if (
-      currentScreen === 'frequencia_mensal' ||
-      currentScreen === 'detalhes' ||
-      currentScreen === 'bolsa_familia' ||
-      currentScreen === 'dias_letivos' ||
-      currentScreen === 'planilha' ||
-      currentScreen === 'usuarios_acesso'
-    ) {
+    if (currentScreen === 'detalhes') {
+      if (userRole === 'usuario') {
+        setCurrentScreen('home');
+      } else {
+        setCurrentScreen('turmas');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (currentScreen === 'turmas') {
+      setCurrentScreen('home');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    // Outras telas (mapa_estudantes, faltas_consecutivas, bolsa_familia, planilha, etc.)
+    if (userRole === 'usuario') {
+      setCurrentScreen('detalhes');
+    } else {
       setCurrentScreen('turmas');
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleLoginSuccess = (authUser: AuthorizedUser) => {

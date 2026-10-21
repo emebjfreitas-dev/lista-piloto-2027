@@ -23,12 +23,14 @@ interface ListasNominaisScreenProps {
   ) => void;
   onOpenPhotoModal: (student: Student, className: string) => void;
   onOpenStudentPdf: (student: Student, className: string) => void;
+  onBack?: () => void;
 }
 
 export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   classes,
   userRole,
   onOpenStudentGrid,
+  onBack,
 }) => {
   const [selectedBimesterId, setSelectedBimesterId] = useState<BimesterId2027>('5bim');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
@@ -357,6 +359,23 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             </span>
             <p className="text-[0.82rem] font-semibold leading-snug">{toastMsg}</p>
           </div>
+        </div>
+      )}
+
+      {/* Botão Voltar Didático e Visível */}
+      {onBack && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onBack}
+            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
+            <span>Voltar para Minha Turma</span>
+          </button>
+          <span className="text-xs sm:text-sm font-bold text-slate-500">
+            Relatório Bolsa Família &amp; Busca Ativa
+          </span>
         </div>
       )}
 

@@ -403,6 +403,22 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </div>
       )}
 
+      {/* Botão Voltar Didático e Visível */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+        >
+          <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
+          <span>Voltar para Minha Turma</span>
+        </button>
+
+        <span className="text-xs sm:text-sm font-bold text-slate-500">
+          Lançamento Mensal de Presença
+        </span>
+      </div>
+
       {/* CABEÇALHO ENXUTO E COERENTE DA TURMA + CONTADORES E INDICATIVOS MELHORADOS */}
       <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-3.5 sm:space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">

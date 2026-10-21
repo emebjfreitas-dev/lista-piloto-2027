@@ -708,6 +708,23 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto pb-12 space-y-4 animate-gentle-fade">
+      {/* Botão Voltar Didático e Visível */}
+      {onBack && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onBack}
+            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
+            <span>Voltar para Minha Turma</span>
+          </button>
+          <span className="text-xs sm:text-sm font-bold text-slate-500">
+            Quadro Docente &amp; Acessos Institucionais
+          </span>
+        </div>
+      )}
+
       {/* Feedback Toast */}
       {feedbackMsg && (
         <div

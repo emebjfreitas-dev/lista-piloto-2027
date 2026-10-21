@@ -19,12 +19,28 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   userRole = 'admin',
   onOpenConfigDaysModal,
   onNavigateToSheet,
+  onBack,
 }) => {
   const savedSheet = getSavedSpreadsheetInfo();
   const isAdmin = userRole === 'admin';
 
   return (
     <div className="flex flex-col w-full max-w-[1100px] mx-auto space-y-4 pb-12 animate-gentle-fade">
+      {/* Botão Voltar Didático e Visível */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+        >
+          <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
+          <span>Voltar para Minha Turma</span>
+        </button>
+        <span className="text-xs sm:text-sm font-bold text-slate-500">
+          Calendário Escolar • 200 Dias Letivos
+        </span>
+      </div>
+
       <section className="card-welcoming bg-white p-6 sm:p-8 space-y-5 rounded-3xl border border-[#003440]/10 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5">

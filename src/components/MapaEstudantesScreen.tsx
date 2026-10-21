@@ -28,6 +28,7 @@ interface MapaEstudantesScreenProps {
   ) => void;
   onOpenStudentPdf?: (student: Student, className: string) => void;
   onNavigateToTurma?: (cls: ClassGroup) => void;
+  onBack?: () => void;
 }
 
 export interface StudentMapMarkerItem {
@@ -77,6 +78,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
   onOpenStudentGrid,
   onOpenStudentPdf,
   onNavigateToTurma,
+  onBack,
 }) => {
   // Navigation & Filter States
   const [filterClassId, setFilterClassId] = useState<string>(selectedClassId || 'all');
@@ -632,6 +634,23 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
 
   return (
     <div className="space-y-4 pb-24 max-w-[1550px] mx-auto px-2 sm:px-4 lg:px-6 candelario-map-root font-sans">
+      {/* Botão Voltar Didático e Visível */}
+      {onBack && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onBack}
+            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
+            <span>Voltar para Minha Turma</span>
+          </button>
+          <span className="text-xs sm:text-sm font-bold text-slate-500">
+            Mapa de Trajetos &amp; Distâncias
+          </span>
+        </div>
+      )}
+
       {/* 1. Header Card - Ultra-Simplified for Elderly Users */}
       <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border-2 border-slate-200 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

@@ -19,6 +19,7 @@ export interface ResumoMensalScreenProps {
   onNavigateToSheet?: () => void;
   onOpenStudentGrid?: (student: Student) => void;
   onOpenStudentPdf?: (student: Student) => void;
+  onBack?: () => void;
 }
 
 interface EvaluatedStudentSnapshot {
@@ -113,6 +114,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   onOpenReportPrint,
   onOpenStudentGrid,
   onOpenStudentPdf,
+  onBack,
 }) => {
   // Slicers de controle analítico sóbrio
   const [selectedMonthName, setSelectedMonthName] = useState<string>('Outubro');
@@ -375,6 +377,23 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade text-slate-800">
+      {/* Botão Voltar Didático e Visível */}
+      {onBack && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onBack}
+            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
+            <span>Voltar para Minha Turma</span>
+          </button>
+          <span className="text-xs sm:text-sm font-bold text-slate-500">
+            Painel Executivo • Fechamento Mensal
+          </span>
+        </div>
+      )}
+
       {/* CABEÇALHO EXECUTIVO POWER BI (SÓBRIO, SEM ATALHOS REDUNDANTES) */}
       <section className="bg-slate-900 text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

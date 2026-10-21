@@ -178,15 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isAdmin = userRole === 'admin';
 
-  const showBackButton =
-    currentScreen === 'frequencia_mensal' ||
-    currentScreen === 'faltas_consecutivas' ||
-    (currentScreen === 'detalhes' && userRole !== 'usuario') ||
-    currentScreen === 'bolsa_familia' ||
-    currentScreen === 'dias_letivos' ||
-    currentScreen === 'mapa_estudantes' ||
-    currentScreen === 'planilha' ||
-    currentScreen === 'usuarios_acesso';
+  const showBackButton = currentScreen !== 'home' && currentScreen !== 'login';
 
   const getScreenTitle = () => {
     if (title) return title;
@@ -207,17 +199,19 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <>
       <header className="fixed top-0 left-0 right-0 w-full z-50 pt-safe ios-glass-top">
-        <div className="h-[54px] sm:h-[60px] px-3 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
+        <div className="h-[56px] sm:h-[62px] px-3 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Zone 1: Brand / Back Control */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 lg:flex-1">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 lg:flex-1">
             {showBackButton && (
               <button
+                type="button"
                 onClick={onBack}
                 aria-label="Voltar para tela anterior"
-                className="h-[34px] px-2.5 sm:px-3.5 flex items-center justify-center gap-0.5 sm:gap-1 rounded-full bg-[#e8e8ed] hover:bg-[#d2d2d7] text-[#1d1d1f] font-semibold text-[0.78rem] sm:text-[0.8rem] transition-all active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+                className="min-h-[42px] px-3.5 sm:px-4 flex items-center justify-center gap-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 border-2 border-slate-400 font-black text-xs sm:text-sm shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
+                title="Voltar à tela anterior"
               >
-                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                <span className="hidden xs:inline sm:inline">Voltar</span>
+                <span className="material-symbols-outlined text-[20px] font-bold text-slate-900">arrow_back</span>
+                <span className="font-bold">Voltar</span>
               </button>
             )}
 
