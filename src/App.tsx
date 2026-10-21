@@ -972,7 +972,7 @@ export default function App() {
       loginTimeISO: nowISO,
       lastHeartbeatISO: nowISO,
       durationSeconds: 1,
-      lastScreen: latestFromList.role === 'usuario' ? 'Detalhes da Turma' : '1. Turmas',
+      lastScreen: 'Minha turma',
       isOnlineNow: true,
     };
 
@@ -991,7 +991,7 @@ export default function App() {
         lastLoginAt: nowFormatted,
         lastActiveAt: nowFormatted,
         lastSessionDurationSeconds: 1,
-        lastScreenVisited: latestFromList.role === 'usuario' ? 'Detalhes da Turma' : '1. Turmas',
+        lastScreenVisited: 'Minha turma',
       };
     });
     setAuthorizedUsers(nextUsers);
@@ -1033,9 +1033,9 @@ export default function App() {
     const screenLabelMap: Record<ScreenType, string> = {
       login: 'Login',
       home: 'Início & Visão Geral',
-      turmas: '1. Turmas',
-      detalhes: 'Detalhes da Turma',
-      frequencia_mensal: '2. Faltas do Mês',
+      turmas: 'Minha turma',
+      detalhes: 'Minha turma (Alunos)',
+      frequencia_mensal: 'Fazer Chamada (Faltas do Mês)',
       faltas_consecutivas: 'Faltas Consecutivas',
       bolsa_familia: 'Bolsa Família',
       planilha: '3. Planilha & Fotos',

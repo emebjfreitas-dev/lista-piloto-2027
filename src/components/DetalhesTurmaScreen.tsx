@@ -78,6 +78,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   userName,
   schoolNotices = [],
   onSaveSchoolNotices,
+  canLaunchAttendance = true,
+  onGoToMonthlyAttendance,
   onGoToMonthlySummary,
   onOpenStudentGrid,
   onOpenPhotoModal,
@@ -679,20 +681,60 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             </p>
           </div>
 
-          {/* Cabeçalho Minimalista da Turma: Apenas 1 ação discreta para Admin baixar Excel se desejar */}
-          {userRole === 'admin' && (
-            <div className="flex items-center gap-2 shrink-0">
+          {/* Ações da Turma: Fazer Chamada em destaque máximo */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {canLaunchAttendance && (
+              <button
+                type="button"
+                onClick={onGoToMonthlyAttendance}
+                className="min-h-[48px] px-5 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm flex items-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+                title="Abrir lançamento de faltas do mês selecionado"
+              >
+                <span className="material-symbols-outlined text-[22px] text-emerald-400">checklist</span>
+                <span>Fazer Chamada (Faltas do Mês)</span>
+              </button>
+            )}
+
+            {userRole === 'admin' && (
               <button
                 type="button"
                 onClick={() => setIsExportXlsModalOpen(true)}
-                className="min-h-[36px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.76rem] flex items-center gap-1.5 cursor-pointer transition-all active:scale-97"
+                className="min-h-[48px] px-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all border border-black/[0.08]"
               >
-                <span className="material-symbols-outlined text-[16px] text-[#0071e3]">download</span>
+                <span className="material-symbols-outlined text-[18px] text-[#0071e3]">download</span>
                 <span>Exportar .XLS</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
+        {/* Banner Didático para Facilitar o Acesso à Chamada */}
+        {canLaunchAttendance && (
+          <div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-950">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[24px]">calendar_today</span>
+              </div>
+              <div>
+                <span className="text-xs font-black uppercase text-emerald-900 block">
+                  Registro de Presença Escolar
+                </span>
+                <p className="text-sm font-bold text-emerald-950">
+                  Deseja registrar as faltas de {classGroup.name} no mês atual?
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={onGoToMonthlyAttendance}
+              className="min-h-[44px] px-5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-all active:scale-98"
+            >
+              <span className="material-symbols-outlined text-[20px]">checklist</span>
+              <span>Abrir Chamada do Mês</span>
+            </button>
+          </div>
+        )}
 
         {/* Quadro Docente Oficial da Turma: Professor(a) Regente PEB I + Especialistas PEB II (Arte, Educação Física e Língua Inglesa) */}
         {(classGroup.teacherName || classGroup.artTeacher || classGroup.peTeacher || classGroup.englishTeacher) && (

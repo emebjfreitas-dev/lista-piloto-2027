@@ -35,6 +35,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   onOpenPhotoModal,
   onOpenStudentGrid,
   onOpenStudentPdf,
+  onBack,
 }) => {
   const [selectedMonthName, setSelectedMonthName] = useState<string>('Outubro');
   const [diasLetivosMes, setDiasLetivosMes] = useState<number>(classGroup.classesHeld || 20);
@@ -418,41 +419,35 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               <span>{classGroup.shift.replace('Turno ', '')}</span>
               <span aria-hidden="true">·</span>
               <span>{classGroup.room}</span>
-              {classGroup.classeSedCode && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span className="font-mono">SED: {classGroup.classeSedCode}</span>
-                </>
-              )}
               <span aria-hidden="true">·</span>
-              <span className="text-[#005035] font-medium">
-                {instantSyncStatus === 'syncing' ? 'Sincronizando...' : 'Sincronizado'}
+              <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                {instantSyncStatus === 'syncing' ? 'Sincronizando...' : '✓ Salvo Automaticamente'}
               </span>
             </div>
 
             <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-[#1d1d1f] tracking-tight">
-                Lançamento de Faltas · {classGroup.name}
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                Fazer Chamada — Informar Faltas do Mês de {selectedMonthName}
               </h1>
-              <span className="text-xs sm:text-sm text-[#6e6e73]">
-                {classGroup.pronoun || 'Prof.'} {classGroup.teacherName || 'Regente'} · {detailedIndicators.ativosCount} ativos
-              </span>
             </div>
+            <p className="text-xs sm:text-sm text-slate-700 font-medium">
+              Turma {classGroup.name} • {classGroup.pronoun || 'Prof.'} {classGroup.teacherName || 'Regente'} • {detailedIndicators.ativosCount} estudantes matriculados • {diasLetivosMes} dias letivos em {selectedMonthName}
+            </p>
           </div>
 
-          {/* Seletor de Mês Enxuto */}
-          <div className="flex items-center gap-2.5 bg-[#f5f5f7] px-3.5 py-2 rounded-2xl border border-black/[0.06] shrink-0 self-start lg:self-auto">
-            <span className="material-symbols-outlined text-[20px] text-[#0071e3]">
+          {/* Seletor de Mês em Destaque — Grande e Intuitivo */}
+          <div className="flex items-center gap-3 bg-emerald-50 border-2 border-emerald-300 px-4 py-2.5 rounded-2xl shrink-0 self-start lg:self-auto shadow-xs">
+            <span className="material-symbols-outlined text-[26px] text-emerald-800">
               calendar_month
             </span>
             <div>
-              <label className="block text-[0.62rem] font-bold uppercase tracking-wider text-[#86868b]">
-                Mês de Referência (2027)
+              <label className="block text-[0.66rem] font-black uppercase tracking-wider text-emerald-900">
+                Mês da Chamada (2027)
               </label>
               <select
                 value={selectedMonthName}
                 onChange={(e) => handleMonthChange(e.target.value)}
-                className="bg-transparent text-[#1d1d1f] font-bold text-[0.86rem] sm:text-[0.9rem] focus:outline-none cursor-pointer pr-2"
+                className="bg-transparent text-slate-900 font-black text-sm sm:text-base focus:outline-none cursor-pointer pr-2"
               >
                 {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
                   const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
@@ -1083,6 +1078,27 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           })}
         </div>
       )}
+
+      {/* Rodapé Didático e Conclusão da Chamada */}
+      <section className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base sm:text-lg font-black text-slate-900">
+            Chamada do Mês de {selectedMonthName}
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-600 font-medium mt-0.5">
+            Total de <strong>{liveClassMetrics.totalFaltasTurma} faltas</strong> registradas na turma • <strong>{liveClassMetrics.presenceRate}% de presença global</strong> • Salvo automaticamente
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="min-h-[50px] px-6 rounded-2xl bg-[#003440] hover:bg-[#00222a] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+        >
+          <span className="material-symbols-outlined text-[22px] text-emerald-400">check_circle</span>
+          <span>Concluir e Voltar para Minha Turma</span>
+        </button>
+      </section>
     </div>
   );
 };

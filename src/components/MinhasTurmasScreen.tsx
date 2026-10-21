@@ -114,6 +114,17 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
     return [assignedClassId];
   }, [assignedClassIds, assignedClassId]);
 
+  const primaryTeacherClass = useMemo(() => {
+    return (
+      classes.find(
+        (c) =>
+          allowedClassIdsForUsuario.includes(c.id) ||
+          allowedClassIdsForUsuario.includes(c.name) ||
+          c.id === assignedClassId
+      ) || classes[0]
+    );
+  }, [classes, allowedClassIdsForUsuario, assignedClassId]);
+
   const filteredClasses = useMemo(() => {
     return classes.filter((cls) => {
       if (userRole === 'usuario') {
@@ -200,8 +211,8 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1d1d1f]">
-                {userRole === 'usuario' ? 'Minha Turma' : 'Quadro de Turmas'}
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+                Minha Turma
               </h1>
               {userRole !== 'peb2' && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6e6e73]">
@@ -281,6 +292,74 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           )}
         </div>
       </section>
+
+      {/* Minha Turma Prioritária — Destaque Imediato para a Chamada e Alunos */}
+      {primaryTeacherClass && (
+        <section className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-300 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-slate-100">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-14 h-14 rounded-2xl bg-[#003440] text-white flex items-center justify-center font-black text-xl shadow-xs shrink-0">
+                {primaryTeacherClass.turmaAbrev || primaryTeacherClass.name.slice(0, 3)}
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-black uppercase text-blue-700 tracking-wider block">
+                  {userRole === 'usuario' ? 'Sua Turma de Regência' : 'Turma Principal Selecionada'}
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight truncate">
+                  Turma {primaryTeacherClass.name}
+                </h2>
+                <p className="text-xs sm:text-sm font-bold text-slate-600 mt-0.5 truncate">
+                  {primaryTeacherClass.shift.replace('Turno ', '')} • {primaryTeacherClass.room} • Prof. {primaryTeacherClass.teacherName || 'Regente'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="text-right">
+                <span className="text-xs font-bold text-slate-500 uppercase block">Presença Mês</span>
+                <span className="text-xl font-black text-emerald-800 font-mono">
+                  {primaryTeacherClass.presenceRate}%
+                </span>
+              </div>
+              <div className="text-right border-l-2 border-slate-200 pl-4">
+                <span className="text-xs font-bold text-slate-500 uppercase block">Faltas no Mês</span>
+                <span className="text-xl font-black text-rose-700 font-mono">
+                  {primaryTeacherClass.monthlyAbsences}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Duas Grandes Ações Didáticas: 1) Fazer Chamada e 2) Ver Alunos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {userRole !== 'peb2' && (
+              <button
+                type="button"
+                onClick={() => onSelectClassForMonthlyAttendance(primaryTeacherClass)}
+                disabled={!isLaunchButtonOpen}
+                className={`min-h-[54px] px-5 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-3 cursor-pointer shadow-sm transition-all active:scale-98 ${
+                  isLaunchButtonOpen
+                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white border-2 border-emerald-800'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed border-2 border-slate-200'
+                }`}
+                title={isLaunchButtonOpen ? 'Informar faltas do mês selecionado' : windowEval.reasonLabel}
+              >
+                <span className="material-symbols-outlined text-[24px]">checklist</span>
+                <span>Fazer Chamada — Informar Faltas do Mês</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onSelectClassForDetails(primaryTeacherClass)}
+              className="min-h-[54px] px-5 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm sm:text-base flex items-center justify-center gap-3 cursor-pointer shadow-sm transition-all active:scale-98 border-2 border-slate-900"
+            >
+              <Users className="w-5 h-5 text-white" />
+              <span>Ver Alunos da Minha Turma ({primaryTeacherClass.totalStudents})</span>
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Barra de Busca e Filtros de Turno (Direta, Compacta e Intuitiva) */}
       {userRole !== 'usuario' && (

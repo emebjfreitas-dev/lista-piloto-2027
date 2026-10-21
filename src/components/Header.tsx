@@ -191,16 +191,17 @@ export const Header: React.FC<HeaderProps> = ({
   const getScreenTitle = () => {
     if (title) return title;
     if (currentScreen === 'home') return 'Visão Geral & Home';
-    if (currentScreen === 'frequencia_mensal') return 'Faltas do Mês';
+    if (currentScreen === 'turmas') return 'Minha turma';
+    if (currentScreen === 'detalhes') return 'Minha turma';
+    if (currentScreen === 'frequencia_mensal') return 'Fazer Chamada (Faltas do Mês)';
     if (currentScreen === 'faltas_consecutivas') return 'Faltas Consecutivas';
-    if (currentScreen === 'detalhes') return 'Caderneta da Turma';
     if (currentScreen === 'bolsa_familia') return 'Bolsa Família';
     if (currentScreen === 'dias_letivos') return '200 Dias Letivos';
     if (currentScreen === 'resumo') return 'Fechamento Mensal';
-    if (currentScreen === 'mapa_estudantes') return 'Mapa de Trajetos & KM';
+    if (currentScreen === 'mapa_estudantes') return 'Mapa e Rotas';
     if (currentScreen === 'planilha') return 'Sincronização Nuvem';
     if (currentScreen === 'usuarios_acesso') return 'Professores & Acessos';
-    return 'Lista Piloto 2027';
+    return 'Minha turma';
   };
 
   return (
@@ -282,7 +283,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-[18px]">groups</span>
-                <span>{userRole === 'usuario' ? 'Meus Alunos' : 'Turmas'}</span>
+                <span>Minha turma</span>
               </button>
 
               {userRole !== 'peb2' && (

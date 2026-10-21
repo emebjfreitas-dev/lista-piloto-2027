@@ -53,14 +53,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'turmas',
-      label: userRole === 'usuario' ? selectedClassName || 'Turma' : 'Turmas',
+      label: 'Minha turma',
       icon: Users,
     },
     ...(userRole !== 'peb2'
       ? [
           {
             id: 'frequencia_mensal' as ScreenType,
-            label: 'Faltas',
+            label: 'Chamada',
             icon: CalendarCheck,
           },
         ]

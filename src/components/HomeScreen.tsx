@@ -235,7 +235,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               className="h-11 px-4.5 rounded-2xl bg-[#1d1d1f] hover:bg-black text-white font-medium text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98 select-none"
             >
               <Users className="w-4 h-4 text-white" />
-              <span>{userRole === 'usuario' ? 'Acessar Minha Turma' : 'Quadro de Turmas'}</span>
+              <span>Minha turma</span>
             </button>
           </div>
         </div>
@@ -328,7 +328,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Cartão 1: Meus Alunos */}
+          {/* Cartão 1: Minha Turma */}
           <div
             onClick={() => onNavigateToScreen('turmas')}
             className="bg-white rounded-3xl p-5 border-2 border-black/[0.08] hover:border-[#0071e3] transition-all cursor-pointer flex flex-col justify-between group active:scale-[0.98] select-none shadow-xs hover:shadow-md"
@@ -343,10 +343,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
             <div className="mt-4 space-y-1">
               <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                {userRole === 'usuario' ? 'Meus Alunos (Turma)' : 'Lista de Turmas'}
+                Minha turma
               </h3>
               <p className="text-sm text-slate-700 font-medium leading-relaxed">
-                Ver a lista de todos os alunos da sala com foto, chamada e telefone.
+                Acessar a turma do professor, lista de alunos, chamada e dados escolares.
               </p>
             </div>
           </div>
@@ -367,10 +367,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </div>
               <div className="mt-4 space-y-1">
                 <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                  Fazer a Chamada do Mês
+                  Fazer Chamada — Informar Faltas do Mês
                 </h3>
                 <p className="text-sm text-slate-700 font-medium leading-relaxed">
-                  Anotar faltas com botões grandes de mais (+) e menos (—). Salva na hora.
+                  Informar as faltas do mês selecionado com botões grandes de (+) e (—). Salvo na hora.
                 </p>
               </div>
             </div>
