@@ -316,14 +316,14 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onChangeScreen('mapa_estudantes')}
-                className={`h-10 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                className={`min-h-[42px] px-4 rounded-xl font-extrabold text-sm transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
                   currentScreen === 'mapa_estudantes'
-                    ? 'bg-white text-[#1d1d1f] shadow-xs border border-black/[0.08]'
-                    : 'text-slate-700 hover:text-black hover:bg-white/60'
+                    ? 'bg-[#003440] text-white shadow-xs'
+                    : 'text-slate-800 hover:text-black hover:bg-slate-100'
                 }`}
               >
-                <span className="material-symbols-outlined text-[18px]">directions_bus</span>
-                <span>Ônibus / Mapa</span>
+                <span className="material-symbols-outlined text-[20px]">map</span>
+                <span>Mapa e Rotas</span>
               </button>
 
               {isAdmin && (

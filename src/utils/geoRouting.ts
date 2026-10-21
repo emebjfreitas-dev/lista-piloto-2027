@@ -216,30 +216,225 @@ export const resolveStudentCoordinates = (
 };
 
 /**
- * Builds standard Google Maps directions and place links
+ * Maneuver types for turn-by-turn routing steps
+ */
+export interface FreeRouteStep {
+  instruction: string;
+  distanceMeters: number;
+  durationSeconds: number;
+  streetName: string;
+}
+
+export interface FreeRouteResult {
+  coordinates: [number, number][]; // [lat, lng] for Leaflet
+  distanceKm: number;
+  durationMinutes: number;
+  steps: FreeRouteStep[];
+  source: 'osrm' | 'fallback';
+  profile: 'foot' | 'driving' | 'bus';
+}
+
+/**
+ * Translates OSRM maneuver modifiers and types to clear, friendly Portuguese
+ */
+function translateOsrmManeuver(step: any, isLast: boolean): string {
+  const name = step.name ? `pela ${step.name}` : 'em frente';
+  const type = step.maneuver?.type || '';
+  const modifier = step.maneuver?.modifier || '';
+
+  if (isLast || type === 'arrive') {
+    return `Chegada ao destino (${step.name || 'EMEB Joaquim Candelário'})`;
+  }
+  if (type === 'depart') {
+    return `Inicie o trajeto ${name}`;
+  }
+  if (modifier === 'right') {
+    return `Vire à direita ${name}`;
+  }
+  if (modifier === 'sharp right') {
+    return `Curva acentuada à direita ${name}`;
+  }
+  if (modifier === 'slight right') {
+    return `Mantenha-se à direita ${name}`;
+  }
+  if (modifier === 'left') {
+    return `Vire à esquerda ${name}`;
+  }
+  if (modifier === 'sharp left') {
+    return `Curva acentuada à esquerda ${name}`;
+  }
+  if (modifier === 'slight left') {
+    return `Mantenha-se à esquerda ${name}`;
+  }
+  if (modifier === 'straight' || type === 'continue') {
+    return `Siga em frente ${name}`;
+  }
+  if (modifier === 'uturn') {
+    return `Faça o retorno ${name}`;
+  }
+  if (type === 'roundabout' || type === 'rotary') {
+    return `Na rotatória, siga ${name}`;
+  }
+  return `Siga ${name}`;
+}
+
+/**
+ * Fetches free street trajectory, real street distance, and turn-by-turn steps
+ * using free OpenStreetMap / OSRM (100% Free, NO API Keys required)
+ */
+export async function fetchFreeOsmRoute(
+  origin: { lat: number; lng: number; label?: string },
+  destination: { lat: number; lng: number; label?: string },
+  mode: 'foot' | 'driving' | 'bus' = 'driving'
+): Promise<FreeRouteResult> {
+  const profile = mode === 'foot' ? 'foot' : 'driving';
+  const coordsParam = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
+
+  // 1. Try local server proxy first (avoids CORS and caches results)
+  try {
+    const proxyUrl = `/api/route?profile=${profile}&coords=${encodeURIComponent(coordsParam)}`;
+    const res = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' } });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.code === 'Ok' && Array.isArray(data.routes) && data.routes[0]) {
+        return parseOsrmRoute(data.routes[0], mode);
+      }
+    }
+  } catch {
+    // try direct fallback next
+  }
+
+  // 2. Direct public OSRM router fallback
+  try {
+    const directUrl = `https://router.project-osrm.org/route/v1/${profile}/${coordsParam}?overview=full&geometries=geojson&steps=true`;
+    const res = await fetch(directUrl, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.code === 'Ok' && Array.isArray(data.routes) && data.routes[0]) {
+        return parseOsrmRoute(data.routes[0], mode);
+      }
+    }
+  } catch {
+    // fallback to mathematical street geometry
+  }
+
+  // 3. Graceful offline fallback: interpolated trajectory with road geometry
+  const directDistance = haversineDistanceKm(origin.lat, origin.lng, destination.lat, destination.lng);
+  const roadKm = Math.round(directDistance * 1.28 * 10) / 10;
+  const speedKmH = mode === 'foot' ? 4.2 : mode === 'bus' ? 18 : 25;
+  const durationMin = Math.max(3, Math.round((roadKm / speedKmH) * 60 + (mode === 'bus' ? 5 : 2)));
+
+  // Generate 5-point interpolated curve along Jundiaí street axes
+  const midLat = (origin.lat + destination.lat) / 2;
+  const midLng = (origin.lng + destination.lng) / 2;
+  const p1: [number, number] = [origin.lat, origin.lng];
+  const p2: [number, number] = [origin.lat * 0.7 + destination.lat * 0.3, origin.lng * 0.7 + destination.lng * 0.3 + 0.0008];
+  const p3: [number, number] = [midLat + 0.0006, midLng - 0.0006];
+  const p4: [number, number] = [origin.lat * 0.3 + destination.lat * 0.7, origin.lng * 0.3 + destination.lng * 0.7 - 0.0004];
+  const p5: [number, number] = [destination.lat, destination.lng];
+
+  const destName = destination.label || 'EMEB Prof. Joaquim Candelário de Freitas';
+  const origName = origin.label || 'Ponto de Partida';
+
+  return {
+    coordinates: [p1, p2, p3, p4, p5],
+    distanceKm: roadKm,
+    durationMinutes: durationMin,
+    source: 'fallback',
+    profile: mode,
+    steps: [
+      {
+        instruction: `Inicie o percurso a partir de ${origName}`,
+        distanceMeters: Math.round(roadKm * 400),
+        durationSeconds: Math.round(durationMin * 25),
+        streetName: 'Vias urbanas de Jundiaí',
+      },
+      {
+        instruction: `Siga pelo eixo viário do bairro em direção a ${destName}`,
+        distanceMeters: Math.round(roadKm * 400),
+        durationSeconds: Math.round(durationMin * 25),
+        streetName: 'Avenida/Rua Principal',
+      },
+      {
+        instruction: `Chegada ao destino final (${destName})`,
+        distanceMeters: Math.round(roadKm * 200),
+        durationSeconds: Math.round(durationMin * 10),
+        streetName: destName,
+      },
+    ],
+  };
+}
+
+function parseOsrmRoute(route: any, mode: 'foot' | 'driving' | 'bus'): FreeRouteResult {
+  const geojsonCoords = route.geometry?.coordinates || [];
+  // GeoJSON is [lng, lat], Leaflet polyline expects [lat, lng]
+  const coordinates: [number, number][] = geojsonCoords.map((c: [number, number]) => [c[1], c[0]]);
+
+  const distanceKm = Math.round((route.distance / 1000) * 10) / 10;
+  let durationMinutes = Math.round(route.duration / 60);
+  if (mode === 'bus') {
+    durationMinutes = Math.max(5, Math.round(durationMinutes * 1.35 + 4));
+  } else if (mode === 'foot') {
+    durationMinutes = Math.max(3, durationMinutes);
+  }
+
+  const rawSteps = route.legs?.[0]?.steps || [];
+  const steps: FreeRouteStep[] = rawSteps.map((s: any, idx: number) => {
+    const isLast = idx === rawSteps.length - 1;
+    return {
+      instruction: translateOsrmManeuver(s, isLast),
+      distanceMeters: Math.round(s.distance || 0),
+      durationSeconds: Math.round(s.duration || 0),
+      streetName: s.name || 'Via local',
+    };
+  });
+
+  return {
+    coordinates,
+    distanceKm,
+    durationMinutes,
+    steps,
+    source: 'osrm',
+    profile: mode,
+  };
+}
+
+/**
+ * Builds free open navigation and web direction links (Zero API Keys)
  */
 export const buildGoogleMapsNavigationUrls = (
   destinationLat: number,
   destinationLng: number,
-  destinationAddress: string
+  destinationAddress: string,
+  customOrigin?: { lat: number; lng: number }
 ) => {
-  const originLat = CANDELARIO_SCHOOL_LOCATION.lat;
-  const originLng = CANDELARIO_SCHOOL_LOCATION.lng;
+  const originLat = customOrigin ? customOrigin.lat : CANDELARIO_SCHOOL_LOCATION.lat;
+  const originLng = customOrigin ? customOrigin.lng : CANDELARIO_SCHOOL_LOCATION.lng;
 
-  // Directions from EMEB Candelário to Student's home
+  // 100% Free OpenStreetMap directions link (no keys, completely open)
+  const openStreetMapDirectionsUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${destinationLat}%2C${destinationLng}%3B${originLat}%2C${originLng}`;
+
+  // Free OpenStreetMap walking directions link
+  const openStreetMapWalkingUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=${destinationLat}%2C${destinationLng}%3B${originLat}%2C${originLng}`;
+
+  // Standard web directions (opens in browser / Google Maps app without API keys)
   const directionsFromSchoolUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destinationLat},${destinationLng}&travelmode=driving`;
-
-  // Directions from Student's home to EMEB Candelário
   const directionsToSchoolUrl = `https://www.google.com/maps/dir/?api=1&origin=${destinationLat},${destinationLng}&destination=${originLat},${originLng}&travelmode=walking`;
+  const placeSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destinationAddress)}`;
 
-  // Direct Pin Search on Google Maps
-  const placeSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `${destinationAddress}`
-  )}`;
+  // Waze direct navigation link
+  const wazeUrl = `https://waze.com/ul?ll=${destinationLat},${destinationLng}&navigate=yes`;
 
   return {
+    openStreetMapDirectionsUrl,
+    openStreetMapWalkingUrl,
     directionsFromSchoolUrl,
     directionsToSchoolUrl,
     placeSearchUrl,
+    wazeUrl,
   };
 };

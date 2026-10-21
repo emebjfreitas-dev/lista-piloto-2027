@@ -6,11 +6,13 @@ import {
   CANDELARIO_SCHOOL_LOCATION,
   resolveStudentCoordinates,
   calculateTravelEstimates,
+  fetchFreeOsmRoute,
+  buildGoogleMapsNavigationUrls,
+  FreeRouteResult,
   RouteTravelEstimates,
 } from '../utils/geoRouting';
-import { getStudentGenderLabel, resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
+import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
-import { StudentAvatar } from './StudentAvatar';
 import { toast } from 'sonner';
 
 interface MapaEstudantesScreenProps {
@@ -36,7 +38,6 @@ export interface StudentMapMarkerItem {
   fullAddress: string;
   estimates: RouteTravelEstimates;
   guardianInfo: ReturnType<typeof resolveGuardianRelationshipInfo>;
-  genderInfo: ReturnType<typeof getStudentGenderLabel>;
   photoUrl: string;
   initials: string;
 }
@@ -77,26 +78,35 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
   onOpenStudentPdf,
   onNavigateToTurma,
 }) => {
+  // Navigation & Filter States
   const [filterClassId, setFilterClassId] = useState<string>(selectedClassId || 'all');
-  const [filterShift, setFilterShift] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
-  const [filterDistanceTier, setFilterDistanceTier] = useState<
-    'all' | 'perto' | 'medio' | 'distante' | 'muito_distante'
-  >('all');
-  const [filterTransporte, setFilterTransporte] = useState<'all' | 'com_onibus' | 'sem_onibus'>('all');
+  const [filterOnlyBus, setFilterOnlyBus] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStudentMarker, setSelectedStudentMarker] = useState<StudentMapMarkerItem | null>(null);
-  const [showSchoolRadiusCircle, setShowSchoolRadiusCircle] = useState(true);
-  const [copiedCoords, setCopiedCoords] = useState(false);
   const [isListViewOpen, setIsListViewOpen] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState<'map' | 'route'>('map');
 
-  // Map DOM and Leaflet instance references
+  // Selected student & Routing state
+  const [selectedStudentMarker, setSelectedStudentMarker] = useState<StudentMapMarkerItem | null>(null);
+  const [travelMode, setTravelMode] = useState<'foot' | 'driving' | 'bus'>('foot');
+  const [routeData, setRouteData] = useState<FreeRouteResult | null>(null);
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [copiedCoords, setCopiedCoords] = useState(false);
+
+  // Custom 2-Point Routing Mode
+  const [isCustomPointsMode, setIsCustomPointsMode] = useState(false);
+  const [customPointA, setCustomPointA] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const [customPointB, setCustomPointB] = useState<{ lat: number; lng: number; label: string } | null>(null);
+  const [settingPointStep, setSettingPointStep] = useState<'none' | 'pointA' | 'pointB'>('none');
+
+  // Map and layer references
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerGroupRef = useRef<L.LayerGroup | null>(null);
-  const radiusLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const routeLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const schoolMarkerLayerRef = useRef<L.LayerGroup | null>(null);
 
-  // Compute all student markers with coordinates & route calculations
+  // Compute all active student markers
   const allMarkers = useMemo<StudentMapMarkerItem[]>(() => {
     const list: StudentMapMarkerItem[] = [];
 
@@ -112,7 +122,6 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
           'filiacao1',
           student.notes
         );
-        const genderInfo = getStudentGenderLabel(student);
         const { photoUrl, initials } = getStudentPhotoAndInitials(student);
 
         list.push({
@@ -123,7 +132,6 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
           fullAddress: coords.fullAddress,
           estimates,
           guardianInfo,
-          genderInfo,
           photoUrl,
           initials,
         });
@@ -133,80 +141,58 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
     return list;
   }, [classes]);
 
-  // Set initial selected student if requested
+  // Handle initial selected student
   useEffect(() => {
     if (initialSelectedStudentId && allMarkers.length > 0) {
       const found = allMarkers.find((m) => m.student.id === initialSelectedStudentId);
       if (found) {
         setSelectedStudentMarker(found);
+        setActiveMobileTab('route');
       }
     }
   }, [initialSelectedStudentId, allMarkers]);
 
-  // Apply filters
+  // Filtered markers
   const filteredMarkers = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
     return allMarkers.filter((item) => {
       if (filterClassId !== 'all' && item.cls.id !== filterClassId) return false;
-      if (filterShift !== 'all' && item.cls.shift.toUpperCase().indexOf(filterShift) === -1) return false;
-      if (filterDistanceTier !== 'all' && item.estimates.routeTier !== filterDistanceTier) return false;
-      if (filterTransporte === 'com_onibus' && !item.student.rotaOnibus) return false;
-      if (filterTransporte === 'sem_onibus' && Boolean(item.student.rotaOnibus)) return false;
+      if (filterOnlyBus && !item.student.rotaOnibus) return false;
 
       if (q) {
         const matchName = item.student.name.toLowerCase().includes(q);
         const matchBairro = (item.student.bairro || '').toLowerCase().includes(q);
-        const matchLogradouro = (item.student.logradouro || '').toLowerCase().includes(q);
-        const matchRota = (item.student.rotaOnibus || '').toLowerCase().includes(q);
+        const matchLogr = (item.student.logradouro || '').toLowerCase().includes(q);
         const matchTurma = item.cls.name.toLowerCase().includes(q);
         const matchRa = (item.student.ra || '').toLowerCase().includes(q);
-        return matchName || matchBairro || matchLogradouro || matchRota || matchTurma || matchRa;
+        return matchName || matchBairro || matchLogr || matchTurma || matchRa;
       }
 
       return true;
     });
-  }, [allMarkers, filterClassId, filterShift, filterDistanceTier, filterTransporte, searchQuery]);
+  }, [allMarkers, filterClassId, filterOnlyBus, searchQuery]);
 
-  // Overall statistics for distance and transport
+  // Concise key metrics
   const stats = useMemo(() => {
     const total = filteredMarkers.length;
-    if (total === 0) {
-      return {
-        total: 0,
-        avgDistanceKm: 0,
-        avgWalkMinutes: 0,
-        avgCarMinutes: 0,
-        comTransporteEscolar: 0,
-        maisDe2Km: 0,
-        menosDe1Km: 0,
-      };
-    }
+    if (total === 0) return { total: 0, avgDistanceKm: 0, avgWalkMinutes: 0, withBus: 0 };
 
     let sumRoadKm = 0;
     let sumWalk = 0;
-    let sumCar = 0;
-    let comTransporte = 0;
-    let maisDe2Km = 0;
-    let menosDe1Km = 0;
+    let withBus = 0;
 
     filteredMarkers.forEach((m) => {
       sumRoadKm += m.estimates.distanceRoadKm;
       sumWalk += m.estimates.walkMinutes;
-      sumCar += m.estimates.carMinutes;
-      if (m.student.rotaOnibus) comTransporte++;
-      if (m.estimates.distanceRoadKm >= 2.0) maisDe2Km++;
-      if (m.estimates.distanceRoadKm < 1.0) menosDe1Km++;
+      if (m.student.rotaOnibus) withBus++;
     });
 
     return {
       total,
       avgDistanceKm: Math.round((sumRoadKm / total) * 10) / 10,
       avgWalkMinutes: Math.round(sumWalk / total),
-      avgCarMinutes: Math.round(sumCar / total),
-      comTransporteEscolar: comTransporte,
-      maisDe2Km,
-      menosDe1Km,
+      withBus,
     };
   }, [filteredMarkers]);
 
@@ -222,31 +208,52 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
       attributionControl: true,
     });
 
-    // High performance CartoDB Voyager tiles (crisp retina, clean, modern typography)
+    // 100% Free OpenStreetMap & Carto Voyager tiles (clean, high contrast, no API keys)
     L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
       {
         attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> &copy; <a href="https://carto.com/" target="_blank">CARTO</a>',
         subdomains: 'abcd',
-        maxZoom: 20,
+        maxZoom: 19,
       }
     ).addTo(map);
 
-    // Zoom control at top right
+    // Big, accessible Zoom control
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Layer groups
-    radiusLayerGroupRef.current = L.layerGroup().addTo(map);
+    // Layer Groups
+    schoolMarkerLayerRef.current = L.layerGroup().addTo(map);
     routeLayerGroupRef.current = L.layerGroup().addTo(map);
     markersLayerGroupRef.current = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
 
-    // Handle initial resize smoothly
+    // Handle map click for custom 2-point routing
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (settingPointStep === 'pointA') {
+        setCustomPointA({
+          lat: Math.round(lat * 100000) / 100000,
+          lng: Math.round(lng * 100000) / 100000,
+          label: `Ponto A (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+        });
+        setSettingPointStep('pointB');
+        toast.info('Ponto 1 (Partida) marcado! Agora toque no mapa para marcar o Ponto 2 (Chegada).');
+      } else if (settingPointStep === 'pointB') {
+        setCustomPointB({
+          lat: Math.round(lat * 100000) / 100000,
+          lng: Math.round(lng * 100000) / 100000,
+          label: `Ponto B (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+        });
+        setSettingPointStep('none');
+        toast.success('Ponto 2 marcado! Calculando rota gratuita pelas ruas...');
+      }
+    });
+
     setTimeout(() => {
       map.invalidateSize();
-    }, 200);
+    }, 250);
 
     return () => {
       map.remove();
@@ -254,98 +261,93 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
     };
   }, []);
 
-  // 2. Render Radius Circles & School Marker
+  // Sync settingPointStep with leaflet click listener
   useEffect(() => {
     const map = mapInstanceRef.current;
-    const radiusGroup = radiusLayerGroupRef.current;
-    if (!map || !radiusGroup) return;
+    if (!map) return;
+    map.off('click');
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (settingPointStep === 'pointA') {
+        setCustomPointA({
+          lat: Math.round(lat * 100000) / 100000,
+          lng: Math.round(lng * 100000) / 100000,
+          label: `Ponto 1 (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+        });
+        setSettingPointStep('pointB');
+        toast.info('Ponto 1 marcado! Agora toque no local do Ponto 2 (Chegada).');
+      } else if (settingPointStep === 'pointB') {
+        setCustomPointB({
+          lat: Math.round(lat * 100000) / 100000,
+          lng: Math.round(lng * 100000) / 100000,
+          label: `Ponto 2 (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+        });
+        setSettingPointStep('none');
+        toast.success('Ponto 2 marcado! Calculando caminho gratuito...');
+      }
+    });
+  }, [settingPointStep]);
 
-    radiusGroup.clearLayers();
+  // 2. Render School Marker and 1km Walking Radius
+  useEffect(() => {
+    const schoolGroup = schoolMarkerLayerRef.current;
+    if (!schoolGroup) return;
 
-    // Central School Marker
+    schoolGroup.clearLayers();
+
+    // Prominent High-Contrast School Icon
     const schoolIcon = L.divIcon({
-      className: 'candelario-school-div-icon',
+      className: 'candelario-school-marker-div',
       html: `
         <div class="relative flex flex-col items-center cursor-pointer select-none -translate-x-1/2 -translate-y-1/2">
-          <div class="relative flex items-center justify-center w-12 h-12 rounded-2xl bg-[#003440] text-white shadow-xl border-2 border-white ring-4 ring-[#003440]/25">
-            <span class="material-symbols-outlined text-[24px]">school</span>
-            <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
-            </span>
+          <div class="w-14 h-14 rounded-2xl bg-[#003440] text-white shadow-2xl border-4 border-white ring-4 ring-[#003440]/30 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[30px]">school</span>
           </div>
-          <div class="mt-1 px-2.5 py-0.5 rounded-full bg-[#1d1d1f] text-white text-[10px] font-black tracking-wide whitespace-nowrap shadow-md border border-white/20">
-            EMEB Joaquim Candelário
+          <div class="mt-1 px-3 py-1 rounded-full bg-[#0f172a] text-white text-xs font-black tracking-wide whitespace-nowrap shadow-xl border-2 border-white">
+            EMEB Candelário (Escola)
           </div>
         </div>
       `,
-      iconSize: [48, 64],
-      iconAnchor: [24, 32],
+      iconSize: [56, 74],
+      iconAnchor: [28, 37],
     });
 
-    const schoolMarker = L.marker(
+    const marker = L.marker(
       [CANDELARIO_SCHOOL_LOCATION.lat, CANDELARIO_SCHOOL_LOCATION.lng],
-      { icon: schoolIcon, zIndexOffset: 1000 }
-    ).addTo(radiusGroup);
+      { icon: schoolIcon, zIndexOffset: 2000 }
+    ).addTo(schoolGroup);
 
-    schoolMarker.bindPopup(`
-      <div class="p-3 text-slate-800 space-y-1 text-xs">
-        <div class="font-extrabold text-sm text-[#003440] flex items-center gap-1.5">
-          <span class="material-symbols-outlined text-[18px]">school</span>
+    marker.bindPopup(`
+      <div class="p-4 text-slate-900 space-y-2">
+        <div class="font-black text-base text-[#003440] flex items-center gap-2">
+          <span class="material-symbols-outlined text-[22px]">school</span>
           <span>${CANDELARIO_SCHOOL_LOCATION.name}</span>
         </div>
-        <p class="text-slate-600 font-medium">${CANDELARIO_SCHOOL_LOCATION.address}, Jundiaí - SP</p>
-        <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px] font-mono text-slate-500">
-          <span>Lat: ${CANDELARIO_SCHOOL_LOCATION.lat}</span>
-          <span>Lng: ${CANDELARIO_SCHOOL_LOCATION.lng}</span>
+        <p class="text-sm font-semibold text-slate-700">${CANDELARIO_SCHOOL_LOCATION.address}, Jundiaí - SP</p>
+        <div class="pt-2 border-t border-slate-200 text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg">
+          Destino central de todas as rotas de alunos
         </div>
       </div>
     `);
 
-    // Concentric radius circles around school
-    if (showSchoolRadiusCircle) {
-      // 1.0 km radius (Caminhável direto)
-      L.circle([CANDELARIO_SCHOOL_LOCATION.lat, CANDELARIO_SCHOOL_LOCATION.lng], {
-        radius: 1000,
-        color: '#10b981',
-        weight: 1.5,
-        opacity: 0.6,
-        fillColor: '#10b981',
-        fillOpacity: 0.05,
-        dashArray: '5, 5',
+    // 1 km walk radius circle (High contrast, clearly visible)
+    L.circle([CANDELARIO_SCHOOL_LOCATION.lat, CANDELARIO_SCHOOL_LOCATION.lng], {
+      radius: 1000,
+      color: '#059669',
+      weight: 2,
+      opacity: 0.8,
+      fillColor: '#10b981',
+      fillOpacity: 0.08,
+      dashArray: '6, 6',
+    })
+      .bindTooltip('Raio de 1 km em volta da escola (caminhável a pé)', {
+        permanent: false,
+        direction: 'top',
       })
-        .bindTooltip('Raio 1.0 km (Caminhável)', { permanent: false, direction: 'top' })
-        .addTo(radiusGroup);
+      .addTo(schoolGroup);
+  }, []);
 
-      // 2.0 km radius (Transporte recomendado)
-      L.circle([CANDELARIO_SCHOOL_LOCATION.lat, CANDELARIO_SCHOOL_LOCATION.lng], {
-        radius: 2000,
-        color: '#0071e3',
-        weight: 1.2,
-        opacity: 0.5,
-        fillColor: '#0071e3',
-        fillOpacity: 0.03,
-        dashArray: '6, 6',
-      })
-        .bindTooltip('Raio 2.0 km (Deslocamento Intermediário)', { permanent: false, direction: 'top' })
-        .addTo(radiusGroup);
-
-      // 3.5 km radius (Transporte prioritário)
-      L.circle([CANDELARIO_SCHOOL_LOCATION.lat, CANDELARIO_SCHOOL_LOCATION.lng], {
-        radius: 3500,
-        color: '#8b5cf6',
-        weight: 1.2,
-        opacity: 0.45,
-        fillColor: '#8b5cf6',
-        fillOpacity: 0.02,
-        dashArray: '8, 8',
-      })
-        .bindTooltip('Raio 3.5 km (Prioridade Ônibus Fretado)', { permanent: false, direction: 'top' })
-        .addTo(radiusGroup);
-    }
-  }, [showSchoolRadiusCircle]);
-
-  // 3. Render Student Pins with Photo on Map
+  // 3. Render Student Pins
   useEffect(() => {
     const markersGroup = markersLayerGroupRef.current;
     if (!markersGroup) return;
@@ -357,112 +359,241 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
       const numStr = item.student.number.toString().padStart(2, '0');
       const hasBus = Boolean(item.student.rotaOnibus);
 
-      let ringColorClass = 'border-emerald-500';
-      if (hasBus) ringColorClass = 'border-purple-600';
-      else if (item.estimates.routeTier === 'muito_distante') ringColorClass = 'border-rose-500';
-      else if (item.estimates.routeTier === 'distante') ringColorClass = 'border-amber-500';
-      else if (item.estimates.routeTier === 'medio') ringColorClass = 'border-sky-500';
+      let pinBorderColor = 'border-blue-600 bg-blue-50';
+      if (hasBus) pinBorderColor = 'border-purple-600 bg-purple-50';
+      else if (item.estimates.distanceRoadKm >= 2.0) pinBorderColor = 'border-amber-600 bg-amber-50';
 
       const iconHtml = `
-        <div class="relative flex flex-col items-center cursor-pointer select-none transition-transform hover:scale-120 ${
+        <div class="relative flex flex-col items-center cursor-pointer select-none transition-transform hover:scale-115 ${
           isSelected ? 'scale-125 z-50' : 'z-20'
-        }" style="width: 44px; height: 50px;">
-          <!-- Avatar Pin com Foto da Criança -->
-          <div class="relative w-10 h-10 rounded-full overflow-hidden bg-white border-2 ${ringColorClass} shadow-md flex items-center justify-center">
+        }" style="width: 48px; height: 56px;">
+          <!-- Avatar da Criança -->
+          <div class="relative w-11 h-11 rounded-full overflow-hidden bg-white border-3 ${
+            isSelected ? 'border-amber-400 ring-4 ring-amber-300' : pinBorderColor
+          } shadow-lg flex items-center justify-center">
             ${
               item.photoUrl
                 ? `<img src="${item.photoUrl}" alt="${item.student.name}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                   <div class="hidden w-full h-full bg-[#003440] text-white font-mono font-bold text-[11px] items-center justify-center">${item.initials}</div>`
-                : `<div class="w-full h-full bg-[#003440] text-white font-mono font-bold text-[11px] flex items-center justify-center">${item.initials}</div>`
+                   <div class="hidden w-full h-full bg-[#003440] text-white font-mono font-bold text-xs items-center justify-center">${item.initials}</div>`
+                : `<div class="w-full h-full bg-[#003440] text-white font-mono font-black text-xs flex items-center justify-center">${item.initials}</div>`
             }
           </div>
-          <!-- Badge com Nº de Chamada -->
-          <span class="absolute bottom-1 -right-0.5 px-1.5 py-0.2 rounded-full font-mono font-extrabold text-[9px] leading-tight text-white shadow-xs ${
+          <!-- Número de Chamada Grande e Nítido -->
+          <span class="absolute -bottom-1 px-2 py-0.5 rounded-full font-mono font-black text-[11px] text-white shadow-md ${
             isSelected
-              ? 'bg-[#0071e3] ring-2 ring-white'
+              ? 'bg-[#005bb5] ring-2 ring-white'
               : hasBus
-              ? 'bg-[#8b5cf6]'
-              : 'bg-[#1d1d1f]'
+              ? 'bg-[#7c3aed]'
+              : 'bg-[#0f172a]'
           }">
-            ${numStr}
+            Nº ${numStr}
           </span>
-          <!-- Pino inferior -->
-          <div class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-[#0071e3]' : 'bg-slate-700'} mt-0.5"></div>
         </div>
       `;
 
       const studentIcon = L.divIcon({
-        className: 'candelario-student-div-icon',
+        className: 'candelario-student-pin',
         html: iconHtml,
-        iconSize: [44, 50],
-        iconAnchor: [22, 50],
+        iconSize: [48, 56],
+        iconAnchor: [24, 56],
       });
 
       const marker = L.marker([item.lat, item.lng], {
         icon: studentIcon,
-        zIndexOffset: isSelected ? 500 : 100,
+        zIndexOffset: isSelected ? 800 : 100,
       });
 
       marker.bindTooltip(
-        `<strong>${item.student.name}</strong> (Nº ${item.student.number})<br/>
-         Turma ${item.cls.name} • 🚶 ${item.estimates.walkMinutes} min (${item.estimates.distanceRoadKm} km)`,
-        { direction: 'top', offset: [0, -45] }
+        `<div class="p-1 font-sans text-xs">
+           <strong class="text-sm font-black text-slate-900">${item.student.name}</strong><br/>
+           Turma ${item.cls.name} • 🚶 ${item.estimates.walkMinutes} min a pé (${item.estimates.distanceRoadKm} km)
+         </div>`,
+        { direction: 'top', offset: [0, -50] }
       );
 
       marker.on('click', () => {
+        setIsCustomPointsMode(false);
         setSelectedStudentMarker(item);
+        setActiveMobileTab('route');
       });
 
       marker.addTo(markersGroup);
     });
   }, [filteredMarkers, selectedStudentMarker]);
 
-  // 4. Render Dynamic Trajectory Polyline to School when Student is Selected
+  // 4. Calculate and Draw Real Free Route using OSRM
   useEffect(() => {
+    let isCancelled = false;
     const map = mapInstanceRef.current;
     const routeGroup = routeLayerGroupRef.current;
     if (!map || !routeGroup) return;
 
     routeGroup.clearLayers();
 
-    if (!selectedStudentMarker) return;
+    // Determine Origin and Destination
+    let origin: { lat: number; lng: number; label: string } | null = null;
+    let destination: { lat: number; lng: number; label: string } | null = null;
 
-    const studentCoords: [number, number] = [selectedStudentMarker.lat, selectedStudentMarker.lng];
-    const schoolCoords: [number, number] = [CANDELARIO_SCHOOL_LOCATION.lat, CANDELARIO_SCHOOL_LOCATION.lng];
+    if (isCustomPointsMode && customPointA && customPointB) {
+      origin = customPointA;
+      destination = customPointB;
+    } else if (selectedStudentMarker) {
+      origin = {
+        lat: selectedStudentMarker.lat,
+        lng: selectedStudentMarker.lng,
+        label: `Casa de ${selectedStudentMarker.student.name}`,
+      };
+      destination = {
+        lat: CANDELARIO_SCHOOL_LOCATION.lat,
+        lng: CANDELARIO_SCHOOL_LOCATION.lng,
+        label: CANDELARIO_SCHOOL_LOCATION.name,
+      };
+    }
 
-    // Trajectory Polyline
-    const polyline = L.polyline([studentCoords, schoolCoords], {
-      color: '#0071e3',
-      weight: 3.5,
-      dashArray: '6, 6',
-      opacity: 0.9,
-    }).addTo(routeGroup);
+    if (!origin || !destination) {
+      setRouteData(null);
+      return;
+    }
 
-    // Midpoint Distance & Time Badge
-    const midLat = (selectedStudentMarker.lat + CANDELARIO_SCHOOL_LOCATION.lat) / 2;
-    const midLng = (selectedStudentMarker.lng + CANDELARIO_SCHOOL_LOCATION.lng) / 2;
+    setIsCalculatingRoute(true);
 
-    const badgeIcon = L.divIcon({
-      className: 'candelario-midpoint-badge',
-      html: `
-        <div class="px-2.5 py-1 rounded-full bg-[#1d1d1f] text-white font-mono font-bold text-[10px] shadow-lg border border-white/20 whitespace-nowrap flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2">
-          <span>🚶 ${selectedStudentMarker.estimates.walkMinutes} min</span>
-          <span class="text-slate-400">·</span>
-          <span>${selectedStudentMarker.estimates.distanceRoadKm} km</span>
-        </div>
-      `,
-      iconSize: [120, 26],
-      iconAnchor: [60, 13],
+    fetchFreeOsmRoute(origin, destination, travelMode)
+      .then((res) => {
+        if (isCancelled) return;
+        setRouteData(res);
+        setIsCalculatingRoute(false);
+
+        // Draw Thick Visible High-Contrast Trajectory Polyline
+        // Outer glow/casing for visibility
+        L.polyline(res.coordinates, {
+          color: '#0f172a',
+          weight: 7,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(routeGroup);
+
+        // Inner bright line
+        const lineColor =
+          travelMode === 'foot' ? '#10b981' : travelMode === 'bus' ? '#9333ea' : '#0284c7';
+
+        L.polyline(res.coordinates, {
+          color: lineColor,
+          weight: 5,
+          opacity: 1,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(routeGroup);
+
+        // Start Flag Marker 🟢
+        const startIcon = L.divIcon({
+          className: 'candelario-route-start-icon',
+          html: `
+            <div class="px-2.5 py-1 rounded-xl bg-emerald-600 text-white font-black text-xs shadow-xl border-2 border-white flex items-center gap-1 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+              <span>🟢 Início</span>
+            </div>
+          `,
+          iconSize: [80, 28],
+          iconAnchor: [40, 14],
+        });
+        L.marker([origin.lat, origin.lng], { icon: startIcon, interactive: false }).addTo(routeGroup);
+
+        // End Flag Marker 🔴
+        const endIcon = L.divIcon({
+          className: 'candelario-route-end-icon',
+          html: `
+            <div class="px-2.5 py-1 rounded-xl bg-rose-600 text-white font-black text-xs shadow-xl border-2 border-white flex items-center gap-1 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+              <span>🏁 Chegada</span>
+            </div>
+          `,
+          iconSize: [80, 28],
+          iconAnchor: [40, 14],
+        });
+        L.marker([destination.lat, destination.lng], { icon: endIcon, interactive: false }).addTo(routeGroup);
+
+        // Midpoint badge with km & minutes
+        if (res.coordinates.length > 0) {
+          const midIdx = Math.floor(res.coordinates.length / 2);
+          const midCoord = res.coordinates[midIdx];
+
+          const modeIcon = travelMode === 'foot' ? '🚶' : travelMode === 'bus' ? '🚌' : '🚗';
+          const badgeIcon = L.divIcon({
+            className: 'candelario-route-midpoint-icon',
+            html: `
+              <div class="px-3 py-1.5 rounded-full bg-[#0f172a] text-white font-black text-xs shadow-2xl border-2 border-white flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+                <span>${modeIcon} ${res.durationMinutes} min</span>
+                <span class="text-amber-300 font-bold">·</span>
+                <span>${res.distanceKm} km</span>
+              </div>
+            `,
+            iconSize: [140, 32],
+            iconAnchor: [70, 16],
+          });
+          L.marker(midCoord, { icon: badgeIcon, interactive: false }).addTo(routeGroup);
+        }
+
+        // Fit map bounds comfortably
+        map.fitBounds([
+          [origin.lat, origin.lng],
+          [destination.lat, destination.lng],
+        ], {
+          padding: [80, 80],
+          maxZoom: 16,
+        });
+      })
+      .catch((err) => {
+        if (isCancelled) return;
+        setIsCalculatingRoute(false);
+        console.warn('Erro ao carregar rota OSRM:', err);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedStudentMarker, travelMode, isCustomPointsMode, customPointA, customPointB]);
+
+  // Voice Synthesizer to Read Steps Aloud for Elderly Users
+  const handleSpeakRoute = () => {
+    if (!('speechSynthesis' in window)) {
+      toast.error('Leitura em voz alta não é suportada pelo seu navegador.');
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!routeData) {
+      toast.info('Nenhuma rota calculada no momento.');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const modeLabel = travelMode === 'foot' ? 'a pé' : travelMode === 'bus' ? 'de ônibus' : 'de carro';
+    const targetName = selectedStudentMarker ? selectedStudentMarker.student.name : 'ponto de partida';
+
+    let speechText = `Caminho ${modeLabel} até a escola. Distância total: ${routeData.distanceKm} quilômetros. Tempo estimado: ${routeData.durationMinutes} minutos. `;
+
+    routeData.steps.forEach((step, idx) => {
+      speechText += `Passo ${idx + 1}: ${step.instruction}. `;
     });
 
-    L.marker([midLat, midLng], { icon: badgeIcon, interactive: false }).addTo(routeGroup);
+    speechText += 'Você chegou ao seu destino!';
 
-    // Smoothly pan & fit bounds
-    map.fitBounds([studentCoords, schoolCoords], {
-      padding: [70, 70],
-      maxZoom: 16,
-    });
-  }, [selectedStudentMarker]);
+    const utterance = new SpeechSynthesisUtterance(speechText);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 0.88; // Calm and clear for seniors
+    utterance.pitch = 1.0;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+    toast.success('Lendo instruções do caminho em voz alta...');
+  };
 
   const handleCenterOnSchool = () => {
     if (!mapInstanceRef.current) return;
@@ -476,172 +607,128 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
   const handleCopyCoords = (lat: number, lng: number) => {
     navigator.clipboard?.writeText(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     setCopiedCoords(true);
-    toast.success('Coordenadas copiadas para a área de transferência!');
+    toast.success('Coordenadas copiadas!');
     setTimeout(() => setCopiedCoords(false), 2000);
   };
 
+  const navUrls = useMemo(() => {
+    if (selectedStudentMarker) {
+      return buildGoogleMapsNavigationUrls(
+        selectedStudentMarker.lat,
+        selectedStudentMarker.lng,
+        selectedStudentMarker.fullAddress
+      );
+    }
+    if (customPointA && customPointB) {
+      return buildGoogleMapsNavigationUrls(
+        customPointB.lat,
+        customPointB.lng,
+        customPointB.label,
+        customPointA
+      );
+    }
+    return null;
+  }, [selectedStudentMarker, customPointA, customPointB]);
+
   return (
-    <div className="space-y-4 pb-20 animate-gentle-fade max-w-[1600px] mx-auto px-2 sm:px-4 lg:px-6 candelario-map-container">
-      {/* Top Banner & Title Bar */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-xs border border-black/[0.06] space-y-4">
+    <div className="space-y-4 pb-24 max-w-[1550px] mx-auto px-2 sm:px-4 lg:px-6 candelario-map-root font-sans">
+      {/* 1. Header Card - Ultra-Simplified for Elderly Users */}
+      <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border-2 border-slate-200 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[28px]">distance</span>
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-14 h-14 rounded-2xl bg-[#003440] text-white flex items-center justify-center shrink-0 shadow-md">
+              <span className="material-symbols-outlined text-[32px]">map</span>
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-[#0071e3]/10 text-[#0071e3] text-[0.7rem] font-black uppercase tracking-wider">
-                  Mapeamento Georreferenciado &amp; Trajetos
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wide border border-emerald-300">
+                  100% Gratuito · Sem Custos · Código Aberto
                 </span>
-                <span className="text-[0.74rem] font-semibold text-[#86868b]">
-                  {stats.total} de {allMarkers.length} estudantes ativos
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[0.68rem] font-bold border border-emerald-200">
-                  Latitude &amp; Longitude Integradas
+                <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-xs font-bold border border-slate-300">
+                  OpenStreetMap + OSRM
                 </span>
               </div>
-              <h1 className="text-[1.35rem] sm:text-[1.6rem] font-black text-[#1d1d1f] tracking-tight leading-tight mt-0.5">
-                Pontos de Endereço &amp; Tempo de Percurso até a EMEB Candelário
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight mt-1">
+                Mapa e Caminho dos Alunos até a Escola
               </h1>
-              <p className="text-[0.82rem] text-[#6e6e73] mt-0.5">
-                Geolocalização funcional com fotos dos estudantes, cálculo de distância rodoviária, tempo a pé, de carro e ônibus escolar.
+              <p className="text-sm sm:text-base text-slate-700 font-medium mt-0.5">
+                Toque no mapa ou escolha um aluno da lista para ver o trajeto pelas ruas, o tempo e a distância.
               </p>
             </div>
           </div>
 
-          {/* Quick Actions Bar */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Big Accessible Top Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
               onClick={handleCenterOnSchool}
-              className="h-[38px] px-3.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-[0.76rem] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-              title="Centralizar mapa na EMEB Candelário"
+              className="min-h-[48px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 border-slate-300 shadow-xs active:scale-98"
             >
-              <span className="material-symbols-outlined text-[17px] text-[#0071e3]">my_location</span>
-              <span>Centralizar na Escola</span>
+              <span className="material-symbols-outlined text-[20px] text-[#0066cc]">my_location</span>
+              <span>Ir para a Escola</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setShowSchoolRadiusCircle(!showSchoolRadiusCircle)}
-              className={`h-[38px] px-3.5 rounded-full text-[0.76rem] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                showSchoolRadiusCircle
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                  : 'bg-[#f5f5f7] text-[#6e6e73]'
+              onClick={() => {
+                setIsCustomPointsMode((prev) => !prev);
+                if (!isCustomPointsMode) {
+                  setSelectedStudentMarker(null);
+                  setCustomPointA(null);
+                  setCustomPointB(null);
+                  setSettingPointStep('pointA');
+                  toast.info('Modo 2 Pontos ativado! Toque no mapa para marcar o Ponto 1 de partida.');
+                } else {
+                  setSettingPointStep('none');
+                }
+              }}
+              className={`min-h-[48px] px-4 rounded-2xl font-extrabold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 shadow-xs active:scale-98 ${
+                isCustomPointsMode
+                  ? 'bg-amber-100 text-amber-950 border-amber-400'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300'
               }`}
-              title="Exibir círculos de raio caminhável (1km, 2km e 3.5km)"
             >
-              <span className="material-symbols-outlined text-[17px]">radar</span>
-              <span>Raios de Deslocamento</span>
+              <span className="material-symbols-outlined text-[20px] text-amber-600">route</span>
+              <span>{isCustomPointsMode ? 'Fechar Modo 2 Pontos' : 'Traçar Rota Entre 2 Pontos'}</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setIsListViewOpen(!isListViewOpen)}
-              className={`h-[38px] px-3.5 rounded-full text-[0.76rem] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              onClick={() => setIsListViewOpen((prev) => !prev)}
+              className={`min-h-[48px] px-4 rounded-2xl font-extrabold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 shadow-xs active:scale-98 ${
                 isListViewOpen
-                  ? 'bg-[#1d1d1f] text-white shadow-2xs'
-                  : 'bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#e8e8ed]'
+                  ? 'bg-[#0f172a] text-white border-[#0f172a]'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300'
               }`}
             >
-              <span className="material-symbols-outlined text-[17px]">format_list_bulleted</span>
-              <span>Lista de Estudantes ({filteredMarkers.length})</span>
+              <span className="material-symbols-outlined text-[20px]">format_list_bulleted</span>
+              <span>Lista de Alunos ({filteredMarkers.length})</span>
             </button>
           </div>
         </div>
 
-        {/* Metric Cards Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2">
-          <div className="rounded-2xl bg-[#f5f5f7] p-3 border border-black/[0.04]">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
-              Distância Média
-            </span>
-            <span className="text-[1.35rem] font-black text-[#1d1d1f] tabular-nums leading-tight">
-              {stats.avgDistanceKm} <span className="text-[0.8rem] font-semibold text-[#6e6e73]">km</span>
-            </span>
-            <span className="text-[0.68rem] text-[#6e6e73] block mt-0.5">Trajeto rodoviário</span>
-          </div>
-
-          <div className="rounded-2xl bg-[#f5f5f7] p-3 border border-black/[0.04]">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
-              Tempo Médio a Pé
-            </span>
-            <span className="text-[1.35rem] font-black text-[#0071e3] tabular-nums leading-tight">
-              {stats.avgWalkMinutes} <span className="text-[0.8rem] font-semibold text-[#6e6e73]">min</span>
-            </span>
-            <span className="text-[0.68rem] text-[#6e6e73] block mt-0.5">Caminhada escolar</span>
-          </div>
-
-          <div className="rounded-2xl bg-[#f5f5f7] p-3 border border-black/[0.04]">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
-              Tempo de Carro
-            </span>
-            <span className="text-[1.35rem] font-black text-[#34c759] tabular-nums leading-tight">
-              {stats.avgCarMinutes} <span className="text-[0.8rem] font-semibold text-[#6e6e73]">min</span>
-            </span>
-            <span className="text-[0.68rem] text-[#6e6e73] block mt-0.5">Trânsito local</span>
-          </div>
-
-          <div className="rounded-2xl bg-[#f5f5f7] p-3 border border-black/[0.04]">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
-              Raio Imediato &lt; 1km
-            </span>
-            <span className="text-[1.35rem] font-black text-[#1d1d1f] tabular-nums leading-tight">
-              {stats.menosDe1Km}
-            </span>
-            <span className="text-[0.68rem] text-[#1d8338] font-bold block mt-0.5">
-              {stats.total > 0 ? Math.round((stats.menosDe1Km / stats.total) * 100) : 0}% da escola
-            </span>
-          </div>
-
-          <div className="rounded-2xl bg-[#f5f5f7] p-3 border border-black/[0.04]">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
-              Distância &gt; 2km
-            </span>
-            <span className="text-[1.35rem] font-black text-[#ff9500] tabular-nums leading-tight">
-              {stats.maisDe2Km}
-            </span>
-            <span className="text-[0.68rem] text-[#b25000] font-bold block mt-0.5">
-              Transporte prioritário
-            </span>
-          </div>
-
-          <div className="rounded-2xl bg-[#f5f5f7] p-3 border border-black/[0.04]">
-            <span className="text-[0.66rem] font-bold uppercase tracking-wider text-[#86868b] block">
-              Transporte Escolar
-            </span>
-            <span className="text-[1.35rem] font-black text-[#8b5cf6] tabular-nums leading-tight">
-              {stats.comTransporteEscolar}
-            </span>
-            <span className="text-[0.68rem] text-[#7c3aed] font-bold block mt-0.5">
-              Rotas de Ônibus
-            </span>
-          </div>
-        </div>
-
-        {/* Filter Toolbar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-1">
-          {/* Search bar */}
-          <div className="relative">
-            <span className="material-symbols-outlined text-[18px] text-[#86868b] absolute left-3 top-2.5">
+        {/* 2. Simplified Clean Filter Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t-2 border-slate-100">
+          {/* Big Search Input */}
+          <div className="md:col-span-6 relative">
+            <span className="material-symbols-outlined text-[22px] text-slate-500 absolute left-3.5 top-3.5">
               search
             </span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por estudante, rua, bairro ou RA..."
-              className="w-full h-10 pl-9 pr-3 rounded-2xl bg-[#f5f5f7] text-[0.82rem] font-semibold text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30"
+              placeholder="Digite o nome da criança, rua ou bairro..."
+              className="w-full min-h-[50px] pl-11 pr-4 rounded-2xl bg-slate-50 text-base font-bold text-slate-900 border-2 border-slate-300 placeholder:text-slate-500 placeholder:font-normal focus:bg-white focus:outline-none focus:border-[#0066cc]"
             />
           </div>
 
-          {/* Filter by Class */}
-          <div>
+          {/* Class Selector */}
+          <div className="md:col-span-3">
             <select
               value={filterClassId}
               onChange={(e) => setFilterClassId(e.target.value)}
-              className="w-full h-10 px-3 rounded-2xl bg-[#f5f5f7] text-[0.82rem] font-semibold text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 cursor-pointer"
+              className="w-full min-h-[50px] px-3.5 rounded-2xl bg-slate-50 text-sm sm:text-base font-extrabold text-slate-900 border-2 border-slate-300 focus:bg-white focus:outline-none focus:border-[#0066cc] cursor-pointer"
             >
               <option value="all">Todas as {classes.length} Turmas</option>
               {classes.map((c) => (
@@ -652,372 +739,489 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
             </select>
           </div>
 
-          {/* Filter by Shift */}
-          <div>
-            <select
-              value={filterShift}
-              onChange={(e) => setFilterShift(e.target.value as any)}
-              className="w-full h-10 px-3 rounded-2xl bg-[#f5f5f7] text-[0.82rem] font-semibold text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 cursor-pointer"
+          {/* Only Bus Toggle Button */}
+          <div className="md:col-span-3">
+            <button
+              type="button"
+              onClick={() => setFilterOnlyBus((prev) => !prev)}
+              className={`w-full min-h-[50px] px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 border-2 cursor-pointer transition-all active:scale-98 ${
+                filterOnlyBus
+                  ? 'bg-purple-100 text-purple-950 border-purple-500'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+              }`}
             >
-              <option value="all">Todos os Turnos (Manhã + Tarde)</option>
-              <option value="MANHÃ">☀️ Turno Manhã</option>
-              <option value="TARDE">⛅ Turno Tarde</option>
-            </select>
+              <span className="material-symbols-outlined text-[20px] text-purple-700">directions_bus</span>
+              <span>{filterOnlyBus ? 'Mostrando só Ônibus' : 'Ver só Alunos com Ônibus'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 3. Summary Badges */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div className="rounded-2xl bg-slate-50 p-3.5 border-2 border-slate-200 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-[26px] text-blue-600">straighten</span>
+              <div>
+                <span className="text-xs font-bold text-slate-600 uppercase block">Distância Média</span>
+                <span className="text-lg font-black text-slate-900">{stats.avgDistanceKm} km até a escola</span>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-slate-500">Pelas Ruas</span>
           </div>
 
-          {/* Filter by Distance Tier */}
-          <div>
-            <select
-              value={filterDistanceTier}
-              onChange={(e) => setFilterDistanceTier(e.target.value as any)}
-              className="w-full h-10 px-3 rounded-2xl bg-[#f5f5f7] text-[0.82rem] font-semibold text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 cursor-pointer"
-            >
-              <option value="all">Todas as Distâncias</option>
-              <option value="perto">🟢 Raio Imediato (&lt; 1.0 km)</option>
-              <option value="medio">🔵 Intermediário (1.0 a 2.0 km)</option>
-              <option value="distante">🟠 Distante (2.0 a 3.5 km)</option>
-              <option value="muito_distante">🔴 Muito Distante (&gt; 3.5 km)</option>
-            </select>
+          <div className="rounded-2xl bg-emerald-50 p-3.5 border-2 border-emerald-200 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-[26px] text-emerald-700">directions_walk</span>
+              <div>
+                <span className="text-xs font-bold text-emerald-800 uppercase block">Tempo Médio a Pé</span>
+                <span className="text-lg font-black text-emerald-950">{stats.avgWalkMinutes} minutos</span>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-emerald-700">Caminhada</span>
           </div>
 
-          {/* Filter by Bus Route */}
-          <div>
-            <select
-              value={filterTransporte}
-              onChange={(e) => setFilterTransporte(e.target.value as any)}
-              className="w-full h-10 px-3 rounded-2xl bg-[#f5f5f7] text-[0.82rem] font-semibold text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30 cursor-pointer"
-            >
-              <option value="all">Todos os Transportes</option>
-              <option value="com_onibus">🚌 Com Ônibus Fretado</option>
-              <option value="sem_onibus">🚶 Transporte Individual / A pé</option>
-            </select>
+          <div className="rounded-2xl bg-purple-50 p-3.5 border-2 border-purple-200 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-[26px] text-purple-700">directions_bus</span>
+              <div>
+                <span className="text-xs font-bold text-purple-800 uppercase block">Transporte Escolar</span>
+                <span className="text-lg font-black text-purple-950">{stats.withBus} alunos</span>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-purple-700">Ônibus Fretado</span>
           </div>
         </div>
       </div>
 
-      {/* Main Interactive Map Layout: Grid with Map & Inspector Panel */}
+      {/* Mobile Tab Selector (Big & Highly Visible) */}
+      <div className="lg:hidden flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveMobileTab('map')}
+          className={`flex-1 min-h-[50px] rounded-2xl font-black text-base flex items-center justify-center gap-2 border-2 transition-all ${
+            activeMobileTab === 'map'
+              ? 'bg-[#0f172a] text-white border-[#0f172a] shadow-md'
+              : 'bg-white text-slate-800 border-slate-300'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[22px]">map</span>
+          <span>Ver Mapa</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveMobileTab('route')}
+          className={`flex-1 min-h-[50px] rounded-2xl font-black text-base flex items-center justify-center gap-2 border-2 transition-all ${
+            activeMobileTab === 'route'
+              ? 'bg-[#005bb5] text-white border-[#005bb5] shadow-md'
+              : 'bg-white text-slate-800 border-slate-300'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[22px]">directions</span>
+          <span>Ver Caminho &amp; Aluno {selectedStudentMarker ? '✅' : ''}</span>
+        </button>
+      </div>
+
+      {/* Main Grid: Interactive Leaflet Map (Left) & Route / Inspector Panel (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* Leaflet Native Map Container */}
-        <div className="lg:col-span-8 space-y-3">
-          <div className="relative bg-white rounded-3xl p-2.5 shadow-sm border border-black/[0.08] overflow-hidden">
-            {/* The Actual Leaflet Map Canvas */}
+        {/* Leaflet Map Column */}
+        <div className={`lg:col-span-7 space-y-3 ${activeMobileTab === 'route' ? 'hidden lg:block' : 'block'}`}>
+          <div className="relative bg-white rounded-3xl p-3 shadow-md border-2 border-slate-300 overflow-hidden">
+            {/* Custom 2-Points Instructional Banner */}
+            {isCustomPointsMode && (
+              <div className="mb-3 p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[26px] text-amber-700">touch_app</span>
+                  <div>
+                    <span className="font-black text-sm block">Modo: Traçar Rota Livre Entre 2 Pontos</span>
+                    <span className="text-xs font-semibold text-amber-900 block">
+                      {settingPointStep === 'pointA' && '👉 Toque no mapa para marcar o Início (Ponto 1)'}
+                      {settingPointStep === 'pointB' && '👉 Agora toque no mapa para marcar a Chegada (Ponto 2)'}
+                      {settingPointStep === 'none' && customPointA && customPointB && '✅ Rota calculada com sucesso!'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomPointA(null);
+                      setCustomPointB(null);
+                      setSettingPointStep('pointA');
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 font-black text-xs cursor-pointer"
+                  >
+                    Recomeçar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomPointsMode(false)}
+                    className="p-1 rounded-xl text-amber-700 hover:text-black cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Map Canvas */}
             <div
               ref={mapContainerRef}
-              className="w-full h-[540px] sm:h-[620px] rounded-2xl overflow-hidden z-0"
-              style={{ minHeight: '520px' }}
+              className="w-full h-[520px] sm:h-[620px] rounded-2xl overflow-hidden z-0"
+              style={{ minHeight: '500px' }}
             />
 
-            {/* Bottom Floating Legend */}
-            <div className="absolute bottom-6 left-6 z-10 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-black/[0.08] shadow-lg text-[0.72rem] space-y-1.5 max-w-[280px]">
-              <span className="font-extrabold text-[#1d1d1f] block text-[0.7rem] uppercase tracking-wider">
-                Legenda de Deslocamento até a EMEB:
+            {/* Quick Floating Hint Overlay on Map */}
+            <div className="absolute bottom-5 left-5 z-10 bg-white/95 backdrop-blur-md rounded-2xl p-3 border-2 border-slate-200 shadow-xl max-w-[280px]">
+              <span className="font-black text-slate-900 text-xs block mb-1">
+                Legenda Simples:
               </span>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-emerald-500 border border-white shrink-0" />
-                <span className="text-[#1d1d1f] font-semibold">&lt; 1 km (Raio Caminhável)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#0071e3] border border-white shrink-0" />
-                <span className="text-[#1d1d1f] font-semibold">1 a 2 km (Deslocamento Médio)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-amber-500 border border-white shrink-0" />
-                <span className="text-[#1d1d1f] font-semibold">&gt; 2 km (Distância Elevada)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-purple-600 border border-white shrink-0" />
-                <span className="text-[#1d1d1f] font-semibold">🚌 Ônibus Fretado Atribuído</span>
+              <div className="space-y-1 text-xs font-bold text-slate-700">
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 border border-white" />
+                  <span>Raio de 1 km da Escola</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full bg-purple-600 border border-white" />
+                  <span>Criança com Ônibus Escolar</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded-full bg-blue-600 border border-white" />
+                  <span>Criança Transporte Individual / A pé</span>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Selected Student Banner Overlay on Top of Map */}
-            {selectedStudentMarker && (
-              <div className="absolute top-5 left-5 right-16 z-10 bg-white/95 backdrop-blur-md p-3 rounded-2xl border border-black/[0.08] shadow-lg flex items-center justify-between gap-3 animate-in fade-in duration-200">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-white border-2 border-[#0071e3] shadow-xs shrink-0 flex items-center justify-center">
-                    {selectedStudentMarker.photoUrl ? (
-                      <img
-                        src={selectedStudentMarker.photoUrl}
-                        alt={selectedStudentMarker.student.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="font-mono font-bold text-xs text-[#003440]">
-                        {selectedStudentMarker.initials}
+        {/* Right Inspector & Full Turn-by-Turn Routing Panel */}
+        <div className={`lg:col-span-5 space-y-4 ${activeMobileTab === 'map' ? 'hidden lg:block' : 'block'}`}>
+          {selectedStudentMarker || (isCustomPointsMode && customPointA && customPointB) ? (
+            <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-md border-2 border-slate-300 space-y-5 animate-in fade-in duration-200">
+              {/* Top Banner of Selected Item */}
+              <div className="flex items-start justify-between gap-3 pb-3 border-b-2 border-slate-100">
+                <div className="flex items-center gap-3">
+                  {selectedStudentMarker ? (
+                    <>
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white border-3 border-blue-600 shadow-md shrink-0 flex items-center justify-center">
+                        {selectedStudentMarker.photoUrl ? (
+                          <img
+                            src={selectedStudentMarker.photoUrl}
+                            alt={selectedStudentMarker.student.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="font-mono font-black text-xl text-[#003440]">
+                            {selectedStudentMarker.initials}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-xs font-black uppercase text-blue-700 block">
+                          Aluno(a) Selecionado(a)
+                        </span>
+                        <h2 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
+                          {selectedStudentMarker.student.name}
+                        </h2>
+                        <p className="text-sm font-bold text-slate-600 mt-0.5">
+                          Turma {selectedStudentMarker.cls.name} • Nº {selectedStudentMarker.student.number}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <span className="text-xs font-black uppercase text-amber-700 block">
+                        Rota Personalizada
                       </span>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-[0.88rem] text-[#1d1d1f] truncate">
-                        {selectedStudentMarker.student.name}
-                      </span>
-                      <span className="text-[0.68rem] font-bold px-2 py-0.2 rounded-md bg-[#eaf6ef] text-[#005035]">
-                        Turma {selectedStudentMarker.cls.name}
-                      </span>
+                      <h2 className="text-lg font-black text-slate-900">
+                        {customPointA?.label} ➔ {customPointB?.label}
+                      </h2>
                     </div>
-                    <p className="text-[0.72rem] text-[#6e6e73] truncate">
-                      🚶 {selectedStudentMarker.estimates.walkMinutes} min a pé ({selectedStudentMarker.estimates.distanceRoadKm} km) · Lat: {selectedStudentMarker.lat.toFixed(5)}, Lng: {selectedStudentMarker.lng.toFixed(5)}
-                    </p>
-                  </div>
+                  )}
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setSelectedStudentMarker(null)}
-                  className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-                  title="Fechar seleção"
+                  onClick={() => {
+                    setSelectedStudentMarker(null);
+                    setCustomPointA(null);
+                    setCustomPointB(null);
+                    setIsCustomPointsMode(false);
+                  }}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 cursor-pointer"
+                  title="Fechar rota"
                 >
-                  <span className="material-symbols-outlined text-[18px]">close</span>
+                  <span className="material-symbols-outlined text-[24px]">close</span>
                 </button>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Right Inspector & Student Details Panel */}
-        <div className="lg:col-span-4 space-y-4">
-          {selectedStudentMarker ? (
-            <div className="bg-white rounded-3xl p-5 shadow-sm border border-black/[0.08] space-y-4 animate-in fade-in duration-200">
-              {/* Header: Photo, Name, RA, Class */}
-              <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-black/[0.06]">
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white border-2 border-[#0071e3] shadow-md shrink-0 flex items-center justify-center">
-                    {selectedStudentMarker.photoUrl ? (
-                      <img
-                        src={selectedStudentMarker.photoUrl}
-                        alt={selectedStudentMarker.student.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="font-mono font-bold text-base text-[#003440]">
-                        {selectedStudentMarker.initials}
+              {/* Travel Mode Selector: 3 Big Buttons (Walking / Car / Bus) */}
+              <div className="space-y-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-600 block">
+                  Escolha como fazer o trajeto:
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTravelMode('foot')}
+                    className={`min-h-[52px] rounded-2xl font-black text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
+                      travelMode === 'foot'
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-md'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">directions_walk</span>
+                    <span>🚶 A Pé</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTravelMode('driving')}
+                    className={`min-h-[52px] rounded-2xl font-black text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
+                      travelMode === 'driving'
+                        ? 'bg-[#0066cc] text-white border-[#0055aa] shadow-md'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">directions_car</span>
+                    <span>🚗 De Carro</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTravelMode('bus')}
+                    className={`min-h-[52px] rounded-2xl font-black text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
+                      travelMode === 'bus'
+                        ? 'bg-purple-700 text-white border-purple-800 shadow-md'
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">directions_bus</span>
+                    <span>🚌 Ônibus</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Route Summary Box: Distance & Duration */}
+              <div className="p-4 rounded-2xl bg-blue-50 border-2 border-blue-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-blue-900 tracking-wider flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[18px]">straighten</span>
+                    <span>Distância Real Pelas Ruas</span>
+                  </span>
+                  {isCalculatingRoute && (
+                    <span className="text-xs font-bold text-blue-700 animate-pulse">
+                      Calculando trajeto...
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <div className="bg-white rounded-xl p-3 border-2 border-blue-100 shadow-xs">
+                    <span className="text-xs font-bold text-slate-500 block uppercase">Distância</span>
+                    <span className="text-2xl font-black text-slate-900">
+                      {routeData ? `${routeData.distanceKm} km` : selectedStudentMarker ? `${selectedStudentMarker.estimates.distanceRoadKm} km` : '--'}
+                    </span>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-3 border-2 border-blue-100 shadow-xs">
+                    <span className="text-xs font-bold text-slate-500 block uppercase">Tempo Estimado</span>
+                    <span className="text-2xl font-black text-blue-700">
+                      {routeData ? `${routeData.durationMinutes} min` : selectedStudentMarker ? `${selectedStudentMarker.estimates.walkMinutes} min` : '--'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Big Voice Synthesizer Button */}
+                <button
+                  type="button"
+                  onClick={handleSpeakRoute}
+                  className={`w-full min-h-[48px] px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 cursor-pointer transition-all border-2 shadow-xs active:scale-98 ${
+                    isSpeaking
+                      ? 'bg-rose-600 text-white border-rose-700 animate-pulse'
+                      : 'bg-emerald-700 hover:bg-emerald-800 text-white border-emerald-800'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[22px]">
+                    {isSpeaking ? 'stop_circle' : 'volume_up'}
+                  </span>
+                  <span>{isSpeaking ? 'Parar Leitura de Voz' : '🔊 Ouvir Caminho em Voz Alta'}</span>
+                </button>
+              </div>
+
+              {/* Turn-by-Turn Steps List (Numbered with clear instructions) */}
+              <div className="space-y-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                  Passo a Passo pelas Ruas (Gratuito):
+                </span>
+
+                <div className="max-h-[220px] overflow-y-auto divide-y-2 divide-slate-100 bg-slate-50 rounded-2xl p-2 border-2 border-slate-200">
+                  {routeData && routeData.steps.length > 0 ? (
+                    routeData.steps.map((step, idx) => (
+                      <div key={idx} className="py-2.5 px-2 flex items-start gap-3">
+                        <span className="w-6 h-6 rounded-full bg-[#0f172a] text-white font-mono font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-slate-900 leading-snug">
+                            {step.instruction}
+                          </p>
+                          <span className="text-xs font-bold text-slate-500 block mt-0.5">
+                            {step.distanceMeters > 0 ? `${step.distanceMeters} metros` : ''} • {step.streetName}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-sm font-bold text-slate-500">
+                      Calculando as ruas do trajeto...
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Student Details: Address, Contact, Ficha */}
+              {selectedStudentMarker && (
+                <div className="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200 space-y-3">
+                  <div>
+                    <span className="text-xs font-bold text-slate-500 uppercase block">Endereço do Aluno:</span>
+                    <p className="text-sm font-black text-slate-900 mt-0.5">
+                      {selectedStudentMarker.fullAddress}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs font-mono font-semibold text-slate-600">
+                        Lat: {selectedStudentMarker.lat.toFixed(5)}, Lng: {selectedStudentMarker.lng.toFixed(5)}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCoords(selectedStudentMarker.lat, selectedStudentMarker.lng)}
+                        className="text-xs font-black text-blue-700 hover:underline cursor-pointer"
+                      >
+                        {copiedCoords ? 'Copiado!' : 'Copiar'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Family Contact Buttons */}
+                  {(() => {
+                    const rawPhone =
+                      selectedStudentMarker.student.telefones ||
+                      selectedStudentMarker.student.guardianPhone;
+                    const waList = buildWhatsAppLinksFromPhoneString(
+                      rawPhone,
+                      selectedStudentMarker.student.name,
+                      `Olá! Somos da EMEB Prof. Joaquim Candelário de Freitas. Gostaríamos de conversar sobre o trajeto e presença escolar de ${selectedStudentMarker.student.name}.`
+                    );
+
+                    if (!rawPhone || waList.length === 0) {
+                      return <span className="text-xs font-bold text-slate-500 italic">Sem telefone cadastrado</span>;
+                    }
+
+                    return (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <a
+                          href={waList[0].waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 min-h-[44px] px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">chat</span>
+                          <span>WhatsApp Responsável</span>
+                        </a>
+
+                        <a
+                          href={`tel:${rawPhone.replace(/\D/g, '')}`}
+                          className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 border-2 border-slate-300"
+                          title="Fazer ligação"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">call</span>
+                          <span>Ligar</span>
+                        </a>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Ficha Completa and Ficha PDF buttons */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
+                    {onOpenStudentGrid && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenStudentGrid(
+                            selectedStudentMarker.student,
+                            selectedStudentMarker.cls.id,
+                            selectedStudentMarker.cls.name,
+                            selectedStudentMarker.cls.classesHeld || 20
+                          )
+                        }
+                        className="min-h-[46px] px-3 rounded-xl bg-[#003440] hover:bg-[#00222a] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">open_in_full</span>
+                        <span>Ficha Completa</span>
+                      </button>
+                    )}
+
+                    {onOpenStudentPdf && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenStudentPdf(selectedStudentMarker.student, selectedStudentMarker.cls.name)
+                        }
+                        className="min-h-[46px] px-3 rounded-xl bg-[#0066cc] hover:bg-[#0055aa] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                        <span>Abrir PDF</span>
+                      </button>
                     )}
                   </div>
-                  <div>
-                    <span className="text-[0.66rem] font-black uppercase tracking-wider text-[#0071e3] block">
-                      Estudante Selecionado(a)
-                    </span>
-                    <h2 className="text-[1.05rem] font-black text-[#1d1d1f] leading-tight">
-                      {selectedStudentMarker.student.name}
-                    </h2>
-                    <p className="text-[0.72rem] text-[#6e6e73] font-mono mt-0.5">
-                      Nº {selectedStudentMarker.student.number.toString().padStart(2, '0')} · RA {selectedStudentMarker.student.ra || 'S/N'}-{selectedStudentMarker.student.digRa || '0'}
-                    </p>
-                  </div>
                 </div>
+              )}
 
-                <span className="px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f] font-bold text-[0.72rem] shrink-0 border border-black/[0.06]">
-                  {selectedStudentMarker.cls.name}
-                </span>
-              </div>
-
-              {/* Exact Geolocation: Latitude & Longitude */}
-              <div className="bg-[#f8faf9] rounded-2xl p-3.5 border border-[#003440]/10 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#003440] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[15px]">pin_drop</span>
-                    <span>Geolocalização Precisa (Lat / Lng)</span>
+              {/* Free Open Navigation Links (OpenStreetMap / Web Maps) */}
+              {navUrls && (
+                <div className="pt-2 border-t-2 border-slate-100 space-y-2">
+                  <span className="text-xs font-bold text-slate-600 block">
+                    Abrir Trajeto em Aplicativos Externos (Sem API Keys):
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyCoords(selectedStudentMarker.lat, selectedStudentMarker.lng)}
-                    className="text-[0.68rem] font-bold text-[#0071e3] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">
-                      {copiedCoords ? 'done' : 'content_copy'}
-                    </span>
-                    <span>{copiedCoords ? 'Copiado!' : 'Copiar'}</span>
-                  </button>
-                </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <a
+                      href={navUrls.openStreetMapDirectionsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-xs flex items-center justify-center gap-1.5 border-2 border-slate-300"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                      <span>OpenStreetMap</span>
+                    </a>
 
-                <div className="grid grid-cols-2 gap-2 text-center font-mono">
-                  <div className="bg-white rounded-xl p-2 border border-black/[0.05]">
-                    <span className="text-[0.62rem] text-slate-400 block font-sans uppercase">Latitude</span>
-                    <span className="text-[0.82rem] font-bold text-[#003440]">
-                      {selectedStudentMarker.lat.toFixed(5)}
-                    </span>
-                  </div>
-                  <div className="bg-white rounded-xl p-2 border border-black/[0.05]">
-                    <span className="text-[0.62rem] text-slate-400 block font-sans uppercase">Longitude</span>
-                    <span className="text-[0.82rem] font-bold text-[#003440]">
-                      {selectedStudentMarker.lng.toFixed(5)}
-                    </span>
+                    <a
+                      href={navUrls.directionsToSchoolUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-xs flex items-center justify-center gap-1.5 border-2 border-slate-300"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">navigation</span>
+                      <span>Navegar no Celular</span>
+                    </a>
                   </div>
                 </div>
-
-                <div className="pt-1 text-[0.72rem] text-[#1d1d1f]">
-                  <span className="text-slate-400 block text-[0.64rem] font-bold uppercase">Endereço Cadastrado:</span>
-                  <span className="font-semibold block">{selectedStudentMarker.fullAddress}</span>
-                </div>
-              </div>
-
-              {/* Cálculo Oficial de Percurso até a EMEB Candelário */}
-              <div className="bg-white rounded-2xl p-3.5 border border-black/[0.08] space-y-2.5 shadow-2xs">
-                <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-slate-700 block">
-                  Tempo de Percurso até a EMEB Candelário
-                </span>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-[#f0fdf4] rounded-xl p-2.5 border border-emerald-200 text-center">
-                    <span className="material-symbols-outlined text-emerald-700 text-[20px] block">
-                      directions_walk
-                    </span>
-                    <span className="text-xl font-black text-emerald-800 font-mono tabular-nums block mt-0.5">
-                      {selectedStudentMarker.estimates.walkMinutes}
-                      <span className="text-[0.65rem] font-normal"> min</span>
-                    </span>
-                    <span className="text-[0.62rem] font-bold text-emerald-700 block uppercase">
-                      A pé
-                    </span>
-                  </div>
-
-                  <div className="bg-[#f0f9ff] rounded-xl p-2.5 border border-sky-200 text-center">
-                    <span className="material-symbols-outlined text-sky-700 text-[20px] block">
-                      directions_car
-                    </span>
-                    <span className="text-xl font-black text-sky-800 font-mono tabular-nums block mt-0.5">
-                      {selectedStudentMarker.estimates.carMinutes}
-                      <span className="text-[0.65rem] font-normal"> min</span>
-                    </span>
-                    <span className="text-[0.62rem] font-bold text-sky-700 block uppercase">
-                      De Carro
-                    </span>
-                  </div>
-
-                  <div className="bg-[#faf5ff] rounded-xl p-2.5 border border-purple-200 text-center">
-                    <span className="material-symbols-outlined text-purple-700 text-[20px] block">
-                      directions_bus
-                    </span>
-                    <span className="text-xl font-black text-purple-800 font-mono tabular-nums block mt-0.5">
-                      {selectedStudentMarker.estimates.busMinutes}
-                      <span className="text-[0.65rem] font-normal"> min</span>
-                    </span>
-                    <span className="text-[0.62rem] font-bold text-purple-700 block uppercase">
-                      Ônibus
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-[0.74rem]">
-                  <span className="text-slate-600 font-medium">Distância Rodoviária Real:</span>
-                  <span className="font-mono font-black text-slate-900 text-[0.88rem]">
-                    {selectedStudentMarker.estimates.distanceRoadKm} km
-                  </span>
-                </div>
-
-                {selectedStudentMarker.student.rotaOnibus && (
-                  <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-between text-[0.74rem]">
-                    <span className="text-purple-800 font-semibold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[16px]">directions_bus</span>
-                      <span>Linha de Transporte Fretado:</span>
-                    </span>
-                    <span className="font-extrabold text-purple-900">
-                      {selectedStudentMarker.student.rotaOnibus}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Family Contacts & WhatsApp Quick Link */}
-              <div className="bg-[#f5f5f7] rounded-2xl p-3.5 border border-black/[0.04] space-y-2">
-                <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#6e6e73] block">
-                  Responsável &amp; Comunicação
-                </span>
-
-                <div className="text-[0.74rem]">
-                  <span className="text-slate-400 block text-[0.64rem] font-bold uppercase">
-                    {selectedStudentMarker.guardianInfo.roleLabel}:
-                  </span>
-                  <span className="font-bold text-slate-900 block truncate">
-                    {selectedStudentMarker.guardianInfo.cleanName}
-                  </span>
-                </div>
-
-                {(() => {
-                  const rawPhone =
-                    selectedStudentMarker.student.telefones ||
-                    selectedStudentMarker.student.guardianPhone;
-                  const waList = buildWhatsAppLinksFromPhoneString(
-                    rawPhone,
-                    selectedStudentMarker.student.name,
-                    `Olá! Somos da Secretaria de Educação de Jundiaí / EMEB Joaquim Candelário de Freitas. Gostaríamos de conversar sobre o trajeto e acompanhamento escolar de ${selectedStudentMarker.student.name}.`
-                  );
-
-                  if (!rawPhone || waList.length === 0) {
-                    return <span className="text-slate-400 italic text-[0.7rem]">Sem telefone cadastrado</span>;
-                  }
-
-                  return (
-                    <div className="flex items-center gap-2 pt-1">
-                      <a
-                        href={waList[0].waUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 h-[32px] px-3 rounded-xl bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-[0.72rem] flex items-center justify-center gap-1.5 transition-colors cursor-pointer truncate"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">chat</span>
-                        <span className="truncate">WhatsApp: {waList[0].display}</span>
-                      </a>
-
-                      <a
-                        href={`tel:${rawPhone.replace(/\D/g, '')}`}
-                        className="h-[32px] px-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-[0.72rem] flex items-center justify-center transition-colors border border-black/[0.08]"
-                        title="Fazer ligação"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">call</span>
-                      </a>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Action Buttons: Ficha Completa & Ficha PDF */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                {onOpenStudentGrid && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onOpenStudentGrid(
-                        selectedStudentMarker.student,
-                        selectedStudentMarker.cls.id,
-                        selectedStudentMarker.cls.name,
-                        selectedStudentMarker.cls.classesHeld || 20
-                      )
-                    }
-                    className="h-[38px] px-3 rounded-xl bg-[#003440] hover:bg-[#00252e] text-white font-bold text-[0.74rem] flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-97"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">open_in_full</span>
-                    <span>Ficha Completa</span>
-                  </button>
-                )}
-
-                {onOpenStudentPdf && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onOpenStudentPdf(selectedStudentMarker.student, selectedStudentMarker.cls.name)
-                    }
-                    className="h-[38px] px-3 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-bold text-[0.74rem] flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-97"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                    <span>Ficha PDF</span>
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           ) : (
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-black/[0.08] text-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center mx-auto">
-                <span className="material-symbols-outlined text-[28px]">touch_app</span>
+            /* Empty State: Encouraging clear guidance for elderly users */
+            <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-md border-2 border-slate-300 text-center space-y-4">
+              <div className="w-16 h-16 rounded-3xl bg-blue-100 text-blue-700 flex items-center justify-center mx-auto shadow-xs">
+                <span className="material-symbols-outlined text-[36px]">touch_app</span>
               </div>
               <div>
-                <h3 className="font-extrabold text-[0.95rem] text-[#1d1d1f]">
-                  Selecione um Estudante no Mapa
+                <h3 className="text-lg sm:text-xl font-black text-slate-900">
+                  Como Ver o Caminho e Distância
                 </h3>
-                <p className="text-[0.74rem] text-[#6e6e73] mt-1 leading-relaxed">
-                  Clique em qualquer pino de foto no mapa interativo ou selecione da lista para traçar a rota exata até a EMEB Candelário, calcular tempo a pé, de carro, de ônibus e visualizar as coordenadas geográficas.
+                <p className="text-sm sm:text-base font-medium text-slate-600 mt-2 leading-relaxed">
+                  1. Toque em qualquer foto de aluno no mapa à esquerda.<br />
+                  2. Ou abra a lista abaixo e toque no nome do aluno desejado.<br />
+                  3. O sistema calcula na hora a rota pelas ruas, tempo de caminhada, carro e ônibus, 100% grátis!
                 </p>
               </div>
 
@@ -1025,32 +1229,32 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsListViewOpen(true)}
-                  className="w-full h-[40px] px-4 rounded-xl bg-[#1d1d1f] hover:bg-black text-white text-[0.78rem] font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                  className="w-full min-h-[50px] px-4 rounded-2xl bg-[#0f172a] hover:bg-black text-white text-base font-black flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-98"
                 >
-                  <span className="material-symbols-outlined text-[18px]">format_list_bulleted</span>
-                  <span>Ver Lista de {filteredMarkers.length} Estudantes</span>
+                  <span className="material-symbols-outlined text-[20px]">format_list_bulleted</span>
+                  <span>Ver Lista com {filteredMarkers.length} Alunos</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* Quick List of Filtered Students */}
+          {/* Quick List Modal / Card */}
           {isListViewOpen && (
-            <div className="bg-white rounded-3xl p-4 shadow-sm border border-black/[0.08] space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-black/[0.06]">
-                <span className="text-[0.72rem] font-extrabold uppercase tracking-wider text-slate-700">
-                  Estudantes Mapeados ({filteredMarkers.length})
+            <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-lg border-2 border-slate-300 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b-2 border-slate-100">
+                <span className="text-sm font-black uppercase text-slate-800">
+                  Lista de Alunos ({filteredMarkers.length})
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsListViewOpen(false)}
-                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                  className="p-1 rounded-xl text-slate-500 hover:text-black cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">close</span>
+                  <span className="material-symbols-outlined text-[22px]">close</span>
                 </button>
               </div>
 
-              <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100 pr-1">
+              <div className="max-h-[360px] overflow-y-auto divide-y-2 divide-slate-100 pr-1">
                 {filteredMarkers.map((m) => {
                   const isSelected = selectedStudentMarker?.student.id === m.student.id;
                   return (
@@ -1058,34 +1262,38 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                       key={m.student.id}
                       onClick={() => {
                         setSelectedStudentMarker(m);
+                        setIsCustomPointsMode(false);
+                        setActiveMobileTab('route');
                       }}
-                      className={`p-2 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer transition-colors ${
-                        isSelected ? 'bg-sky-50/80 font-bold' : 'hover:bg-slate-50'
+                      className={`p-3 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'bg-blue-100 border-2 border-blue-400 font-black'
+                          : 'hover:bg-slate-100'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-white border border-slate-200 shrink-0 flex items-center justify-center text-[10px] font-mono font-bold">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white border-2 border-slate-300 shrink-0 flex items-center justify-center font-black text-xs">
                           {m.photoUrl ? (
                             <img src={m.photoUrl} alt={m.student.name} className="w-full h-full object-cover" />
                           ) : (
                             <span>{m.initials}</span>
                           )}
                         </div>
-                        <div className="min-w-0 text-[0.74rem]">
-                          <span className="font-extrabold text-slate-900 block truncate">
+                        <div className="min-w-0 text-sm">
+                          <span className="font-black text-slate-900 block truncate">
                             {m.student.name}
                           </span>
-                          <span className="text-[0.66rem] text-slate-500 block truncate">
-                            Turma {m.cls.name} · {m.student.bairro || 'Vila Hortolândia'}
+                          <span className="text-xs font-bold text-slate-500 block truncate">
+                            Turma {m.cls.name} • Nº {m.student.number}
                           </span>
                         </div>
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-[0.74rem] font-mono font-extrabold text-[#0071e3] block">
-                          {m.estimates.walkMinutes} min
+                        <span className="text-sm font-black text-emerald-800 block">
+                          🚶 {m.estimates.walkMinutes} min
                         </span>
-                        <span className="text-[0.64rem] font-mono text-slate-500 block">
+                        <span className="text-xs font-bold text-slate-500 block">
                           {m.estimates.distanceRoadKm} km
                         </span>
                       </div>

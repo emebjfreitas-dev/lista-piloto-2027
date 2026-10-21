@@ -414,10 +414,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
             <div className="mt-4 space-y-1">
               <h3 className="text-lg font-bold text-slate-900 leading-tight">
-                Ônibus Escolar e Endereços
+                Mapa e Caminho dos Alunos
               </h3>
               <p className="text-sm text-slate-700 font-medium leading-relaxed">
-                Veja quais crianças vêm de ônibus fretado e a distância até a escola.
+                Veja onde os alunos moram, tempo a pé, de carro, de ônibus e rotas pelas ruas 100% grátis.
               </p>
             </div>
           </div>

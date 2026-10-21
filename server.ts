@@ -603,6 +603,63 @@ async function startServer() {
     res.json(saved);
   });
 
+  // In-memory cache for free OpenStreetMap/OSRM routes (1 hour cache)
+  const routeCache = new Map<string, { data: any; expires: number }>();
+
+  // API: Cálculo de Rotas Gratuitas e Trajetos via OpenStreetMap / OSRM (100% Free & Sem API Key)
+  app.get('/api/route', async (req, res) => {
+    try {
+      const profile = req.query.profile === 'foot' ? 'foot' : 'driving';
+      const coords = String(req.query.coords || '').trim();
+
+      if (!coords || !coords.includes(';') || !coords.includes(',')) {
+        res.status(400).json({ error: 'Coordenadas inválidas. Formato esperado: lng1,lat1;lng2,lat2' });
+        return;
+      }
+
+      const cacheKey = `${profile}:${coords}`;
+      const cached = routeCache.get(cacheKey);
+      if (cached && cached.expires > Date.now()) {
+        res.json(cached.data);
+        return;
+      }
+
+      const osrmUrl = `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+      const response = await fetch(osrmUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'CandelarioGestao-SchoolRouting/1.0 (EMEB Prof. Joaquim Candelario de Freitas Jundiai)',
+          'Accept': 'application/json',
+        },
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        res.status(502).json({ error: 'OSRM service error', status: response.status });
+        return;
+      }
+
+      const data = await response.json();
+      if (data && data.code === 'Ok') {
+        // Cache for 1 hour
+        routeCache.set(cacheKey, { data, expires: Date.now() + 60 * 60 * 1000 });
+        // Cap cache size
+        if (routeCache.size > 500) {
+          const firstKey = routeCache.keys().next().value;
+          if (firstKey) routeCache.delete(firstKey);
+        }
+      }
+
+      res.json(data);
+    } catch (err: any) {
+      console.warn('Erro ao consultar roteamento OSRM gratuito:', err?.message || err);
+      res.status(503).json({ error: 'Roteador OSRM temporariamente indisponível', fallback: true });
+    }
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

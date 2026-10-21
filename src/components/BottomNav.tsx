@@ -75,7 +75,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       : [
           {
             id: 'mapa_estudantes' as ScreenType,
-            label: 'Mapa',
+            label: 'Mapa e Rotas',
             icon: MapPin,
           },
         ]),
@@ -89,8 +89,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   }> = [
     {
       id: 'mapa_estudantes',
-      label: 'Mapa de Trajetos & KM',
-      description: 'Geolocalização dos estudantes e rotas até a escola',
+      label: 'Mapa e Rotas dos Alunos',
+      description: 'Caminho pelas ruas, distâncias e tempo até a escola',
       icon: MapPin,
     },
     {
