@@ -6,8 +6,6 @@ import {
   uploadStudentPhotoToDrive,
   getStoredDiscoveredDrivePhotos,
   DiscoveredDrivePhotoFile,
-  extractDriveFileOrFolderId,
-  toEmbeddableDrivePhotoUrl,
 } from '../services/googleSheetsApi';
 
 interface UploadFotoModalProps {
@@ -38,7 +36,6 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   const [activeTab, setActiveTab] = useState<'drive_catalog' | 'device_upload'>('drive_catalog');
   const [previewUrl, setPreviewUrl] = useState<string>(student.photo || '');
   const [selectedDriveFile, setSelectedDriveFile] = useState<DiscoveredDrivePhotoFile | null>(null);
-  const [manualDriveUrlInput, setManualDriveUrlInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
@@ -178,33 +175,6 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     setStatusMsg(`Arquivo selecionado: "${item.name}" (ID: ${item.id.slice(0, 10)}...)`);
   };
 
-  const handleApplyDirectDriveUrl = () => {
-    const extractedId = extractDriveFileOrFolderId(manualDriveUrlInput);
-    if (!extractedId || extractedId.length < 10) {
-      setStatusMsg('Informe um link ou ID válido de imagem do Google Drive.');
-      return;
-    }
-    const embedUrl = toEmbeddableDrivePhotoUrl(extractedId);
-    const webLink = `https://drive.google.com/file/d/${extractedId}/view`;
-    setSelectedDriveFile({
-      id: extractedId,
-      name: `Foto Vinculada Manualmente (${extractedId.slice(0, 8)})`,
-      normName: student.name,
-      coreName: student.name,
-      subfolderName: className,
-      photoUrl: embedUrl,
-      driveLink: webLink,
-    });
-    setPreviewUrl(embedUrl);
-    setStatusMsg(`✓ ID do Drive identificado (${extractedId.slice(0, 12)}...). Clique em Confirmar Vínculo.`);
-  };
-
-  const handleRemoveLink = () => {
-    setPreviewUrl('');
-    setSelectedDriveFile(null);
-    onSavePhoto(student.id, '', '', '', false);
-    setStatusMsg('Vínculo de foto removido. O sistema usará as iniciais ou futura correspondência.');
-  };
 
   const handleRefreshCatalog = async () => {
     if (!onSyncDrivePhotos || isSyncingCatalog) return;
@@ -312,18 +282,6 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
               </span>
             </div>
           </div>
-
-          {previewUrl && (
-            <button
-              type="button"
-              onClick={handleRemoveLink}
-              className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#fff2f2] text-[#ff3b30] border border-black/[0.08] font-bold text-[0.72rem] flex items-center gap-1 cursor-pointer shrink-0 transition-colors"
-              title="Remover vínculo atual de foto"
-            >
-              <span className="material-symbols-outlined text-[15px]">link_off</span>
-              <span>Desvincular</span>
-            </button>
-          )}
         </div>
 
         {/* Mode Selector Tabs */}
@@ -338,7 +296,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
             }`}
           >
             <span className="material-symbols-outlined text-[17px] text-[#0071e3]">cloud_search</span>
-            <span>Vincular da Pasta Drive ({discoveredPhotos.length})</span>
+            <span>Fotos do Google Drive ({discoveredPhotos.length})</span>
           </button>
           <button
             type="button"
@@ -409,7 +367,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                     Nenhum arquivo de foto localizado com esse filtro.
                   </p>
                   <p className="text-[0.74rem] text-[#6e6e73]">
-                    Você pode colar o link/ID direto do arquivo abaixo ou enviar do dispositivo.
+                    Você pode refinar o termo de busca ou enviar a foto do dispositivo.
                   </p>
                 </div>
               ) : (
@@ -448,24 +406,6 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                   })}
                 </div>
               )}
-
-              {/* Direct Google Drive URL / File ID input for files with custom sharing */}
-              <div className="pt-2 border-t border-black/[0.06] flex items-center gap-2">
-                <input
-                  type="text"
-                  value={manualDriveUrlInput}
-                  onChange={(e) => setManualDriveUrlInput(e.target.value)}
-                  placeholder="Ou cole aqui o link / ID direto da foto no Google Drive..."
-                  className="flex-1 h-9 px-3 bg-[#f5f5f7] border border-black/[0.08] rounded-xl text-[0.75rem] font-mono text-[#1d1d1f] focus:bg-white focus:border-[#0071e3] focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyDirectDriveUrl}
-                  className="h-9 px-3 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-bold text-[0.74rem] cursor-pointer shrink-0"
-                >
-                  Usar Link/ID
-                </button>
-              </div>
             </div>
           ) : (
             <div className="space-y-3 py-2">

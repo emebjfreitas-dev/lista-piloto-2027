@@ -67,9 +67,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [showAdminNavDropdown, setShowAdminNavDropdown] = useState(false);
   const [textSizePref, setTextSizePref] = useState<'normal' | 'grande' | 'extra'>(() => {
     try {
-      return (localStorage.getItem('emeb_candelario_text_size_pref') as any) || 'grande';
+      return (localStorage.getItem('emeb_candelario_text_size_pref') as any) || 'normal';
     } catch {
-      return 'grande';
+      return 'normal';
     }
   });
 
@@ -178,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isAdmin = userRole === 'admin';
 
-  const showBackButton = currentScreen !== 'home' && currentScreen !== 'login';
+  const showBackButton = currentScreen !== 'home';
 
   const getScreenTitle = () => {
     if (title) return title;

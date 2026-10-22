@@ -1381,28 +1381,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     Somente o Administrador ({OFFICIAL_ADMIN_EMAIL}) edita a estrutura de pastas no Drive.
                   </div>
                 )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={isSyncingCloud}
-                    onClick={handleSyncDrivePhotosNow}
-                    className="min-h-[40px] px-3 bg-white hover:bg-[#eaf6ef] text-[#005035] border border-[#005035]/25 font-bold text-[0.78rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">photo_library</span>
-                    <span>Vincular Fotos da Pasta do Drive</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isSyncingCloud}
-                    onClick={handleSyncNominalPdfsNow}
-                    className="min-h-[40px] px-3 bg-white hover:bg-[#fff8f7] text-[#ba1a1a] border border-[#ba1a1a]/25 font-bold text-[0.78rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">document_scanner</span>
-                    <span>Vincular Subpastas de PDFs Escaneados</span>
-                  </button>
-                </div>
               </div>
             ) : (
               <div className="bg-[#f5f7f6] p-3.5 rounded-2xl border border-[#003440]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

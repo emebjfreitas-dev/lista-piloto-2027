@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { ClassGroup, DriveNominalPdfFile, Student } from '../types';
 import {
-  extractDriveFileOrFolderId,
   getStoredDiscoveredNominalPdfs,
   normalizeStudentNameForPhoto,
 } from '../services/googleSheetsApi';
@@ -88,7 +87,6 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
   const [isCheckingDrive, setIsCheckingDrive] = useState(false);
   const [showManualLinker, setShowManualLinker] = useState(false);
   const [pdfSearchQuery, setPdfSearchQuery] = useState('');
-  const [directUrlInput, setDirectUrlInput] = useState('');
   const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
   const [catalogTick, setCatalogTick] = useState(0);
 
@@ -219,25 +217,6 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
     setStatusFeedback(`✓ PDF "${pdfItem.name}" vinculado manualmente com sucesso!`);
   };
 
-  const handleBindDirectPdfUrl = () => {
-    const extractedId = extractDriveFileOrFolderId(directUrlInput);
-    if (!extractedId || extractedId.length < 10 || !onSaveStudentPdfLink) {
-      setStatusFeedback('Informe um link ou ID válido de arquivo PDF do Google Drive.');
-      return;
-    }
-    const webUrl = `https://drive.google.com/file/d/${extractedId}/view`;
-    onSaveStudentPdfLink(student.id, extractedId, webUrl, className, true);
-    setDirectUrlInput('');
-    setShowManualLinker(false);
-    setStatusFeedback('✓ Link direto de Ficha PDF vinculado manualmente ao estudante!');
-  };
-
-  const handleUnlinkPdf = () => {
-    if (!onSaveStudentPdfLink) return;
-    onSaveStudentPdfLink(student.id, '', '', '', false);
-    setShowManualLinker(true);
-    setStatusFeedback('Vínculo de PDF removido. Selecione outro arquivo abaixo se desejar.');
-  };
 
   const handleRefreshDrivePdfs = async () => {
     if (!onSyncDrivePdfs || isCheckingDrive) return;
@@ -318,18 +297,18 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             </div>
           )}
 
-          {/* Ferramenta de Vínculo Manual de PDF do Google Drive */}
+          {/* Localização de Ficha PDF do Google Drive */}
           <div className="bg-[#f5f5f7] rounded-2xl p-4 border border-black/[0.06] space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h4 className="text-[0.86rem] font-extrabold text-[#1d1d1f] flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[18px] text-[#0071e3]">
-                    add_link
+                    folder_open
                   </span>
-                  <span>Localizar e Vincular PDF da Pasta do Google Drive ({discoveredPdfs.length} arquivos)</span>
+                  <span>Localizar PDF da Pasta do Google Drive ({discoveredPdfs.length} arquivos)</span>
                 </h4>
                 <p className="text-[0.72rem] text-[#6e6e73]">
-                  Ideal para alunos recém-transferidos, nomes abreviados ou com diferença de grafia. O vínculo é salvo pelo ID estável do arquivo.
+                  Localização rápida de fichas escaneadas sincronizadas no Google Drive.
                 </p>
               </div>
 
@@ -414,7 +393,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                           onClick={() => handleConfirmManualPdf(pdf)}
                           className="px-3 py-1 rounded-lg bg-[#0071e3] hover:bg-[#005bb5] text-white text-[0.72rem] font-bold cursor-pointer"
                         >
-                          {isCurrent ? 'Vinculado' : 'Vincular'}
+                          {isCurrent ? 'Selecionado' : 'Selecionar'}
                         </button>
                       </div>
                     </div>
@@ -423,23 +402,6 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               </div>
             )}
 
-            {/* Colar Link ou ID Direto do PDF */}
-            <div className="pt-2 border-t border-black/[0.06] flex items-center gap-2">
-              <input
-                type="text"
-                value={directUrlInput}
-                onChange={(e) => setDirectUrlInput(e.target.value)}
-                placeholder="Ou cole o link / ID direto do PDF no Google Drive..."
-                className="flex-1 h-9 px-3 bg-white border border-black/[0.08] rounded-xl text-[0.75rem] font-mono text-[#1d1d1f] focus:border-[#0071e3] focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleBindDirectPdfUrl}
-                className="h-9 px-3.5 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-bold text-[0.74rem] cursor-pointer shrink-0"
-              >
-                Vincular Link/ID
-              </button>
-            </div>
           </div>
 
           {statusFeedback && (
@@ -516,7 +478,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             </div>
           </div>
 
-          {/* Ações: Abrir no Drive, Trocar, Desvincular e Fechar */}
+          {/* Ações: Abrir no Drive, Trocar e Fechar */}
           <div className="flex items-center gap-2 shrink-0">
             {driveFileId && (
               <a
@@ -542,15 +504,6 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             >
               <span className="material-symbols-outlined text-[18px] text-blue-700">swap_horiz</span>
               <span className="hidden sm:inline">Trocar</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleUnlinkPdf}
-              className="min-h-[44px] px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors"
-              title="Desvincular este PDF do estudante"
-            >
-              <span className="material-symbols-outlined text-[18px]">link_off</span>
             </button>
 
             <button

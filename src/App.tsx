@@ -149,6 +149,15 @@ export default function App() {
     return 'home';
   });
 
+  const [navigationHistory, setNavigationHistory] = useState<ScreenType[]>([]);
+
+  const navigateToScreen = (nextScreen: ScreenType) => {
+    if (nextScreen === currentScreen) return;
+    setNavigationHistory((prev) => [...prev, currentScreen]);
+    setCurrentScreen(nextScreen);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const [classes, setClasses] = useState<ClassGroup[]>(() => initialClasses);
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(() => {
     const targetId =
@@ -716,21 +725,18 @@ export default function App() {
   const handleSelectClassForDetails = (cls: ClassGroup) => {
     if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
     setSelectedClass(cls);
-    setCurrentScreen('detalhes');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateToScreen('detalhes');
   };
 
   const handleSelectClassForMonthlyAttendance = (cls: ClassGroup) => {
     if (userRole === 'peb2') {
       setSelectedClass(cls);
-      setCurrentScreen('detalhes');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      navigateToScreen('detalhes');
       return;
     }
     if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
     setSelectedClass(cls);
-    setCurrentScreen('frequencia_mensal');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigateToScreen('frequencia_mensal');
   };
 
   const triggerDebouncedSheetWrite = (
@@ -935,30 +941,21 @@ export default function App() {
   };
 
   const handleBack = () => {
+    if (navigationHistory.length > 0) {
+      const prevScreen = navigationHistory[navigationHistory.length - 1];
+      setNavigationHistory((prev) => prev.slice(0, -1));
+      setCurrentScreen(prevScreen);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (currentScreen === 'frequencia_mensal') {
       setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    if (currentScreen === 'detalhes') {
-      if (userRole === 'usuario') {
-        setCurrentScreen('home');
-      } else {
-        setCurrentScreen('turmas');
-      }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    if (currentScreen === 'turmas') {
+    } else if (currentScreen === 'detalhes') {
+      setCurrentScreen(userRole === 'usuario' ? 'home' : 'turmas');
+    } else if (currentScreen === 'turmas') {
       setCurrentScreen('home');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-    // Outras telas (mapa_estudantes, faltas_consecutivas, bolsa_familia, planilha, etc.)
-    if (userRole === 'usuario') {
-      setCurrentScreen('detalhes');
     } else {
-      setCurrentScreen('turmas');
+      setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1307,7 +1304,7 @@ export default function App() {
             : currentScreen === 'planilha'
             ? 'Planilha Oficial'
             : currentScreen === 'usuarios_acesso'
-            ? 'Acessos (@educacao.jundiai.sp.gov.br)'
+            ? 'Professores & Acessos'
             : undefined
         }
         subtitle={
@@ -1351,13 +1348,13 @@ export default function App() {
             return;
           }
           if (userRole === 'usuario' && screen === 'turmas') {
-            setCurrentScreen('detalhes');
+            navigateToScreen('detalhes');
             return;
           }
-          setCurrentScreen(screen);
+          navigateToScreen(screen);
         }}
         onNavigatePlanilha={() => {
-          if (userRole === 'admin') setCurrentScreen('planilha');
+          if (userRole === 'admin') navigateToScreen('planilha');
         }}
         onQuickSyncDriveNow={handleQuickSyncDriveNow}
         onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
@@ -1393,22 +1390,19 @@ export default function App() {
               if (targetScreen === 'turmas' && userRole === 'usuario') {
                 const targetCls = classes.find((c) => c.id === assignedClassId) || classes[0];
                 if (targetCls) setSelectedClass(targetCls);
-                setCurrentScreen('detalhes');
+                navigateToScreen('detalhes');
               } else {
-                setCurrentScreen(targetScreen);
+                navigateToScreen(targetScreen);
               }
-              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onSelectClassForMonthlyAttendance={(cls) => {
               setSelectedClass(cls);
-              setCurrentScreen('frequencia_mensal');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigateToScreen('frequencia_mensal');
             }}
             onSelectStudentForConsecutiveScreen={(classId) => {
               const cls = classes.find((c) => c.id === classId);
               if (cls) setSelectedClass(cls);
-              setCurrentScreen('faltas_consecutivas');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigateToScreen('faltas_consecutivas');
             }}
             onOpenStudentGrid={(student) => {
               const matchedClass =
@@ -1428,8 +1422,7 @@ export default function App() {
               });
             }}
             onNavigateToAcessos={() => {
-              setCurrentScreen('usuarios_acesso');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigateToScreen('usuarios_acesso');
             }}
           />
         )}
@@ -1484,7 +1477,7 @@ export default function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateToDatabaseEmailsTab={() => setCurrentScreen('planilha')}
-            onBack={() => setCurrentScreen('turmas')}
+            onBack={handleBack}
           />
         )}
 
@@ -1562,12 +1555,10 @@ export default function App() {
             onSaveSchoolNotices={handleSaveSchoolNotices}
             canLaunchAttendance={canEditClass(selectedClass.id)}
             onGoToMonthlyAttendance={() => {
-              setCurrentScreen('frequencia_mensal');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigateToScreen('frequencia_mensal');
             }}
             onGoToMonthlySummary={() => {
-              setCurrentScreen('resumo');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigateToScreen('resumo');
             }}
             onOpenStudentList={() => setIsStudentListModalOpen(true)}
             onOpenNotes={() => setIsNotesModalOpen(true)}
@@ -1585,23 +1576,23 @@ export default function App() {
             }
             onNavigateToBolsaFamilia={() => {
               if (userRole === 'admin') {
-                setCurrentScreen('bolsa_familia');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                navigateToScreen('bolsa_familia');
               }
             }}
             onNavigateToConsecutiveAbsences={() => {
-              setCurrentScreen('faltas_consecutivas');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigateToScreen('faltas_consecutivas');
             }}
             onNavigateToMap={(student) => {
               setMapTargetStudentId(student.id);
-              setCurrentScreen('mapa_estudantes');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              navigateToScreen('mapa_estudantes');
             }}
-            onNavigateToSheet={() => setCurrentScreen('planilha')}
+            onNavigateToSheet={() => navigateToScreen('planilha')}
             onBackToClasses={() => {
-              if (userRole === 'usuario') return;
-              setCurrentScreen('turmas');
+              if (userRole === 'usuario') {
+                navigateToScreen('home');
+              } else {
+                navigateToScreen('turmas');
+              }
             }}
           />
         )}
@@ -1631,6 +1622,7 @@ export default function App() {
             onUpdateStudentField={(classId, updatedStudent) => {
               handleSaveSingleStudent(classId, updatedStudent);
             }}
+            onBack={handleBack}
           />
         )}
 
@@ -1654,9 +1646,7 @@ export default function App() {
               })
             }
             onNavigateToSheet={() => setCurrentScreen('planilha')}
-            onBack={() =>
-              setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas')
-            }
+            onBack={handleBack}
           />
         )}
 
@@ -1672,6 +1662,7 @@ export default function App() {
             onUpdateStudent={(classId, updatedStudent) => {
               handleSaveSingleStudent(classId, updatedStudent);
             }}
+            onBack={handleBack}
           />
         )}
 
@@ -1680,7 +1671,7 @@ export default function App() {
             userRole={userRole}
             onOpenConfigDaysModal={() => setIsConfigDaysModalOpen(true)}
             onNavigateToSheet={() => setCurrentScreen('planilha')}
-            onBack={() => setCurrentScreen('turmas')}
+            onBack={handleBack}
           />
         )}
 
@@ -1709,6 +1700,7 @@ export default function App() {
                   diasLetivosMes: selectedClass.classesHeld || 20,
                 })
               }
+              onBack={handleBack}
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs max-w-lg mx-auto my-12 space-y-4 animate-gentle-fade">
@@ -1727,7 +1719,7 @@ export default function App() {
               </div>
               <button
                 type="button"
-                onClick={() => setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas')}
+                onClick={handleBack}
                 className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-xs"
               >
                 Voltar à Página Principal
@@ -1758,6 +1750,7 @@ export default function App() {
               setCurrentScreen('detalhes');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            onBack={handleBack}
           />
         )}
 
@@ -1798,7 +1791,7 @@ export default function App() {
             }}
             onOpenConfigDaysModal={() => setIsConfigDaysModalOpen(true)}
             onNavigateToAcessos={() => setCurrentScreen('usuarios_acesso')}
-            onBack={() => setCurrentScreen('turmas')}
+            onBack={handleBack}
           />
         )}
       </main>

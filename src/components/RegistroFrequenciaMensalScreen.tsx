@@ -49,6 +49,21 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     () => MONTHLY_SCHOOL_DAYS_2027.find((m) => m.month === selectedMonthName),
     [selectedMonthName]
   );
+  const currentMonthIdx = useMemo(
+    () =>
+      MONTHLY_SCHOOL_DAYS_2027.findIndex(
+        (m) => m.month.toLowerCase() === selectedMonthName.toLowerCase()
+      ),
+    [selectedMonthName]
+  );
+  const previousPeriodMeta = currentMonthIdx > 0 ? MONTHLY_SCHOOL_DAYS_2027[currentMonthIdx - 1] : null;
+  const previousPeriodName = previousPeriodMeta?.month || null;
+  const nextPeriodMeta =
+    currentMonthIdx >= 0 && currentMonthIdx < MONTHLY_SCHOOL_DAYS_2027.length - 1
+      ? MONTHLY_SCHOOL_DAYS_2027[currentMonthIdx + 1]
+      : null;
+  const nextPeriodName = nextPeriodMeta?.month || null;
+
   const isPastMonth = Boolean(
     selectedMonthMeta && selectedMonthMeta.monthNumber < CURRENT_ACTIVE_MONTH_NUMBER
   );
@@ -403,19 +418,33 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </div>
       )}
 
-      {/* Botão Voltar Didático e Visível */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-        >
-          <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-          <span>Voltar para Minha Turma</span>
-        </button>
+      {/* Botão Voltar Didático e Visível + Botão Voltar ao Período Anterior */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onBack}
+            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
+            <span>Voltar para Minha Turma</span>
+          </button>
+
+          {previousPeriodName && (
+            <button
+              type="button"
+              onClick={() => handleMonthChange(previousPeriodName)}
+              className="min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-xs cursor-pointer active:scale-98 transition-all"
+              title={`Voltar à tela do período anterior: ${previousPeriodName}`}
+            >
+              <span className="material-symbols-outlined text-[20px] font-bold text-amber-300">history</span>
+              <span>Voltar ao Período Anterior ({previousPeriodName})</span>
+            </button>
+          )}
+        </div>
 
         <span className="text-xs sm:text-sm font-bold text-slate-500">
-          Lançamento Mensal de Presença
+          Lançamento Mensal de Presença ({selectedMonthName}/2027)
         </span>
       </div>
 
@@ -451,19 +480,31 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             </p>
           </div>
 
-          {/* Seletor de Mês em Destaque — Grande e Intuitivo */}
-          <div className="flex items-center gap-3 bg-emerald-50 border-2 border-emerald-300 px-4 py-2.5 rounded-2xl shrink-0 self-start lg:self-auto shadow-xs">
-            <span className="material-symbols-outlined text-[26px] text-emerald-800">
+          {/* Seletor de Mês em Destaque — Grande e Intuitivo com Navegação entre Períodos */}
+          <div className="flex items-center gap-2 bg-emerald-50 border-2 border-emerald-300 px-3 sm:px-4 py-2 rounded-2xl shrink-0 self-start lg:self-auto shadow-xs">
+            {previousPeriodName && (
+              <button
+                type="button"
+                onClick={() => handleMonthChange(previousPeriodName)}
+                className="h-10 px-2.5 rounded-xl bg-white hover:bg-emerald-100 text-emerald-950 border border-emerald-300 font-extrabold text-xs flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
+                title={`Voltar ao período anterior (${previousPeriodName})`}
+              >
+                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                <span className="hidden sm:inline">{previousPeriodName}</span>
+              </button>
+            )}
+
+            <span className="material-symbols-outlined text-[24px] text-emerald-800 shrink-0">
               calendar_month
             </span>
-            <div>
-              <label className="block text-[0.66rem] font-black uppercase tracking-wider text-emerald-900">
+            <div className="min-w-0">
+              <label className="block text-[0.66rem] font-black uppercase tracking-wider text-emerald-900 leading-tight">
                 Mês da Chamada (2027)
               </label>
               <select
                 value={selectedMonthName}
                 onChange={(e) => handleMonthChange(e.target.value)}
-                className="bg-transparent text-slate-900 font-black text-sm sm:text-base focus:outline-none cursor-pointer pr-2"
+                className="bg-transparent text-slate-900 font-black text-sm sm:text-base focus:outline-none cursor-pointer pr-1"
               >
                 {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
                   const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
@@ -475,6 +516,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 })}
               </select>
             </div>
+
+            {nextPeriodName && (
+              <button
+                type="button"
+                onClick={() => handleMonthChange(nextPeriodName)}
+                className="h-10 px-2.5 rounded-xl bg-white hover:bg-emerald-100 text-emerald-950 border border-emerald-300 font-extrabold text-xs flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
+                title={`Ir para o próximo período (${nextPeriodName})`}
+              >
+                <span className="hidden sm:inline">{nextPeriodName}</span>
+                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+              </button>
+            )}
           </div>
         </div>
 

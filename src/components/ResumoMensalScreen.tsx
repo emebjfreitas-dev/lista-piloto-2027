@@ -146,6 +146,20 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       MONTHLY_SCHOOL_DAYS_2027[8],
     [selectedMonthName]
   );
+  const currentMonthIdx = useMemo(
+    () =>
+      MONTHLY_SCHOOL_DAYS_2027.findIndex(
+        (m) => m.month.toLowerCase() === selectedMonthName.toLowerCase()
+      ),
+    [selectedMonthName]
+  );
+  const previousPeriodMeta = currentMonthIdx > 0 ? MONTHLY_SCHOOL_DAYS_2027[currentMonthIdx - 1] : null;
+  const previousPeriodName = previousPeriodMeta?.month || null;
+  const nextPeriodMeta =
+    currentMonthIdx >= 0 && currentMonthIdx < MONTHLY_SCHOOL_DAYS_2027.length - 1
+      ? MONTHLY_SCHOOL_DAYS_2027[currentMonthIdx + 1]
+      : null;
+  const nextPeriodName = nextPeriodMeta?.month || null;
 
   // Turmas no escopo
   const filteredClasses = useMemo(() => {
@@ -377,19 +391,34 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade text-slate-800">
-      {/* Botão Voltar Didático e Visível */}
+      {/* Botão Voltar Didático e Visível + Botão Voltar ao Período Anterior */}
       {onBack && (
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onBack}
-            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-          >
-            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-            <span>Voltar para Minha Turma</span>
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onBack}
+              className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+            >
+              <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
+              <span>Voltar para Minha Turma</span>
+            </button>
+
+            {previousPeriodName && (
+              <button
+                type="button"
+                onClick={() => setSelectedMonthName(previousPeriodName)}
+                className="min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-xs cursor-pointer active:scale-98 transition-all"
+                title={`Voltar à tela do período anterior: ${previousPeriodName}`}
+              >
+                <span className="material-symbols-outlined text-[20px] font-bold text-amber-300">history</span>
+                <span>Voltar ao Período Anterior ({previousPeriodName})</span>
+              </button>
+            )}
+          </div>
+
           <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Painel Executivo • Fechamento Mensal
+            Painel Executivo • Fechamento Mensal ({selectedMonthName}/2027)
           </span>
         </div>
       )}
