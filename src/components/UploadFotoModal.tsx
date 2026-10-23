@@ -227,16 +227,9 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
               <span className="material-symbols-outlined text-[22px]">photo_camera</span>
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-[1.05rem] sm:text-[1.15rem] font-extrabold text-[#1d1d1f] truncate">
-                  Foto e Vínculo Google Drive
-                </h3>
-                {student.photoManualLink && (
-                  <span className="px-2 py-0.5 rounded-full bg-[#0071e3]/12 text-[#0066cc] text-[0.65rem] font-bold uppercase shrink-0">
-                    Vínculo Manual
-                  </span>
-                )}
-              </div>
+              <h3 className="text-[1.05rem] sm:text-[1.15rem] font-extrabold text-[#1d1d1f] truncate">
+                Foto do Estudante
+              </h3>
               <p className="text-[0.78rem] font-semibold text-[#6e6e73] truncate">
                 Nº {student.number.toString().padStart(2, '0')} • {student.name} ({className})
               </p>
@@ -274,11 +267,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
               </span>
               <span className="text-[0.72rem] font-medium text-[#6e6e73] block truncate">
                 RA: {student.ra || '—'}-{student.digRa || ''} •{' '}
-                {student.photoManualLink
-                  ? 'Associação manual protegida (ID estável)'
-                  : previewUrl
-                  ? 'Correspondência automática da pasta Drive'
-                  : 'Sem foto associada'}
+                {previewUrl ? 'Foto anexada' : 'Sem foto cadastrada'}
               </span>
             </div>
           </div>
@@ -442,7 +431,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           {uploadSuccess && (
             <div className="p-2.5 bg-[#eaf6ef] text-[#005035] rounded-xl font-bold text-[0.8rem] flex items-center gap-2 border border-[#005035]/25">
               <span className="material-symbols-outlined text-[18px]">check_circle</span>
-              <span>Vínculo de foto confirmado e salvo com ID estável!</span>
+              <span>Foto confirmada e salva com sucesso!</span>
             </div>
           )}
         </div>
@@ -464,7 +453,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
             className="flex-1 min-h-[44px] bg-[#005035] hover:bg-[#003723] text-white font-extrabold text-[0.84rem] rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[18px]">verified</span>
-            <span>Confirmar Vínculo da Foto</span>
+            <span>Confirmar Foto</span>
           </button>
         </div>
       </div>

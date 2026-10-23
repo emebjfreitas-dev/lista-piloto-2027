@@ -1715,6 +1715,46 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Rodapé com Navegação entre Períodos e Retorno */}
+      <section className="bg-white rounded-3xl p-5 border-2 border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-black text-slate-900">
+            Fechamento de {selectedMonthName}/2027
+          </h3>
+          <p className="text-xs text-slate-600 font-medium mt-0.5">
+            Relatório gerado a partir da base oficial do Google Sheets da EMEB Prof. Joaquim Candelário de Freitas
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {previousPeriodName && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMonthName(previousPeriodName);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="min-h-[46px] px-5 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+              title={`Voltar à tela do período anterior: ${previousPeriodName}`}
+            >
+              <span className="material-symbols-outlined text-[20px] text-amber-300 font-bold">history</span>
+              <span>Voltar ao Período Anterior ({previousPeriodName})</span>
+            </button>
+          )}
+
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="min-h-[46px] px-6 rounded-2xl bg-[#003440] hover:bg-[#00222a] text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+            >
+              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+              <span>Voltar para Minha Turma</span>
+            </button>
+          )}
+        </div>
+      </section>
     </div>
   );
 };

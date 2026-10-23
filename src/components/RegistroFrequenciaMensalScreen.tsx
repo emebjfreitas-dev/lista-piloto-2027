@@ -1159,14 +1159,28 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onBack}
-          className="min-h-[50px] px-6 rounded-2xl bg-[#003440] hover:bg-[#00222a] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
-        >
-          <span className="material-symbols-outlined text-[22px] text-emerald-400">check_circle</span>
-          <span>Concluir e Voltar para Minha Turma</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {previousPeriodName && (
+            <button
+              type="button"
+              onClick={() => handleMonthChange(previousPeriodName)}
+              className="min-h-[50px] px-5 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+              title={`Voltar ao período anterior: ${previousPeriodName}`}
+            >
+              <span className="material-symbols-outlined text-[20px] text-amber-300 font-bold">history</span>
+              <span>Voltar ao Período Anterior ({previousPeriodName})</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onBack}
+            className="min-h-[50px] px-6 rounded-2xl bg-[#003440] hover:bg-[#00222a] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+          >
+            <span className="material-symbols-outlined text-[22px] text-emerald-400">check_circle</span>
+            <span>Concluir e Voltar para Minha Turma</span>
+          </button>
+        </div>
       </section>
     </div>
   );

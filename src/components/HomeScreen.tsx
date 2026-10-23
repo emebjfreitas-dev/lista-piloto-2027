@@ -458,7 +458,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <div>
               <strong className="block text-slate-900 font-bold mb-0.5 text-base">Ver Telefones e Fotos</strong>
               <span className="text-slate-700 text-xs sm:text-sm leading-relaxed block">
-                Toque em <strong className="text-slate-900">Meus Alunos</strong>. Você pode ver as fotos das crianças e abrir o WhatsApp dos pais em 1 toque.
+                Toque em <strong className="text-slate-900">Minha turma</strong>. Você pode ver as fotos das crianças e abrir o WhatsApp dos pais em 1 toque.
               </span>
             </div>
           </div>

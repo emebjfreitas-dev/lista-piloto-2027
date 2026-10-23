@@ -3,6 +3,7 @@ import { ClassGroup, DriveNominalPdfFile, Student } from '../types';
 import {
   getStoredDiscoveredNominalPdfs,
   normalizeStudentNameForPhoto,
+  extractDriveFileOrFolderId,
 } from '../services/googleSheetsApi';
 import { StudentAvatar } from './StudentAvatar';
 
@@ -355,7 +356,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
 
             {filteredPdfs.length === 0 ? (
               <div className="p-4 text-center bg-white rounded-xl border border-black/[0.05] text-[0.76rem] text-[#6e6e73]">
-                Nenhum PDF encontrado na lista com esse termo. Cole o link direto abaixo ou clique em "Recarregar Drive".
+                Nenhum PDF encontrado na lista com esse termo. Refine a busca ou clique em "Recarregar Drive".
               </div>
             ) : (
               <div className="max-h-[210px] overflow-y-auto space-y-1.5 pr-1">
@@ -456,14 +457,8 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                 <span className="text-[0.72rem] font-semibold text-[#6e6e73] uppercase tracking-wider">
                   {className} • Nº {student.number.toString().padStart(2, '0')}
                 </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[0.64rem] font-bold uppercase ${
-                    student.fichaPdfManualLink
-                      ? 'bg-[#0071e3]/12 text-[#0066cc]'
-                      : 'bg-[#eaf6ef] text-[#005035]'
-                  }`}
-                >
-                  {student.fichaPdfManualLink ? 'Vínculo Manual' : 'Vínculo Automático'}
+                <span className="px-2 py-0.5 rounded-full text-[0.64rem] font-bold uppercase bg-[#eaf6ef] text-[#005035]">
+                  Ficha Digitalizada
                 </span>
                 {student.fichaPdfSubfolder && (
                   <span className="text-[0.7rem] text-[#86868b] truncate hidden md:inline">

@@ -1,6 +1,6 @@
 {
-  "summary": "Plano de implementação para transformar a tela Resumo Mensal em um painel Power BI executivo e sóbrio, com foco minimalista em cartões de metas MEC, atestados médicos e alertas de busca ativa prioritária.",
-  "updatedAt": "2026-10-14T10:49:59.582966251Z",
-  "requestFeedback": true,
-  "userFacing": true
+  "summary":  "Plano e relatório de execução: navegação entre períodos com botão de retorno ao período anterior, varredura e remoção de botões indevidos/sem função, eliminação de vinculações manuais de link e garantia de persistência e leitura centralizadas no Google Sheets.",
+  "updatedAt":  "2026-10-23T14:35:39.102850433Z",
+  "requestFeedback":  true,
+  "userFacing":  true
 }
