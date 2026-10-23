@@ -1,4 +1,5 @@
 // Coordinates and georeferencing for EMEB Prof. Joaquim Candelário de Freitas and surroundings in Jundiaí/SP
+import { isBackendApiAvailable } from '../services/apiEnvironment';
 
 export interface SchoolLocation {
   name: string;
@@ -290,18 +291,20 @@ export async function fetchFreeOsmRoute(
   const profile = mode === 'foot' ? 'foot' : 'driving';
   const coordsParam = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
 
-  // 1. Try local server proxy first (avoids CORS and caches results)
-  try {
-    const proxyUrl = `/api/route?profile=${profile}&coords=${encodeURIComponent(coordsParam)}`;
-    const res = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' } });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.code === 'Ok' && Array.isArray(data.routes) && data.routes[0]) {
-        return parseOsrmRoute(data.routes[0], mode);
+  // 1. Try local server proxy only if backend API is available
+  if (isBackendApiAvailable()) {
+    try {
+      const proxyUrl = `/api/route?profile=${profile}&coords=${encodeURIComponent(coordsParam)}`;
+      const res = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.code === 'Ok' && Array.isArray(data.routes) && data.routes[0]) {
+          return parseOsrmRoute(data.routes[0], mode);
+        }
       }
+    } catch {
+      // try direct fallback next
     }
-  } catch {
-    // try direct fallback next
   }
 
   // 2. Direct public OSRM router fallback

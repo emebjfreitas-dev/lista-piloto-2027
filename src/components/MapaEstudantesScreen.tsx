@@ -13,6 +13,7 @@ import {
 } from '../utils/geoRouting';
 import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
+import { isBackendApiAvailable } from '../services/apiEnvironment';
 import { toast } from 'sonner';
 
 interface MapaEstudantesScreenProps {
@@ -54,7 +55,9 @@ const getStudentPhotoAndInitials = (student: Student) => {
   ) {
     const driveMatch = rawPhoto.match(/(?:\/api\/drive-photo\/|\/file\/d\/|[?&]id=|d\/)([a-zA-Z0-9-_]+)/);
     if (driveMatch && driveMatch[1]) {
-      photoUrl = `/api/drive-photo/${driveMatch[1]}`;
+      photoUrl = isBackendApiAvailable()
+        ? `/api/drive-photo/${driveMatch[1]}`
+        : `https://lh3.googleusercontent.com/d/${driveMatch[1]}=w200`;
     } else {
       photoUrl = rawPhoto;
     }

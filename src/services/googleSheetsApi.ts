@@ -38,6 +38,30 @@ import {
   formatDurationHuman,
   pushCloudLinksToServer,
 } from './db';
+import { isBackendApiAvailable } from './apiEnvironment';
+
+// Rate-limit & concurrency protection for 100 concurrent school users
+let googleSheetsRateLimitCooldownUntilMs = 0;
+let cachedReadClassesResult: {
+  spreadsheetId: string;
+  result: {
+    updatedClasses: ClassGroup[];
+    rowsRead: number;
+    sheetTitle: string;
+    matchedPhotosCount?: number;
+  };
+  cachedAtMs: number;
+} | null = null;
+
+let cachedReadUsersResult: {
+  users: AuthorizedUser[];
+  cachedAtMs: number;
+} | null = null;
+
+let cachedReadLogsResult: {
+  logs: UserAccessSessionLog[];
+  cachedAtMs: number;
+} | null = null;
 import {
   enqueuePendingSyncOperation,
   markSyncOperationSuccess,
@@ -296,7 +320,7 @@ export const initAuth = (
 };
 
 const registerDriveTokenOnServer = (token: string | null) => {
-  if (!token || typeof window === 'undefined') return;
+  if (!token || typeof window === 'undefined' || !isBackendApiAvailable()) return;
   fetch('/api/school-state/drive-token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -441,25 +465,34 @@ export const toEmbeddableDrivePhotoUrl = (
   const trimmed = (urlOrId || '').trim();
   if (trimmed.startsWith('data:image/')) return trimmed;
   if (trimmed.startsWith('blob:')) return trimmed;
-  if (trimmed.startsWith('/api/drive-photo/')) return trimmed;
   if (trimmed.includes('/drive/folders/')) {
     return '';
   }
+
+  let driveId = '';
   const proxyMatch = trimmed.match(/\/api\/drive-photo\/([a-zA-Z0-9-_]+)/);
   if (proxyMatch && proxyMatch[1]) {
-    return `/api/drive-photo/${proxyMatch[1]}`;
+    driveId = proxyMatch[1];
   }
   const fileMatch = trimmed.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
   if (fileMatch && fileMatch[1]) {
-    return `/api/drive-photo/${fileMatch[1]}`;
+    driveId = fileMatch[1];
   }
   const idMatch = trimmed.match(/[?&]id=([a-zA-Z0-9-_]+)/);
   if (idMatch && idMatch[1]) {
-    return `/api/drive-photo/${idMatch[1]}`;
+    driveId = idMatch[1];
   }
   if (/^[a-zA-Z0-9-_]{20,}$/.test(trimmed)) {
-    return `/api/drive-photo/${trimmed}`;
+    driveId = trimmed;
   }
+
+  if (driveId) {
+    if (isBackendApiAvailable()) {
+      return `/api/drive-photo/${driveId}`;
+    }
+    return `https://lh3.googleusercontent.com/d/${driveId}=w400`;
+  }
+
   if (thumbnailLink && thumbnailLink.trim()) {
     return thumbnailLink.replace(/=s\d+/, '=s400');
   }
@@ -1412,10 +1445,16 @@ export const readAuthorizedUsersFromGoogleSheet = async (
   currentUsers: AuthorizedUser[],
   classes: ClassGroup[]
 ): Promise<AuthorizedUser[] | null> => {
+  if (Date.now() < googleSheetsRateLimitCooldownUntilMs) {
+    return cachedReadUsersResult?.users || null;
+  }
+  if (cachedReadUsersResult && Date.now() - cachedReadUsersResult.cachedAtMs < 35000) {
+    return cachedReadUsersResult.users;
+  }
   const token = await getAccessToken();
-  if (!token) return null;
+  if (!token) return cachedReadUsersResult?.users || null;
   const spreadsheetId = await ensureOfficialSpreadsheetId();
-  if (!spreadsheetId) return null;
+  if (!spreadsheetId) return cachedReadUsersResult?.users || null;
 
   try {
     const meta = await fetchSpreadsheetMetadata(spreadsheetId);
@@ -1427,7 +1466,12 @@ export const readAuthorizedUsersFromGoogleSheet = async (
       )}/values/${encodeURIComponent('Emails_Permitidos_2027!A2:O500')}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (res.status === 429 || res.status === 403) {
+        googleSheetsRateLimitCooldownUntilMs = Date.now() + 60000;
+      }
+      return cachedReadUsersResult?.users || null;
+    }
     const data = await res.json();
     const rows: any[][] = data.values || [];
     if (rows.length === 0) return null;
@@ -1601,20 +1645,33 @@ export const readAuthorizedUsersFromGoogleSheet = async (
       });
     });
 
-    return parsedUsers.length > 0 ? parsedUsers : null;
+    if (parsedUsers.length > 0) {
+      cachedReadUsersResult = {
+        users: parsedUsers,
+        cachedAtMs: Date.now(),
+      };
+      return parsedUsers;
+    }
+    return null;
   } catch (e) {
     console.warn('Aviso ao ler Emails_Permitidos_2027:', e);
-    return null;
+    return cachedReadUsersResult?.users || null;
   }
 };
 
 export const readSessionLogsFromGoogleSheet = async (): Promise<
   UserAccessSessionLog[] | null
 > => {
+  if (Date.now() < googleSheetsRateLimitCooldownUntilMs) {
+    return cachedReadLogsResult?.logs || null;
+  }
+  if (cachedReadLogsResult && Date.now() - cachedReadLogsResult.cachedAtMs < 35000) {
+    return cachedReadLogsResult.logs;
+  }
   const token = await getAccessToken();
-  if (!token) return null;
+  if (!token) return cachedReadLogsResult?.logs || null;
   const spreadsheetId = await ensureOfficialSpreadsheetId();
-  if (!spreadsheetId) return null;
+  if (!spreadsheetId) return cachedReadLogsResult?.logs || null;
 
   try {
     const meta = await fetchSpreadsheetMetadata(spreadsheetId);
@@ -1626,7 +1683,12 @@ export const readSessionLogsFromGoogleSheet = async (): Promise<
       )}/values/${encodeURIComponent('Monitoramento_Acessos_2027!A2:K300')}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (res.status === 429 || res.status === 403) {
+        googleSheetsRateLimitCooldownUntilMs = Date.now() + 60000;
+      }
+      return cachedReadLogsResult?.logs || null;
+    }
     const data = await res.json();
     const rows: any[][] = data.values || [];
     if (rows.length === 0) return null;
@@ -1663,9 +1725,16 @@ export const readSessionLogsFromGoogleSheet = async (): Promise<
       });
     });
 
-    return logs.length > 0 ? logs : null;
-  } catch {
+    if (logs.length > 0) {
+      cachedReadLogsResult = {
+        logs,
+        cachedAtMs: Date.now(),
+      };
+      return logs;
+    }
     return null;
+  } catch {
+    return cachedReadLogsResult?.logs || null;
   }
 };
 
@@ -4145,8 +4214,28 @@ export const readClassesFromGoogleSheet = async (
   sheetTitle: string;
   matchedPhotosCount?: number;
 }> => {
+  if (Date.now() < googleSheetsRateLimitCooldownUntilMs) {
+    if (cachedReadClassesResult) {
+      return cachedReadClassesResult.result;
+    }
+    return {
+      updatedClasses: currentClasses,
+      rowsRead: 0,
+      sheetTitle: '',
+    };
+  }
+
+  if (
+    cachedReadClassesResult &&
+    cachedReadClassesResult.spreadsheetId === spreadsheetId &&
+    Date.now() - cachedReadClassesResult.cachedAtMs < 35000
+  ) {
+    return cachedReadClassesResult.result;
+  }
+
   const token = await getAccessToken();
   if (!token) {
+    if (cachedReadClassesResult) return cachedReadClassesResult.result;
     throw new Error('Autenticação necessária. Faça login com o Google primeiro.');
   }
 
@@ -4170,6 +4259,17 @@ export const readClassesFromGoogleSheet = async (
   );
 
   if (!res.ok) {
+    if (res.status === 429 || res.status === 403) {
+      googleSheetsRateLimitCooldownUntilMs = Date.now() + 60000;
+      if (cachedReadClassesResult) {
+        return cachedReadClassesResult.result;
+      }
+      return {
+        updatedClasses: currentClasses,
+        rowsRead: 0,
+        sheetTitle: meta.title,
+      };
+    }
     const errData = await res.json().catch(() => ({}));
     throw new Error(
       errData?.error?.message ||
@@ -4703,10 +4803,18 @@ export const readClassesFromGoogleSheet = async (
 
   saveSpreadsheetInfo(spreadsheetId, meta.title);
 
-  return {
+  const finalResult = {
     updatedClasses,
     rowsRead: values.length - 1,
     sheetTitle: meta.title,
     matchedPhotosCount,
   };
+
+  cachedReadClassesResult = {
+    spreadsheetId,
+    result: finalResult,
+    cachedAtMs: Date.now(),
+  };
+
+  return finalResult;
 };

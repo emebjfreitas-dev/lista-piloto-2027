@@ -35,6 +35,7 @@ import {
   getStudentGenderLabel,
   resolveGuardianRelationshipInfo,
 } from '../utils/genderDictionary';
+import { isBackendApiAvailable } from './apiEnvironment';
 
 const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v6';
 const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v3';
@@ -487,25 +488,27 @@ export const pushAuthorizedUsersToServer = async (
     // continue to backend API
   }
 
-  try {
-    const res = await fetch('/api/school-state/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ authorizedUsers: sanitized }),
-    });
-    if (res.ok) {
-      savedToAny = true;
-      const data = await res.json();
-      if (Array.isArray(data?.authorizedUsers)) {
-        const clean = classesOrUsersSanitize(data.authorizedUsers);
-        memoryCachedUsers = clean;
-        safeSetLocalStorage(USERS_STORAGE_KEY, JSON.stringify(clean));
-        markSyncOperationSuccess('save_users');
-        return clean;
+  if (isBackendApiAvailable()) {
+    try {
+      const res = await fetch('/api/school-state/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authorizedUsers: sanitized }),
+      });
+      if (res.ok) {
+        savedToAny = true;
+        const data = await res.json();
+        if (Array.isArray(data?.authorizedUsers)) {
+          const clean = classesOrUsersSanitize(data.authorizedUsers);
+          memoryCachedUsers = clean;
+          safeSetLocalStorage(USERS_STORAGE_KEY, JSON.stringify(clean));
+          markSyncOperationSuccess('save_users');
+          return clean;
+        }
       }
+    } catch {
+      // handled below
     }
-  } catch {
-    // handled below
   }
 
   if (savedToAny) {
@@ -534,17 +537,19 @@ export const pushSessionLogsToServer = async (
   } catch {
     // ignore
   }
-  try {
-    await fetch('/api/school-state/logs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        accessSessionLogs: logs,
-        ...(sanitizedUsers ? { authorizedUsers: sanitizedUsers } : {}),
-      }),
-    });
-  } catch {
-    // ignore offline
+  if (isBackendApiAvailable()) {
+    try {
+      await fetch('/api/school-state/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessSessionLogs: logs,
+          ...(sanitizedUsers ? { authorizedUsers: sanitizedUsers } : {}),
+        }),
+      });
+    } catch {
+      // ignore offline
+    }
   }
 };
 
@@ -617,15 +622,17 @@ export const pushSchoolNoticesToServer = async (
   } catch {
     // ignore
   }
-  try {
-    const res = await fetch('/api/school-state/notices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ schoolNotices: sliced }),
-    });
-    if (res.ok) saved = true;
-  } catch {
-    // ignore offline
+  if (isBackendApiAvailable()) {
+    try {
+      const res = await fetch('/api/school-state/notices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolNotices: sliced }),
+      });
+      if (res.ok) saved = true;
+    } catch {
+      // ignore offline
+    }
   }
   if (saved) {
     markSyncOperationSuccess('save_notices');
@@ -649,15 +656,17 @@ export const pushAttendanceWindowToServer = async (
   } catch {
     // ignore
   }
-  try {
-    const res = await fetch('/api/school-state/window', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ attendanceWindowConfig: config }),
-    });
-    if (res.ok) saved = true;
-  } catch {
-    // ignore offline
+  if (isBackendApiAvailable()) {
+    try {
+      const res = await fetch('/api/school-state/window', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendanceWindowConfig: config }),
+      });
+      if (res.ok) saved = true;
+    } catch {
+      // ignore offline
+    }
   }
   if (saved) {
     markSyncOperationSuccess('save_window');
@@ -790,22 +799,24 @@ export const pushClassesToServer = async (
     // fallback to API
   }
 
-  try {
-    const res = await fetch('/api/school-state/classes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        classes,
-        classesUpdatedAtMs: nowMs,
-        ...(cloudLinks ? { cloudLinks } : {}),
-        ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
-      }),
-    });
-    if (res.ok) {
-      savedToApi = true;
+  if (isBackendApiAvailable()) {
+    try {
+      const res = await fetch('/api/school-state/classes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classes,
+          classesUpdatedAtMs: nowMs,
+          ...(cloudLinks ? { cloudLinks } : {}),
+          ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
+        }),
+      });
+      if (res.ok) {
+        savedToApi = true;
+      }
+    } catch {
+      // offline or serverless cold start
     }
-  } catch {
-    // offline or serverless cold start
   }
 
   if (savedToFirestore || savedToApi) {
@@ -838,19 +849,21 @@ export const pushCloudLinksToServer = async (
   } catch {
     // ignore
   }
-  try {
-    const res = await fetch('/api/school-state/links', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cloudLinks,
-        ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
-        ...(discoveredDrivePhotos ? { discoveredDrivePhotos } : {}),
-      }),
-    });
-    if (res.ok) saved = true;
-  } catch {
-    // ignore offline
+  if (isBackendApiAvailable()) {
+    try {
+      const res = await fetch('/api/school-state/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cloudLinks,
+          ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
+          ...(discoveredDrivePhotos ? { discoveredDrivePhotos } : {}),
+        }),
+      });
+      if (res.ok) saved = true;
+    } catch {
+      // ignore offline
+    }
   }
   if (saved) {
     markSyncOperationSuccess('save_links');
@@ -893,16 +906,18 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
 } | null> => {
   try {
     let apiData: any = null;
-    try {
-      const res = await fetch('/api/school-state', { cache: 'no-store' });
-      if (res.ok) {
-        apiData = await res.json();
+    if (isBackendApiAvailable()) {
+      try {
+        const res = await fetch('/api/school-state', { cache: 'no-store' });
+        if (res.ok) {
+          apiData = await res.json();
+        }
+      } catch {
+        // API unreachable or serverless route not active; fallback to Firestore Cloud
       }
-    } catch {
-      // API unreachable or serverless route not active; fallback to Firestore Cloud
     }
 
-    // If API has no classes (e.g. fresh serverless container on Vercel), pull from Cloud Firestore!
+    // If API has no classes (e.g. static hosting on GitHub Pages or fresh container), pull from Cloud Firestore!
     let firestoreData: any = null;
     if (!apiData || !Array.isArray(apiData.classes) || apiData.classes.length === 0) {
       firestoreData = await fetchStateFromFirestoreCloud();

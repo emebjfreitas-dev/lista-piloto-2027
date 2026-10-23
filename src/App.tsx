@@ -37,6 +37,10 @@ import {
   SyncQueueManager,
   SyncQueueTaskCategory,
 } from './services/syncQueueManager';
+import {
+  probeBackendAvailability,
+  isBackendApiAvailable,
+} from './services/apiEnvironment';
 import { OFFICIAL_OCTOBER_DAYS } from './data/mockData';
 import { getClassAttendanceMetrics, haveClassesChanged } from './utils/attendanceRules';
 import {
@@ -221,6 +225,11 @@ export default function App() {
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [currentScreen]);
+
+  // Probe whether backend Express API is active (or if running as pure static SPA on GitHub Pages)
+  useEffect(() => {
+    void probeBackendAvailability();
+  }, []);
 
   // Automatically save current screen, selected class, and user session while logged in so page refresh returns to the exact coherent page
   useEffect(() => {
@@ -423,8 +432,16 @@ export default function App() {
       }
     };
 
-    syncFromBackendServer();
-    const pollId = window.setInterval(syncFromBackendServer, 1200);
+    let pollId: number | null = null;
+    if (isBackendApiAvailable()) {
+      syncFromBackendServer();
+      // On Node/Express servers, poll occasionally (60s) when visible; Firestore onSnapshot already delivers real-time sync <200ms
+      pollId = window.setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          syncFromBackendServer();
+        }
+      }, 60000);
+    }
 
     // Instant <200ms Real-Time Push via Cloud Firestore onSnapshot
     const unsubFirestore = subscribeToFirestoreRealtimeState({
@@ -467,7 +484,7 @@ export default function App() {
 
     return () => {
       active = false;
-      window.clearInterval(pollId);
+      if (pollId !== null) window.clearInterval(pollId);
       unsubFirestore();
     };
   }, []);
@@ -627,21 +644,32 @@ export default function App() {
       }
     };
 
-    // Run immediately on startup and whenever window regains focus or visibility
+    // Run on startup with intelligent throttle
+    let lastPulledAtMs = 0;
+    const safePullMasterData = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (Date.now() - lastPulledAtMs < 45000) return; // At least 45 seconds between pulls
+      lastPulledAtMs = Date.now();
+      pullMasterDataFromGoogle();
+    };
+
     pullMasterDataFromGoogle();
+    lastPulledAtMs = Date.now();
 
     const handleWindowFocus = () => {
-      pullMasterDataFromGoogle();
+      safePullMasterData();
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        pullMasterDataFromGoogle();
+        safePullMasterData();
       }
     };
 
     window.addEventListener('focus', handleWindowFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    const intervalId = window.setInterval(pullMasterDataFromGoogle, 6500);
+    // Relaxed polling with randomized jitter (90s to 150s) so 100 concurrent users never hit Google Sheets simultaneously
+    const pollIntervalMs = 90000 + Math.floor(Math.random() * 60000);
+    const intervalId = window.setInterval(safePullMasterData, pollIntervalMs);
 
     return () => {
       isMounted = false;
@@ -1167,8 +1195,9 @@ export default function App() {
               };
             });
             saveStoredAuthorizedUsers(updatedUsers);
-            pushSessionLogsToServer(updatedLogs, updatedUsers);
-            if (tickCounter % 2 === 0) {
+            // Throttle server and Google Sheets access-log sync: once on first tick, then every 3 minutes (180 ticks)
+            if (tickCounter === 1 || tickCounter % 180 === 0) {
+              pushSessionLogsToServer(updatedLogs, updatedUsers);
               SyncQueueManager.enqueueUsersAccessWrite({
                 users: updatedUsers,
                 sessionLogs: updatedLogs,

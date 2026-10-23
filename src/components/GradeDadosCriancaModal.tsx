@@ -17,6 +17,7 @@ import {
   getAccessToken,
   uploadStudentPhotoToDrive,
 } from '../services/googleSheetsApi';
+import { isBackendApiAvailable } from '../services/apiEnvironment';
 
 interface GradeDadosCriancaModalProps {
   isOpen: boolean;
@@ -304,10 +305,17 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
       return [rawPhotoCandidate];
     }
     if (portraitDriveId) {
+      if (isBackendApiAvailable()) {
+        return [
+          `/api/drive-photo/${portraitDriveId}`,
+          `https://lh3.googleusercontent.com/d/${portraitDriveId}=w500`,
+          `https://drive.google.com/thumbnail?id=${portraitDriveId}&sz=w500`,
+          `https://drive.google.com/uc?export=view&id=${portraitDriveId}`,
+        ];
+      }
       return [
-        `/api/drive-photo/${portraitDriveId}`,
-        `https://drive.google.com/thumbnail?id=${portraitDriveId}&sz=w500`,
         `https://lh3.googleusercontent.com/d/${portraitDriveId}=w500`,
+        `https://drive.google.com/thumbnail?id=${portraitDriveId}&sz=w500`,
         `https://drive.google.com/uc?export=view&id=${portraitDriveId}`,
       ];
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Student } from '../types';
 import { findPhotoInDiscoveredCache } from '../services/googleSheetsApi';
+import { isBackendApiAvailable } from '../services/apiEnvironment';
 
 interface StudentAvatarProps {
   student?: Student | null;
@@ -69,10 +70,19 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
     if (rawPhoto.startsWith('data:image/') || rawPhoto.startsWith('blob:')) return [rawPhoto];
     if (rawPhoto.includes('/drive/folders/')) return [];
     if (driveFileId) {
+      // If backend API is available (Express node), proxy can be tried first.
+      // On static/GitHub Pages hosting, NEVER call /api/drive-photo/ to avoid 404 floods & rate limit triggers!
+      if (isBackendApiAvailable()) {
+        return [
+          `/api/drive-photo/${driveFileId}`,
+          `https://lh3.googleusercontent.com/d/${driveFileId}=w400`,
+          `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400`,
+          `https://drive.google.com/uc?export=view&id=${driveFileId}`,
+        ];
+      }
       return [
-        `/api/drive-photo/${driveFileId}`,
-        `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400`,
         `https://lh3.googleusercontent.com/d/${driveFileId}=w400`,
+        `https://drive.google.com/thumbnail?id=${driveFileId}&sz=w400`,
         `https://drive.google.com/uc?export=view&id=${driveFileId}`,
       ];
     }
