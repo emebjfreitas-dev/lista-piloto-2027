@@ -26,22 +26,30 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-[1100px] mx-auto space-y-4 pb-12 animate-gentle-fade">
-      {/* Botão Voltar Didático e Visível */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-        >
-          <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-          <span>Voltar para Minha Turma</span>
-        </button>
-        <span className="text-xs sm:text-sm font-bold text-slate-500">
-          Calendário Escolar • 200 Dias Letivos
+      {/* Breadcrumb Limpo */}
+      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center gap-1.5">
+          {onBack && (
+            <>
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                <span>Voltar</span>
+              </button>
+              <span className="text-slate-300">/</span>
+            </>
+          )}
+          <span className="font-semibold text-slate-800">200 Dias Letivos</span>
+        </div>
+        <span className="text-slate-400 text-xs hidden sm:inline">
+          Calendário Escolar Oficial 2027
         </span>
       </div>
 
-      <section className="card-welcoming bg-white p-6 sm:p-8 space-y-5 rounded-3xl border border-[#003440]/10 shadow-xs">
+      <section className="bg-white p-5 sm:p-6 space-y-4 rounded-xl border border-slate-200/90">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#005035]/10 text-[#005035] text-[0.72rem] font-bold uppercase tracking-wider">

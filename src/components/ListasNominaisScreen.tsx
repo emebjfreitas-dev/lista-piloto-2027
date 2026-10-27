@@ -362,22 +362,28 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         </div>
       )}
 
-      {/* Botão Voltar Didático e Visível */}
-      {onBack && (
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onBack}
-            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-          >
-            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-            <span>Voltar para Minha Turma</span>
-          </button>
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Relatório Bolsa Família &amp; Busca Ativa
-          </span>
+      {/* Breadcrumb Limpo */}
+      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center gap-1.5">
+          {onBack && (
+            <>
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                <span>Voltar</span>
+              </button>
+              <span className="text-slate-300">/</span>
+            </>
+          )}
+          <span className="font-semibold text-slate-800">Bolsa Família &amp; Fretado</span>
         </div>
-      )}
+        <span className="text-slate-400 text-xs hidden sm:inline">
+          Listas Nominais e Condicionalidades Sociais
+        </span>
+      </div>
 
       {/* CABEÇALHO SIMPLIFICADO & EXPORTAÇÃO (.XLS OU NOVA GOOGLE SHEET) */}
       <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-4">

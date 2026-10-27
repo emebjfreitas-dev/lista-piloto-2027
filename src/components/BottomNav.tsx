@@ -53,21 +53,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'turmas',
-      label: 'Minha turma',
+      label: 'Turmas',
       icon: Users,
     },
     ...(userRole !== 'peb2'
       ? [
           {
             id: 'frequencia_mensal' as ScreenType,
-            label: 'Chamada',
+            label: 'Faltas do Mês',
             icon: CalendarCheck,
           },
         ]
       : []),
     {
       id: 'faltas_consecutivas',
-      label: 'Alertas',
+      label: 'Busca Ativa',
       icon: AlertCircle,
     },
     ...(isAdmin
@@ -137,9 +137,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {/* Barra de Navegação Inferior (Mobile/Tablet) */}
       <nav
         aria-label="Barra de Navegação Inferior"
-        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-md border-t-2 border-black/[0.08] lg:hidden shadow-lg"
+        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-md border-t border-slate-200/90 lg:hidden shadow-md"
       >
-        <div className="flex items-center justify-around h-[68px] px-1 max-w-lg mx-auto">
+        <div className="flex items-center justify-around h-[64px] px-1 max-w-lg mx-auto">
           {coreNavItems.map((item) => {
             const isActive = getIsActive(item.id);
             const IconComp = item.icon;
@@ -152,20 +152,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   onChangeScreen(item.id);
                 }}
                 aria-current={isActive ? 'page' : undefined}
-                className={`group flex flex-col items-center justify-center flex-1 h-full py-1.5 transition-all cursor-pointer select-none active:scale-95 ${
-                  isActive ? 'text-[#0050c8]' : 'text-slate-700 hover:text-black'
+                className={`group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95 ${
+                  isActive ? 'text-blue-700' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <div
-                  className={`flex items-center justify-center w-10 h-8 rounded-2xl transition-colors ${
-                    isActive ? 'bg-[#0071e3]/15 text-[#0050c8]' : 'bg-transparent text-slate-700'
+                  className={`flex items-center justify-center w-10 h-7 rounded-xl transition-colors ${
+                    isActive ? 'bg-blue-50 text-blue-700' : 'bg-transparent text-slate-600'
                   }`}
                 >
-                  <IconComp className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <IconComp className="w-5 h-5" />
                 </div>
                 <span
-                  className={`text-xs tracking-tight leading-none mt-1 truncate ${
-                    isActive ? 'font-black text-[#0050c8]' : 'font-bold text-slate-700'
+                  className={`text-[11px] tracking-tight leading-none mt-1 truncate ${
+                    isActive ? 'font-semibold text-blue-700' : 'font-medium text-slate-600'
                   }`}
                 >
                   {item.label}

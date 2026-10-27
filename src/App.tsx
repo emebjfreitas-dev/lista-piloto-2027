@@ -979,7 +979,7 @@ export default function App() {
     if (currentScreen === 'frequencia_mensal') {
       setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas');
     } else if (currentScreen === 'detalhes') {
-      setCurrentScreen(userRole === 'usuario' ? 'home' : 'turmas');
+      setCurrentScreen('turmas');
     } else if (currentScreen === 'turmas') {
       setCurrentScreen('home');
     } else {
@@ -1072,7 +1072,7 @@ export default function App() {
       home: 'Início & Visão Geral',
       turmas: 'Minha turma',
       detalhes: 'Minha turma (Alunos)',
-      frequencia_mensal: 'Fazer Chamada (Faltas do Mês)',
+      frequencia_mensal: 'Informar Faltas do Mês',
       faltas_consecutivas: 'Faltas Consecutivas',
       bolsa_familia: 'Bolsa Família',
       planilha: '3. Planilha & Fotos',
@@ -1617,11 +1617,7 @@ export default function App() {
             }}
             onNavigateToSheet={() => navigateToScreen('planilha')}
             onBackToClasses={() => {
-              if (userRole === 'usuario') {
-                navigateToScreen('home');
-              } else {
-                navigateToScreen('turmas');
-              }
+              navigateToScreen('turmas');
             }}
           />
         )}

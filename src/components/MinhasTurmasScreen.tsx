@@ -293,86 +293,90 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         </div>
       </section>
 
-      {/* Minha Turma Prioritária — Destaque Imediato para a Chamada e Alunos */}
+      {/* Turma Prioritária do Professor Regente */}
       {primaryTeacherClass && (
-        <section className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-300 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-slate-100">
+        <section className="bg-white rounded-xl p-5 border border-slate-200/90 shadow-none space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-14 h-14 rounded-2xl bg-[#003440] text-white flex items-center justify-center font-black text-xl shadow-xs shrink-0">
+              <div className="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200/80 text-slate-900 flex items-center justify-center font-semibold text-base shrink-0">
                 {primaryTeacherClass.turmaAbrev || primaryTeacherClass.name.slice(0, 3)}
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-black uppercase text-blue-700 tracking-wider block">
-                  {userRole === 'usuario' ? 'Sua Turma de Regência' : 'Turma Principal Selecionada'}
+                <span className="text-[11px] font-medium uppercase text-slate-500 tracking-wider block">
+                  {userRole === 'usuario' ? 'Sua Turma de Regência' : 'Turma em Destaque'}
                 </span>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight truncate">
+                <h2 className="text-lg sm:text-xl font-semibold text-slate-900 leading-tight truncate">
                   Turma {primaryTeacherClass.name}
                 </h2>
-                <p className="text-xs sm:text-sm font-bold text-slate-600 mt-0.5 truncate">
-                  {primaryTeacherClass.shift.replace('Turno ', '')} • {primaryTeacherClass.room} • Prof. {primaryTeacherClass.teacherName || 'Regente'}
-                </p>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 truncate">
+                  <span>{primaryTeacherClass.shift.replace('Turno ', '')}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{primaryTeacherClass.room}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Prof. {primaryTeacherClass.teacherName || 'Regente'}</span>
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-4 shrink-0">
               <div className="text-right">
-                <span className="text-xs font-bold text-slate-500 uppercase block">Presença Mês</span>
-                <span className="text-xl font-black text-emerald-800 font-mono">
+                <span className="text-[11px] font-medium text-slate-500 uppercase block">Presença Mês</span>
+                <span className="text-lg font-semibold text-emerald-800 font-mono tabular-nums">
                   {primaryTeacherClass.presenceRate}%
                 </span>
               </div>
-              <div className="text-right border-l-2 border-slate-200 pl-4">
-                <span className="text-xs font-bold text-slate-500 uppercase block">Faltas no Mês</span>
-                <span className="text-xl font-black text-rose-700 font-mono">
+              <div className="text-right border-l border-slate-200 pl-4">
+                <span className="text-[11px] font-medium text-slate-500 uppercase block">Faltas no Mês</span>
+                <span className="text-lg font-semibold text-rose-700 font-mono tabular-nums">
                   {primaryTeacherClass.monthlyAbsences}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Duas Grandes Ações Didáticas: 1) Fazer Chamada e 2) Ver Alunos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {/* Ações Didáticas: 1) Informar Faltas do Mês e 2) Ver Alunos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
             {userRole !== 'peb2' && (
               <button
                 type="button"
                 onClick={() => onSelectClassForMonthlyAttendance(primaryTeacherClass)}
                 disabled={!isLaunchButtonOpen}
-                className={`min-h-[54px] px-5 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-3 cursor-pointer shadow-sm transition-all active:scale-98 ${
+                className={`h-10 px-4 rounded-lg font-medium text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors ${
                   isLaunchButtonOpen
-                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white border-2 border-emerald-800'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed border-2 border-slate-200'
+                    ? 'bg-slate-900 hover:bg-slate-800 text-white'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
                 }`}
-                title={isLaunchButtonOpen ? 'Informar faltas do mês selecionado' : windowEval.reasonLabel}
+                title={isLaunchButtonOpen ? 'Informar faltas do mês de referência' : windowEval.reasonLabel}
               >
-                <span className="material-symbols-outlined text-[24px]">checklist</span>
-                <span>Fazer Chamada — Informar Faltas do Mês</span>
+                <span className="material-symbols-outlined text-[18px]">checklist</span>
+                <span>Informar Faltas do Mês</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => onSelectClassForDetails(primaryTeacherClass)}
-              className="min-h-[54px] px-5 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm sm:text-base flex items-center justify-center gap-3 cursor-pointer shadow-sm transition-all active:scale-98 border-2 border-slate-900"
+              className="h-10 px-4 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-800 font-medium text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
             >
-              <Users className="w-5 h-5 text-white" />
-              <span>Ver Alunos da Minha Turma ({primaryTeacherClass.totalStudents})</span>
+              <Users className="w-4 h-4 text-slate-700" />
+              <span>Ver Alunos ({primaryTeacherClass.totalStudents})</span>
             </button>
           </div>
         </section>
       )}
 
-      {/* Barra de Busca e Filtros de Turno (Direta, Compacta e Intuitiva) */}
+      {/* Barra de Busca e Filtros de Turno */}
       {userRole !== 'usuario' && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Segmented Filter de Turnos */}
-          <div className="inline-flex items-center p-1 bg-white rounded-2xl border border-black/[0.06] text-xs font-medium shrink-0">
+          <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200/60 text-xs font-medium shrink-0">
             <button
               onClick={() => setSelectedShift('Todos')}
               type="button"
-              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
                 selectedShift === 'Todos'
-                  ? 'bg-[#1d1d1f] text-white font-semibold shadow-xs'
-                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Todas ({classes.length})
@@ -380,25 +384,25 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             <button
               onClick={() => setSelectedShift('Turno Manhã')}
               type="button"
-              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                 selectedShift === 'Turno Manhã'
-                  ? 'bg-[#1d1d1f] text-white font-semibold shadow-xs'
-                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Sun className="w-3.5 h-3.5" />
+              <Sun className="w-3 h-3 text-slate-500" />
               <span>Manhã ({manhaCount})</span>
             </button>
             <button
               onClick={() => setSelectedShift('Turno Tarde')}
               type="button"
-              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                 selectedShift === 'Turno Tarde'
-                  ? 'bg-[#1d1d1f] text-white font-semibold shadow-xs'
-                  : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Sunset className="w-3.5 h-3.5" />
+              <Sunset className="w-3 h-3 text-slate-500" />
               <span>Tarde ({tardeCount})</span>
             </button>
           </div>
@@ -406,48 +410,48 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           {/* Campo de Busca e Alternador de Visão */}
           <div className="flex items-center gap-2 flex-1 sm:max-w-md">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b]" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar turma, regente ou código SED..."
-                className="w-full h-10 pl-10 pr-9 bg-white text-[#1d1d1f] text-xs sm:text-sm rounded-2xl border border-black/[0.08] focus:border-[#0071e3] focus:outline-none transition-all placeholder:text-[#86868b]"
+                className="w-full h-8 pl-8 pr-8 bg-white text-slate-900 text-xs rounded-lg border border-slate-200/90 focus:border-slate-400 focus:outline-none transition-colors placeholder:text-slate-400"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3 h-3" />
                 </button>
               )}
             </div>
 
-            <div className="inline-flex items-center p-1 bg-white rounded-2xl border border-black/[0.06] shrink-0">
+            <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200/60 shrink-0">
               <button
                 type="button"
                 onClick={() => setTurmasViewMode('grid')}
                 title="Grade de Cartões"
-                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                className={`p-1.5 rounded-md transition-colors cursor-pointer ${
                   turmasViewMode === 'grid'
-                    ? 'bg-[#1d1d1f] text-white'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                <LayoutGrid className="w-4 h-4" />
+                <LayoutGrid className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setTurmasViewMode('table')}
                 title="Tabela de Dados"
-                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                className={`p-1.5 rounded-md transition-colors cursor-pointer ${
                   turmasViewMode === 'table'
-                    ? 'bg-[#1d1d1f] text-white'
-                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                <TableIcon className="w-4 h-4" />
+                <TableIcon className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -456,23 +460,23 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
 
       {/* Exibição: Tabela ou Cartões */}
       {turmasViewMode === 'table' ? (
-        <div className="bg-white rounded-3xl border border-black/[0.06] overflow-x-auto shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200/90 overflow-x-auto shadow-none">
           <table className="w-full text-left text-xs border-collapse min-w-[850px]">
-            <thead className="bg-[#fafafc] text-[#86868b] border-b border-black/[0.06] font-semibold uppercase tracking-wider text-[0.66rem]">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200/80 font-medium uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3 px-4">Turma</th>
-                <th className="py-3 px-3">Turno &amp; Sala</th>
-                <th className="py-3 px-3">Regente</th>
-                <th className="py-3 px-3 text-center">Estudantes</th>
-                <th className="py-3 px-3 text-center">Frequência</th>
-                <th className="py-3 px-3 text-center">Faltas no Mês</th>
-                <th className="py-3 px-4 text-right">Ações</th>
+                <th className="py-2.5 px-4">Turma</th>
+                <th className="py-2.5 px-3">Turno &amp; Sala</th>
+                <th className="py-2.5 px-3">Regente</th>
+                <th className="py-2.5 px-3 text-center">Estudantes</th>
+                <th className="py-2.5 px-3 text-center">Frequência</th>
+                <th className="py-2.5 px-3 text-center">Faltas no Mês</th>
+                <th className="py-2.5 px-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/[0.04]">
+            <tbody className="divide-y divide-slate-100">
               {filteredClasses.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#86868b] font-normal">
+                  <td colSpan={7} className="py-8 text-center text-slate-400 font-normal">
                     Nenhuma turma encontrada.
                   </td>
                 </tr>
@@ -489,72 +493,72 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                     <tr
                       key={cls.id}
                       onClick={() => onSelectClassForDetails(cls)}
-                      className="hover:bg-[#fafafc] cursor-pointer transition-colors"
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors"
                     >
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                              isInfantil
-                                ? 'bg-[#0071e3]/10 text-[#0066cc]'
-                                : 'bg-[#f5f5f7] text-[#1d1d1f]'
-                            }`}
-                          >
+                          <div className="w-7 h-7 rounded-md bg-slate-100 border border-slate-200/70 flex items-center justify-center font-medium text-xs text-slate-800 shrink-0">
                             {shortBadge}
                           </div>
                           <div>
-                            <span className="font-semibold text-[#1d1d1f] block">
+                            <span className="font-semibold text-slate-900 block">
                               {cls.name}
                             </span>
                             {cls.classeSedCode && (
-                              <span className="font-mono text-[0.66rem] text-[#86868b]">
+                              <span className="font-mono text-[10px] text-slate-400">
                                 SED: {cls.classeSedCode}
                               </span>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3 text-[#6e6e73]">
-                        <span className="font-medium text-[#1d1d1f] block">
+                      <td className="py-2.5 px-3 text-slate-600">
+                        <span className="font-medium text-slate-900 block">
                           {cls.shift.replace('Turno ', '')}
                         </span>
-                        <span className="text-[0.68rem]">{cls.room}</span>
+                        <span className="text-[11px] text-slate-400">{cls.room}</span>
                       </td>
-                      <td className="py-3 px-3">
-                        <span className="font-medium text-[#1d1d1f] block truncate max-w-[220px]">
-                          {cls.teacherName || 'Regente a atribuir'}
-                        </span>
+                      <td className="py-2.5 px-3">
+                        {cls.isVaga || cls.teacherName === 'TURMA VAGA' ? (
+                          <span className="inline-flex items-center gap-1 text-amber-800 font-medium bg-amber-50 px-2 py-0.5 rounded text-xs border border-amber-200">
+                            TURMA VAGA
+                          </span>
+                        ) : (
+                          <span className="font-medium text-slate-800 block truncate max-w-[220px]">
+                            {cls.teacherName || 'Regente a atribuir'}
+                          </span>
+                        )}
                       </td>
-                      <td className="py-3 px-3 text-center font-mono tabular-nums font-medium text-[#1d1d1f]">
+                      <td className="py-2.5 px-3 text-center font-mono tabular-nums font-medium text-slate-900">
                         {cls.totalStudents}
                       </td>
-                      <td className="py-3 px-3 text-center font-mono tabular-nums font-semibold text-[#005035]">
+                      <td className="py-2.5 px-3 text-center font-mono tabular-nums font-semibold text-emerald-800">
                         {cls.presenceRate}%
                       </td>
-                      <td className="py-3 px-3 text-center font-mono tabular-nums font-medium">
-                        <span className={cls.monthlyAbsences > 0 ? 'text-[#ba1a1a]' : 'text-[#6e6e73]'}>
+                      <td className="py-2.5 px-3 text-center font-mono tabular-nums font-medium">
+                        <span className={cls.monthlyAbsences > 0 ? 'text-rose-700 font-semibold' : 'text-slate-400'}>
                           {cls.monthlyAbsences}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-2.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => onSelectClassForDetails(cls)}
-                            className="h-8 px-3 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                            className="h-7 px-2.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors"
                           >
                             <span>Ver Alunos</span>
-                            <ChevronRight className="w-3.5 h-3.5" />
+                            <ChevronRight className="w-3 h-3" />
                           </button>
                           {userRole !== 'peb2' && isLaunchButtonOpen && (
                             <button
                               type="button"
                               onClick={() => onSelectClassForMonthlyAttendance(cls)}
-                              className="h-8 px-2.5 rounded-lg bg-[#1d1d1f] hover:bg-black text-white font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors"
-                              title="Lançar faltas do mês"
+                              className="h-7 px-2.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                              title="Informar faltas do mês"
                             >
-                              <CalendarCheck className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">Lançar</span>
+                              <CalendarCheck className="w-3 h-3" />
+                              <span className="hidden sm:inline">Faltas do Mês</span>
                             </button>
                           )}
                         </div>
@@ -570,13 +574,13 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         /* Modo Grade de Cartões Limpos */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 items-stretch">
           {filteredClasses.length === 0 ? (
-            <div className="bg-white rounded-3xl p-8 text-center border border-black/[0.06] col-span-full">
-              <p className="text-sm font-medium text-[#86868b]">
+            <div className="bg-white rounded-xl p-8 text-center border border-slate-200/90 col-span-full">
+              <p className="text-xs text-slate-400 font-normal">
                 Nenhuma turma encontrada para "{searchTerm}".
               </p>
               <button
                 onClick={() => setSearchTerm('')}
-                className="mt-3 px-4 py-2 bg-[#1d1d1f] text-white font-medium rounded-xl text-xs cursor-pointer hover:bg-black transition-colors"
+                className="mt-3 px-3 py-1.5 bg-slate-900 text-white font-medium rounded-lg text-xs cursor-pointer hover:bg-slate-800 transition-colors"
               >
                 Limpar Busca
               </button>
@@ -593,47 +597,47 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               return (
                 <div
                   key={cls.id}
-                  className="bg-white rounded-3xl p-5 border-2 border-slate-200 hover:border-blue-500 transition-all flex flex-col justify-between gap-4 shadow-xs"
+                  className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 hover:border-slate-300 transition-all flex flex-col justify-between gap-3 shadow-none"
                 >
                   <div
                     onClick={() => onSelectClassForDetails(cls)}
-                    className="cursor-pointer group space-y-3"
+                    className="cursor-pointer group space-y-2.5"
                   >
-                    <div className="flex items-start justify-between gap-2.5">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 transition-transform group-hover:scale-105 shadow-xs ${
-                            isInfantil
-                              ? 'bg-blue-100 text-blue-900 border-2 border-blue-200'
-                              : 'bg-slate-100 text-slate-900 border-2 border-slate-200'
-                          }`}
-                        >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200/70 flex items-center justify-center font-medium text-xs text-slate-800 shrink-0">
                           {shortBadge}
                         </div>
                         <div className="min-w-0">
-                          <h2 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-blue-700 transition-colors truncate">
+                          <h2 className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors truncate">
                             {cls.name}
                           </h2>
-                          <p className="text-xs sm:text-sm font-bold text-slate-600 truncate">
+                          <p className="text-xs text-slate-500 truncate">
                             {cls.shift.replace('Turno ', '')} · {cls.room}
                           </p>
                         </div>
                       </div>
 
-                      <span className="font-mono font-black text-sm text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-xl tabular-nums shrink-0 border border-emerald-300">
+                      <span className="font-mono font-semibold text-xs text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md tabular-nums shrink-0 border border-emerald-200/60">
                         {cls.presenceRate}%
                       </span>
                     </div>
 
-                    <div className="text-xs sm:text-sm text-slate-700 space-y-1">
-                      <p className="font-bold text-slate-900 truncate">
-                        Prof. {cls.teacherName || 'Regente a atribuir'}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                    <div className="text-xs text-slate-600 space-y-0.5">
+                      {cls.isVaga || cls.teacherName === 'TURMA VAGA' ? (
+                        <span className="inline-flex items-center text-amber-800 font-medium text-[11px] bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                          TURMA VAGA
+                        </span>
+                      ) : (
+                        <p className="font-medium text-slate-800 truncate">
+                          Prof. {cls.teacherName || 'Regente a atribuir'}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
                         <span>{cls.totalStudents} estudantes</span>
                         <span aria-hidden="true">·</span>
-                        <span className={cls.monthlyAbsences > 0 ? 'text-rose-700 font-bold' : ''}>
-                          {cls.monthlyAbsences} faltas no mês
+                        <span className={cls.monthlyAbsences > 0 ? 'text-rose-700 font-medium' : ''}>
+                          {cls.monthlyAbsences} faltas
                         </span>
                       </div>
                     </div>
@@ -642,15 +646,15 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   <div
                     className={`grid ${
                       userRole === 'peb2' ? 'grid-cols-1' : 'grid-cols-2'
-                    } gap-2.5 pt-3 border-t-2 border-slate-100`}
+                    } gap-2 pt-2.5 border-t border-slate-100`}
                   >
                     <button
                       type="button"
                       onClick={() => onSelectClassForDetails(cls)}
-                      className="min-h-[48px] px-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-2xs active:scale-98"
+                      className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-800 font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                     >
-                      <Users className="w-4 h-4 text-slate-700" />
-                      <span>Ver Alunos</span>
+                      <Users className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Alunos</span>
                     </button>
 
                     {userRole !== 'peb2' && (
@@ -658,15 +662,15 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                         type="button"
                         onClick={() => onSelectClassForMonthlyAttendance(cls)}
                         disabled={!isLaunchButtonOpen}
-                        className={`min-h-[48px] px-3.5 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-2xs active:scale-98 ${
+                        className={`h-8 px-2.5 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                           isLaunchButtonOpen
-                            ? 'bg-slate-900 hover:bg-black text-white'
+                            ? 'bg-slate-900 hover:bg-slate-800 text-white'
                             : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                         }`}
-                        title={isLaunchButtonOpen ? 'Lançar faltas do mês' : windowEval.reasonLabel}
+                        title={isLaunchButtonOpen ? 'Informar faltas do mês' : windowEval.reasonLabel}
                       >
-                        <CalendarCheck className="w-4 h-4" />
-                        <span>Fazer Chamada</span>
+                        <CalendarCheck className="w-3.5 h-3.5" />
+                        <span>Faltas</span>
                       </button>
                     )}
                   </div>

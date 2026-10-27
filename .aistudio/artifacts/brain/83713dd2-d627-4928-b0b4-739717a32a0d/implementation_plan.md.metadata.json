@@ -1,6 +1,6 @@
 {
-  "summary":  "Plano e relatório de execução: navegação entre períodos com botão de retorno ao período anterior, varredura e remoção de botões indevidos/sem função, eliminação de vinculações manuais de link e garantia de persistência e leitura centralizadas no Google Sheets.",
-  "updatedAt":  "2026-10-23T14:35:39.102850433Z",
+  "summary":  "Documentação das melhorias de reestruturação para o ano letivo de 2027:\n- Atualização integral das 40 turmas oficiais (20 Manhã e 20 Tarde) com professores regentes, especialistas e destaque das 3 turmas vagas (2F, G5E, 1E).\n- Padronização tipográfica institucional SED SP (Open Sans, Public Sans e numerais tabulares).\n- Nova Home Screen com relógio dinâmico, contadores por período, status das chamadas e mês de referência automático (mês anterior ao corrente).\n- Gerenciamento de acessos unificado com filtros de Turmas Vagas e atribuição docente.\n- Relatórios A4 e exportação Excel (.xlsx) totalmente adequados.",
+  "updatedAt":  "2026-10-26T12:38:38.653567504Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

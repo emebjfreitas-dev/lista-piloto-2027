@@ -1199,22 +1199,28 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
-      {/* Botão Voltar Didático e Visível */}
-      {onBack && (
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onBack}
-            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-          >
-            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-            <span>Voltar para Minha Turma</span>
-          </button>
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Planilha Oficial SME &amp; Fotos
-          </span>
+      {/* Breadcrumb Limpo */}
+      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center gap-1.5">
+          {onBack && (
+            <>
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                <span>Voltar</span>
+              </button>
+              <span className="text-slate-300">/</span>
+            </>
+          )}
+          <span className="font-semibold text-slate-800">Planilha Google &amp; Fotos</span>
         </div>
-      )}
+        <span className="text-slate-400 text-xs hidden sm:inline">
+          Integração Google Sheets e Drive Institucional
+        </span>
+      </div>
 
       {/* Status Toast */}
       {statusMessage && (

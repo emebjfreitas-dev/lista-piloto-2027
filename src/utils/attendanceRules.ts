@@ -703,3 +703,63 @@ export const haveClassesChanged = (
   return false;
 };
 
+export const MONTH_NAMES_PT = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+] as const;
+
+/**
+ * Regra Oficial de Competência e Fechamento Mensal de Frequência Escolar:
+ * A chamada informa os registros mensais referentes ao mês anterior ao mês vigente.
+ * Exemplo: se o mês atual for outubro de 2026, a referência padrão será setembro de 2026.
+ * Em janeiro de qualquer ano, a referência padrão será dezembro do ano anterior.
+ */
+export interface ReferencePeriod {
+  year: number;
+  monthIndex: number; // 0..11
+  monthNumber: number; // 1..12
+  monthName: string; // "Setembro"
+  periodKey: string; // "2026-09"
+  label: string; // "Setembro/2026"
+  currentDate: Date;
+  referenceDate: Date;
+  ruleExplanation: string;
+}
+
+export const getDefaultReferencePeriod = (baseDate: Date = new Date()): ReferencePeriod => {
+  const current = new Date(baseDate);
+  const ref = new Date(current.getFullYear(), current.getMonth(), 1);
+  // Subtract one month
+  ref.setMonth(ref.getMonth() - 1);
+
+  const year = ref.getFullYear();
+  const monthIndex = ref.getMonth();
+  const monthNumber = monthIndex + 1;
+  const monthName = MONTH_NAMES_PT[monthIndex] || 'Mês Anterior';
+  const periodKey = `${year}-${String(monthNumber).padStart(2, '0')}`;
+  const label = `${monthName}/${year}`;
+  const currentMonthName = MONTH_NAMES_PT[current.getMonth()] || '';
+
+  return {
+    year,
+    monthIndex,
+    monthNumber,
+    monthName,
+    periodKey,
+    label,
+    currentDate: current,
+    referenceDate: ref,
+    ruleExplanation: `Referência mensal padrão: ${monthName}/${year} (mês imediatamente anterior a ${currentMonthName}/${current.getFullYear()}).`,
+  };
+};
+

@@ -37,8 +37,8 @@ import {
 } from '../utils/genderDictionary';
 import { isBackendApiAvailable } from './apiEnvironment';
 
-const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v6';
-const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v3';
+const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v7';
+const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v4';
 const ATTENDANCE_WINDOW_STORAGE_KEY = 'emeb_candelario_attendance_window_2027_v1';
 const ACCESS_LOGS_STORAGE_KEY = 'emeb_candelario_access_session_logs_2027_v1';
 const NOTICES_STORAGE_KEY = 'emeb_candelario_school_notices_2027_v1';
@@ -456,7 +456,7 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
         assignedClassName:
           off?.assignedClassName ||
           (subjectLabel
-            ? `${subjectLabel} • ${specIds.filter((i) => i !== 'all').length || 39} Turmas (Visualização)`
+            ? `${subjectLabel} • ${specIds.filter((i) => i !== 'all').length || 40} Turmas (Visualização)`
             : 'Todas as Turmas (Somente Visualização)'),
         assignedClassNames: specNames,
       };
@@ -468,8 +468,8 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
       teacherRoleType: 'admin',
       assignedClassId: 'all',
       assignedClassIds: ['all'],
-      assignedClassName: 'Todas as 39 Turmas (Acesso Pleno)',
-      assignedClassNames: ['Todas as 39 Turmas (Acesso Pleno)'],
+      assignedClassName: 'Todas as 40 Turmas (Acesso Pleno)',
+      assignedClassNames: ['Todas as 40 Turmas (Acesso Pleno)'],
     };
   });
 };
@@ -1086,18 +1086,18 @@ export const findAuthorizedUserByEmail = (
   return list.find((u) => u.email.trim().toLowerCase() === normalized);
 };
 
-const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] => {
-  const officialMap = new Map(INITIAL_CLASSES.map((c) => [c.id.toLowerCase(), c]));
-  const seenClassIds = new Set<string>();
-  return classes.map((cls, clsIdx) => {
-    const off = officialMap.get(cls.id.toLowerCase());
-    let cleanClassId = cls.id || off?.id || `cls-${clsIdx + 1}`;
-    if (seenClassIds.has(cleanClassId.toLowerCase())) {
-      cleanClassId = `${cleanClassId}-${clsIdx + 1}`;
-    }
-    seenClassIds.add(cleanClassId.toLowerCase());
+const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGroup[] => {
+  const loadedMap = new Map<string, ClassGroup>();
+  (loadedClasses || []).forEach((c) => {
+    if (c.id) loadedMap.set(c.id.toLowerCase(), c);
+    if (c.turmaAbrev) loadedMap.set(c.turmaAbrev.toLowerCase(), c);
+  });
 
-    const baseStudents = cls.students || off?.students || [];
+  return INITIAL_CLASSES.map((off) => {
+    const loaded = loadedMap.get(off.id.toLowerCase()) || (off.turmaAbrev ? loadedMap.get(off.turmaAbrev.toLowerCase()) : undefined);
+    if (!loaded) return off;
+
+    const baseStudents = loaded.students && loaded.students.length > 0 ? loaded.students : off.students;
     const seenStudentKeysInClass = new Set<string>();
     const deduplicatedBaseStudents: Student[] = [];
     baseStudents.forEach((st) => {
@@ -1118,10 +1118,9 @@ const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] =>
     const seenStudentIdsInClass = new Set<string>();
     const enrichedStudents = deduplicatedBaseStudents.map((st, idx) => {
       const num = st.number || idx + 1;
-      let cleanStudentId = st.id || `${cleanClassId}-s${num}`;
-      // Fix legacy duplicated IDs or collisions within the same class
+      let cleanStudentId = st.id || `${off.id}-s${num}`;
       if (seenStudentIdsInClass.has(cleanStudentId)) {
-        cleanStudentId = `${cleanClassId}-s${num}-i${idx + 1}`;
+        cleanStudentId = `${off.id}-s${num}-i${idx + 1}`;
       }
       seenStudentIdsInClass.add(cleanStudentId);
 
@@ -1147,31 +1146,21 @@ const enrichClassesWithOfficialMatrix = (classes: ClassGroup[]): ClassGroup[] =>
         rotaOnibus: defaultRota || undefined,
       };
     });
-    if (!off) {
-      return {
-        ...cls,
-        id: cleanClassId,
-        students: enrichedStudents,
-      };
-    }
+
     return {
-      ...off,
-      ...cls,
-      id: cleanClassId,
+      ...loaded,
+      ...off, // Always enforce official 2027 teacher and shift
       students: enrichedStudents,
-      turmaAbrev: cls.turmaAbrev || off.turmaAbrev,
-      teacherName: cls.teacherName || off.teacherName,
-      teacherEmail: cls.teacherEmail || off.teacherEmail,
-      pronoun: cls.pronoun || off.pronoun,
-      teacherFirstName: cls.teacherFirstName || off.teacherFirstName,
-      sedClassName: cls.sedClassName || off.sedClassName,
-      sedExpectedStudents: cls.sedExpectedStudents ?? off.sedExpectedStudents,
-      classeSedCode: cls.classeSedCode || off.classeSedCode,
-      artTeacher: cls.artTeacher || off.artTeacher,
-      peTeacher: cls.peTeacher || off.peTeacher,
-      englishTeacher: cls.englishTeacher || off.englishTeacher,
-      room: cls.room || off.room,
-      shift: cls.shift || off.shift,
+      totalStudents: enrichedStudents.length,
+      classesHeld: loaded.classesHeld ?? off.classesHeld,
+      classesPlanned: loaded.classesPlanned ?? off.classesPlanned,
+      monthlySchoolDays: loaded.monthlySchoolDays || off.monthlySchoolDays,
+      pedagogicalNotes: loaded.pedagogicalNotes || off.pedagogicalNotes,
+      statusText: loaded.statusText || off.statusText,
+      monthlyAbsences: loaded.monthlyAbsences ?? off.monthlyAbsences,
+      presenceRate: loaded.presenceRate ?? off.presenceRate,
+      driveFolderUrl: loaded.driveFolderUrl || off.driveFolderUrl,
+      updatedAtMs: Math.max(loaded.updatedAtMs || 0, off.updatedAtMs || 0),
     };
   });
 };
@@ -1786,7 +1775,7 @@ export const downloadSpreadsheetXLSX = (
   const wsMeses = XLSX.utils.json_to_sheet(rowsMesesPorTurma);
   XLSX.utils.book_append_sheet(wb, wsMeses, 'Dias_Letivos_Turma_Mês');
 
-  // Tab 9: Resumo das 39 Turmas (Ano 2027)
+  // Tab 9: Resumo das 40 Turmas (Ano Letivo 2027)
   const rowsTurmas = classes.map((c) => {
     const cm = getClassAttendanceMetrics(c, calendar);
     const percentFaltasTurma =

@@ -6,6 +6,7 @@ import {
   getClassAttendanceMetrics,
   getStudentBimesterReport,
   OFFICIAL_BIMESTERS_2027,
+  getDefaultReferencePeriod,
 } from '../utils/attendanceRules';
 
 interface RelatorioImpressaoModalProps {
@@ -24,6 +25,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
 
   if (!isOpen) return null;
 
+  const defaultRefPeriod = getDefaultReferencePeriod();
   const classMetrics = getClassAttendanceMetrics(classGroup, OFFICIAL_OCTOBER_DAYS);
   const isInfantilClass = classGroup.name.toUpperCase().startsWith('GRUPO');
   const minLegalPresencePercent = isInfantilClass ? 60 : 75;
@@ -149,7 +151,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <div className="text-right">
               <span className="text-[0.72rem] font-bold text-[#71787b] block">ANO LETIVO 2027</span>
               <span className="text-[1.05rem] font-extrabold text-[#003440]">
-                {reportMode === 'bimestral' ? currentBimester.periodLabel.toUpperCase() : 'OUTUBRO / 2027'}
+                {reportMode === 'bimestral' ? currentBimester.periodLabel.toUpperCase() : defaultRefPeriod.label.toUpperCase()}
               </span>
               <span className="text-[0.7rem] text-[#005035] font-bold block">
                 Mínimo Legal: {minLegalPresencePercent}% ({isInfantilClass ? 'Ed. Infantil' : 'Ens. Fundamental'})
@@ -345,15 +347,19 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           </div>
 
           {/* Signatures Area */}
-          <div className="pt-8 grid grid-cols-2 gap-8 text-center text-[0.85rem]">
+          <div className="pt-8 grid grid-cols-2 gap-8 text-center text-[0.85rem] print:pt-10 break-inside-avoid">
             <div>
               <div className="border-t border-[#191c1b] mx-4 mb-1"></div>
-              <span className="font-bold text-[#003440] block">Docente Regente da Turma {classGroup.name}</span>
-              <span className="text-[#71787b] text-[0.75rem]">Responsável pelo Lançamento</span>
+              <span className="font-extrabold text-[#003440] block">
+                {classGroup.isVaga || classGroup.teacherName === 'TURMA VAGA'
+                  ? 'Docente Regente (Aguardando Atribuição)'
+                  : classGroup.teacherName || 'Docente Regente Responsável'}
+              </span>
+              <span className="text-[#71787b] text-[0.75rem]">Docente Regente • Turma {classGroup.name} ({classGroup.shift})</span>
             </div>
             <div>
               <div className="border-t border-[#191c1b] mx-4 mb-1"></div>
-              <span className="font-bold text-[#003440] block">Direção / Coordenação Pedagógica</span>
+              <span className="font-extrabold text-[#003440] block">Direção / Coordenação Pedagógica</span>
               <span className="text-[#71787b] text-[0.75rem]">{SCHOOL_NAME}</span>
             </div>
           </div>

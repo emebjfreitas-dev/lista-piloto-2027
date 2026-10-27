@@ -198,6 +198,8 @@ export interface ClassGroup {
   pedagogicalNotes: string;
   driveFolderUrl?: string;
   updatedAtMs?: number;
+  isVaga?: boolean;
+  periodo?: 'MANHÃ' | 'TARDE';
 }
 
 export interface SheetTabInfo {

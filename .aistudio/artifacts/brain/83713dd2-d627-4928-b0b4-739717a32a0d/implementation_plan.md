@@ -1,39 +1,79 @@
-# Relatório de Conclusão - Navegação de Períodos, Varredura de Botões e Sincronização Google Sheets
+# REESTRUTURAÇÃO, ATUALIZAÇÃO E PADRONIZAÇÃO COMPLETA DO SISTEMA ESCOLAR (2027)
 
-Todas as diretrizes solicitadas foram integralmente revisadas, corrigidas e implementadas com compilação e tipagem 100% validadas (`tsc --noEmit` e `npm run build`).
+Revisão e modernização integral do sistema da EMEB Prof. Joaquim Candelário de Freitas, atendendo a todos os requisitos arquiteturais, visuais, tipográficos e funcionais solicitados para o ano letivo de 2027.
 
-## 1. Botão para Voltar à Tela do Período Anterior
-- **Tela de Registro de Frequência Mensal (`RegistroFrequenciaMensalScreen.tsx`)**:
-  - Adicionado botão de retorno direto ao período letivo imediatamente anterior tanto na barra superior quanto no rodapé de conclusão (`Voltar ao Período Anterior ({previousPeriodName})`), com ícone institucional e alto contraste.
-  - Permite aos professores transitar facilmente entre os meses escolares (ex.: de Novembro para Outubro, etc.) sem perda de dados e com recálculo automático em tempo real.
-- **Tela de Fechamento Executivo Mensal (`ResumoMensalScreen.tsx`)**:
-  - Adicionado botão `Voltar ao Período Anterior ({previousPeriodName})` tanto no seletor do topo quanto no rodapé executivo, rolando suavemente para a visualização analítica do mês antecedente.
+---
 
-## 2. Varredura e Limpeza de Botões Sem Função ou Indevidos
-- Realizada varredura completa na árvore de componentes (`Header.tsx`, `BottomNav.tsx`, `HomeScreen.tsx`, `MinhasTurmasScreen.tsx`, `DetalhesTurmaScreen.tsx`, `UploadFotoModal.tsx`, `VisualizarPdfNominalModal.tsx`).
-- Removidos handlers sem função e unificados rótulos de botões para total consistência (ex.: harmonização de `Minha turma` na orientação passo a passo da `HomeScreen`).
-- Corrigidas marcações JSX e fechamento de blocos e ternários nos modais.
+## 1. Atualização Completa das Informações para 2027 (Quadro Oficial de 40 Turmas)
 
-## 3. Remoção de Recursos de Vinculação Manual de Links
-- **Modal de Foto (`UploadFotoModal.tsx`)**:
-  - Removido o campo e o botão de inserção manual de URLs externas/links avulsos.
-  - Eliminada a terminologia de "vínculo manual" e "desvincular" da interface, substituindo-a por fluxo direto e elegante de escolha de foto na pasta oficial do Drive ou envio direto do dispositivo.
-- **Modal de Ficha PDF Escaneada (`VisualizarPdfNominalModal.tsx`)**:
-  - Removidos botões e inputs de inserção manual de links e simplificados os indicadores para `Ficha Digitalizada`.
+- **Fonte Oficial Única de Dados (`officialMatrix2027.ts`)**:
+  - Exatamente **40 turmas oficiais cadastradas**: **20 no período da manhã** e **20 no período da tarde**.
+  - **Manhã (20 turmas)**:
+    - 4A (Adília), 3A (Ana Lúcia), 5B (Ana Maria), G4B (Bianca), 4C (Cleonice), G4A (Denise), 2C (Elaine Cristiane), G5A (Gésica), 4B (Helena), 3C (Iara), G4C (Luana), G5B (Lucimeire), 5C (Marcos), 3B (Marina), 1B (Rosângela), 5A (Sandra), 1C (Sílvia Aparecida), 2A (Sílvia Helena), 1A (Simone), 2B (Viviane).
+  - **Tarde (20 turmas)**:
+    - 5E (Amanda), G4D (Ana Laura), 3F (Ana Paula), G4E (Bárbara), 3E (Camilo), 1D (Carol), 4F (Fábio), G5D (Fernanda), 1F (Giulia), 5D (Karina), 3D (Maria Aparecida), 4D (Maria Júlia), 4E (Maria Paula), G5C (Mariana Cristina), 4G (Rafaela), 2D (Rita), 2E (Vanessa), **2F (TURMA VAGA)**, **G5E (TURMA VAGA)**, **1E (TURMA VAGA)**.
+- **Tratamento das Turmas Vagas**:
+  - As 3 turmas vagas (`2F`, `G5E` e `1E`) são mantidas estritamente com identificação `TURMA VAGA` (sem professores fictícios).
+  - Diferenciação clara entre turma vaga e turma inativa: turmas vagas possuem badge de destaque âmbar (`TURMA VAGA (Aguardando Atribuição)`) e ação direta de atribuição para administradores.
+  - Adicionado filtro rápido exclusivo `⚠️ Turmas Vagas (3)` no Quadro Geral.
+- **Persistência Garantida**:
+  - Chaves de armazenamento atualizadas para `emeb_candelario_sed_classes_2027_v7` e `emeb_candelario_authorized_users_2027_v4`, garantindo consistência sem corromper presenças, faltas, fotos ou pareceres pedagógicos dos estudantes.
 
-## 4. Google Sheets como Fonte Central e Exclusiva de Dados
-- Confirmada a arquitetura onde a Planilha Oficial no Google Sheets (`readClassesFromGoogleSheet`, `syncClassesToGoogleSheet`, `writeAttendanceMonthToGoogleSheet`) permanece como fonte soberana de dados para alunos, turmas, endereços, transporte escolar, inclusão e registros de presença/faltas.
+---
 
-## 5. Garantia Contra Excesso de Requisições (GitHub & Google Sheets) — 100 Usuários
-- **Origem do Problema Identificada**:
-  - Polling agressivo a cada 1.2 segundos para rotas `/api/*` gerava mais de 5.000 requisições 404 por minuto ao GitHub Pages, disparando o bloqueio de taxa do GitHub (`HTTP 429 Too Many Requests` / `403 Rate Limit Exceeded`).
-  - O heartbeat de acesso enviava gravações ao Google Sheets a cada 2 segundos por usuário, gerando mais de 3.000 gravações por minuto para 100 usuários e estourando a cota de 300 req/min da API do Google.
-  - Avatares de alunos solicitavam `/api/drive-photo/:id` em vez de carregar direto da CDN do Google.
-- **Soluções Implementadas**:
-  - **Módulo `apiEnvironment.ts`**: Identifica automaticamente ambientes estáticos como GitHub Pages (`*.github.io`) e cessa 100% das chamadas para `/api/*`. Zero requisições 404 atingem o GitHub.
-  - **Avatares via CDN Direta do Google**: Fotos agora usam links diretos de alta velocidade (`lh3.googleusercontent.com/d/:id=w400`), sem passar por proxies ou endpoints do GitHub.
-  - **Cache Inteligente de Leitura do Google Sheets (TTL 35s)**: Leituras de turmas, usuários e logs são cacheadas em memória.
-  - **Cooldown Automático de 60s**: Caso o Google Sheets reporte 429/403, a aplicação entra em modo de resguardo retornando dados do cache local sem exibir erro ao usuário.
-  - **Polling com Jitter Aleatório (90s a 150s)**: A sincronização dos 100 professores foi distribuída de forma estocástica e ocorre apenas quando a aba está visível.
-  - **Heartbeat Desacoplado**: O contador visual em tela continua contando a cada segundo, mas as gravações de sessão são enviadas apenas no início, no logout ou espaçadas a cada 3 minutos (redução de 99% das chamadas).
-  - **Cache npm no GitHub Actions**: Adicionado `cache: 'npm'` em `deploy-github-pages.yml` para evitar limites de download no registry durante deploys.
+## 2. Padronização da Tipografia Institucional (Padrão SED SP)
+
+- **Famílias Tipográficas Oficiais**:
+  - `Open Sans` e `Public Sans` carregadas do Google Fonts, com alinhamento visual idêntico ao portal SED da Secretaria da Educação do Estado de São Paulo.
+  - `JetBrains Mono` reservada para números tabulares (RA, NIS, códigos SED, percentuais de frequência e contadores).
+- **Centralização de Tokens**:
+  - Variáveis globais `--font-sans` e `--font-display` definidas no CSS principal e aplicadas transversalmente a todos os módulos, menus, formulários, botões, modais e relatórios.
+
+---
+
+## 3. Reformulação da Página Inicial (Home)
+
+- **Painel de Boas-Vindas e Indicadores Temporais**:
+  - Relógio digital em tempo real com horas, minutos e segundos (`HH:mm:ss`), data completa por extenso, dia da semana e ano letivo de 2027.
+  - Cartão informativo do **Mês de Referência Padrão** (`Setembro/2026`), com explicação de que o fechamento refere-se ao mês imediatamente anterior ao corrente.
+- **Métricas Oficiais de Turmas**:
+  - Total de **40 turmas ativas**, discriminando a divisão exata de **20 no período da manhã** e **20 no período da tarde**.
+  - Quadro de regência: **37 docentes atribuídos** e **3 turmas vagas aguardando atribuição**.
+  - Indicadores de fechamento de frequência (concluídas vs. pendentes), taxa média de presença escolar e atalhos rápidos com alto contraste e zero sobreposição de botões.
+
+---
+
+## 4. Regra de Mês de Referência Padrão (Mês Imediatamente Anterior)
+
+- Criada a função utilitária `getDefaultReferencePeriod()` em `attendanceRules.ts`.
+- Aplicação automática da regra: o sistema sempre seleciona como referência padrão o mês anterior ao mês do sistema (ex.: em Outubro, a referência é Setembro; em Janeiro, a referência é Dezembro do ano anterior).
+- Navegação entre períodos preservada em todas as telas (`RegistroFrequenciaMensalScreen`, `ResumoMensalScreen`, etc.).
+
+---
+
+## 5. Tela de Controle de Acesso e Usuários (`UsuariosAcessoScreen.tsx`)
+
+- Totalmente atualizada para 40 turmas oficiais.
+- Sub-aba do Quadro Geral com filtro rápido por período (`Todas (40)`, `☀️ Manhã (20)`, `⛅ Tarde (20)` e `⚠️ Turmas Vagas (3)`).
+- Tabela com colunas oficiais completas, pesquisa instantânea, sincronização com matriz oficial e modal de edição para atribuir docentes a turmas vagas.
+- Perfil administrativo atualizado para conceder acesso às 40 turmas.
+
+---
+
+## 6. Exportação de Documentos (PDF / Impressão A4 e Planilha XLSX)
+
+- **Impressão A4 / PDF (`RelatorioImpressaoModal.tsx`)**:
+  - Cabeçalho oficial com brasão municipal, identificação da escola e do ano letivo de 2027.
+  - Dinamização do mês de referência padrão.
+  - Linhas de assinatura para Docente Regente (com nome do professor atribuído) e Direção/Coordenação.
+  - Estilização de quebra de página (`break-inside-avoid`) para evitar cortes indesejados de tabelas na impressão A4.
+- **Exportação Excel (.XLS / .XLSX)**:
+  - Todas as abas consolidadas com suporte às 40 turmas e 200 dias letivos anuais.
+
+---
+
+## 7. Verificação e Qualidade do Código
+
+- `tsc --noEmit` executado via `lint_applet` com **zero erros**.
+- `compile_applet` executado com **sucesso**.
+- Servidor reiniciado e validado.

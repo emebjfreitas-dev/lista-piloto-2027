@@ -648,66 +648,72 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         </section>
       )}
 
-      {/* Botão Voltar Didático e Visível */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBackToClasses}
-          className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-        >
-          <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-          <span>{userRole === 'usuario' ? 'Voltar para o Início' : 'Voltar para Minha Turma'}</span>
-        </button>
-
-        <span className="text-xs sm:text-sm font-bold text-slate-500">
-          Alunos da Turma {classGroup.name}
+      {/* Contexto da Turma e Navegação */}
+      {/* Breadcrumb Limpo */}
+      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onBackToClasses}
+            className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+            <span>Turmas</span>
+          </button>
+          <span className="text-slate-300">/</span>
+          <span className="font-semibold text-slate-800">{classGroup.name}</span>
+          <span className="text-slate-400">·</span>
+          <span>{classGroup.shift}</span>
+        </div>
+        <span className="hidden sm:inline text-slate-400 font-mono text-[11px]">
+          {classGroup.room}
         </span>
       </div>
 
-      {/* ALTA DA TURMA: Cabeçalho Apple Clean + Quadro Docente Oficial + Resumo Completo de Estudantes */}
-      <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-3.5 sm:space-y-4">
+      {/* Painel Principal da Turma */}
+      <section className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {classGroup.turmaAbrev && (
-                <span className="text-[0.7rem] font-bold uppercase tracking-wider text-white bg-[#1d1d1f] px-2.5 py-0.5 rounded-lg font-mono">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-mono">
                   {classGroup.turmaAbrev}
                 </span>
               )}
-              <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-[#0066cc] bg-[#0071e3]/10 px-2.5 py-0.5 rounded-full">
+              <span className="text-[11px] font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
                 {classGroup.shift} · {classGroup.room}
               </span>
               {classGroup.classeSedCode && (
-                <span className="text-[0.7rem] font-mono font-semibold text-[#1d1d1f] bg-[#f5f5f7] px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
                   SED: {classGroup.classeSedCode}
                 </span>
               )}
-              <span className="text-[0.7rem] font-medium text-[#6e6e73] bg-[#f5f5f7] px-2.5 py-0.5 rounded-full">
+              <span className="text-[11px] text-slate-500">
                 Mín. Legal: {minLegalPresence}%
               </span>
             </div>
-            <h1 className="text-[1.4rem] sm:text-[1.8rem] font-bold text-[#1d1d1f] tracking-tight leading-tight mt-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-1">
               Turma {classGroup.name}
             </h1>
-            <p className="text-[0.78rem] sm:text-[0.84rem] text-[#6e6e73] font-normal">
+            <p className="text-xs text-slate-500 font-normal mt-0.5">
               {classGroup.sedClassName
-                ? `${classGroup.sedClassName} · Qtd Prevista SED: ${classGroup.sedExpectedStudents ?? classSummary.totalMatriculados}`
+                ? `${classGroup.sedClassName} · Previsto SED: ${classGroup.sedExpectedStudents ?? classSummary.totalMatriculados}`
                 : `${classGroup.grade} · ${classGroup.room}`}{' '}
               · {diasLetivosMes} dias letivos no mês
             </p>
           </div>
 
-          {/* Ações da Turma: Fazer Chamada em destaque máximo */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {/* Ações da Turma */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {canLaunchAttendance && (
               <button
                 type="button"
                 onClick={onGoToMonthlyAttendance}
-                className="min-h-[48px] px-5 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm flex items-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
-                title="Abrir lançamento de faltas do mês selecionado"
+                className="h-9 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors"
+                title="Informar faltas do mês de referência"
               >
-                <span className="material-symbols-outlined text-[22px] text-emerald-400">checklist</span>
-                <span>Fazer Chamada (Faltas do Mês)</span>
+                <span className="material-symbols-outlined text-[18px] text-emerald-400">checklist</span>
+                <span>Informar Faltas do Mês</span>
               </button>
             )}
 
@@ -715,9 +721,9 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsExportXlsModalOpen(true)}
-                className="min-h-[48px] px-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all border border-black/[0.08]"
+                className="h-9 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors border border-slate-200/90"
               >
-                <span className="material-symbols-outlined text-[18px] text-[#0071e3]">download</span>
+                <span className="material-symbols-outlined text-[17px] text-slate-500">download</span>
                 <span>Exportar .XLS</span>
               </button>
             )}
@@ -725,189 +731,200 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         </div>
 
 
-        {/* Quadro Docente Oficial da Turma: Professor(a) Regente PEB I + Especialistas PEB II (Arte, Educação Física e Língua Inglesa) */}
+        {/* Quadro Docente Oficial da Turma */}
         {(classGroup.teacherName || classGroup.artTeacher || classGroup.peTeacher || classGroup.englishTeacher) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-black/[0.06] items-stretch">
-            <div className="rounded-2xl bg-[#eaf6ef]/70 border border-[#005035]/20 p-3 flex items-start gap-2.5 h-full">
-              <div className="w-8 h-8 rounded-xl bg-[#005035] text-white flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[18px]">school</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-3 border-t border-slate-100 items-stretch">
+            <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex items-start gap-2.5 h-full">
+              <div className="w-7 h-7 rounded-md bg-slate-800 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[16px]">school</span>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[0.63rem] font-extrabold uppercase tracking-wider text-[#005035]">
-                    {classGroup.pronoun || 'PROFESSORA'} REGENTE (PEB I)
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    {classGroup.pronoun || 'PROFESSORA'} REGENTE
                   </span>
                   {classGroup.teacherFirstName && (
-                    <span className="px-1.5 py-0.2 rounded bg-[#005035]/15 text-[#005035] text-[0.62rem] font-black">
+                    <span className="px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 text-[10px] font-semibold">
                       {classGroup.teacherFirstName}
                     </span>
                   )}
                 </div>
-                <p className="text-[0.8rem] font-extrabold text-[#003440] truncate mt-0.5">
-                  {classGroup.teacherName || 'Não atribuído'}
-                </p>
-                <p className="text-[0.66rem] font-mono text-[#436370] truncate min-h-[1rem]">
-                  {classGroup.teacherEmail || 'Docente Regente'}
-                </p>
+                {classGroup.isVaga || classGroup.teacherName === 'TURMA VAGA' ? (
+                  <div className="mt-1">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-xs font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Turma Vaga
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold text-slate-900 truncate mt-0.5">
+                      {classGroup.teacherName || 'Não atribuído'}
+                    </p>
+                    <p className="text-[11px] font-mono text-slate-500 truncate">
+                      {classGroup.teacherEmail || 'Docente Regente'}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="rounded-2xl bg-[#fdf7fa] border border-[#8f2d56]/20 p-3 flex items-start gap-2.5 h-full">
-              <div className="w-8 h-8 rounded-xl bg-[#8f2d56] text-white flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[18px]">palette</span>
+            <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex items-start gap-2.5 h-full">
+              <div className="w-7 h-7 rounded-md bg-slate-800 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[16px]">palette</span>
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[0.63rem] font-extrabold uppercase tracking-wider text-[#8f2d56] block">
-                  ARTE (ESPECIALISTA PEB II)
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
+                  Arte (PEB II)
                 </span>
-                <p className="text-[0.8rem] font-extrabold text-[#1c1c1e] truncate mt-0.5">
+                <p className="text-xs font-semibold text-slate-900 truncate mt-0.5">
                   {classGroup.artTeacher || '—'}
                 </p>
-                <p className="text-[0.66rem] font-mono text-[#5a676b] truncate min-h-[1rem]">
-                  {classGroup.artTeacherEmail || 'Especialista de Arte'}
+                <p className="text-[11px] font-mono text-slate-500 truncate">
+                  {classGroup.artTeacherEmail || 'Especialista'}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-[#f4f9fc] border border-[#004e64]/20 p-3 flex items-start gap-2.5 h-full">
-              <div className="w-8 h-8 rounded-xl bg-[#004e64] text-white flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[18px]">sports_soccer</span>
+            <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex items-start gap-2.5 h-full">
+              <div className="w-7 h-7 rounded-md bg-slate-800 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[16px]">sports_soccer</span>
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[0.63rem] font-extrabold uppercase tracking-wider text-[#004e64] block">
-                  EDUCAÇÃO FÍSICA (PEB II)
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
+                  Ed. Física (PEB II)
                 </span>
-                <p className="text-[0.8rem] font-extrabold text-[#1c1c1e] truncate mt-0.5">
+                <p className="text-xs font-semibold text-slate-900 truncate mt-0.5">
                   {classGroup.peTeacher || '—'}
                 </p>
-                <p className="text-[0.66rem] font-mono text-[#5a676b] truncate min-h-[1rem]">
-                  {classGroup.peTeacherEmail || 'Especialista de Ed. Física'}
+                <p className="text-[11px] font-mono text-slate-500 truncate">
+                  {classGroup.peTeacherEmail || 'Especialista'}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-[#f5f3ff] border border-[#5b21b6]/20 p-3 flex items-start gap-2.5 h-full">
-              <div className="w-8 h-8 rounded-xl bg-[#5b21b6] text-white flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[18px]">translate</span>
+            <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex items-start gap-2.5 h-full">
+              <div className="w-7 h-7 rounded-md bg-slate-800 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <span className="material-symbols-outlined text-[16px]">translate</span>
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[0.63rem] font-extrabold uppercase tracking-wider text-[#5b21b6] block">
-                  LÍNGUA INGLESA (PEB II)
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block">
+                  Inglês (PEB II)
                 </span>
-                <p className="text-[0.8rem] font-extrabold text-[#1c1c1e] truncate mt-0.5">
+                <p className="text-xs font-semibold text-slate-900 truncate mt-0.5">
                   {classGroup.englishTeacher || '—'}
                 </p>
-                <p className="text-[0.66rem] font-mono text-[#5a676b] truncate min-h-[1rem]">
-                  {classGroup.englishTeacherEmail || 'Especialista de Inglês'}
+                <p className="text-[11px] font-mono text-slate-500 truncate">
+                  {classGroup.englishTeacherEmail || 'Especialista'}
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Grade Simétrica de 4 Indicadores Cadastrais da Turma */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-black/[0.06] items-stretch">
+        {/* Indicadores Cadastrais da Turma */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-3 border-t border-slate-100 items-stretch">
           {/* 1. Estudantes Ativos */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'ativos' ? 'all' : 'ativos')}
-            className="bg-[#f5f5f7] hover:bg-[#e8e8ed]/70 rounded-2xl p-3.5 cursor-pointer transition-colors flex flex-col justify-between h-full"
+            className="bg-slate-50/80 hover:bg-slate-100/70 border border-slate-200/60 rounded-lg p-3 cursor-pointer transition-colors flex flex-col justify-between h-full"
           >
-            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
+            <span className="text-[11px] font-medium text-slate-500 block">
               Estudantes Ativos
             </span>
             <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-[1.45rem] font-extrabold text-[#1d1d1f] tabular-nums leading-none">
+              <span className="text-xl font-bold text-slate-900 tabular-nums">
                 {classSummary.ativos}
               </span>
-              <span className="text-[0.72rem] font-semibold text-[#6e6e73] tabular-nums">
+              <span className="text-xs text-slate-500 tabular-nums">
                 de {classSummary.totalMatriculados} matriculados
               </span>
             </div>
           </div>
 
-          {/* 2. Composição por Gênero (Meninas / Meninos) */}
-          <div className="bg-[#f5f5f7] rounded-2xl p-3.5 flex flex-col justify-between h-full">
-            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
-              Feminino · Masculino
+          {/* 2. Composição por Gênero */}
+          <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 flex flex-col justify-between h-full">
+            <span className="text-[11px] font-medium text-slate-500 block">
+              Gênero
             </span>
-            <div className="flex items-baseline gap-2 mt-1 tabular-nums">
-              <span className="text-[1.4rem] font-extrabold text-[#8f2d56] leading-none">
-                {classSummary.feminino} <span className="text-[0.72rem] font-bold">Meninas</span>
+            <div className="flex items-baseline gap-2 mt-1 tabular-nums text-xs">
+              <span className="font-semibold text-slate-900">
+                {classSummary.feminino} <span className="text-slate-500 font-normal">Feminino</span>
               </span>
-              <span className="text-[#c7c7cc]">·</span>
-              <span className="text-[1.4rem] font-extrabold text-[#004e64] leading-none">
-                {classSummary.masculino} <span className="text-[0.72rem] font-bold">Meninos</span>
+              <span className="text-slate-300">·</span>
+              <span className="font-semibold text-slate-900">
+                {classSummary.masculino} <span className="text-slate-500 font-normal">Masculino</span>
               </span>
             </div>
           </div>
 
-          {/* 3. Movimentação (Transferidos / Remanejados) */}
+          {/* 3. Movimentação */}
           <div
             onClick={() =>
               classSummary.transferidos + classSummary.remanejados > 0 &&
               setStatusFilter(statusFilter === 'movimentados' ? 'all' : 'movimentados')
             }
-            className={`bg-[#f5f5f7] rounded-2xl p-3.5 transition-colors flex flex-col justify-between h-full ${
+            className={`bg-slate-50/80 border border-slate-200/60 rounded-lg p-3 transition-colors flex flex-col justify-between h-full ${
               classSummary.transferidos + classSummary.remanejados > 0
-                ? 'cursor-pointer hover:bg-[#e8e8ed]/70'
+                ? 'cursor-pointer hover:bg-slate-100/70'
                 : ''
             }`}
           >
-            <span className="text-[0.65rem] font-bold uppercase tracking-wider text-[#6e6e73] block">
-              Transferidos e Remanejados
+            <span className="text-[11px] font-medium text-slate-500 block">
+              Movimentados
             </span>
             <div className="flex items-baseline gap-1.5 mt-1 tabular-nums">
-              <span className="text-[1.45rem] font-extrabold text-[#1d1d1f] leading-none">
+              <span className="text-xl font-bold text-slate-900">
                 {classSummary.transferidos + classSummary.remanejados}
               </span>
-              <span className="text-[0.7rem] font-semibold text-[#6e6e73]">
-                ({classSummary.transferidos} transferidos · {classSummary.remanejados} remanejados)
+              <span className="text-xs text-slate-500">
+                ({classSummary.transferidos} transf. · {classSummary.remanejados} reman.)
               </span>
             </div>
           </div>
 
-          {/* 4. Fichas Informativas PDF (Com Filtro em 1 Toque, Sem Banner Duplicado) */}
+          {/* 4. Fichas Informativas PDF */}
           <div
             onClick={() =>
               classSummary.semFichaEscaneadaCount > 0 &&
               setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')
             }
-            className={`rounded-2xl p-3.5 border transition-colors flex flex-col justify-between h-full ${
+            className={`rounded-lg p-3 border transition-colors flex flex-col justify-between h-full ${
               classSummary.semFichaEscaneadaCount > 0
-                ? 'bg-[#fff2f2] border-[#ff3b30]/30 cursor-pointer hover:bg-[#ffe5e5]'
-                : 'bg-[#eaf6ef]/70 border-[#005035]/20'
+                ? 'bg-rose-50/50 border-rose-200/80 cursor-pointer hover:bg-rose-50'
+                : 'bg-slate-50/80 border-slate-200/60'
             }`}
           >
             <div className="flex items-center justify-between gap-1">
               <span
-                className={`text-[0.65rem] font-bold uppercase tracking-wider ${
-                  classSummary.semFichaEscaneadaCount > 0 ? 'text-[#ff3b30]' : 'text-[#005035]'
+                className={`text-[11px] font-medium ${
+                  classSummary.semFichaEscaneadaCount > 0 ? 'text-rose-800' : 'text-slate-600'
                 }`}
               >
                 {classSummary.semFichaEscaneadaCount > 0
-                  ? '⚠️ Sem Ficha PDF'
-                  : '✓ Fichas PDF em Dia'}
+                  ? 'Sem Ficha PDF'
+                  : 'Fichas em Dia'}
               </span>
               {classSummary.semFichaEscaneadaCount > 0 && (
-                <span className="text-[0.63rem] font-bold text-[#ff3b30] underline">
+                <span className="text-[10px] font-semibold text-rose-700 underline">
                   {statusFilter === 'sem_ficha_pdf' ? 'Ver todos' : 'Filtrar'}
                 </span>
               )}
             </div>
             <div className="flex items-baseline gap-1.5 mt-1 tabular-nums">
               <span
-                className={`text-[1.45rem] font-extrabold leading-none ${
-                  classSummary.semFichaEscaneadaCount > 0 ? 'text-[#ff3b30]' : 'text-[#005035]'
+                className={`text-xl font-bold ${
+                  classSummary.semFichaEscaneadaCount > 0 ? 'text-rose-700' : 'text-slate-900'
                 }`}
               >
                 {classSummary.semFichaEscaneadaCount > 0
                   ? classSummary.semFichaEscaneadaCount
                   : classSummary.comFichaEscaneadaCount}
               </span>
-              <span className="text-[0.7rem] font-semibold text-[#6e6e73]">
+              <span className="text-xs text-slate-500">
                 {classSummary.semFichaEscaneadaCount > 0
                   ? `pendente(s) · ${classSummary.comFichaEscaneadaCount} em dia`
-                  : '100% escaneadas'}
+                  : '100% digitalizadas'}
               </span>
             </div>
           </div>
@@ -916,39 +933,41 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
 
 
-      {/* Barra de Controles iOS: Busca + Filtros de Situação + Múltiplas Opções de Visualização */}
-      <section className="bg-white/90 backdrop-blur-md rounded-2xl p-3.5 border border-black/[0.06] flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-2xs">
-        {/* Campo de busca estilo Spotlight iOS */}
-        <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8e8e93] text-[20px]">
+      {/* Barra de Filtros e Busca */}
+      <section className="bg-white rounded-xl p-3 border border-slate-200/90 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+        {/* Campo de busca */}
+        <div className="relative flex-1 min-w-[240px]">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
             search
           </span>
           <input
             type="text"
             value={searchStudent}
             onChange={(e) => setSearchStudent(e.target.value)}
-            placeholder="Buscar estudante por Nº, nome, RA, mãe, pai, avó, tio..."
-            className="w-full min-h-[40px] pl-10 pr-8 rounded-xl bg-[#767680]/[0.09] border border-transparent text-[0.86rem] font-medium text-[#1c1c1e] placeholder:text-[#8e8e93] focus:outline-none focus:bg-white focus:border-[#005035]/40 transition-all"
+            placeholder="Buscar estudante por Nº, nome, RA, responsável..."
+            className="w-full h-8 pl-9 pr-7 rounded-lg bg-slate-50 border border-slate-200/80 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-slate-400 transition-colors"
           />
           {searchStudent && (
             <button
               type="button"
               onClick={() => setSearchStudent('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8e8e93] hover:text-[#1c1c1e] cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">cancel</span>
+              <span className="material-symbols-outlined text-[16px]">close</span>
             </button>
           )}
         </div>
 
-        {/* Filtro Rápido de Situação */}
-        <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
-          <div className="ios-segmented flex-wrap">
+        {/* Filtros de Situação & Modos de Visualização */}
+        <div className="flex flex-wrap items-center gap-1.5 justify-between sm:justify-end">
+          <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
-              className={`ios-segmented-item ${
-                statusFilter === 'all' ? 'ios-segmented-item-active' : ''
+              className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                statusFilter === 'all'
+                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Todos ({orderedStudents.length})
@@ -956,8 +975,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter('ativos')}
-              className={`ios-segmented-item ${
-                statusFilter === 'ativos' ? 'ios-segmented-item-active' : ''
+              className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                statusFilter === 'ativos'
+                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Ativos ({classSummary.ativos})
@@ -966,35 +987,34 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setStatusFilter('sem_ficha_pdf')}
-                className={`ios-segmented-item flex items-center gap-1 ${
+                className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center gap-1 ${
                   statusFilter === 'sem_ficha_pdf'
-                    ? 'bg-[#be123c] text-white font-extrabold shadow-xs'
-                    : 'text-[#be123c] font-extrabold'
+                    ? 'bg-rose-600 text-white shadow-2xs font-semibold'
+                    : 'text-rose-700 hover:text-rose-900'
                 }`}
               >
-                <span className="material-symbols-outlined text-[14px]">warning</span>
-                <span>Sem Ficha PDF ({classSummary.semFichaEscaneadaCount})</span>
+                <span>Sem PDF ({classSummary.semFichaEscaneadaCount})</span>
               </button>
             )}
             <button
               type="button"
               onClick={() => setStatusFilter('onibus_fretado')}
-              className={`ios-segmented-item ${
+              className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                 statusFilter === 'onibus_fretado'
-                  ? 'ios-segmented-item-active text-[#0369a1]'
-                  : ''
+                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Ônibus Fretado ({classSummary.onibusFretadoCount})
+              Ônibus ({classSummary.onibusFretadoCount})
             </button>
             {userRole === 'admin' && (
               <button
                 type="button"
                 onClick={() => setStatusFilter('bolsa_familia')}
-                className={`ios-segmented-item ${
+                className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   statusFilter === 'bolsa_familia'
-                    ? 'ios-segmented-item-active text-[#006644]'
-                    : ''
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Bolsa Família ({classSummary.bolsaFamiliaCount})
@@ -1004,68 +1024,68 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setStatusFilter('movimentados')}
-                className={`ios-segmented-item ${
-                  statusFilter === 'movimentados' ? 'ios-segmented-item-active' : ''
+                className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                  statusFilter === 'movimentados'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Transferidos e Remanejados ({classSummary.transferidos + classSummary.remanejados})
+                Movimentados ({classSummary.transferidos + classSummary.remanejados})
               </button>
             )}
             {userRole === 'admin' && classSummary.alertaLegalCount > 0 && (
               <button
                 type="button"
                 onClick={() => setStatusFilter('alerta')}
-                className={`ios-segmented-item ${
+                className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   statusFilter === 'alerta'
-                    ? 'bg-[#ba1a1a] text-white font-bold shadow-xs'
-                    : 'text-[#ba1a1a]'
+                    ? 'bg-rose-600 text-white shadow-2xs font-semibold'
+                    : 'text-rose-700 hover:text-rose-900'
                 }`}
               >
-                Abaixo de {minLegalPresence}% ({classSummary.alertaLegalCount})
+                Abaixo {minLegalPresence}% ({classSummary.alertaLegalCount})
               </button>
             )}
           </div>
 
-          {/* Botão de Gerenciamento Fino: Expandir / Recolher Todos os Resumos Simultaneamente */}
+          {/* Botão Expandir Todos */}
           <button
             type="button"
             onClick={() =>
               setExpandedStudentId((prev) => (prev === '__ALL__' ? null : '__ALL__'))
             }
-            title="Expandir ou recolher o resumo de todos os estudantes da turma ao mesmo tempo"
-            className={`min-h-[34px] px-3 py-1 rounded-full font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer transition-all border ${
-              expandedStudentId === '__ALL__'
-                ? 'bg-[#003440] text-white border-[#003440] shadow-2xs'
-                : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border-black/[0.06]'
-            }`}
+            title="Expandir ou recolher resumo de todos"
+            className="h-8 px-2.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 flex items-center gap-1 cursor-pointer transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px]">
+            <span className="material-symbols-outlined text-[15px]">
               {expandedStudentId === '__ALL__' ? 'unfold_less' : 'unfold_more'}
             </span>
-            <span>
-              {expandedStudentId === '__ALL__' ? 'Recolher Resumos' : 'Expandir Todos'}
-            </span>
+            <span>{expandedStudentId === '__ALL__' ? 'Recolher' : 'Expandir'}</span>
           </button>
 
-          {/* Seletor de Múltiplas Opções de Visualização (Preferência do Usuário) */}
-          <div className="ios-segmented" role="group" aria-label="Modo de visualização">
+          {/* Seletor de visualização */}
+          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg">
             <button
               type="button"
               onClick={() => setViewMode('grid')}
-              title="Visualização em Cartões Completos"
-              className={`ios-segmented-item flex items-center gap-1 ${
-                viewMode === 'grid' ? 'ios-segmented-item-active' : ''
+              title="Cartões"
+              className={`h-7 px-2 rounded-md text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">grid_view</span>
-              <span className="hidden sm:inline">Cartões</span>
+              <span className="hidden sm:inline">Cards</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode('compact')}
-              title="Visualização em Lista Compacta"
-              className={`ios-segmented-item flex items-center gap-1 ${
-                viewMode === 'compact' ? 'ios-segmented-item-active' : ''
+              title="Lista"
+              className={`h-7 px-2 rounded-md text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                viewMode === 'compact'
+                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">view_agenda</span>
@@ -1074,9 +1094,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('table')}
-              title="Visualização em Tabela Completa"
-              className={`ios-segmented-item flex items-center gap-1 ${
-                viewMode === 'table' ? 'ios-segmented-item-active' : ''
+              title="Tabela"
+              className={`h-7 px-2 rounded-md text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">table_rows</span>
@@ -1113,22 +1135,22 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               .trim()}.jpg`;
 
             const cardColorClasses = isTransferred
-              ? 'bg-gradient-to-br from-[#fef3c7] via-[#fffbeb] to-[#fde68a]/65 border-2 border-[#d97706]/60 ring-1 ring-[#f59e0b]/25 shadow-xs'
+              ? 'bg-amber-50/40 border-amber-200/80 hover:border-amber-300'
               : isRemanejado
-              ? 'bg-gradient-to-br from-[#ede9fe] via-[#f5f3ff] to-[#ddd6fe]/65 border-2 border-[#7c3aed]/55 ring-1 ring-[#8b5cf6]/25 shadow-xs'
+              ? 'bg-purple-50/40 border-purple-200/80 hover:border-purple-300'
               : isOtherNonActive
-              ? 'bg-gradient-to-br from-[#e2e8f0] via-[#f1f5f9] to-[#cbd5e1]/65 border-2 border-[#64748b]/55 shadow-xs'
+              ? 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
               : m.isBelowLegalThreshold
-              ? 'bg-[#fff9f8] border-[#ba1a1a]/35'
-              : 'bg-white border-black/[0.06]';
+              ? 'bg-rose-50/30 border-rose-200/80 hover:border-rose-300'
+              : 'bg-white border-slate-200/90 hover:border-slate-300';
 
             const numberBadgeClasses = isTransferred
-              ? 'bg-[#b45309] text-white'
+              ? 'bg-amber-100 text-amber-900 border border-amber-200'
               : isRemanejado
-              ? 'bg-[#6d28d9] text-white'
+              ? 'bg-purple-100 text-purple-900 border border-purple-200'
               : isOtherNonActive
-              ? 'bg-[#475569] text-white'
-              : 'bg-[#003440] text-white';
+              ? 'bg-slate-200 text-slate-700'
+              : 'bg-slate-100 text-slate-800';
 
             const cumulativeOccs = getStudentCumulativeOccurrences(student);
             const latestConsecOcc =
@@ -1160,33 +1182,33 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   if (onOpenStudentGrid) onOpenStudentGrid(student);
                 }}
                 title={`Toque no cartão para abrir a Ficha Completa (48 dados SED) de ${studentGenderInfo.estudanteTerm}`}
-                className={`card-welcoming rounded-3xl p-4 flex flex-col justify-between gap-3 cursor-pointer select-none transition-all duration-300 ease-out h-full min-h-[246px] ${cardColorClasses}`}
+                className={`rounded-xl border p-4 flex flex-col justify-between gap-3 cursor-pointer select-none transition-colors h-full min-h-[220px] ${cardColorClasses}`}
               >
-                {/* Faixa Superior Destacada para Estudantes Não Ativos (Nova Coloração) */}
+                {/* Faixa para Estudantes Não Ativos */}
                 {isNonActive && (
                   <div
-                    className={`-mx-1 -mt-1 px-3 py-1.5 rounded-2xl text-[0.68rem] font-black uppercase tracking-wider flex items-center justify-between gap-2 shadow-2xs ${
+                    className={`-mx-2 -mt-2 px-2.5 py-1 rounded-t-lg text-[11px] font-medium flex items-center justify-between gap-1.5 ${
                       isTransferred
-                        ? 'bg-[#b45309] text-white'
+                        ? 'bg-amber-100 text-amber-900'
                         : isRemanejado
-                        ? 'bg-[#6d28d9] text-white'
-                        : 'bg-[#475569] text-white'
+                        ? 'bg-purple-100 text-purple-900'
+                        : 'bg-slate-200 text-slate-800'
                     }`}
                   >
-                    <span className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[15px]">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">
                         {isTransferred ? 'transfer_within_a_station' : 'swap_horiz'}
                       </span>
                       <span>
                         {isTransferred
-                          ? `${studentGenderInfo.transferidoTerm.toUpperCase()} (Baixa de Matrícula)`
+                          ? `${studentGenderInfo.transferidoTerm} (Baixa)`
                           : isRemanejado
-                          ? `${studentGenderInfo.remanejadoTerm.toUpperCase()} de Turma`
-                          : `NÃO ${studentGenderInfo.ativoTerm.toUpperCase()} • ${sit}`}
+                          ? `${studentGenderInfo.remanejadoTerm} de Turma`
+                          : `Não ativo · ${sit}`}
                       </span>
                     </span>
                     {student.dataMovimentacao && (
-                      <span className="font-mono text-[0.64rem] bg-white/20 px-1.5 py-0.5 rounded">
+                      <span className="font-mono text-[10px] bg-white/50 px-1 py-0.2 rounded">
                         {student.dataMovimentacao}
                       </span>
                     )}
@@ -1401,10 +1423,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     studentGenderInfo
                   )}
 
-                {/* Botões Grandes e Acessíveis para Pessoas Idosas: Ficha Completa e PDF */}
+                {/* Ações Rápidas: Ficha Completa & PDF */}
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="pt-2 flex flex-col gap-2"
+                  className="pt-2 border-t border-slate-100 flex items-center gap-1.5"
                 >
                   {onOpenStudentGrid && (
                     <button
@@ -1414,17 +1436,12 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         e.stopPropagation();
                         onOpenStudentGrid(student);
                       }}
-                      className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl font-bold text-xs sm:text-sm bg-slate-900 hover:bg-black text-white flex items-center justify-between gap-2 cursor-pointer transition-all shadow-xs active:scale-98"
+                      className="flex-1 h-8 px-2.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                     >
-                      <span className="flex items-center gap-2 truncate">
-                        <span className="material-symbols-outlined text-[20px] text-emerald-400 shrink-0">
-                          badge
-                        </span>
-                        <span className="truncate">Ver Ficha Completa do Aluno</span>
+                      <span className="material-symbols-outlined text-[15px] text-emerald-400">
+                        badge
                       </span>
-                      <span className="material-symbols-outlined text-[18px] shrink-0">
-                        chevron_right
-                      </span>
+                      <span className="truncate">Ficha SED</span>
                     </button>
                   )}
 
@@ -1439,38 +1456,33 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       title={
                         (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
-                          ? `Abrir PDF da Ficha Informativa de ${student.name}`
-                          : `Estudante sem ficha: clique para ver o aviso de solicitação à família`
+                          ? `Abrir PDF de ${student.name}`
+                          : `Estudante sem ficha digitalizada`
                       }
-                      className={`w-full min-h-[44px] px-4 py-2 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-all shadow-2xs active:scale-98 ${
+                      className={`h-8 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer border ${
                         (student.fichaPdfDriveUrl &&
                           student.fichaPdfDriveUrl.trim().length > 0) ||
                         (student.fichaPdfDriveId &&
                           student.fichaPdfDriveId.trim().length > 0)
-                          ? 'bg-blue-50 hover:bg-blue-100 text-blue-900 border-2 border-blue-300'
-                          : 'bg-rose-50 hover:bg-rose-100 text-rose-900 border-2 border-rose-300'
+                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200/90'
+                          : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
                       }`}
                     >
-                      <span className="flex items-center gap-2 truncate">
-                        <span className="material-symbols-outlined text-[20px] shrink-0">
-                          {(student.fichaPdfDriveUrl &&
-                            student.fichaPdfDriveUrl.trim().length > 0) ||
-                          (student.fichaPdfDriveId &&
-                            student.fichaPdfDriveId.trim().length > 0)
-                            ? 'picture_as_pdf'
-                            : 'notification_important'}
-                        </span>
-                        <span className="truncate">
-                          {(student.fichaPdfDriveUrl &&
-                            student.fichaPdfDriveUrl.trim().length > 0) ||
-                          (student.fichaPdfDriveId &&
-                            student.fichaPdfDriveId.trim().length > 0)
-                            ? 'Abrir Documento PDF'
-                            : 'Sem PDF • Pedir à Família'}
-                        </span>
+                      <span className="material-symbols-outlined text-[15px]">
+                        {(student.fichaPdfDriveUrl &&
+                          student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId &&
+                          student.fichaPdfDriveId.trim().length > 0)
+                          ? 'picture_as_pdf'
+                          : 'warning'}
                       </span>
-                      <span className="material-symbols-outlined text-[18px] shrink-0">
-                        open_in_new
+                      <span className="text-[11px]">
+                        {(student.fichaPdfDriveUrl &&
+                          student.fichaPdfDriveUrl.trim().length > 0) ||
+                        (student.fichaPdfDriveId &&
+                          student.fichaPdfDriveId.trim().length > 0)
+                          ? 'PDF'
+                          : 'Sem PDF'}
                       </span>
                     </button>
                   )}

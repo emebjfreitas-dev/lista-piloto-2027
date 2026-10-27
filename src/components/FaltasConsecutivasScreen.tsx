@@ -473,46 +473,58 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
   return (
     <div className="flex flex-col w-full max-w-[1250px] mx-auto space-y-4 pb-12 animate-gentle-fade">
-      {/* Botão Voltar Didático e Visível */}
-      {onBack && (
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onBack}
-            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-          >
-            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-            <span>Voltar para Minha Turma</span>
-          </button>
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Acompanhamento de Faltas Consecutivas
-          </span>
+      {/* Breadcrumb Limpo */}
+      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center gap-1.5">
+          {onBack && (
+            <>
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                <span>Voltar</span>
+              </button>
+              <span className="text-slate-300">/</span>
+            </>
+          )}
+          <span className="font-semibold text-slate-800">Busca Ativa</span>
+          <span className="text-slate-400">·</span>
+          <span>Alertas de Faltas Consecutivas</span>
         </div>
-      )}
+        <span className="text-slate-400 text-xs hidden sm:inline">
+          {availableClasses.length} turmas monitoradas
+        </span>
+      </div>
 
-      {/* Seletor de Turma / Escopo */}
+      {/* Seletor de Escopo */}
       {availableClasses.length > 1 && onSelectClass && (
-        <div className="bg-white rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="bg-white rounded-xl border border-slate-200/90 p-2.5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-[0.76rem] font-semibold text-[#6e6e73] pl-1">
-              Visualização:
+            <span className="text-xs font-medium text-slate-500 pl-1">
+              Escopo:
             </span>
             {userRole !== 'usuario' && (
-              <div className="ios-segmented">
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
                 <button
                   type="button"
                   onClick={() => setViewAllClassesMode(true)}
-                  className={`ios-segmented-item px-3 py-1 text-[0.75rem] ${
-                    viewAllClassesMode ? 'ios-segmented-item-active' : ''
+                  className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                    viewAllClassesMode
+                      ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  Todas as Turmas ({availableClasses.length})
+                  Todas ({availableClasses.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewAllClassesMode(false)}
-                  className={`ios-segmented-item px-3 py-1 text-[0.75rem] ${
-                    !viewAllClassesMode ? 'ios-segmented-item-active' : ''
+                  className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                    !viewAllClassesMode
+                      ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Por Turma ({classGroup.name})
@@ -528,12 +540,11 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 const target = availableClasses.find((c) => c.id === e.target.value);
                 if (target) onSelectClass(target);
               }}
-              className="px-3.5 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-[0.8rem] font-semibold cursor-pointer focus:outline-none"
+              className="h-8 px-2.5 rounded-lg bg-slate-50 border border-slate-200/90 text-slate-800 text-xs font-medium cursor-pointer focus:outline-none"
             >
               {availableClasses.map((cls) => (
                 <option key={cls.id} value={cls.id}>
-                  Turma {cls.name} — {cls.shift.replace('Turno ', '')} (
-                  {cls.teacherName || 'PEB I'})
+                  Turma {cls.name} — {cls.shift.replace('Turno ', '')} ({cls.teacherName || 'PEB I'})
                 </option>
               ))}
             </select>

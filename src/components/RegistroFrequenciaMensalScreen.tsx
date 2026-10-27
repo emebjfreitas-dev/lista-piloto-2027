@@ -8,6 +8,7 @@ import {
 import {
   getStudentAttendanceMetrics,
   getClassAttendanceMetrics,
+  getDefaultReferencePeriod,
 } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
 
@@ -37,8 +38,19 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   onOpenStudentPdf,
   onBack,
 }) => {
-  const [selectedMonthName, setSelectedMonthName] = useState<string>('Outubro');
-  const [diasLetivosMes, setDiasLetivosMes] = useState<number>(classGroup.classesHeld || 20);
+  const defaultRef = useMemo(() => getDefaultReferencePeriod(), []);
+  const [selectedMonthName, setSelectedMonthName] = useState<string>(() => {
+    const match = MONTHLY_SCHOOL_DAYS_2027.find(
+      (m) => m.month.toLowerCase() === defaultRef.monthName.toLowerCase()
+    );
+    return match ? match.month : 'Setembro';
+  });
+  const [diasLetivosMes, setDiasLetivosMes] = useState<number>(() => {
+    const match = MONTHLY_SCHOOL_DAYS_2027.find(
+      (m) => m.month.toLowerCase() === defaultRef.monthName.toLowerCase()
+    );
+    return match ? match.schoolDays : (classGroup.classesHeld || 20);
+  });
   const [students, setStudents] = useState<Student[]>(classGroup.students);
   const [ruleAlertMessage, setRuleAlertMessage] = useState<string | null>(null);
   const [searchName, setSearchName] = useState('');
@@ -418,99 +430,88 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </div>
       )}
 
-      {/* Botão Voltar Didático e Visível + Botão Voltar ao Período Anterior */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Breadcrumb e Contexto */}
+      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={onBack}
-            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
+            className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-            <span>Voltar para Minha Turma</span>
+            <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+            <span>Turma {classGroup.name}</span>
           </button>
-
-          {previousPeriodName && (
-            <button
-              type="button"
-              onClick={() => handleMonthChange(previousPeriodName)}
-              className="min-h-[44px] px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-xs cursor-pointer active:scale-98 transition-all"
-              title={`Voltar à tela do período anterior: ${previousPeriodName}`}
-            >
-              <span className="material-symbols-outlined text-[20px] font-bold text-amber-300">history</span>
-              <span>Voltar ao Período Anterior ({previousPeriodName})</span>
-            </button>
-          )}
+          <span className="text-slate-300">/</span>
+          <span className="font-semibold text-slate-800">Informar Faltas do Mês</span>
+          <span className="text-slate-400">·</span>
+          <span>{selectedMonthName}/2027</span>
         </div>
-
-        <span className="text-xs sm:text-sm font-bold text-slate-500">
-          Lançamento Mensal de Presença ({selectedMonthName}/2027)
+        <span className="hidden sm:inline text-slate-500 text-xs">
+          {diasLetivosMes} dias letivos no mês
         </span>
       </div>
 
-      {/* CABEÇALHO ENXUTO E COERENTE DA TURMA + CONTADORES E INDICATIVOS MELHORADOS */}
-      <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-3.5 sm:space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+      {/* Painel de Faltas do Mês */}
+      <section className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#86868b]">
-              <span className="font-semibold text-[#1d1d1f]">{classGroup.name}</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span className="font-semibold text-slate-900">{classGroup.name}</span>
               {classGroup.turmaAbrev && (
                 <>
-                  <span aria-hidden="true">·</span>
-                  <span className="font-mono font-bold text-[#1d1d1f]">{classGroup.turmaAbrev}</span>
+                  <span aria-hidden="true" className="text-slate-300">·</span>
+                  <span className="font-mono text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">{classGroup.turmaAbrev}</span>
                 </>
               )}
-              <span aria-hidden="true">·</span>
+              <span aria-hidden="true" className="text-slate-300">·</span>
               <span>{classGroup.shift.replace('Turno ', '')}</span>
-              <span aria-hidden="true">·</span>
+              <span aria-hidden="true" className="text-slate-300">·</span>
               <span>{classGroup.room}</span>
-              <span aria-hidden="true">·</span>
-              <span className="text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                {instantSyncStatus === 'syncing' ? 'Sincronizando...' : '✓ Salvo Automaticamente'}
+              <span aria-hidden="true" className="text-slate-300">·</span>
+              <span className="text-slate-600 font-medium text-[11px] bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
+                {instantSyncStatus === 'syncing' ? 'Sincronizando...' : '✓ Salvo automaticamente'}
               </span>
             </div>
 
-            <div className="flex flex-wrap items-baseline gap-2 sm:gap-3">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                Fazer Chamada — Informar Faltas do Mês de {selectedMonthName}
-              </h1>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-700 font-medium">
-              Turma {classGroup.name} • {classGroup.pronoun || 'Prof.'} {classGroup.teacherName || 'Regente'} • {detailedIndicators.ativosCount} estudantes matriculados • {diasLetivosMes} dias letivos em {selectedMonthName}
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Informar Faltas do Mês — {selectedMonthName}
+            </h1>
+            <p className="text-xs text-slate-500 font-normal">
+              Turma {classGroup.name} · {classGroup.pronoun || 'Prof.'} {classGroup.teacherName || 'Regente'} · {detailedIndicators.ativosCount} estudantes · {diasLetivosMes} dias letivos
             </p>
           </div>
 
-          {/* Seletor de Mês em Destaque — Grande e Intuitivo com Navegação entre Períodos */}
-          <div className="flex items-center gap-2 bg-emerald-50 border-2 border-emerald-300 px-3 sm:px-4 py-2 rounded-2xl shrink-0 self-start lg:self-auto shadow-xs">
+          {/* Seletor de Mês */}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/90 px-3 py-1.5 rounded-lg shrink-0 self-start lg:self-auto">
             {previousPeriodName && (
               <button
                 type="button"
                 onClick={() => handleMonthChange(previousPeriodName)}
-                className="h-10 px-2.5 rounded-xl bg-white hover:bg-emerald-100 text-emerald-950 border border-emerald-300 font-extrabold text-xs flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
-                title={`Voltar ao período anterior (${previousPeriodName})`}
+                className="h-8 px-2 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80 text-xs font-medium flex items-center gap-0.5 cursor-pointer transition-colors"
+                title={`Ir para ${previousPeriodName}`}
               >
-                <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
                 <span className="hidden sm:inline">{previousPeriodName}</span>
               </button>
             )}
 
-            <span className="material-symbols-outlined text-[24px] text-emerald-800 shrink-0">
+            <span className="material-symbols-outlined text-[20px] text-slate-500 shrink-0">
               calendar_month
             </span>
             <div className="min-w-0">
-              <label className="block text-[0.66rem] font-black uppercase tracking-wider text-emerald-900 leading-tight">
-                Mês da Chamada (2027)
+              <label className="block text-[10px] font-medium text-slate-500 leading-tight">
+                Mês de Referência
               </label>
               <select
                 value={selectedMonthName}
                 onChange={(e) => handleMonthChange(e.target.value)}
-                className="bg-transparent text-slate-900 font-black text-sm sm:text-base focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent text-slate-900 font-semibold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
               >
                 {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
                   const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
                   return (
                     <option key={m.month} value={m.month}>
-                      {m.month} ({daysForClass} dias letivos)
+                      {m.month} ({daysForClass} dias)
                     </option>
                   );
                 })}
@@ -521,125 +522,125 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               <button
                 type="button"
                 onClick={() => handleMonthChange(nextPeriodName)}
-                className="h-10 px-2.5 rounded-xl bg-white hover:bg-emerald-100 text-emerald-950 border border-emerald-300 font-extrabold text-xs flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
-                title={`Ir para o próximo período (${nextPeriodName})`}
+                className="h-8 px-2 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80 text-xs font-medium flex items-center gap-0.5 cursor-pointer transition-colors"
+                title={`Ir para ${nextPeriodName}`}
               >
                 <span className="hidden sm:inline">{nextPeriodName}</span>
-                <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* PAINEL DE CONTADORES E INDICATIVOS DA TURMA (2 COLUNAS NO MOBILE, 4 NO DESKTOP) */}
+        {/* Indicadores de Faltas do Mês */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
-          {/* Indicativo 1: Taxa de Presença da Turma */}
-          <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
+          {/* Indicativo 1: Taxa de Presença */}
+          <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex flex-col justify-between">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#1d8338] truncate">
+              <span className="text-[11px] font-medium text-slate-500 truncate">
                 Presença Mês
               </span>
-              <span className="px-1.5 py-0.5 rounded-md bg-[#1d8338] text-white font-mono text-[0.64rem] font-semibold shrink-0">
+              <span className="px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono text-[10px] font-medium shrink-0">
                 {diasLetivosMes}d
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-[1.45rem] sm:text-[1.7rem] font-bold text-[#1d1d1f] tabular-nums leading-none">
+              <span className="text-xl font-bold text-slate-900 tabular-nums">
                 {liveClassMetrics.presenceRate}%
               </span>
-              <span className="text-[0.68rem] sm:text-[0.74rem] font-semibold text-[#6e6e73] tabular-nums truncate ml-1">
+              <span className="text-xs text-slate-500 tabular-nums truncate ml-1">
                 {liveClassMetrics.totalPresencasTurma}/{liveClassMetrics.totalDiasMatriculadosTurma}
               </span>
             </div>
-            <div className="w-full h-1.5 rounded-full bg-black/[0.08] overflow-hidden mt-2">
+            <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mt-2">
               <div
-                className="h-full bg-[#28cd41] rounded-full transition-all duration-300"
+                className="h-full bg-emerald-600 rounded-full transition-all"
                 style={{ width: `${Math.min(100, liveClassMetrics.presenceRate)}%` }}
               />
             </div>
           </div>
 
-          {/* Indicativo 2: Total de Faltas no Mês */}
-          <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
+          {/* Indicativo 2: Total de Faltas */}
+          <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex flex-col justify-between">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#ff3b30] truncate">
-                Faltas ({selectedMonthName})
+              <span className="text-[11px] font-medium text-slate-500 truncate">
+                Faltas no Mês
               </span>
-              <span className="px-1.5 py-0.5 rounded-md bg-[#ff3b30]/12 text-[#ff3b30] font-mono text-[0.64rem] font-semibold shrink-0">
+              <span className="px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 font-mono text-[10px] font-medium shrink-0">
                 {detailedIndicators.pctFaltaTurma}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-[1.45rem] sm:text-[1.7rem] font-bold text-[#ff3b30] tabular-nums leading-none">
+              <span className="text-xl font-bold text-rose-700 tabular-nums">
                 {liveClassMetrics.totalFaltasTurma}
               </span>
-              <span className="text-[0.68rem] sm:text-[0.74rem] font-semibold text-[#6e6e73] tabular-nums truncate ml-1">
-                {detailedIndicators.countWithFaltas} {detailedIndicators.countWithFaltas === 1 ? 'estudante' : 'estudantes'}
+              <span className="text-xs text-slate-500 tabular-nums truncate ml-1">
+                {detailedIndicators.countWithFaltas} estudantes
               </span>
             </div>
-            <div className="flex items-center justify-between text-[0.65rem] sm:text-[0.7rem] font-medium text-[#6e6e73] mt-2 pt-1.5 border-t border-black/[0.06]">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-1.5 border-t border-slate-200/60">
               <span>Sem atestado: {detailedIndicators.faltasSemAtestadoTurma}</span>
               <span>Com atestado: {liveClassMetrics.totalAtestadosTurma}</span>
             </div>
           </div>
 
-          {/* Indicativo 3: Atestados Médicos no Mês */}
-          <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
+          {/* Indicativo 3: Atestados */}
+          <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex flex-col justify-between">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#0066cc] truncate">
+              <span className="text-[11px] font-medium text-slate-500 truncate">
                 Atestados Médicos
               </span>
-              <span className="px-1.5 py-0.5 rounded-md bg-[#0071e3]/12 text-[#0066cc] font-mono text-[0.64rem] font-semibold shrink-0">
+              <span className="px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono text-[10px] font-medium shrink-0">
                 {detailedIndicators.pctAtestadosSobreFaltas}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-[1.45rem] sm:text-[1.7rem] font-bold text-[#0066cc] tabular-nums leading-none">
+              <span className="text-xl font-bold text-slate-900 tabular-nums">
                 {liveClassMetrics.totalAtestadosTurma}
               </span>
-              <span className="text-[0.68rem] sm:text-[0.74rem] font-semibold text-[#6e6e73] tabular-nums truncate ml-1">
-                {detailedIndicators.countWithAtestados} {detailedIndicators.countWithAtestados === 1 ? 'estudante' : 'estudantes'}
+              <span className="text-xs text-slate-500 tabular-nums truncate ml-1">
+                {detailedIndicators.countWithAtestados} estudantes
               </span>
             </div>
-            <div className="w-full h-1.5 rounded-full bg-black/[0.08] overflow-hidden mt-2">
+            <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mt-2">
               <div
-                className="h-full bg-[#0071e3] rounded-full transition-all duration-300"
+                className="h-full bg-slate-700 rounded-full transition-all"
                 style={{ width: `${Math.min(100, detailedIndicators.pctAtestadosSobreFaltas)}%` }}
               />
             </div>
           </div>
 
-          {/* Indicativo 4: Assiduidade Plena vs Atenção de Frequência */}
-          <div className="rounded-2xl bg-[#f5f5f7] border border-black/[0.06] p-3 sm:p-3.5 flex flex-col justify-between">
+          {/* Indicativo 4: Assiduidade */}
+          <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex flex-col justify-between">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[0.65rem] sm:text-[0.68rem] font-bold uppercase tracking-wider text-[#6e6e73] truncate">
+              <span className="text-[11px] font-medium text-slate-500 truncate">
                 Assiduidade Legal
               </span>
-              <span className="px-1.5 py-0.5 rounded-md bg-black/[0.06] text-[#1d1d1f] font-mono text-[0.64rem] font-semibold shrink-0">
+              <span className="px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono text-[10px] font-medium shrink-0">
                 Mín. {minLegalPresence}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
               <div>
-                <span className="text-[1.45rem] sm:text-[1.6rem] font-bold text-[#1d8338] tabular-nums leading-none">
+                <span className="text-xl font-bold text-slate-900 tabular-nums">
                   {detailedIndicators.countZeroFaltas}
                 </span>
-                <span className="text-[0.68rem] font-medium text-[#6e6e73] ml-1">
+                <span className="text-xs text-slate-500 ml-1">
                   sem faltas
                 </span>
               </div>
               <span
-                className={`px-1.5 py-0.5 rounded-md font-mono text-[0.68rem] font-bold ${
+                className={`px-1.5 py-0.2 rounded font-mono text-[11px] font-medium ${
                   detailedIndicators.countBelowLegal > 0
-                    ? 'bg-[#ff3b30]/12 text-[#ff3b30]'
-                    : 'bg-[#28cd41]/15 text-[#1d8338]'
+                    ? 'bg-rose-50 text-rose-700'
+                    : 'bg-emerald-50 text-emerald-700'
                 }`}
               >
-                {detailedIndicators.countBelowLegal} abaixo de {minLegalPresence}%
+                {detailedIndicators.countBelowLegal} &lt; {minLegalPresence}%
               </span>
             </div>
-            <div className="text-[0.65rem] sm:text-[0.68rem] font-medium text-[#86868b] mt-2 pt-1.5 border-t border-black/[0.06] truncate">
-              Use <strong>—</strong> e <strong>+</strong> em Faltas e Atestados
+            <div className="text-[11px] text-slate-400 mt-2 pt-1.5 border-t border-slate-200/60 truncate">
+              Controles — e + por estudante
             </div>
           </div>
         </div>
@@ -1148,37 +1149,37 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </div>
       )}
 
-      {/* Rodapé Didático e Conclusão da Chamada */}
-      <section className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Resumo e Conclusão de Faltas do Mês */}
+      <section className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base sm:text-lg font-black text-slate-900">
-            Chamada do Mês de {selectedMonthName}
+          <h3 className="text-base sm:text-lg font-bold text-slate-900">
+            Faltas do Mês de {selectedMonthName}
           </h3>
-          <p className="text-xs sm:text-sm text-slate-600 font-medium mt-0.5">
-            Total de <strong>{liveClassMetrics.totalFaltasTurma} faltas</strong> registradas na turma • <strong>{liveClassMetrics.presenceRate}% de presença global</strong> • Salvo automaticamente
+          <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5">
+            Total de {liveClassMetrics.totalFaltasTurma} falta(s) registradas · {liveClassMetrics.presenceRate}% de presença global · Salvo automaticamente
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {previousPeriodName && (
             <button
               type="button"
               onClick={() => handleMonthChange(previousPeriodName)}
-              className="min-h-[50px] px-5 rounded-2xl bg-slate-900 hover:bg-black text-white font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+              className="h-9 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200/90 transition-colors"
               title={`Voltar ao período anterior: ${previousPeriodName}`}
             >
-              <span className="material-symbols-outlined text-[20px] text-amber-300 font-bold">history</span>
-              <span>Voltar ao Período Anterior ({previousPeriodName})</span>
+              <span className="material-symbols-outlined text-[16px] text-slate-500">history</span>
+              <span>Período Anterior ({previousPeriodName})</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={onBack}
-            className="min-h-[50px] px-6 rounded-2xl bg-[#003440] hover:bg-[#00222a] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+            className="h-9 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
-            <span className="material-symbols-outlined text-[22px] text-emerald-400">check_circle</span>
-            <span>Concluir e Voltar para Minha Turma</span>
+            <span className="material-symbols-outlined text-[16px] text-emerald-400">check</span>
+            <span>Concluir e Voltar</span>
           </button>
         </div>
       </section>

@@ -637,25 +637,33 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
 
   return (
     <div className="space-y-4 pb-24 max-w-[1550px] mx-auto px-2 sm:px-4 lg:px-6 candelario-map-root font-sans">
-      {/* Botão Voltar Didático e Visível */}
-      {onBack && (
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onBack}
-            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-          >
-            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-            <span>Voltar para Minha Turma</span>
-          </button>
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Mapa de Trajetos &amp; Distâncias
-          </span>
+      {/* Breadcrumb Limpo */}
+      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center gap-1.5">
+          {onBack && (
+            <>
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                <span>Voltar</span>
+              </button>
+              <span className="text-slate-300">/</span>
+            </>
+          )}
+          <span className="font-semibold text-slate-800">Mapa &amp; Rotas</span>
+          <span className="text-slate-400">·</span>
+          <span>Trajetos e Distâncias dos Estudantes</span>
         </div>
-      )}
+        <span className="text-slate-400 text-xs hidden sm:inline">
+          Geolocalização e Logística Escolar
+        </span>
+      </div>
 
-      {/* 1. Header Card - Ultra-Simplified for Elderly Users */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border-2 border-slate-200 space-y-4">
+      {/* Header Card */}
+      <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3.5">
             <div className="w-14 h-14 rounded-2xl bg-[#003440] text-white flex items-center justify-center shrink-0 shadow-md">

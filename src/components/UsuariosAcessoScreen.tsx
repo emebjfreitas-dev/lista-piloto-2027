@@ -51,7 +51,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   onBack,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabId>('quadro_turmas');
-  const [matrixShiftFilter, setMatrixShiftFilter] = useState<'ALL' | 'MANHÃ' | 'TARDE'>('ALL');
+  const [matrixShiftFilter, setMatrixShiftFilter] = useState<'ALL' | 'MANHÃ' | 'TARDE' | 'VAGAS'>('ALL');
   const [matrixSearchTerm, setMatrixSearchTerm] = useState('');
   const [editingMatrixClassId, setEditingMatrixClassId] = useState<string | null>(null);
   const [matrixDraft, setMatrixDraft] = useState<{
@@ -224,11 +224,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   const handleSaveMatrixRow = (cls: ClassGroup) => {
     if (!canManage || !matrixDraft) return;
 
+    const trimmedTeacher = matrixDraft.teacherName.trim().toUpperCase();
+    const isVagaNow = trimmedTeacher === 'TURMA VAGA' || trimmedTeacher === '';
+
     const updatedClasses = classes.map((c) =>
       c.id === cls.id
         ? {
             ...c,
-            teacherName: matrixDraft.teacherName.trim().toUpperCase(),
+            teacherName: trimmedTeacher || 'TURMA VAGA',
             teacherPronoun: matrixDraft.teacherPronoun.trim().toUpperCase(),
             teacherFirstName: matrixDraft.teacherFirstName.trim().toUpperCase(),
             room: matrixDraft.room.trim().toUpperCase(),
@@ -238,6 +241,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             artTeacher: matrixDraft.artTeacher.trim().toUpperCase(),
             peTeacher: matrixDraft.peTeacher.trim().toUpperCase(),
             englishTeacher: matrixDraft.englishTeacher.trim().toUpperCase(),
+            isVaga: isVagaNow,
           }
         : c
     );
@@ -548,7 +552,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     onSaveAuthorizedUsers(mergedUsers);
     triggerFeedback(
       'success',
-      `Quadro Oficial sincronizado: 39 Professores Regentes (PEB I) + 9 Especialistas (Arte, Ed. Física, Inglês) + Gestão!`
+      `Quadro Oficial sincronizado: ${classes.length} Turmas (37 Professores Regentes + 3 Turmas Vagas) + Especialistas + Gestão!`
     );
   };
 
@@ -558,6 +562,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     return classes.filter((cls) => {
       if (matrixShiftFilter === 'MANHÃ' && cls.shift !== 'Turno Manhã') return false;
       if (matrixShiftFilter === 'TARDE' && cls.shift !== 'Turno Tarde') return false;
+      if (matrixShiftFilter === 'VAGAS' && !cls.isVaga && cls.teacherName !== 'TURMA VAGA') return false;
       if (!q) return true;
       return (
         cls.name.toLowerCase().includes(q) ||
@@ -645,6 +650,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
   const manhaTurmasCount = classes.filter((c) => c.shift === 'Turno Manhã').length;
   const tardeTurmasCount = classes.filter((c) => c.shift === 'Turno Tarde').length;
+  const vacantTurmasCount = classes.filter((c) => c.isVaga || c.teacherName === 'TURMA VAGA').length;
   const totalActiveStudentsAll = classes.reduce(
     (acc, c) =>
       acc +
@@ -708,22 +714,28 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto pb-12 space-y-4 animate-gentle-fade">
-      {/* Botão Voltar Didático e Visível */}
-      {onBack && (
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onBack}
-            className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-sm flex items-center gap-2 border-2 border-slate-300 shadow-xs cursor-pointer active:scale-98 transition-all"
-          >
-            <span className="material-symbols-outlined text-[20px] font-bold">arrow_back</span>
-            <span>Voltar para Minha Turma</span>
-          </button>
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Quadro Docente &amp; Acessos Institucionais
-          </span>
+      {/* Breadcrumb Limpo */}
+      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center gap-1.5">
+          {onBack && (
+            <>
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                <span>Voltar</span>
+              </button>
+              <span className="text-slate-300">/</span>
+            </>
+          )}
+          <span className="font-semibold text-slate-800">Professores &amp; Acessos</span>
         </div>
-      )}
+        <span className="text-slate-400 text-xs hidden sm:inline">
+          Quadro Docente &amp; Acessos Institucionais
+        </span>
+      </div>
 
       {/* Feedback Toast */}
       {feedbackMsg && (
@@ -766,7 +778,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               Professores, Turmas SED &amp; Gerenciamento de Acessos
             </h1>
             <p className="text-[0.84rem] text-[#436370] font-medium max-w-3xl">
-              Base unificada sem redundâncias com as 39 turmas oficiais, professores regentes (PEB I), especialistas de Arte, Educação Física e Língua Inglesa (PEB II), códigos SED e monitoramento de acessos em tempo real.
+              Base unificada com as {classes.length} turmas oficiais de 2027 (20 Manhã · 20 Tarde, com 3 turmas vagas aguardando atribuição), docentes regentes (PEB I), especialistas de Arte, Educação Física e Língua Inglesa (PEB II), códigos SED e monitoramento de acessos em tempo real.
             </p>
           </div>
 
@@ -790,7 +802,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               <button
                 type="button"
                 onClick={handleRestoreOfficialSchoolMatrix}
-                title="Sincronizar todas as 39 professoras regentes e 9 especialistas com o Quadro Oficial 2027"
+                title={`Sincronizar as ${classes.length} turmas oficiais e especialistas com o Quadro Oficial 2027`}
                 className="min-h-[44px] px-3.5 rounded-2xl bg-[#f2f4f3] hover:bg-[#e3e8e6] text-[#003440] font-extrabold text-[0.8rem] flex items-center gap-1.5 border border-black/[0.08] cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">sync_saved_locally</span>
@@ -1162,6 +1174,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     { id: 'ALL', label: `Todas (${classes.length})` },
                     { id: 'MANHÃ', label: `☀️ Manhã (${manhaTurmasCount})` },
                     { id: 'TARDE', label: `⛅ Tarde (${tardeTurmasCount})` },
+                    { id: 'VAGAS', label: `⚠️ Turmas Vagas (${vacantTurmasCount})` },
                   ] as const
                 ).map((item) => (
                   <button
@@ -1170,7 +1183,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     onClick={() => setMatrixShiftFilter(item.id)}
                     className={`min-h-[38px] px-3.5 rounded-xl text-[0.78rem] font-extrabold transition-all cursor-pointer ${
                       matrixShiftFilter === item.id
-                        ? 'bg-[#003440] text-white shadow-2xs'
+                        ? item.id === 'VAGAS'
+                          ? 'bg-amber-600 text-white shadow-2xs'
+                          : 'bg-[#003440] text-white shadow-2xs'
+                        : item.id === 'VAGAS' && vacantTurmasCount > 0
+                        ? 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
                         : 'bg-[#f2f4f3] text-[#436370] hover:bg-[#e4e8e6]'
                     }`}
                   >
@@ -1202,7 +1219,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               </div>
             </div>
 
-            {/* Tabela Completa das 39 Turmas com todas as Colunas Oficiais e Ações Diretas */}
+            {/* Tabela Completa das 40 Turmas Oficiais de 2027 com todas as Colunas Oficiais e Ações Diretas */}
             <div className="border border-black/[0.08] rounded-2xl overflow-x-auto shadow-2xs">
               <table className="w-full text-left text-[0.76rem] border-collapse min-w-[1440px]">
                 <thead className="bg-[#003440] text-white font-extrabold uppercase tracking-wider text-[0.67rem]">
@@ -1264,6 +1281,23 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               }
                               className="w-full px-2 py-1 rounded-lg bg-white border border-[#005035] font-bold text-[#003440] text-[0.76rem]"
                             />
+                          ) : cls.isVaga || cls.teacherName === 'TURMA VAGA' ? (
+                            <div className="flex flex-col items-start gap-1">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-300 font-extrabold text-[0.72rem]">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                TURMA VAGA (Aguardando Atribuição)
+                              </span>
+                              {canManage && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEditMatrixRow(cls)}
+                                  className="text-[0.68rem] text-[#005035] hover:text-[#003440] font-black underline flex items-center gap-1 cursor-pointer"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">person_add</span>
+                                  Designar Professor(a)
+                                </button>
+                              )}
+                            </div>
                           ) : (
                             <div>
                               <span className="font-extrabold text-[#003440] block">
@@ -1703,7 +1737,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   >
                     <option value="usuario">PEB I (Regente · Sua Turma)</option>
                     <option value="peb2">PEB II (Especialista · Leitura)</option>
-                    <option value="admin">ADMIN (Gestão · 39 Turmas)</option>
+                    <option value="admin">ADMIN (Gestão · Todas as {classes.length} Turmas)</option>
                   </select>
                 </div>
 
@@ -1720,12 +1754,13 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                       {classes.map((cls) => (
                         <option key={cls.id} value={cls.id}>
                           {cls.turmaAbrev || cls.name} — {cls.name} ({cls.shift.replace('Turno ', '')})
+                          {cls.isVaga || cls.teacherName === 'TURMA VAGA' ? ' [TURMA VAGA]' : ''}
                         </option>
                       ))}
                     </select>
                   ) : (
                     <div className="min-h-[42px] px-3 rounded-xl border border-black/[0.08] bg-[#f2f4f3] text-[#436370] font-bold text-[0.76rem] flex items-center">
-                      {role === 'admin' ? 'Todas as 39 Turmas' : 'Turmas de Especialista'}
+                      {role === 'admin' ? `Todas as ${classes.length} Turmas` : 'Turmas de Especialista'}
                     </div>
                   )}
                 </div>
