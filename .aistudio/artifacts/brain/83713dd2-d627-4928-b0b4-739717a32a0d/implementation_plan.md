@@ -47,6 +47,7 @@ Substituição de todos os valores fracionários e arbitrários de `rem` (`text-
 ## 4. Coerência Visual em Todos os Componentes
 
 - **Telas Padronizadas**:
+  - `LoginScreen.tsx` (Login Simplificado com Verificação em Duas Etapas - 2FA)
   - `HomeScreen.tsx` (Painel Executivo de Gestão)
   - `MinhasTurmasScreen.tsx` e `DetalhesTurmaScreen.tsx` (Ficha da Turma e dos Estudantes)
   - `RegistroFrequenciaMensalScreen.tsx` (Informar Faltas do Mês)
@@ -57,6 +58,22 @@ Substituição de todos os valores fracionários e arbitrários de `rem` (`text-
   - `DiasLetivosScreen.tsx` e `ConfigurarDiasLetivosTurmasModal.tsx` (Calendário dos 200 Dias Letivos)
   - `UsuariosAcessoScreen.tsx` (Atribuição e Acessos)
   - `ListasNominaisScreen.tsx`, `AlunosModal.tsx`, `GradeDadosCriancaModal.tsx`, `UploadFotoModal.tsx`, `VisualizarPdfNominalModal.tsx`, `RelatorioImpressaoModal.tsx`, `SpotlightCommandModal.tsx`.
+
+---
+
+## 5. Login Simplificado com Verificação em Duas Etapas (2FA)
+
+- **Etapa 1 (Identificação)**:
+  - Input direto para e-mail institucional (`@jundiai.sp.gov.br`) com suporte a preenchimento automático.
+  - Reconhecimento automático de perfil lembrado com opção de troca rápida.
+  - Integração com Google Workspace para autenticação em 1 clique.
+  - Detecção de dispositivo confiável previamente autorizado.
+- **Etapa 2 (Verificação em Duas Etapas - 2FA)**:
+  - Mascaramento de e-mail institucional para privacidade.
+  - Campo numérico de 6 dígitos formatado em tipografia monospace (`font-mono tracking-[0.5em]`).
+  - Banner institucional com código de verificação instantâneo e botão de preenchimento automático em 1 clique (para evitar bloqueios ou atrasos).
+  - Opção "Confiar neste dispositivo por 30 dias" para reduzir atritos em acessos recorrentes.
+  - Ações para reenvio de código com contagem regressiva e troca de e-mail.
 
 ## 6. Expansão Única e Fluida de Dados ao Clicar
 
