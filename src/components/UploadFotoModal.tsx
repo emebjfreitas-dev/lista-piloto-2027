@@ -227,10 +227,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
               <span className="material-symbols-outlined text-[22px]">photo_camera</span>
             </div>
             <div className="min-w-0">
-              <h3 className="text-[1.05rem] sm:text-[1.15rem] font-extrabold text-[#1d1d1f] truncate">
+              <h3 className="text-base font-semibold text-slate-900 truncate">
                 Foto do Estudante
               </h3>
-              <p className="text-[0.78rem] font-semibold text-[#6e6e73] truncate">
+              <p className="text-xs text-slate-500 truncate">
                 Nº {student.number.toString().padStart(2, '0')} • {student.name} ({className})
               </p>
             </div>
@@ -238,34 +238,34 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer transition-colors shrink-0"
             aria-label="Fechar"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         {/* Student Preview & Current Association Status */}
-        <div className="flex items-center justify-between gap-3 p-3.5 mt-3 bg-[#f5f5f7] rounded-2xl border border-black/[0.05]">
-          <div className="flex items-center gap-3.5 min-w-0">
+        <div className="flex items-center justify-between gap-3 p-3 mt-3 bg-slate-50 rounded-xl border border-slate-200/80">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
               <StudentAvatar
                 student={{ ...student, photo: previewUrl }}
                 size="lg"
-                className="w-16 h-16 rounded-2xl ring-2 ring-white shadow-xs"
+                className="w-14 h-14 rounded-xl border border-slate-200"
               />
               {previewUrl && (
-                <span className="absolute -bottom-1 -right-1 p-1 bg-[#005035] text-white rounded-full shadow-2xs">
-                  <span className="material-symbols-outlined text-[13px] block">check</span>
+                <span className="absolute -bottom-1 -right-1 p-1 bg-emerald-600 text-white rounded-full">
+                  <span className="material-symbols-outlined text-[12px] block">check</span>
                 </span>
               )}
             </div>
 
             <div className="min-w-0">
-              <span className="text-[0.92rem] font-extrabold text-[#1d1d1f] block truncate">
+              <span className="text-sm font-semibold text-slate-900 block truncate">
                 {student.name}
               </span>
-              <span className="text-[0.72rem] font-medium text-[#6e6e73] block truncate">
+              <span className="text-xs text-slate-500 block truncate">
                 RA: {student.ra || '—'}-{student.digRa || ''} •{' '}
                 {previewUrl ? 'Foto anexada' : 'Sem foto cadastrada'}
               </span>
@@ -278,7 +278,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('drive_catalog')}
-            className={`py-2 px-3 rounded-lg font-bold text-[0.76rem] flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+            className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
               activeTab === 'drive_catalog'
                 ? 'bg-white text-[#1d1d1f] shadow-2xs'
                 : 'text-[#6e6e73] hover:text-[#1d1d1f]'
@@ -290,7 +290,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('device_upload')}
-            className={`py-2 px-3 rounded-lg font-bold text-[0.76rem] flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+            className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
               activeTab === 'device_upload'
                 ? 'bg-white text-[#1d1d1f] shadow-2xs'
                 : 'text-[#6e6e73] hover:text-[#1d1d1f]'
@@ -316,7 +316,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Pesquisar foto por nome, abreviação, turma ou extensão (.jpg, .png)..."
-                    className="w-full h-10 pl-9 pr-8 bg-[#f5f5f7] border border-black/[0.08] rounded-xl text-[0.8rem] font-medium text-[#1d1d1f] focus:bg-white focus:border-[#0071e3] focus:outline-none"
+                    className="w-full h-10 pl-9 pr-8 bg-[#f5f5f7] border border-black/[0.08] rounded-xl text-sm font-medium text-[#1d1d1f] focus:bg-white focus:border-[#0071e3] focus:outline-none"
                   />
                   {searchQuery && (
                     <button
@@ -334,7 +334,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                     type="button"
                     onClick={handleRefreshCatalog}
                     disabled={isSyncingCatalog}
-                    className="h-10 px-3 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border border-black/[0.08] font-bold text-[0.74rem] flex items-center gap-1 cursor-pointer shrink-0"
+                    className="h-10 px-3 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border border-black/[0.08] font-bold text-xs flex items-center gap-1 cursor-pointer shrink-0"
                     title="Recarregar arquivos da pasta Fotos Estudantes no Google Drive"
                   >
                     <span
@@ -352,10 +352,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
               {/* Results list */}
               {filteredDrivePhotos.length === 0 ? (
                 <div className="p-5 text-center bg-[#f5f5f7]/70 rounded-2xl border border-black/[0.05] space-y-1">
-                  <p className="text-[0.82rem] font-bold text-[#1d1d1f]">
+                  <p className="text-sm font-bold text-[#1d1d1f]">
                     Nenhum arquivo de foto localizado com esse filtro.
                   </p>
-                  <p className="text-[0.74rem] text-[#6e6e73]">
+                  <p className="text-xs text-[#6e6e73]">
                     Você pode refinar o termo de busca ou enviar a foto do dispositivo.
                   </p>
                 </div>
@@ -382,10 +382,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                           className="w-10 h-10 rounded-lg object-cover bg-[#e8e8ed] shrink-0"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-[0.76rem] font-bold text-[#1d1d1f] truncate">
+                          <p className="text-xs font-bold text-[#1d1d1f] truncate">
                             {item.name}
                           </p>
-                          <p className="text-[0.66rem] text-[#6e6e73] truncate">
+                          <p className="text-[11px] text-[#6e6e73] truncate">
                             {item.subfolderName || 'Pasta Fotos Estudantes'} • ID:{' '}
                             {item.id.slice(0, 7)}
                           </p>
@@ -410,9 +410,9 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                 type="button"
                 disabled={isProcessing}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full min-h-[76px] px-4 bg-[#eaf6ef] hover:bg-[#d3f2e0] text-[#003723] font-extrabold text-[0.9rem] rounded-2xl flex items-center justify-center gap-2.5 border-2 border-dashed border-[#005035] cursor-pointer active:scale-98 transition-all disabled:opacity-50"
+                className="w-full h-12 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium text-sm rounded-xl flex items-center justify-center gap-2 border border-dashed border-emerald-300 cursor-pointer active:scale-98 transition-colors disabled:opacity-50"
               >
-                <span className="material-symbols-outlined text-[26px]">folder_open</span>
+                <span className="material-symbols-outlined text-[20px]">folder_open</span>
                 <span>
                   {isProcessing
                     ? 'Processando e otimizando foto...'
@@ -423,25 +423,25 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           )}
 
           {statusMsg && (
-            <div className="p-2.5 rounded-xl bg-[#f5f5f7] border border-black/[0.07] text-[0.76rem] font-semibold text-[#1d1d1f]">
+            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700">
               {statusMsg}
             </div>
           )}
 
           {uploadSuccess && (
-            <div className="p-2.5 bg-[#eaf6ef] text-[#005035] rounded-xl font-bold text-[0.8rem] flex items-center gap-2 border border-[#005035]/25">
-              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+            <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-lg font-medium text-xs flex items-center gap-2 border border-emerald-200">
+              <span className="material-symbols-outlined text-[16px]">check_circle</span>
               <span>Foto confirmada e salva com sucesso!</span>
             </div>
           )}
         </div>
 
         {/* Modal Actions */}
-        <div className="pt-3 border-t border-black/[0.06] flex gap-2.5">
+        <div className="pt-3 border-t border-slate-200 flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 min-h-[44px] bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-bold text-[0.84rem] rounded-xl transition-colors cursor-pointer"
+            className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors cursor-pointer"
           >
             Cancelar
           </button>
@@ -450,9 +450,9 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={isProcessing || !previewUrl}
-            className="flex-1 min-h-[44px] bg-[#005035] hover:bg-[#003723] text-white font-extrabold text-[0.84rem] rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="flex-1 h-9 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-[18px]">verified</span>
+            <span className="material-symbols-outlined text-[16px]">verified</span>
             <span>Confirmar Foto</span>
           </button>
         </div>

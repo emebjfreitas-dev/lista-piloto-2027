@@ -195,8 +195,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <span
                 className={`text-xs tracking-tight leading-none mt-1 truncate ${
                   isMoreActive || showMoreMenu
-                    ? 'font-black text-[#0050c8]'
-                    : 'font-bold text-slate-700'
+                    ? 'font-semibold text-blue-700'
+                    : 'font-medium text-slate-600'
                 }`}
               >
                 Mais
@@ -276,7 +276,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                         <span className="font-semibold text-xs sm:text-sm block truncate">
                           {item.label}
                         </span>
-                        <span className="text-[0.72rem] text-[#86868b] block truncate">
+                        <span className="text-xs text-[#86868b] block truncate">
                           {item.description}
                         </span>
                       </div>

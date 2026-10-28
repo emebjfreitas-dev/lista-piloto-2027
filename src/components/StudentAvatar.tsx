@@ -108,11 +108,11 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   };
 
   const sizeMap: Record<string, string> = {
-    xs: 'w-7 h-7 text-[0.65rem] rounded-lg',
-    sm: 'w-9 h-9 text-[0.75rem] rounded-xl',
-    md: 'w-12 h-12 text-[0.95rem] rounded-2xl',
-    lg: 'w-14 h-14 text-[1.1rem] rounded-2xl',
-    xl: 'w-16 h-16 text-[1.25rem] rounded-2xl',
+    xs: 'w-7 h-7 text-[11px] rounded-lg',
+    sm: 'w-9 h-9 text-xs rounded-xl',
+    md: 'w-12 h-12 text-base rounded-2xl',
+    lg: 'w-14 h-14 text-lg rounded-2xl',
+    xl: 'w-16 h-16 text-lg rounded-2xl',
   };
 
   const getInitials = (fullName: string) => {
@@ -132,7 +132,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden bg-gradient-to-br from-[#0b3b49] to-[#1e5a6d] text-white font-extrabold flex items-center justify-center shadow-xs border border-white/80 select-none ${
+      className={`relative shrink-0 overflow-hidden bg-slate-800 text-white font-semibold flex items-center justify-center border border-white/80 select-none ${
         sizeMap[size]
       } ${className}`}
     >

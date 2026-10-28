@@ -53,10 +53,10 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[28px] text-[#003440]">picture_as_pdf</span>
             <div>
-              <h3 className="text-[1.15rem] font-black text-[#003440] leading-tight">
+              <h3 className="text-lg font-semibold text-[#003440] leading-tight">
                 Relatórios Oficiais — Bimestral (Bolsa Família) e Mensal
               </h3>
-              <p className="text-[0.76rem] font-semibold text-[#41484b]">
+              <p className="text-xs font-semibold text-[#41484b]">
                 Alerta Legal LDB/MEC: &lt;60% Educação Infantil • &lt;75% Ensino Fundamental
               </p>
             </div>
@@ -67,7 +67,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               <button
                 type="button"
                 onClick={() => setReportMode('bimestral')}
-                className={`px-3 py-1.5 rounded-lg text-[0.78rem] font-black cursor-pointer transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                   reportMode === 'bimestral'
                     ? 'bg-[#003440] text-white shadow-2xs'
                     : 'text-[#41484b] hover:text-[#003440]'
@@ -78,7 +78,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               <button
                 type="button"
                 onClick={() => setReportMode('mensal')}
-                className={`px-3 py-1.5 rounded-lg text-[0.78rem] font-black cursor-pointer transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                   reportMode === 'mensal'
                     ? 'bg-[#003440] text-white shadow-2xs'
                     : 'text-[#41484b] hover:text-[#003440]'
@@ -92,7 +92,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               <select
                 value={selectedBimesterId}
                 onChange={(e) => setSelectedBimesterId(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-[#eaf6ef] text-[#005035] border border-[#a4f3ca] font-black text-[0.78rem] cursor-pointer"
+                className="px-3 py-2 rounded-xl bg-[#eaf6ef] text-[#005035] border border-[#a4f3ca] font-semibold text-xs cursor-pointer"
               >
                 {OFFICIAL_BIMESTERS_2027.map((bim) => (
                   <option key={bim.id} value={bim.id}>
@@ -105,7 +105,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <button
               onClick={handlePrint}
               type="button"
-              className="px-4 py-2 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.85rem] rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-4 py-2 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-sm rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <span className="material-symbols-outlined text-[19px]">print</span>
               <span>Imprimir / PDF</span>
@@ -135,13 +135,13 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                 className="h-14 w-auto object-contain"
               />
               <div>
-                <span className="text-[0.76rem] font-extrabold text-[#71787b] uppercase tracking-wide block">
+                <span className="text-xs font-semibold text-[#71787b] uppercase tracking-wide block">
                   {CITY_NAME} • {SECRETARY_NAME}
                 </span>
-                <h1 className="text-[1.18rem] font-extrabold text-[#003440] uppercase tracking-wide">
+                <h1 className="text-lg font-semibold text-[#003440] uppercase tracking-wide">
                   LISTA PILOTO 2027 • {SCHOOL_NAME}
                 </h1>
-                <p className="text-[0.82rem] text-[#005035] font-bold">
+                <p className="text-sm text-[#005035] font-bold">
                   {reportMode === 'bimestral'
                     ? `Relatório Bimestral de Frequência e Atestados por Mês — Sistema Bolsa Família / MEC (${currentBimester.label})`
                     : 'Relatório Consolidado de Frequência e Atestados Mensais'}
@@ -149,35 +149,35 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               </div>
             </div>
             <div className="text-right">
-              <span className="text-[0.72rem] font-bold text-[#71787b] block">ANO LETIVO 2027</span>
-              <span className="text-[1.05rem] font-extrabold text-[#003440]">
+              <span className="text-xs font-bold text-[#71787b] block">ANO LETIVO 2027</span>
+              <span className="text-base font-semibold text-[#003440]">
                 {reportMode === 'bimestral' ? currentBimester.periodLabel.toUpperCase() : defaultRefPeriod.label.toUpperCase()}
               </span>
-              <span className="text-[0.7rem] text-[#005035] font-bold block">
+              <span className="text-xs text-[#005035] font-bold block">
                 Mínimo Legal: {minLegalPresencePercent}% ({isInfantilClass ? 'Ed. Infantil' : 'Ens. Fundamental'})
               </span>
             </div>
           </div>
 
           {/* Class Identifiers */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#f3f4f2] p-3 rounded-xl border border-[#c0c8cb]/60 text-[0.85rem]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#f3f4f2] p-3 rounded-xl border border-[#c0c8cb]/60 text-sm">
             <div>
-              <span className="text-[#71787b] font-bold block text-[0.72rem]">TURMA / ANO</span>
-              <span className="font-extrabold text-[#003440] text-[0.98rem]">{classGroup.name}</span>
+              <span className="text-[#71787b] font-bold block text-xs">TURMA / ANO</span>
+              <span className="font-semibold text-[#003440] text-base">{classGroup.name}</span>
             </div>
             <div>
-              <span className="text-[#71787b] font-bold block text-[0.72rem]">ETAPA / EXIGÊNCIA MEC</span>
+              <span className="text-[#71787b] font-bold block text-xs">ETAPA / EXIGÊNCIA MEC</span>
               <span className="font-bold text-[#191c1b]">
                 {classGroup.grade} (≥{minLegalPresencePercent}%)
               </span>
             </div>
             <div>
-              <span className="text-[#71787b] font-bold block text-[0.72rem]">TURNO / SALA</span>
+              <span className="text-[#71787b] font-bold block text-xs">TURNO / SALA</span>
               <span className="font-bold text-[#191c1b]">{classGroup.shift} • {classGroup.room}</span>
             </div>
             <div>
-              <span className="text-[#71787b] font-bold block text-[0.72rem]">ALERTAS LEGAIS NA TURMA</span>
-              <span className={`font-black ${bimesterAlertsCount > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}`}>
+              <span className="text-[#71787b] font-bold block text-xs">ALERTAS LEGAIS NA TURMA</span>
+              <span className={`font-semibold ${bimesterAlertsCount > 0 ? 'text-[#ba1a1a]' : 'text-[#005035]'}`}>
                 {reportMode === 'bimestral' ? bimesterAlertsCount : criticalStudentsCount} estudante(s) &lt;{minLegalPresencePercent}%
               </span>
             </div>
@@ -185,7 +185,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
 
           {reportMode === 'bimestral' ? (
             <div className="border border-[#c0c8cb] rounded-xl overflow-hidden">
-              <table className="w-full text-left text-[0.8rem] border-collapse">
+              <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="bg-[#003440] text-white font-bold">
                     <th className="py-2 px-2.5 w-10 text-center">Nº</th>
@@ -193,7 +193,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                     {currentBimester.months.map((mObj) => (
                       <th key={mObj.name} className="py-2 px-2 text-center bg-[#004632] border-x border-white/15">
                         {mObj.name.slice(0, 3)}. / 27
-                        <span className="block text-[0.62rem] font-normal opacity-85">Faltas | Atest.</span>
+                        <span className="block text-[11px] font-normal opacity-85">Faltas | Atest.</span>
                       </th>
                     ))}
                     <th className="py-2 px-2 text-center">Total Faltas</th>
@@ -219,40 +219,40 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                       </td>
                       <td className="py-2 px-3">
                         <span className="font-bold text-[#191c1b] block">{r.student.name}</span>
-                        <span className="text-[0.68rem] font-mono text-[#71787b]">
+                        <span className="text-[11px] font-mono text-[#71787b]">
                           RA: {r.student.ra}-{r.student.digRa} • NIS: {r.student.nis || '—'}
                         </span>
                       </td>
                       {r.monthsBreakdown.map((mb) => (
                         <td key={mb.monthName} className="py-2 px-2 text-center border-x border-[#edeeec]">
-                          <span className={`font-black ${mb.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#71787b]'}`}>
+                          <span className={`font-semibold ${mb.faltas > 0 ? 'text-[#ba1a1a]' : 'text-[#71787b]'}`}>
                             {mb.faltas}F
                           </span>
                           <span className="mx-1 text-[#c0c8cb]">|</span>
-                          <span className={`font-black ${mb.atestados > 0 ? 'text-[#005035]' : 'text-[#71787b]'}`}>
+                          <span className={`font-semibold ${mb.atestados > 0 ? 'text-[#005035]' : 'text-[#71787b]'}`}>
                             {mb.atestados}A
                           </span>
-                          <span className="block text-[0.64rem] text-[#71787b]">
+                          <span className="block text-[11px] text-[#71787b]">
                             ({mb.frequenciaPercent}% em {mb.diasLetivos}d)
                           </span>
                         </td>
                       ))}
-                      <td className="py-2 px-2 text-center font-black text-[#ba1a1a]">
+                      <td className="py-2 px-2 text-center font-semibold text-[#ba1a1a]">
                         {r.totalFaltasBimestre}
                       </td>
-                      <td className="py-2 px-2 text-center font-black text-[#005035]">
+                      <td className="py-2 px-2 text-center font-semibold text-[#005035]">
                         {r.totalAtestadosBimestre}
                       </td>
-                      <td className="py-2 px-2 text-center font-black text-[#003440]">
+                      <td className="py-2 px-2 text-center font-semibold text-[#003440]">
                         {r.frequenciaBimestrePercent}%
                       </td>
                       <td className="py-2 px-2.5 text-center">
                         {r.isBelowLegalThresholdBimestre ? (
-                          <span className="px-2 py-0.5 rounded text-[0.7rem] font-black bg-[#ffdad6] text-[#ba1a1a]">
+                          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-[#ffdad6] text-[#ba1a1a]">
                             ⚠️ Alerta &lt;{r.minLegalPresencePercent}%
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded text-[0.7rem] font-black bg-[#a4f3ca]/60 text-[#003723]">
+                          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-[#a4f3ca]/60 text-[#003723]">
                             Regular (≥{r.minLegalPresencePercent}%)
                           </span>
                         )}
@@ -265,7 +265,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           ) : (
             /* Compact Monthly Students Table */
             <div className="border border-[#c0c8cb] rounded-xl overflow-hidden">
-              <table className="w-full text-left text-[0.82rem] border-collapse">
+              <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="bg-[#edeeec] text-[#003440] font-bold border-b border-[#c0c8cb]">
                     <th className="py-2 px-3 w-12 text-center">Nº</th>
@@ -310,20 +310,20 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                         <td className="py-2 px-2 text-center font-bold text-[#005035]">
                           {m.atestados}
                         </td>
-                        <td className="py-2 px-2 text-center font-extrabold text-[#003440]">
+                        <td className="py-2 px-2 text-center font-semibold text-[#003440]">
                           {m.frequenciaPercent}%
                         </td>
                         <td className="py-2 px-3 text-center">
                           {m.isBelowLegalThreshold ? (
-                            <span className="px-2 py-0.5 rounded text-[0.72rem] font-black bg-[#ffdad6] text-[#ba1a1a]">
+                            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-[#ffdad6] text-[#ba1a1a]">
                               ⚠️ Alerta &lt;{m.minLegalPresencePercent}%
                             </span>
                           ) : m.faltas === 0 ? (
-                            <span className="px-2 py-0.5 rounded text-[0.72rem] font-bold bg-[#a4f3ca]/60 text-[#003723]">
+                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-[#a4f3ca]/60 text-[#003723]">
                               100% Presença
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded text-[0.72rem] font-bold bg-[#f3f4f2] text-[#436370]">
+                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-[#f3f4f2] text-[#436370]">
                               Regular (≥{m.minLegalPresencePercent}%)
                             </span>
                           )}
@@ -338,29 +338,29 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
 
           {/* Pedagogical Observations Box */}
           <div className="border border-[#c0c8cb] rounded-xl p-3.5 bg-[#f9faf8]">
-            <span className="text-[0.75rem] font-bold text-[#71787b] block uppercase">
+            <span className="text-xs font-bold text-[#71787b] block uppercase">
               Parecer Pedagógico e Observações Gerais
             </span>
-            <p className="text-[0.9rem] text-[#191c1b] mt-1 leading-relaxed italic">
+            <p className="text-sm text-[#191c1b] mt-1 leading-relaxed italic">
               "{classGroup.pedagogicalNotes}"
             </p>
           </div>
 
           {/* Signatures Area */}
-          <div className="pt-8 grid grid-cols-2 gap-8 text-center text-[0.85rem] print:pt-10 break-inside-avoid">
+          <div className="pt-8 grid grid-cols-2 gap-8 text-center text-sm print:pt-10 break-inside-avoid">
             <div>
               <div className="border-t border-[#191c1b] mx-4 mb-1"></div>
-              <span className="font-extrabold text-[#003440] block">
+              <span className="font-semibold text-[#003440] block">
                 {classGroup.isVaga || classGroup.teacherName === 'TURMA VAGA'
                   ? 'Docente Regente (Aguardando Atribuição)'
                   : classGroup.teacherName || 'Docente Regente Responsável'}
               </span>
-              <span className="text-[#71787b] text-[0.75rem]">Docente Regente • Turma {classGroup.name} ({classGroup.shift})</span>
+              <span className="text-[#71787b] text-xs">Docente Regente • Turma {classGroup.name} ({classGroup.shift})</span>
             </div>
             <div>
               <div className="border-t border-[#191c1b] mx-4 mb-1"></div>
-              <span className="font-extrabold text-[#003440] block">Direção / Coordenação Pedagógica</span>
-              <span className="text-[#71787b] text-[0.75rem]">{SCHOOL_NAME}</span>
+              <span className="font-semibold text-[#003440] block">Direção / Coordenação Pedagógica</span>
+              <span className="text-[#71787b] text-xs">{SCHOOL_NAME}</span>
             </div>
           </div>
         </div>
@@ -369,7 +369,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
         <div className="pt-3 border-t border-[#edeeec] flex justify-end no-print">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-[#edeeec] hover:bg-[#e7e8e6] text-[#003440] font-bold text-[0.95rem] cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-[#edeeec] hover:bg-[#e7e8e6] text-[#003440] font-bold text-base cursor-pointer"
           >
             Fechar Visualização
           </button>

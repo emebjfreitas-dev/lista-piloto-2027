@@ -211,7 +211,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">
                 Minha Turma
               </h1>
               {userRole !== 'peb2' && (

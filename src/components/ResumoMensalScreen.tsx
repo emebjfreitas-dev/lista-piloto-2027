@@ -427,8 +427,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       <section className="bg-slate-900 text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2 text-[0.7rem] font-bold text-slate-400">
-              <span className="bg-sky-950 text-sky-400 px-2.5 py-0.5 rounded border border-sky-800/60 uppercase tracking-widest text-[0.65rem]">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-400">
+              <span className="bg-sky-950 text-sky-400 px-2.5 py-0.5 rounded border border-sky-800/60 uppercase tracking-widest text-[11px]">
                 DIREÇÃO &amp; COORDENAÇÃO
               </span>
               <span className="text-slate-600">•</span>
@@ -444,7 +444,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               <span>Resumo Mensal — Power BI Executivo</span>
             </h1>
 
-            <p className="text-[0.78rem] text-slate-400">
+            <p className="text-xs text-slate-400">
               Painel institucional de metas MEC (LDB 60% Infantil / 75% Fundamental) e inteligência de busca ativa •{' '}
               <span className="text-slate-200 font-semibold">
                 {selectedMonthName}/2027 ({monthDef.schoolDays} dias letivos) • {filteredClasses.length} turmas consolidadas
@@ -473,7 +473,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
       {/* BARRA DE SLICERS (POWER BI - MINIMALISTA E SÓBRIA) */}
       <section className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs">
-        <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-100 text-[0.72rem] font-bold text-slate-600">
+        <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-100 text-xs font-bold text-slate-600">
           <div className="flex items-center gap-1.5 uppercase tracking-wider text-slate-700">
             <span className="material-symbols-outlined text-slate-500 text-[18px]">
               tune
@@ -488,7 +488,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 setSegmentFilter('all');
                 setShiftFilter('all');
               }}
-              className="text-sky-600 hover:text-sky-800 cursor-pointer flex items-center gap-1 text-[0.7rem] font-semibold"
+              className="text-sky-600 hover:text-sky-800 cursor-pointer flex items-center gap-1 text-xs font-semibold"
             >
               <span className="material-symbols-outlined text-[15px]">refresh</span>
               Restaurar Visão Geral
@@ -499,7 +499,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Slicer: Mês Letivo */}
           <div>
-            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Mês Letivo (2027)
             </label>
             <select
@@ -517,7 +517,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Segmento & Metas MEC */}
           <div>
-            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Segmento • Metas MEC
             </label>
             <select
@@ -533,7 +533,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Turno */}
           <div>
-            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Turno Escolar
             </label>
             <select
@@ -549,7 +549,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Turma */}
           <div>
-            <label className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Recorte de Turma
             </label>
             <select
@@ -588,12 +588,12 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Scorecard Executivo MEC — Indicadores Oficiais de Desempenho
               </h2>
-              <p className="text-[0.72rem] text-slate-500">
+              <p className="text-xs text-slate-500">
                 Métricas oficiais de permanência escolar, frequência mínima por aluno e proteção contra abandono.
               </p>
             </div>
           </div>
-          <span className="text-[0.68rem] font-mono text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 self-start sm:self-auto">
+          <span className="text-[11px] font-mono text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 self-start sm:self-auto">
             {kpiData.totalActiveStudents} estudantes ativos
           </span>
         </div>
@@ -602,11 +602,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           {/* KPI 1: Taxa de Permanência Escolar */}
           <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                 Permanência Escolar
               </span>
               <span
-                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[0.62rem] font-bold ${
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold ${
                   kpiData.permanenceRate >= 95
                     ? 'bg-emerald-100 text-emerald-800'
                     : 'bg-rose-100 text-rose-800'
@@ -618,10 +618,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
+                <span className="text-2xl font-semibold text-slate-900 font-mono tracking-tight tabular-nums">
                   {kpiData.permanenceRate}%
                 </span>
-                <span className="text-[0.68rem] text-slate-500 font-medium">
+                <span className="text-xs text-slate-500 font-medium">
                   meta ≥95%
                 </span>
               </div>
@@ -635,7 +635,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               </div>
             </div>
 
-            <p className="text-[0.66rem] text-slate-500 pt-2 border-t border-slate-200/60">
+            <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60">
               {kpiData.severeDropRiskCount === 0
                 ? 'Sem risco de evasão crítica'
                 : `${kpiData.severeDropRiskCount} em risco de evasão`}
@@ -645,20 +645,20 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           {/* KPI 2: Frequência Mínima por Aluno (Piso LDB) */}
           <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                 Alunos no Piso MEC
               </span>
-              <span className="text-[0.62rem] font-mono text-slate-500 font-bold">
+              <span className="text-[11px] font-mono text-slate-500 font-bold">
                 {kpiData.studentsMeetingMecTargetCount}/{kpiData.totalActiveStudents}
               </span>
             </div>
 
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
+                <span className="text-2xl font-semibold text-slate-900 font-mono tracking-tight tabular-nums">
                   {kpiData.studentsMeetingMecTargetPercent}%
                 </span>
-                <span className="text-[0.68rem] text-slate-500 font-medium">
+                <span className="text-xs text-slate-500 font-medium">
                   atingem piso
                 </span>
               </div>
@@ -670,7 +670,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               </div>
             </div>
 
-            <p className="text-[0.66rem] text-slate-500 pt-2 border-t border-slate-200/60 truncate">
+            <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60 truncate">
               Média geral escolar: <strong className="text-slate-800">{kpiData.overallFrequencyRate}%</strong>
             </p>
           </div>
@@ -678,7 +678,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           {/* KPI 3: Alunos Abaixo da Meta MEC */}
           <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                 Abaixo do Piso MEC
               </span>
               <span
@@ -693,24 +693,24 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-3xl font-extrabold font-mono tracking-tight tabular-nums ${
+                  className={`text-2xl font-semibold font-mono tracking-tight tabular-nums ${
                     kpiData.totalBelowLegal === 0 ? 'text-slate-900' : 'text-rose-700'
                   }`}
                 >
                   {kpiData.totalBelowLegal}
                 </span>
-                <span className="text-[0.68rem] text-slate-500 font-medium">
+                <span className="text-xs text-slate-500 font-medium">
                   em risco legal
                 </span>
               </div>
-              <p className="text-[0.66rem] text-slate-500 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 {kpiData.totalActiveStudents > 0
                   ? `${((kpiData.totalBelowLegal / kpiData.totalActiveStudents) * 100).toFixed(1)}% do total`
                   : '0%'}
               </p>
             </div>
 
-            <div className="text-[0.66rem] pt-2 border-t border-slate-200/60 flex justify-between font-medium">
+            <div className="text-[11px] pt-2 border-t border-slate-200/60 flex justify-between font-medium">
               <span className="text-slate-700">Fund: {kpiData.totalBelowFundamental}</span>
               <span className="text-slate-700">Infantil: {kpiData.totalBelowInfantil}</span>
             </div>
@@ -719,7 +719,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           {/* KPI 4: Atestados & Cobertura Legal */}
           <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                 Cobertura Atestados
               </span>
               <span className="material-symbols-outlined text-[18px] text-emerald-600">
@@ -729,10 +729,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight tabular-nums">
+                <span className="text-2xl font-semibold text-slate-900 font-mono tracking-tight tabular-nums">
                   {kpiData.justifiedSharePercent}%
                 </span>
-                <span className="text-[0.68rem] text-slate-500 font-medium">
+                <span className="text-xs text-slate-500 font-medium">
                   justificadas
                 </span>
               </div>
@@ -748,7 +748,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               </div>
             </div>
 
-            <div className="text-[0.66rem] pt-2 border-t border-slate-200/60 flex justify-between font-medium">
+            <div className="text-[11px] pt-2 border-t border-slate-200/60 flex justify-between font-medium">
               <span className="text-emerald-700">Com atestado: {kpiData.totalAtestados}</span>
               <span className="text-rose-700">S/ atestado: {kpiData.totalSemAtestado}</span>
             </div>
@@ -780,7 +780,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                     />
                   </span>
                 )}
-                <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-700">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
                   Busca Ativa (ECA)
                 </span>
               </div>
@@ -800,7 +800,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-3xl font-extrabold font-mono tracking-tight tabular-nums ${
+                  className={`text-2xl font-semibold font-mono tracking-tight tabular-nums ${
                     kpiData.totalConsecutiveAlerts === 0
                       ? 'text-slate-900'
                       : kpiData.tier10Count > 0
@@ -810,16 +810,16 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 >
                   {kpiData.totalConsecutiveAlerts}
                 </span>
-                <span className="text-[0.68rem] text-slate-600 font-medium">
+                <span className="text-xs text-slate-600 font-medium">
                   casos ativos
                 </span>
               </div>
-              <p className="text-[0.66rem] text-slate-500 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 Faltas consecutivas não abonadas
               </p>
             </div>
 
-            <div className="text-[0.66rem] pt-2 border-t border-slate-200/60 flex justify-between font-bold">
+            <div className="text-[11px] pt-2 border-t border-slate-200/60 flex justify-between font-bold">
               <span className="text-amber-700">3d: {kpiData.tier3Count}</span>
               <span className="text-orange-700">5d: {kpiData.tier5Count}</span>
               <span className="text-rose-700">10d+: {kpiData.tier10Count}</span>
@@ -837,11 +837,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Desempenho por Turma ({selectedMonthName})
               </h2>
-              <span className="text-[0.66rem] text-slate-400 font-medium">
+              <span className="text-[11px] text-slate-400 font-medium">
                 Clique na coluna para isolar
               </span>
             </div>
-            <p className="text-[0.72rem] text-slate-500">
+            <p className="text-xs text-slate-500">
               Linha tracejada de referência institucional (meta 85%).
             </p>
           </div>
@@ -898,7 +898,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                     title={`Turma ${entry.className} (${entry.shift}) — Frequência: ${entry.frequencyRate}% • Abaixo Meta MEC: ${entry.belowLegalCount}`}
                   >
                     {/* Tooltip */}
-                    <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-30 w-max max-w-[200px] bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shadow-lg text-left text-[0.68rem] space-y-0.5">
+                    <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-30 w-max max-w-[200px] bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shadow-lg text-left text-[11px] space-y-0.5">
                       <p className="font-bold">
                         {entry.className} ({entry.shift})
                       </p>
@@ -928,8 +928,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                     </div>
 
                     <span
-                      className={`absolute -bottom-6 text-[10px] font-bold truncate max-w-[50px] ${
-                        isSelected ? 'text-slate-900 underline font-extrabold' : 'text-slate-600'
+                      className={`absolute -bottom-6 text-[10px] truncate max-w-[50px] ${
+                        isSelected ? 'text-slate-900 underline font-semibold' : 'text-slate-600 font-medium'
                       }`}
                     >
                       {entry.shortName}
@@ -940,7 +940,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[0.68rem] text-slate-500 font-semibold">
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-xs bg-[#047857]" /> ≥85%
@@ -963,7 +963,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Matriz Consolidada de Turmas ({selectedMonthName})
               </h2>
-              <p className="text-[0.72rem] text-slate-500">
+              <p className="text-xs text-slate-500">
                 Frequência escolar, faltas, cobertura documental e risco legal por turma.
               </p>
             </div>
@@ -971,7 +971,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setScopeFilter('all_classes')}
-                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[0.7rem] cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer"
               >
                 Ver Todas
               </button>
@@ -979,8 +979,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           </div>
 
           <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-            <table className="w-full text-left text-[0.76rem] border-collapse">
-              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold uppercase text-[0.65rem] sticky top-0 z-10">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold uppercase text-[11px] sticky top-0 z-10">
                 <tr>
                   <th className="py-2.5 px-3">Turma</th>
                   <th className="py-2.5 px-2 text-center">Ativos</th>
@@ -1011,7 +1011,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                         <span className="font-bold text-slate-900 block">
                           {row.className}
                         </span>
-                        <span className="text-[0.66rem] text-slate-500 block">
+                        <span className="text-[11px] text-slate-500 block">
                           {row.shift} · Prof. {row.teacherName}
                         </span>
                       </td>
@@ -1020,7 +1020,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                       </td>
                       <td className="py-2.5 px-2 text-center font-mono">
                         <span
-                          className={`font-extrabold ${
+                          className={`font-semibold ${
                             row.frequencyRate >= 85
                               ? 'text-emerald-700'
                               : isCompliant
@@ -1042,11 +1042,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono">
                         {row.belowLegalCount > 0 ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[0.68rem] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
                             {row.belowLegalCount} aluno(s)
                           </span>
                         ) : (
-                          <span className="text-emerald-700 font-bold text-[0.7rem]">
+                          <span className="text-emerald-700 font-bold text-xs">
                             Nenhum
                           </span>
                         )}
@@ -1074,7 +1074,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   Painel de Busca Ativa &amp; Alertas de Frequência ({filteredStudents.length})
                 </h2>
               </div>
-              <p className="text-[0.72rem] text-slate-500">
+              <p className="text-xs text-slate-500">
                 Clique na linha do estudante para visualizar a expansão completa de dados e contatos.
               </p>
             </div>
@@ -1094,7 +1094,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </span>
               </div>
 
-              <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[0.66rem] font-bold">
+              <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[11px] font-bold">
                 <button
                   type="button"
                   onClick={() => setAlertFilterMode('all_alerts')}
@@ -1180,7 +1180,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   <span className="text-xs font-bold block">
                     Atenção Imediata da Gestão: {kpiData.totalConsecutiveAlerts} caso(s) ativo(s) de Busca Ativa (ECA)
                   </span>
-                  <span className="text-[0.7rem] opacity-80 block truncate">
+                  <span className="text-xs opacity-80 block truncate">
                     {kpiData.tier10Count > 0
                       ? `${kpiData.tier10Count} aluno(s) no gatilho crítico (≥10 faltas consecutivas) exigindo notificação urgente ao Conselho Tutelar.`
                       : `${kpiData.totalConsecutiveAlerts} estudante(s) com faltas consecutivas sem atestado médico aguardando busca ativa.`}
@@ -1188,7 +1188,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0 text-[0.66rem] font-bold">
+              <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-bold">
                 {kpiData.tier10Count > 0 && (
                   <span className="px-2 py-0.5 rounded bg-rose-200/80 text-rose-900 border border-rose-300">
                     {kpiData.tier10Count} Crítico (10d)
@@ -1222,8 +1222,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </div>
           ) : (
             <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
-              <table className="w-full text-left text-[0.76rem] border-collapse">
-                <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold uppercase text-[0.65rem] sticky top-0 z-10">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold uppercase text-[11px] sticky top-0 z-10">
                   <tr>
                     <th className="py-2.5 px-3">Estudante</th>
                     <th className="py-2.5 px-2">Turma</th>
@@ -1252,7 +1252,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                 <span className="font-bold text-slate-900 block truncate">
                                   {item.student.name}
                                 </span>
-                                <span className="text-[0.66rem] text-slate-400 block font-mono">
+                                <span className="text-[11px] text-slate-400 block font-mono">
                                   RA {item.student.ra || 'S/N'}-{item.student.digRa || '0'}
                                 </span>
                               </div>
@@ -1274,10 +1274,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                             )}
                           </td>
                           <td className="py-2.5 px-2 text-center font-mono">
-                            <span className={`font-black ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-800'}`}>
+                            <span className={`font-semibold ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-800'}`}>
                               {item.frequenciaPercent}%
                             </span>
-                            <span className="text-[0.66rem] text-slate-400 ml-1">
+                            <span className="text-[11px] text-slate-400 ml-1">
                               (piso ≥{item.minLegalPercent}%)
                             </span>
                           </td>
@@ -1285,7 +1285,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                             <div className="flex flex-wrap items-center gap-1.5">
                               {item.hasConsecutiveAlert && (
                                 <span
-                                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[0.64rem] font-bold ${
+                                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold ${
                                     item.consecutiveAlertTier === '10d'
                                       ? 'bg-rose-100 text-rose-900 border border-rose-300 animate-pulse-subtle-rose'
                                       : item.consecutiveAlertTier === '5d'
@@ -1304,13 +1304,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                 </span>
                               )}
                               {item.isBelowLegal && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
                                   &lt; Piso MEC ({item.minLegalPercent}%)
                                 </span>
                               )}
                               {item.familyFeedback && (
                                 <span
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.64rem] font-semibold bg-slate-100 text-slate-700"
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700"
                                   title={item.familyFeedback}
                                 >
                                   C/ Retorno
@@ -1337,11 +1337,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                     <div>
                                       <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                                         <span>{item.student.name}</span>
-                                        <span className="text-[0.68rem] font-normal text-slate-500">
+                                        <span className="text-[11px] font-normal text-slate-500">
                                           (Nº {item.student.numeroChamada || item.student.number || '—'})
                                         </span>
                                       </h3>
-                                      <p className="text-[0.72rem] text-slate-500 font-mono">
+                                      <p className="text-xs text-slate-500 font-mono">
                                         RA: {item.student.ra || 'S/N'}-{item.student.digRa || '0'} • Turma {item.cls.name} ({item.cls.shift}) • Nasc: {item.student.dataNascimento || '—'} {item.student.idade ? `(${item.student.idade} anos)` : ''}
                                       </p>
                                     </div>
@@ -1408,14 +1408,14 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                                   {/* Visual Gauge de Frequência */}
                                   <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
-                                    <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
                                       Balanço de Frequência no Mês
                                     </span>
                                     <div className="flex items-baseline justify-between">
-                                      <span className={`text-2xl font-black font-mono ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-900'}`}>
+                                      <span className={`text-xl font-semibold font-mono ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-900'}`}>
                                         {item.frequenciaPercent}%
                                       </span>
-                                      <span className="text-[0.68rem] text-slate-500">
+                                      <span className="text-[11px] text-slate-500">
                                         {item.presencas} presenças em {item.diasLetivos} dias
                                       </span>
                                     </div>
@@ -1429,7 +1429,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                         style={{ width: `${100 - item.frequenciaPercent}%` }}
                                       />
                                     </div>
-                                    <div className="flex justify-between text-[0.68rem] text-slate-600 pt-1">
+                                    <div className="flex justify-between text-[11px] text-slate-600 pt-1">
                                       <span>Atestados: <strong className="text-emerald-700">{item.atestados}d</strong></span>
                                       <span>Sem justificativa: <strong className="text-rose-700">{item.semAtestado}d</strong></span>
                                     </div>
@@ -1437,7 +1437,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
                                   {/* Situação Legal MEC */}
                                   <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
-                                    <span className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500 block">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
                                       Conformidade Legal MEC (LDB)
                                     </span>
                                     <div className="flex items-center gap-2">
@@ -1448,12 +1448,12 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                         {item.isBelowLegal ? 'Abaixo do Piso Legal' : 'Conforme a LDB'}
                                       </span>
                                     </div>
-                                    <p className="text-[0.7rem] text-slate-600">
+                                    <p className="text-xs text-slate-600">
                                       {item.isInfantil
                                         ? 'Educação Infantil: Piso mínimo LDB Art. 31 de 60% de frequência.'
                                         : 'Ensino Fundamental: Piso mínimo LDB Art. 24 de 75% de frequência.'}
                                     </p>
-                                    <p className="text-[0.66rem] text-slate-400">
+                                    <p className="text-[11px] text-slate-400">
                                       {item.isBelowLegal
                                         ? 'Requer acompanhamento pedagógico e intervenção da gestão escolar.'
                                         : 'Frequência regular dentro dos parâmetros institucionais.'}
@@ -1472,7 +1472,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                   >
                                     <div className="flex items-center justify-between">
                                       <span
-                                        className={`text-[0.66rem] font-bold uppercase tracking-wider block ${
+                                        className={`text-[11px] font-bold uppercase tracking-wider block ${
                                           item.hasConsecutiveAlert
                                             ? item.consecutiveAlertTier === '10d'
                                               ? 'text-rose-800'
@@ -1526,7 +1526,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                       </span>
                                     </div>
                                     <p
-                                      className={`text-[0.7rem] ${
+                                      className={`text-xs ${
                                         item.hasConsecutiveAlert
                                           ? item.consecutiveAlertTier === '10d'
                                             ? 'text-rose-900'
@@ -1546,9 +1546,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                 </div>
 
                                 {/* Dados Cadastrais, Família e Logística Escolar */}
-                                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[0.72rem]">
+                                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                                   <div>
-                                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                                       Telefones &amp; Contato Direto
                                     </span>
                                     {(() => {
@@ -1563,7 +1563,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                       }
                                       return (
                                         <div className="space-y-1">
-                                          <div className="font-semibold text-slate-800 font-mono text-[0.76rem]">
+                                          <div className="font-semibold text-slate-800 font-mono text-xs">
                                             {rawPhone}
                                           </div>
                                           <div className="flex items-center gap-1.5 pt-0.5">
@@ -1571,7 +1571,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                               href={waList[0].waUrl}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-[0.68rem] transition-colors"
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-[11px] transition-colors"
                                               title={`Abrir WhatsApp: ${waList[0].display}`}
                                             >
                                               <span className="material-symbols-outlined text-[13px]">chat</span>
@@ -1579,7 +1579,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                             </a>
                                             <a
                                               href={`tel:${rawPhone.replace(/\D/g, '')}`}
-                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[0.68rem] transition-colors"
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[11px] transition-colors"
                                               title="Ligar"
                                             >
                                               <span className="material-symbols-outlined text-[13px]">call</span>
@@ -1592,27 +1592,27 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                   </div>
 
                                   <div>
-                                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                                       Filiação / Responsável
                                     </span>
                                     <span className="font-semibold text-slate-800 truncate block">
                                       {item.student.filiacao1 || item.student.guardianName || 'Responsável não informado'}
                                     </span>
                                     {item.student.filiacao2 && (
-                                      <span className="text-[0.68rem] text-slate-500 truncate block">
+                                      <span className="text-[11px] text-slate-500 truncate block">
                                         {item.student.filiacao2}
                                       </span>
                                     )}
                                   </div>
 
                                   <div>
-                                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                                       Programas Sociais / AEE
                                     </span>
                                     <div className="space-y-1">
                                       <span className="font-semibold text-slate-800 block">
                                         {item.student.nis ? (
-                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[0.68rem] font-bold border border-emerald-200">
+                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[11px] font-bold border border-emerald-200">
                                             Bolsa Família (NIS {item.student.nis})
                                           </span>
                                         ) : (
@@ -1620,7 +1620,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                         )}
                                       </span>
                                       {item.student.deficiencia && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 text-[0.66rem] font-bold border border-purple-200 block truncate">
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 text-[11px] font-bold border border-purple-200 block truncate">
                                           AEE: {item.student.deficiencia}
                                         </span>
                                       )}
@@ -1628,12 +1628,12 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                   </div>
 
                                   <div>
-                                    <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                                       Logística &amp; Endereço
                                     </span>
                                     <span className="font-semibold text-slate-800 block">
                                       {item.student.rotaOnibus ? (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-sky-50 text-sky-800 font-bold text-[0.68rem] border border-sky-200">
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-sky-50 text-sky-800 font-bold text-[11px] border border-sky-200">
                                           🚌 Ônibus Fretado: {item.student.rotaOnibus}
                                         </span>
                                       ) : (
@@ -1641,7 +1641,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                       )}
                                     </span>
                                     {(item.student.logradouro || item.student.bairro) && (
-                                      <span className="text-[0.66rem] text-slate-500 block truncate mt-0.5">
+                                      <span className="text-[11px] text-slate-500 block truncate mt-0.5">
                                         {item.student.logradouro} {item.student.numeroResidencia ? `nº ${item.student.numeroResidencia}` : ''} {item.student.bairro ? `· ${item.student.bairro}` : ''}
                                       </span>
                                     )}
@@ -1650,7 +1650,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
                                 {/* Retorno da Família Registrado */}
                                 {item.familyFeedback && (
-                                  <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 text-[0.75rem] text-amber-900 flex items-start gap-2">
+                                  <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
                                     <span className="material-symbols-outlined text-amber-700 text-[18px] shrink-0 mt-0.5">
                                       feedback
                                     </span>
@@ -1677,11 +1677,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Despacho da Gestão • {currentClass.name}
               </span>
               {notesSavedFeedback && (
-                <span className="text-[0.68rem] font-bold text-emerald-700 flex items-center gap-1">
+                <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">done</span>
                   Salvo
                 </span>
@@ -1690,7 +1690,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <h3 className="text-sm font-bold text-slate-900">
               Acompanhamento &amp; Despacho ({selectedMonthName})
             </h3>
-            <p className="text-[0.72rem] text-slate-500">
+            <p className="text-xs text-slate-500">
               Parecer executivo da coordenação/direção sobre busca ativa e retenção para a Turma {currentClass.name}.
             </p>
           </div>
@@ -1704,10 +1704,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               setNotesSavedFeedback(true);
             }}
             placeholder="Registre aqui as providências da gestão, contatos com famílias, encaminhamentos ao Conselho Tutelar ou justificativas administrativas..."
-            className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-[0.8rem] focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:outline-none resize-none leading-relaxed transition-all"
+            className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-sm focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:outline-none resize-none leading-relaxed transition-all"
           />
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[0.7rem] text-slate-500 font-medium">
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>
               Regente: {currentClass.teacherFirstName || currentClass.teacherName || 'Não atribuído'}
             </span>

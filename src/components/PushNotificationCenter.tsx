@@ -274,7 +274,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
           </span>
 
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#ff3b30] text-white text-[0.6rem] font-extrabold flex items-center justify-center tabular-nums shadow-2xs">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-semibold flex items-center justify-center tabular-nums">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -287,11 +287,11 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-[0.92rem] font-bold text-[#1d1d1f]">
+                  <h3 className="text-sm font-bold text-[#1d1d1f]">
                     Avisos &amp; Prazos
                   </h3>
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.62rem] font-bold ${
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
                       swActive
                         ? 'bg-[#28cd41]/15 text-[#1d8338]'
                         : 'bg-[#f5f5f7] text-[#6e6e73]'
@@ -301,7 +301,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                     {swActive ? 'Service Worker Ativo' : 'Push Web'}
                   </span>
                 </div>
-                <p className="text-[0.7rem] text-[#6e6e73] mt-0.5">
+                <p className="text-xs text-[#6e6e73] mt-0.5">
                   Alertas instantâneos de fechamento e busca ativa
                 </p>
               </div>
@@ -310,7 +310,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={handleMarkAllRead}
-                  className="text-[0.7rem] font-semibold text-[#0066cc] hover:underline cursor-pointer shrink-0"
+                  className="text-xs font-semibold text-[#0066cc] hover:underline cursor-pointer shrink-0"
                 >
                   Ler tudo
                 </button>
@@ -320,12 +320,12 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
             {/* Barra de Ativação / Teste Rápido de Push via Service Worker */}
             <div className="p-2.5 rounded-2xl bg-[#f5f5f7] flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <span className="text-[0.72rem] font-bold text-[#1d1d1f] block truncate">
+                <span className="text-xs font-bold text-[#1d1d1f] block truncate">
                   {permission === 'granted'
                     ? 'Notificações Push Habilitadas'
                     : 'Receber Alertas no Dispositivo'}
                 </span>
-                <span className="text-[0.66rem] text-[#6e6e73] block truncate">
+                <span className="text-[11px] text-[#6e6e73] block truncate">
                   {permission === 'granted'
                     ? 'Toque ao lado para testar um alerta Push agora'
                     : 'Ative para ser avisado sobre prazos próximos'}
@@ -335,7 +335,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
               <button
                 type="button"
                 onClick={handleEnableOrTestPush}
-                className={`h-[30px] px-3 rounded-full text-[0.7rem] font-bold shrink-0 cursor-pointer transition-all active:scale-95 ${
+                className={`h-[30px] px-3 rounded-full text-xs font-bold shrink-0 cursor-pointer transition-all active:scale-95 ${
                   permission === 'granted'
                     ? 'bg-[#1d1d1f] text-white hover:bg-black'
                     : 'bg-[#0071e3] text-white hover:bg-[#0077ed]'
@@ -351,7 +351,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterCategory('all')}
-                  className={`ios-segmented-item flex-1 text-center py-1 text-[0.7rem] ${
+                  className={`ios-segmented-item flex-1 text-center py-1 text-xs ${
                     filterCategory === 'all' ? 'ios-segmented-item-active' : ''
                   }`}
                 >
@@ -360,7 +360,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterCategory('prazo')}
-                  className={`ios-segmented-item flex-1 text-center py-1 text-[0.7rem] ${
+                  className={`ios-segmented-item flex-1 text-center py-1 text-xs ${
                     filterCategory === 'prazo' ? 'ios-segmented-item-active' : ''
                   }`}
                 >
@@ -369,7 +369,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterCategory('busca_ativa')}
-                  className={`ios-segmented-item flex-1 text-center py-1 text-[0.7rem] ${
+                  className={`ios-segmented-item flex-1 text-center py-1 text-xs ${
                     filterCategory === 'busca_ativa' ? 'ios-segmented-item-active' : ''
                   }`}
                 >
@@ -378,7 +378,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterCategory('aviso')}
-                  className={`ios-segmented-item flex-1 text-center py-1 text-[0.7rem] ${
+                  className={`ios-segmented-item flex-1 text-center py-1 text-xs ${
                     filterCategory === 'aviso' ? 'ios-segmented-item-active' : ''
                   }`}
                 >
@@ -391,10 +391,10 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
             <div className="max-h-[290px] overflow-y-auto space-y-1.5 pr-0.5">
               {filteredNotices.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className="text-[0.8rem] font-semibold text-[#1d1d1f]">
+                  <p className="text-sm font-semibold text-[#1d1d1f]">
                     Nenhum aviso nesta categoria
                   </p>
-                  <p className="text-[0.7rem] text-[#86868b] mt-0.5">
+                  <p className="text-xs text-[#86868b] mt-0.5">
                     Você está em dia com todos os prazos.
                   </p>
                 </div>
@@ -422,7 +422,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1.5">
-                          <span className="text-[0.64rem] font-bold uppercase tracking-wider text-[#6e6e73]">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6e6e73]">
                             {meta.label} • {notice.createdAt}
                           </span>
                           {!notice.read && (
@@ -431,10 +431,10 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                             />
                           )}
                         </div>
-                        <p className="text-[0.78rem] font-bold text-[#1d1d1f] leading-snug mt-0.5">
+                        <p className="text-xs font-bold text-[#1d1d1f] leading-snug mt-0.5">
                           {notice.title}
                         </p>
-                        <p className="text-[0.72rem] text-[#6e6e73] leading-snug mt-0.5 line-clamp-2">
+                        <p className="text-xs text-[#6e6e73] leading-snug mt-0.5 line-clamp-2">
                           {notice.body}
                         </p>
                       </div>
@@ -451,7 +451,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowComposer(true)}
-                    className="w-full min-h-[38px] rounded-2xl bg-[#0071e3]/10 hover:bg-[#0071e3]/15 text-[#0071e3] font-bold text-[0.76rem] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                    className="w-full min-h-[38px] rounded-2xl bg-[#0071e3]/10 hover:bg-[#0071e3]/15 text-[#0071e3] font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <span className="material-symbols-outlined text-[17px]">
                       send
@@ -461,13 +461,13 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 ) : (
                   <form onSubmit={handleCreateAndSendNotice} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[0.72rem] font-bold text-[#1d1d1f]">
+                      <span className="text-xs font-bold text-[#1d1d1f]">
                         Novo Disparo Push aos Professores
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowComposer(false)}
-                        className="text-[0.7rem] font-semibold text-[#6e6e73] hover:text-[#1d1d1f] cursor-pointer"
+                        className="text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] cursor-pointer"
                       >
                         Cancelar
                       </button>
@@ -479,7 +479,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                         onChange={(e) =>
                           setNewCategory(e.target.value as PushNoticeCategory)
                         }
-                        className="h-[34px] px-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-[0.72rem] font-semibold focus:outline-none"
+                        className="h-[34px] px-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-xs font-semibold focus:outline-none"
                       >
                         <option value="prazo">Categoria: Prazo Próximo</option>
                         <option value="aviso">Categoria: Aviso Geral</option>
@@ -489,7 +489,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                       <select
                         value={newTargetClassId}
                         onChange={(e) => setNewTargetClassId(e.target.value)}
-                        className="h-[34px] px-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-[0.72rem] font-semibold focus:outline-none"
+                        className="h-[34px] px-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-xs font-semibold focus:outline-none"
                       >
                         <option value="all">Todas as Turmas</option>
                         {classesForTargetSelect.map((c) => (
@@ -506,7 +506,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="Título (ex: Prazo de Fechamento até Sexta)"
-                      className="w-full h-[34px] px-3 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-[0.75rem] font-semibold focus:bg-white focus:outline-none"
+                      className="w-full h-[34px] px-3 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-xs font-semibold focus:bg-white focus:outline-none"
                     />
 
                     <textarea
@@ -515,12 +515,12 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                       value={newBody}
                       onChange={(e) => setNewBody(e.target.value)}
                       placeholder="Mensagem curta para notificar os professores..."
-                      className="w-full p-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-[0.74rem] focus:bg-white focus:outline-none resize-none"
+                      className="w-full p-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-xs focus:bg-white focus:outline-none resize-none"
                     />
 
                     <button
                       type="submit"
-                      className="w-full h-[36px] rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-[0.76rem] flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full h-[36px] rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">
                         notifications_active
@@ -553,7 +553,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[0.62rem] font-bold uppercase tracking-wider text-white/65">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-white/65">
                   Push • Agora
                 </span>
                 <button
@@ -569,10 +569,10 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                   </span>
                 </button>
               </div>
-              <p className="text-[0.8rem] font-bold text-white leading-snug mt-0.5">
+              <p className="text-sm font-bold text-white leading-snug mt-0.5">
                 {activeBanner.title}
               </p>
-              <p className="text-[0.72rem] text-white/80 leading-snug mt-0.5 line-clamp-2">
+              <p className="text-xs text-white/80 leading-snug mt-0.5 line-clamp-2">
                 {activeBanner.body}
               </p>
             </div>

@@ -1241,7 +1241,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 ? 'info'
                 : 'check_circle'}
             </span>
-            <p className="font-bold text-[0.95rem] leading-snug">
+            <p className="font-bold text-base leading-snug">
               {statusMessage.text}
             </p>
           </div>
@@ -1252,7 +1252,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       <section className="card-welcoming bg-white rounded-2xl p-4 sm:p-5 border border-[#003440]/12 space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-[0.74rem] font-bold">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
               <span
                 className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full ${
                   needsAuth
@@ -1275,7 +1275,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               </span>
             </div>
 
-            <h1 className="text-[1.35rem] sm:text-[1.5rem] font-extrabold text-[#003440] leading-tight mt-1">
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#003440] leading-tight mt-1">
               Central de Tabulação & Relatórios Oficiais
             </h1>
           </div>
@@ -1286,7 +1286,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isLoggingIn}
-                className="min-h-[40px] px-3.5 rounded-xl bg-white hover:bg-[#f5f7f6] text-[#003440] font-bold text-[0.8rem] border border-[#003440]/20 shadow-2xs flex items-center gap-2 cursor-pointer"
+                className="min-h-[40px] px-3.5 rounded-xl bg-white hover:bg-[#f5f7f6] text-[#003440] font-bold text-sm border border-[#003440]/20 shadow-2xs flex items-center gap-2 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px] text-[#005035]">
                   cloud_sync
@@ -1298,7 +1298,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 type="button"
                 disabled={isSyncingCloud}
                 onClick={handleSyncAllCloudAndFoldersNow}
-                className="min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-extrabold text-[0.8rem] border border-[#005035]/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-semibold text-sm border border-[#005035]/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
               >
                 <span
                   className={`material-symbols-outlined text-[18px] ${
@@ -1318,7 +1318,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <button
               type="button"
               onClick={() => setShowCloudSettingsDrawer(!showCloudSettingsDrawer)}
-              className={`min-h-[40px] px-3.5 rounded-xl font-bold text-[0.8rem] flex items-center gap-1.5 border cursor-pointer transition-colors ${
+              className={`min-h-[40px] px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 border cursor-pointer transition-colors ${
                 showCloudSettingsDrawer
                   ? 'bg-[#005035] text-white border-[#005035]'
                   : 'bg-[#f5f7f6] hover:bg-[#e3e8e6] text-[#003440] border-[#003440]/12'
@@ -1338,13 +1338,13 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             {!needsAuth ? (
               <div className="space-y-3 bg-[#f5f7f6] p-3.5 rounded-2xl border border-[#003440]/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.78rem] font-extrabold text-[#003440]">
+                  <span className="text-xs font-semibold text-[#003440]">
                     Sincronização Google Sheets & Pastas Nomeadas no Drive ({OFFICIAL_ADMIN_EMAIL})
                   </span>
                   <button
                     type="button"
                     onClick={handleGoogleLogout}
-                    className="px-2.5 py-1 rounded-lg bg-white text-[#41484b] font-bold text-[0.74rem] border border-[#c0c8cb] cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-white text-[#41484b] font-bold text-xs border border-[#c0c8cb] cursor-pointer"
                   >
                     Desconectar Conta
                   </button>
@@ -1356,7 +1356,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       type="button"
                       disabled={isSyncingCloud}
                       onClick={handleRequestCreateRealDatabaseAndFolder}
-                      className="min-h-[42px] px-3 bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.8rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="min-h-[42px] px-3 bg-[#005035] hover:bg-[#003723] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
                       <span>Criar Planilha + Pasta Drive</span>
@@ -1366,7 +1366,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       type="button"
                       disabled={isSyncingCloud}
                       onClick={handleRequestCreateDriveFolderOnly}
-                      className="min-h-[42px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.8rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="min-h-[42px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">create_new_folder</span>
                       <span>Criar Pasta de Fotos</span>
@@ -1376,28 +1376,28 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       type="button"
                       disabled={isSyncingCloud || !spreadsheetInput.trim()}
                       onClick={handleRequestWriteSheet}
-                      className="min-h-[42px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.8rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
+                      className="min-h-[42px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
                     >
                       <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
                       <span>Gravar Dados na Planilha</span>
                     </button>
                   </div>
                 ) : (
-                  <div className="p-2.5 bg-[#fff8f0] rounded-xl border border-[#e6c387] text-[0.78rem] font-bold text-[#8c5000]">
+                  <div className="p-2.5 bg-[#fff8f0] rounded-xl border border-[#e6c387] text-xs font-bold text-[#8c5000]">
                     Somente o Administrador ({OFFICIAL_ADMIN_EMAIL}) edita a estrutura de pastas no Drive.
                   </div>
                 )}
               </div>
             ) : (
               <div className="bg-[#f5f7f6] p-3.5 rounded-2xl border border-[#003440]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <p className="text-[0.8rem] text-[#374346] font-medium">
+                <p className="text-sm text-[#374346] font-medium">
                   Autentique com <strong>{OFFICIAL_ADMIN_EMAIL}</strong> para sincronizar diretamente com o Google Sheets e pastas do Google Drive.
                 </p>
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isLoggingIn}
-                  className="px-4 min-h-[40px] bg-white hover:bg-[#f8faf9] text-[#003440] font-bold text-[0.8rem] rounded-xl border border-[#003440]/20 shadow-2xs shrink-0 cursor-pointer"
+                  className="px-4 min-h-[40px] bg-white hover:bg-[#f8faf9] text-[#003440] font-bold text-sm rounded-xl border border-[#003440]/20 shadow-2xs shrink-0 cursor-pointer"
                 >
                   Sign in with Google
                 </button>
@@ -1409,10 +1409,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               {/* 1. Bulk Photos */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <span className="text-[0.75rem] font-extrabold text-[#003440] block truncate">
+                  <span className="text-xs font-semibold text-[#003440] block truncate">
                     Fotos em Lote (NOME.jpg)
                   </span>
-                  <span className="text-[0.69rem] text-[#5a676b] block truncate">
+                  <span className="text-[11px] text-[#5a676b] block truncate">
                     Associa e sobe p/ o Drive
                   </span>
                 </div>
@@ -1428,7 +1428,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   type="button"
                   disabled={isSyncingCloud}
                   onClick={() => bulkPhotoInputRef.current?.click()}
-                  className="px-2.5 min-h-[34px] rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.72rem] shrink-0 cursor-pointer"
+                  className="px-2.5 min-h-[34px] rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-xs shrink-0 cursor-pointer"
                 >
                   Selecionar
                 </button>
@@ -1437,14 +1437,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               {/* 2. Link Planilha (Auto-Salva e Sincroniza ao Colar) */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[0.73rem] font-extrabold text-[#003440] truncate">
+                  <span className="text-xs font-semibold text-[#003440] truncate">
                     Planilha ({connectedTitle})
                   </span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => handleCopyLink('sheet', currentSheetFullUrl)}
-                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.66rem] border border-[#c0c8cb] cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[11px] border border-[#c0c8cb] cursor-pointer"
                     >
                       {copiedKey === 'sheet' ? '✓' : 'Copiar'}
                     </button>
@@ -1452,7 +1452,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       href={currentSheetFullUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded bg-[#005035] text-white font-bold text-[0.66rem]"
+                      className="px-2 py-0.5 rounded bg-[#005035] text-white font-bold text-[11px]"
                     >
                       Abrir
                     </a>
@@ -1471,21 +1471,21 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     }
                   }}
                   placeholder="Cole link ou ID da Planilha..."
-                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.71rem] rounded-lg border border-[#c0c8cb]"
+                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-xs rounded-lg border border-[#c0c8cb]"
                 />
               </div>
 
               {/* 3. Link Pasta Drive Fotos (Auto-Salva e Sincroniza ao Colar) */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[0.73rem] font-extrabold text-[#003440] truncate">
+                  <span className="text-xs font-semibold text-[#003440] truncate">
                     Pasta de Fotos (Drive)
                   </span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => handleCopyLink('drive', driveFolderUrl)}
-                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.66rem] border border-[#c0c8cb] cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[11px] border border-[#c0c8cb] cursor-pointer"
                     >
                       {copiedKey === 'drive' ? '✓' : 'Copiar'}
                     </button>
@@ -1493,7 +1493,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       href={driveFolderUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded bg-[#003440] text-white font-bold text-[0.66rem]"
+                      className="px-2 py-0.5 rounded bg-[#003440] text-white font-bold text-[11px]"
                     >
                       Drive
                     </a>
@@ -1515,21 +1515,21 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     }
                   }}
                   placeholder="Cole link da pasta de fotos..."
-                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.71rem] rounded-lg border border-[#c0c8cb]"
+                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-xs rounded-lg border border-[#c0c8cb]"
                 />
               </div>
 
               {/* 4. Link Pasta Fichas Informativas PDF Escaneadas (Auto-Salva e Sincroniza Subpastas ao Colar) */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[0.73rem] font-extrabold text-[#005035] truncate">
+                  <span className="text-xs font-semibold text-[#005035] truncate">
                     Pasta Fichas PDF (Drive)
                   </span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => handleCopyLink('fichas_pdf', fichasPdfFolderUrl)}
-                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[0.66rem] border border-[#c0c8cb] cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-white text-[#003440] font-bold text-[11px] border border-[#c0c8cb] cursor-pointer"
                     >
                       {copiedKey === 'fichas_pdf' ? '✓' : 'Copiar'}
                     </button>
@@ -1537,7 +1537,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       href={fichasPdfFolderUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2 py-0.5 rounded bg-[#005035] text-white font-bold text-[0.66rem]"
+                      className="px-2 py-0.5 rounded bg-[#005035] text-white font-bold text-[11px]"
                     >
                       PDFs
                     </a>
@@ -1559,20 +1559,20 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     }
                   }}
                   placeholder="Cole link da pasta Fichas Informativas..."
-                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-[0.71rem] rounded-lg border border-[#c0c8cb]"
+                  className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-xs rounded-lg border border-[#c0c8cb]"
                 />
               </div>
             </div>
 
             {isAdmin && (
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[0.73rem] text-[#5a676b]">
+                <span className="text-xs text-[#5a676b]">
                   Sincronização automática ativa: faltas e atestados lançados salvam direto na planilha.
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowTsvImporter(!showTsvImporter)}
-                  className="text-[0.75rem] font-bold text-[#005035] hover:underline cursor-pointer flex items-center gap-1"
+                  className="text-xs font-bold text-[#005035] hover:underline cursor-pointer flex items-center gap-1"
                 >
                   <span className="material-symbols-outlined text-[15px]">content_paste</span>
                   <span>{showTsvImporter ? 'Fechar Importador SED' : 'Colar Dados SED (48 Colunas)'}</span>
@@ -1587,12 +1587,12 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   value={rawTsvText}
                   onChange={(e) => setRawTsvText(e.target.value)}
                   placeholder="Cole aqui as linhas copiadas da SED / Excel com as 48 colunas..."
-                  className="w-full p-2 bg-white text-[#191c1b] font-mono text-[0.74rem] rounded-lg border border-[#c0c8cb]"
+                  className="w-full p-2 bg-white text-[#191c1b] font-mono text-xs rounded-lg border border-[#c0c8cb]"
                 />
                 <button
                   type="button"
                   onClick={handleImportSedTsv}
-                  className="w-full min-h-[38px] bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.82rem] rounded-lg cursor-pointer"
+                  className="w-full min-h-[38px] bg-[#005035] hover:bg-[#003723] text-white font-bold text-sm rounded-lg cursor-pointer"
                 >
                   Importar Linhas SED
                 </button>
@@ -1676,9 +1676,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 setActiveTab(tab.id as any);
                 setFilterTurma('all');
               }}
-              className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-[0.8rem] flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+              className={`min-h-[40px] px-3.5 py-1.5 rounded-xl font-bold text-sm flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer shrink-0 ${
                 isActive
-                  ? 'bg-white text-[#003440] shadow-[0_2px_8px_rgba(0,52,64,0.12)] font-extrabold'
+                  ? 'bg-white text-[#003440] shadow-[0_2px_8px_rgba(0,52,64,0.12)] font-semibold'
                   : 'text-[#436370] hover:text-[#003440] hover:bg-white/50'
               }`}
             >
@@ -1704,18 +1704,18 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
               <div className="space-y-2 max-w-2xl">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-[0.72rem] font-extrabold uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-semibold uppercase tracking-wider">
                     Auditoria Integral &amp; Protocolo SED
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#a4f3ca] text-[#005035] text-[0.72rem] font-black">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#a4f3ca] text-[#005035] text-xs font-semibold">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#005035] animate-pulse"></span>
                     Firebase Firestore &amp; Sheets Sincronizados
                   </span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
                   Diagnóstico de Inconsistências &amp; Sincronia Multi-Cloud
                 </h2>
-                <p className="text-white/85 text-[0.84rem] sm:text-[0.88rem] leading-relaxed">
+                <p className="text-white/85 text-sm sm:text-sm leading-relaxed">
                   Varredura contínua de dados em todas as 40 turmas e ~1.100 estudantes. Detecta lacunas cadastrais SED
                   (RA, nascimento, filiação, telefones), riscos legais de frequência (&lt;60% Infantil / &lt;75% Fundamental),
                   Busca Ativa sem devolutiva registrada e integridade de persistência nas 12 abas do Google Sheets e no Firebase Firestore.
@@ -1725,15 +1725,15 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               {/* Score Circular / Widget */}
               <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/15 shrink-0">
                 <div className="text-center">
-                  <div className="text-3xl sm:text-4xl font-black text-[#a4f3ca]">
+                  <div className="text-3xl sm:text-4xl font-semibold text-[#a4f3ca]">
                     {diagnosticReport.scorePercentage}%
                   </div>
-                  <div className="text-[0.72rem] font-bold text-white/80 uppercase tracking-wider">
+                  <div className="text-xs font-bold text-white/80 uppercase tracking-wider">
                     Índice de Integridade
                   </div>
                 </div>
                 <div className="h-10 w-[1px] bg-white/20" />
-                <div className="space-y-1 text-[0.76rem]">
+                <div className="space-y-1 text-xs">
                   <div className="flex items-center gap-1.5 font-bold">
                     <span className="w-2 h-2 rounded-full bg-[#ffb4ab]"></span>
                     <span>{diagnosticReport.criticalCount} Críticas</span>
@@ -1752,7 +1752,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
             {/* Quick Action Bar within Hero */}
             <div className="mt-5 pt-4 border-t border-white/15 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-[0.76rem] text-white/80">
+              <div className="flex items-center gap-2 text-xs text-white/80">
                 <span className="material-symbols-outlined text-[16px] text-[#a4f3ca]">
                   sync_saved_locally
                 </span>
@@ -1777,7 +1777,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     );
                     showToast('info', 'Diagnóstico de inconsistências recalculado com base no estado mais recente!');
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-[0.78rem] flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <span className="material-symbols-outlined text-[16px]">refresh</span>
                   <span>Recalcular Diagnóstico</span>
@@ -1788,7 +1788,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     type="button"
                     disabled={isSyncingCloud}
                     onClick={handleRequestRedefineSheet}
-                    className="px-3.5 py-1.5 rounded-xl bg-[#a4f3ca] hover:bg-[#83dfb1] text-[#005035] font-black text-[0.78rem] flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#a4f3ca] hover:bg-[#83dfb1] text-[#005035] font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
                   >
                     <span className="material-symbols-outlined text-[18px]">auto_fix_high</span>
                     <span>Redefinir 12 Abas &amp; Sincronia Total</span>
@@ -1802,52 +1802,52 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3.5 rounded-2xl bg-[#fff8f6] border border-[#ffdad6] space-y-1">
               <div className="flex items-center justify-between text-[#ba1a1a]">
-                <span className="text-[0.72rem] font-bold uppercase tracking-wider">Inconsistências Críticas</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Inconsistências Críticas</span>
                 <span className="material-symbols-outlined text-[20px]">error</span>
               </div>
-              <div className="text-2xl font-black text-[#ba1a1a]">
+              <div className="text-2xl font-semibold text-[#ba1a1a]">
                 {diagnosticReport.criticalCount}
               </div>
-              <p className="text-[0.72rem] text-[#41484b]">
+              <p className="text-xs text-[#41484b]">
                 RA faltante, dados em branco ou frequência abaixo do limiar legal.
               </p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-[#fff8f0] border border-[#e6c387] space-y-1">
               <div className="flex items-center justify-between text-[#8c5000]">
-                <span className="text-[0.72rem] font-bold uppercase tracking-wider">Alertas Regulamentares</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Alertas Regulamentares</span>
                 <span className="material-symbols-outlined text-[20px]">warning</span>
               </div>
-              <div className="text-2xl font-black text-[#8c5000]">
+              <div className="text-2xl font-semibold text-[#8c5000]">
                 {diagnosticReport.warningCount}
               </div>
-              <p className="text-[0.72rem] text-[#41484b]">
+              <p className="text-xs text-[#41484b]">
                 Busca Ativa sem devolutiva ou professor regente não atribuído.
               </p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-[#f0f7fa] border border-[#c3e5f4] space-y-1">
               <div className="flex items-center justify-between text-[#004f64]">
-                <span className="text-[0.72rem] font-bold uppercase tracking-wider">Informativas</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Informativas</span>
                 <span className="material-symbols-outlined text-[20px]">info</span>
               </div>
-              <div className="text-2xl font-black text-[#004f64]">
+              <div className="text-2xl font-semibold text-[#004f64]">
                 {diagnosticReport.infoCount}
               </div>
-              <p className="text-[0.72rem] text-[#41484b]">
+              <p className="text-xs text-[#41484b]">
                 Docente de inglês não informado ou pendências leves de sincronia.
               </p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-[#eaf6ef] border border-[#005035]/20 space-y-1">
               <div className="flex items-center justify-between text-[#005035]">
-                <span className="text-[0.72rem] font-bold uppercase tracking-wider">Sincronia Firebase</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Sincronia Firebase</span>
                 <span className="material-symbols-outlined text-[20px]">cloud_done</span>
               </div>
-              <div className="text-2xl font-black text-[#005035]">
+              <div className="text-2xl font-semibold text-[#005035]">
                 100% OK
               </div>
-              <p className="text-[0.72rem] text-[#41484b]">
+              <p className="text-xs text-[#41484b]">
                 Coleções <code>school_classes_2027</code> e <code>school_meta_2027</code> alinhadas.
               </p>
             </div>
@@ -1871,9 +1871,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       key={cat.id}
                       type="button"
                       onClick={() => setDiagnosticCategoryFilter(cat.id as any)}
-                      className={`px-3 py-1.5 rounded-xl font-bold text-[0.76rem] transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                         isSel
-                          ? 'bg-[#003440] text-white shadow-2xs font-extrabold'
+                          ? 'bg-[#003440] text-white shadow-2xs font-semibold'
                           : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
                       }`}
                     >
@@ -1885,7 +1885,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
               {/* Severity Filter */}
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[0.74rem] font-bold text-[#436370]">Gravidade:</span>
+                <span className="text-xs font-bold text-[#436370]">Gravidade:</span>
                 {[
                   { id: 'todas', label: 'Todas' },
                   { id: 'critical', label: 'Críticas' },
@@ -1898,9 +1898,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       key={sev.id}
                       type="button"
                       onClick={() => setDiagnosticSeverityFilter(sev.id as any)}
-                      className={`px-2.5 py-1 rounded-lg text-[0.74rem] font-bold transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         isSel
-                          ? 'bg-[#005035] text-white font-extrabold'
+                          ? 'bg-[#005035] text-white font-semibold'
                           : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
                       }`}
                     >
@@ -1921,7 +1921,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 value={diagnosticSearch}
                 onChange={(e) => setDiagnosticSearch(e.target.value)}
                 placeholder="Buscar por estudante, nº chamada, turma, campo ou ação sugerida..."
-                className="w-full pl-9 pr-4 py-2 bg-[#f5f7f6] focus:bg-white text-[#191c1b] placeholder-[#5a676b] text-[0.82rem] font-medium rounded-xl border border-[#003440]/12 focus:border-[#005035] outline-none transition-colors"
+                className="w-full pl-9 pr-4 py-2 bg-[#f5f7f6] focus:bg-white text-[#191c1b] placeholder-[#5a676b] text-sm font-medium rounded-xl border border-[#003440]/12 focus:border-[#005035] outline-none transition-colors"
               />
               {diagnosticSearch && (
                 <button
@@ -1941,18 +1941,18 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <span className="material-symbols-outlined text-[44px] text-[#005035]">
                 verified
               </span>
-              <h3 className="text-[1.1rem] font-black text-[#003440]">
+              <h3 className="text-lg font-semibold text-[#003440]">
                 {diagnosticSearch || diagnosticCategoryFilter !== 'todas' || diagnosticSeverityFilter !== 'todas'
                   ? 'Nenhuma inconsistência encontrada para este filtro!'
                   : 'Nenhuma inconsistência cadastral ou legal detectada!'}
               </h3>
-              <p className="text-[0.82rem] text-[#436370] max-w-md mx-auto">
+              <p className="text-sm text-[#436370] max-w-md mx-auto">
                 Todos os dados avaliados estão rigorosamente conformes com os protocolos da SME Jundiaí e em sincronia perfeita com o Firebase e Google Sheets.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-[0.76rem] font-bold text-[#436370] px-1">
+              <div className="flex items-center justify-between text-xs font-bold text-[#436370] px-1">
                 <span>Mostrando {filteredDiagnosticIssues.length} de {diagnosticReport.totalIssues} inconsistências</span>
                 <span>Aba Oficial na Planilha: <code className="bg-[#f1f4f3] px-1.5 py-0.5 rounded text-[#003440]">Diagnostico_Inconsistencias_2027</code></span>
               </div>
@@ -1975,7 +1975,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-black/5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[0.68rem] font-black uppercase tracking-wider ${
+                            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${
                               isCrit
                                 ? 'bg-[#ba1a1a] text-white'
                                 : isWarn
@@ -1985,22 +1985,22 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                           >
                             {isCrit ? 'Crítica' : isWarn ? 'Alerta' : 'Info'}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full bg-white/80 text-[0.7rem] font-extrabold text-[#003440] border border-[#003440]/10">
+                          <span className="px-2 py-0.5 rounded-full bg-white/80 text-xs font-semibold text-[#003440] border border-[#003440]/10">
                             {issue.categoryLabel}
                           </span>
                           {issue.className && (
-                            <span className="font-extrabold text-[0.78rem] text-[#003440]">
+                            <span className="font-semibold text-xs text-[#003440]">
                               Turma {issue.className}
                             </span>
                           )}
                           {issue.studentName && (
-                            <span className="text-[0.78rem] text-[#191c1b] font-bold">
+                            <span className="text-xs text-[#191c1b] font-bold">
                               · Nº {issue.studentNumber} {issue.studentName}
                             </span>
                           )}
                         </div>
 
-                        <span className="inline-flex items-center gap-1 text-[0.68rem] font-black uppercase text-[#005035] bg-[#eaf6ef] px-2 py-0.5 rounded-full shrink-0">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase text-[#005035] bg-[#eaf6ef] px-2 py-0.5 rounded-full shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#005035]"></span>
                           Firebase {issue.firebaseStatus}
                         </span>
@@ -2008,28 +2008,28 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-3 items-center">
                         <div className="md:col-span-8 space-y-1.5">
-                          <div className="flex items-center gap-2 text-[0.78rem]">
-                            <span className="font-extrabold text-[#003440]">Campo Afetado:</span>
-                            <span className="font-mono bg-white px-2 py-0.5 rounded-md border border-black/10 text-[0.74rem] text-[#ba1a1a] font-bold">
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="font-semibold text-[#003440]">Campo Afetado:</span>
+                            <span className="font-mono bg-white px-2 py-0.5 rounded-md border border-black/10 text-xs text-[#ba1a1a] font-bold">
                               {issue.affectedField}
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[0.76rem] bg-white/70 p-2.5 rounded-xl border border-black/5">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-white/70 p-2.5 rounded-xl border border-black/5">
                             <div>
-                              <span className="text-[#5a676b] font-bold block text-[0.68rem] uppercase">Valor Atual</span>
+                              <span className="text-[#5a676b] font-bold block text-[11px] uppercase">Valor Atual</span>
                               <span className="font-semibold text-[#191c1b]">{issue.currentValue}</span>
                             </div>
                             <div>
-                              <span className="text-[#005035] font-bold block text-[0.68rem] uppercase">Valor Regulamentar Esperado</span>
+                              <span className="text-[#005035] font-bold block text-[11px] uppercase">Valor Regulamentar Esperado</span>
                               <span className="font-semibold text-[#005035]">{issue.expectedValue}</span>
                             </div>
                           </div>
 
-                          <p className="text-[0.78rem] text-[#41484b] leading-relaxed">
+                          <p className="text-xs text-[#41484b] leading-relaxed">
                             <strong>Diagnóstico:</strong> {issue.description}
                           </p>
-                          <p className="text-[0.76rem] text-[#005035] font-bold leading-relaxed">
+                          <p className="text-xs text-[#005035] font-bold leading-relaxed">
                             <strong>Ação Corretiva:</strong> {issue.suggestedAction}
                           </p>
                         </div>
@@ -2039,7 +2039,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             <button
                               type="button"
                               onClick={() => onOpenStudentGrid(issue.classId!, issue.studentId!)}
-                              className="min-h-[34px] px-3 bg-white hover:bg-[#f1f4f3] text-[#003440] font-bold text-[0.74rem] rounded-xl border border-[#003440]/20 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                              className="min-h-[34px] px-3 bg-white hover:bg-[#f1f4f3] text-[#003440] font-bold text-xs rounded-xl border border-[#003440]/20 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                             >
                               <span className="material-symbols-outlined text-[16px]">edit_note</span>
                               <span>Editar na Grade de Dados</span>
@@ -2050,7 +2050,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             <button
                               type="button"
                               onClick={() => setActiveTab('faltas_consecutivas')}
-                              className="min-h-[34px] px-3 bg-[#005035] hover:bg-[#003723] text-white font-bold text-[0.74rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                              className="min-h-[34px] px-3 bg-[#005035] hover:bg-[#003723] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                             >
                               <span className="material-symbols-outlined text-[16px]">contacts</span>
                               <span>Ficha de Busca Ativa</span>
@@ -2061,7 +2061,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             <button
                               type="button"
                               onClick={onNavigateToAcessos}
-                              className="min-h-[34px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.74rem] rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                              className="min-h-[34px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                             >
                               <span className="material-symbols-outlined text-[16px]">manage_accounts</span>
                               <span>Atribuir na Tela de Acessos</span>
@@ -2083,13 +2083,13 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
         <section className="card-welcoming bg-white rounded-3xl p-5 space-y-4 animate-gentle-fade">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[0.7rem] font-bold uppercase tracking-wider text-[#ff3b30] block">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#ff3b30] block">
                 Aba Oficial: Busca_Ativa_Faltas_Consecutivas_2027
               </span>
-              <h2 className="text-[1.25rem] sm:text-[1.45rem] font-bold text-[#1d1d1f]">
+              <h2 className="text-lg sm:text-xl font-bold text-[#1d1d1f]">
                 Faltas Consecutivas (PEB I) &amp; Devolutiva da Família
               </h2>
-              <p className="text-[0.82rem] text-[#6e6e73]">
+              <p className="text-sm text-[#6e6e73]">
                 Estudantes sinalizados pelo(a) professor(a) PEB I com faltas seguidas (marcas de 3, 5 e 10 dias). Clique no WhatsApp para falar com a família e registre a devolutiva na coluna da frente.
               </p>
             </div>
@@ -2108,7 +2108,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     key={t.id}
                     type="button"
                     onClick={() => setConsecTierFilter(t.id)}
-                    className={`ios-segmented-item px-2.5 py-1.5 text-[0.74rem] ${
+                    className={`ios-segmented-item px-2.5 py-1.5 text-xs ${
                       consecTierFilter === t.id ? 'ios-segmented-item-active' : ''
                     }`}
                   >
@@ -2121,7 +2121,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setConsecShowAllStudents(false)}
-                  className={`ios-segmented-item px-3 py-1.5 text-[0.76rem] ${
+                  className={`ios-segmented-item px-3 py-1.5 text-xs ${
                     !consecShowAllStudents ? 'ios-segmented-item-active' : ''
                   }`}
                 >
@@ -2130,7 +2130,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setConsecShowAllStudents(true)}
-                  className={`ios-segmented-item px-3 py-1.5 text-[0.76rem] ${
+                  className={`ios-segmented-item px-3 py-1.5 text-xs ${
                     consecShowAllStudents ? 'ios-segmented-item-active' : ''
                   }`}
                 >
@@ -2149,10 +2149,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               }`}
             >
               <div>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#f59e0b] text-white font-black text-[0.68rem] uppercase">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#f59e0b] text-white font-semibold text-[11px] uppercase">
                   Marca de 3 Dias (3 a 4d)
                 </span>
-                <p className="text-[0.76rem] font-bold text-[#92400e] mt-1">
+                <p className="text-xs font-bold text-[#92400e] mt-1">
                   Atenção Preventiva • Contato WhatsApp Secretaria
                 </p>
               </div>
@@ -2168,10 +2168,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               }`}
             >
               <div>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#ea580c] text-white font-black text-[0.68rem] uppercase">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#ea580c] text-white font-semibold text-[11px] uppercase">
                   Marca de 5 Dias (5 a 9d)
                 </span>
-                <p className="text-[0.76rem] font-bold text-[#9a3412] mt-1">
+                <p className="text-xs font-bold text-[#9a3412] mt-1">
                   Busca Ativa Urgente • Convocar Responsável
                 </p>
               </div>
@@ -2187,10 +2187,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               }`}
             >
               <div>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#be123c] text-white font-black text-[0.68rem] uppercase">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#be123c] text-white font-semibold text-[11px] uppercase">
                   Marca de 10+ Dias (10d+)
                 </span>
-                <p className="text-[0.76rem] font-bold text-[#9f1239] mt-1">
+                <p className="text-xs font-bold text-[#9f1239] mt-1">
                   Risco Crítico de Evasão • Acionar Gestão / Conselho
                 </p>
               </div>
@@ -2208,14 +2208,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <h3 className="text-[1rem] font-bold text-[#1d1d1f]">
                 Nenhum estudante com aviso de faltas consecutivas neste filtro
               </h3>
-              <p className="text-[0.82rem] text-[#6e6e73] max-w-md mx-auto">
+              <p className="text-sm text-[#6e6e73] max-w-md mx-auto">
                 Assim que o(a) professor(a) PEB I selecionar os dias de falta seguida de um aluno na tela "Faltas Seguidas", ele aparecerá aqui instantaneamente para contato da secretaria.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto border border-black/[0.06] rounded-2xl">
-              <table className="w-full text-left text-[0.82rem] border-collapse min-w-[940px]">
-                <thead className="bg-[#003440] text-white font-bold uppercase tracking-wider text-[0.68rem]">
+              <table className="w-full text-left text-sm border-collapse min-w-[940px]">
+                <thead className="bg-[#003440] text-white font-bold uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3 px-4">Turma &amp; Professor(a) PEB I</th>
                     <th className="py-3 px-4">Estudante</th>
@@ -2256,7 +2256,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             <span className="font-bold text-[#1d1d1f] block">
                               {cls.name} ({cls.shift.replace('Turno ', '')})
                             </span>
-                            <span className="text-[0.74rem] text-[#6e6e73]">
+                            <span className="text-xs text-[#6e6e73]">
                               Prof(a): {cls.teacherFirstName || cls.teacherName || 'PEB I'}
                             </span>
                           </td>
@@ -2271,7 +2271,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                                 <span className="font-bold text-[#1d1d1f] hover:text-[#0071e3] block">
                                   Nº {student.number.toString().padStart(2, '0')} • {student.name}
                                 </span>
-                                <span className="text-[0.73rem] text-[#6e6e73]">
+                                <span className="text-xs text-[#6e6e73]">
                                   Mãe: {student.filiacao1 || student.guardianName || '—'}
                                 </span>
                               </div>
@@ -2282,19 +2282,19 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             {consecInfo.tier !== 'none' ? (
                               <div className="inline-flex flex-col items-center gap-0.5">
                                 <span
-                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-black text-[0.72rem] uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold text-xs uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
                                 >
                                   <span className="material-symbols-outlined text-[14px]">
                                     {consecInfo.icon}
                                   </span>
                                   <span>{consecInfo.shortBadge}</span>
                                 </span>
-                                <span className="text-[0.66rem] font-bold text-[#41484b]">
+                                <span className="text-[11px] font-bold text-[#41484b]">
                                   {consecInfo.actionRequired}
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-[0.74rem] text-[#86868b] font-semibold">
+                              <span className="text-xs text-[#86868b] font-semibold">
                                 Sem Alerta (&lt;3d)
                               </span>
                             )}
@@ -2303,7 +2303,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                           <td className="py-3.5 px-4">
                             {selectedDates.length > 0 ? (
                               <span
-                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[0.76rem] tabular-nums ${
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs tabular-nums ${
                                   consecInfo.tier === '10d'
                                     ? 'bg-[#be123c]/15 text-[#be123c]'
                                     : consecInfo.tier === '5d'
@@ -2320,7 +2320,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                                 </span>
                               </span>
                             ) : (
-                              <span className="text-[0.75rem] text-[#86868b]">
+                              <span className="text-xs text-[#86868b]">
                                 {consecInfo.days > 0
                                   ? `${consecInfo.days} faltas seguidas no mês`
                                   : 'Sem dias marcados'}
@@ -2337,7 +2337,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                                     href={ph.waUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#25D366]/14 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-mono font-semibold text-[0.76rem] transition-colors cursor-pointer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#25D366]/14 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-mono font-semibold text-xs transition-colors cursor-pointer"
                                   >
                                     <span className="material-symbols-outlined text-[15px]">chat</span>
                                     <span>{ph.display}</span>
@@ -2345,7 +2345,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-[0.75rem] text-[#86868b]">Sem telefone</span>
+                              <span className="text-xs text-[#86868b]">Sem telefone</span>
                             )}
                           </td>
 
@@ -2362,7 +2362,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                                 )
                               }
                               placeholder="Digite aqui o retorno da família p/ o(a) professor(a)..."
-                              className="w-full min-h-[40px] px-3.5 py-2 rounded-xl bg-white/90 border border-black/[0.08] focus:bg-[#eaf6ef]/60 text-[#1d1d1f] font-medium text-[0.82rem] placeholder:text-[#86868b] focus:outline-none transition-colors"
+                              className="w-full min-h-[40px] px-3.5 py-2 rounded-xl bg-white/90 border border-black/[0.08] focus:bg-[#eaf6ef]/60 text-[#1d1d1f] font-medium text-sm placeholder:text-[#86868b] focus:outline-none transition-colors"
                             />
                           </td>
                         </tr>
@@ -2382,17 +2382,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#003440]/10">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-[#005035] text-white text-[0.72rem] font-extrabold uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#005035] text-white text-xs font-semibold uppercase tracking-wider">
                   Sistema Presença MEC · Bolsa Família (A partir de Fev./2027)
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#f5f7f6] text-[#003440] text-[0.72rem] font-bold border border-[#003440]/12">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#f5f7f6] text-[#003440] text-xs font-bold border border-[#003440]/12">
                   Ed. Infantil: alerta &lt; 60% · Ens. Fundamental: alerta &lt; 75%
                 </span>
               </div>
-              <h2 className="text-[1.25rem] sm:text-[1.35rem] font-extrabold text-[#003440] mt-1">
+              <h2 className="text-lg sm:text-xl font-semibold text-[#003440] mt-1">
                 Relatório Bimestral de Faltas e Atestados por Mês — {currentBimesterDef.label}
               </h2>
-              <p className="text-[0.82rem] text-[#436370] font-medium">
+              <p className="text-sm text-[#436370] font-medium">
                 Consolidação mensal de {currentBimesterDef.periodLabel} com NIS, RA, Faltas, Atestados e % de Presença para lançamento no Sistema Bolsa Família.
               </p>
             </div>
@@ -2401,7 +2401,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="min-h-[42px] px-3.5 rounded-xl bg-[#f5f7f6] hover:bg-[#e3e8e6] text-[#003440] font-bold text-[0.82rem] border border-[#003440]/15 flex items-center gap-1.5 cursor-pointer"
+                className="min-h-[42px] px-3.5 rounded-xl bg-[#f5f7f6] hover:bg-[#e3e8e6] text-[#003440] font-bold text-sm border border-[#003440]/15 flex items-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">print</span>
                 <span>Imprimir Bimestre</span>
@@ -2419,9 +2419,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     key={bim.id}
                     type="button"
                     onClick={() => setSelectedBimesterId(bim.id)}
-                    className={`px-3.5 py-2 rounded-lg font-bold text-[0.78rem] transition-all cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-lg font-bold text-xs transition-all cursor-pointer ${
                       active
-                        ? 'bg-[#003440] text-white shadow-2xs font-extrabold'
+                        ? 'bg-[#003440] text-white shadow-2xs font-semibold'
                         : 'bg-white text-[#436370] hover:text-[#003440]'
                     }`}
                   >
@@ -2437,7 +2437,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   key={seg}
                   type="button"
                   onClick={() => setBimesterSegmentFilter(seg)}
-                  className={`px-3 py-1.5 rounded-lg text-[0.75rem] font-bold cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
                     bimesterSegmentFilter === seg
                       ? 'bg-[#005035] text-white'
                       : 'bg-white text-[#436370] hover:text-[#003440]'
@@ -2456,56 +2456,56 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           {/* 4 Minimalist KPI Cards for Bimester & Bolsa Família */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="p-3.5 rounded-xl bg-[#f8faf9] border border-[#003440]/10">
-              <span className="text-[0.7rem] font-bold text-[#5a676b] uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#5a676b] uppercase tracking-wider block">
                 Estudantes no Bimestre
               </span>
               <div className="flex items-baseline justify-between mt-1">
-                <span className="text-[1.5rem] font-black text-[#003440] tabular-nums">
+                <span className="text-2xl font-semibold text-[#003440] tabular-nums">
                   {bimesterSummaryStats.totalEstudantes}
                 </span>
-                <span className="text-[0.75rem] font-bold text-[#005035]">
+                <span className="text-xs font-bold text-[#005035]">
                   Freq. Média: {bimesterSummaryStats.pctPresenca}%
                 </span>
               </div>
             </div>
 
             <div className="p-3.5 rounded-xl bg-[#f8faf9] border border-[#003440]/10">
-              <span className="text-[0.7rem] font-bold text-[#5a676b] uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#5a676b] uppercase tracking-wider block">
                 Faltas & Atestados no Período
               </span>
               <div className="flex items-baseline justify-between mt-1">
-                <span className="text-[1.5rem] font-black text-[#ba1a1a] tabular-nums">
+                <span className="text-2xl font-semibold text-[#ba1a1a] tabular-nums">
                   {bimesterSummaryStats.totalFaltas} faltas
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] text-[0.74rem] font-bold">
+                <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] text-xs font-bold">
                   {bimesterSummaryStats.totalAtestados} atestados
                 </span>
               </div>
             </div>
 
             <div className="p-3.5 rounded-xl bg-[#fff8f7] border border-[#ba1a1a]/25">
-              <span className="text-[0.7rem] font-bold text-[#ba1a1a] uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#ba1a1a] uppercase tracking-wider block">
                 Alerta Ed. Infantil (&lt; 60% Presença)
               </span>
               <div className="flex items-baseline justify-between mt-1">
-                <span className="text-[1.5rem] font-black text-[#ba1a1a] tabular-nums">
+                <span className="text-2xl font-semibold text-[#ba1a1a] tabular-nums">
                   {bimesterSummaryStats.alertInfantilCount}
                 </span>
-                <span className="text-[0.72rem] font-semibold text-[#93000a]">
+                <span className="text-xs font-semibold text-[#93000a]">
                   limite mínimo 60% (LDB/MEC)
                 </span>
               </div>
             </div>
 
             <div className="p-3.5 rounded-xl bg-[#fff8f7] border border-[#ba1a1a]/25">
-              <span className="text-[0.7rem] font-bold text-[#ba1a1a] uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#ba1a1a] uppercase tracking-wider block">
                 Alerta Ens. Fundamental (&lt; 75% Presença)
               </span>
               <div className="flex items-baseline justify-between mt-1">
-                <span className="text-[1.5rem] font-black text-[#ba1a1a] tabular-nums">
+                <span className="text-2xl font-semibold text-[#ba1a1a] tabular-nums">
                   {bimesterSummaryStats.alertFundamentalCount}
                 </span>
-                <span className="text-[0.72rem] font-semibold text-[#93000a]">
+                <span className="text-xs font-semibold text-[#93000a]">
                   limite mínimo 75% (LDB/MEC)
                 </span>
               </div>
@@ -2517,7 +2517,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <select
               value={filterTurma}
               onChange={(e) => setFilterTurma(e.target.value)}
-              className="w-full min-h-[42px] px-3 bg-[#f5f7f6] text-[#003440] font-bold rounded-xl border border-[#003440]/15 text-[0.84rem]"
+              className="w-full min-h-[42px] px-3 bg-[#f5f7f6] text-[#003440] font-bold rounded-xl border border-[#003440]/15 text-sm"
             >
               <option value="all">Todas as Turmas ({classes.length})</option>
               {classes.map((c) => (
@@ -2530,7 +2530,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <button
               type="button"
               onClick={() => setBimesterAlertOnly(!bimesterAlertOnly)}
-              className={`min-h-[42px] px-3 rounded-xl font-bold text-[0.82rem] border flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+              className={`min-h-[42px] px-3 rounded-xl font-bold text-sm border flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                 bimesterAlertOnly
                   ? 'bg-[#ba1a1a] text-white border-[#ba1a1a]'
                   : 'bg-[#fff8f7] text-[#ba1a1a] border-[#ba1a1a]/30 hover:bg-[#ffdad6]'
@@ -2549,13 +2549,13 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por nome, RA ou NIS (Bolsa Família)..."
-              className="w-full min-h-[42px] px-3 bg-[#f5f7f6] text-[#191c1b] font-semibold rounded-xl border border-[#003440]/15 text-[0.84rem]"
+              className="w-full min-h-[42px] px-3 bg-[#f5f7f6] text-[#191c1b] font-semibold rounded-xl border border-[#003440]/15 text-sm"
             />
           </div>
 
           {/* Bimester & Bolsa Família Table with Month-by-Month Faltas & Atestados */}
           <div className="border border-[#003440]/15 rounded-2xl overflow-x-auto max-h-[580px]">
-            <table className="w-full text-left text-[0.78rem] border-collapse min-w-[1220px]">
+            <table className="w-full text-left text-xs border-collapse min-w-[1220px]">
               <thead className="bg-[#003440] text-white sticky top-0 z-10 font-bold uppercase tracking-tight">
                 <tr>
                   <th className="py-3 px-2.5">Turma / Seg.</th>
@@ -2568,14 +2568,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       className="py-3 px-2.5 text-center bg-[#1e4b58] border-l border-white/15"
                     >
                       {m.name.slice(0, 3)}. / 27
-                      <span className="block text-[0.65rem] font-normal text-[#bdeafa]">
+                      <span className="block text-[11px] font-normal text-[#bdeafa]">
                         Faltas · Atest. · %
                       </span>
                     </th>
                   ))}
                   <th className="py-3 px-2.5 text-center bg-[#7c1d1d] border-l border-white/15">
                     Total Bimestre
-                    <span className="block text-[0.65rem] font-normal text-[#ffdad6]">
+                    <span className="block text-[11px] font-normal text-[#ffdad6]">
                       Faltas / Atestados
                     </span>
                   </th>
@@ -2601,9 +2601,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     }`}
                   >
                     <td className="py-2.5 px-2.5">
-                      <span className="font-extrabold text-[#003440] block">{r.className}</span>
+                      <span className="font-semibold text-[#003440] block">{r.className}</span>
                       <span
-                        className={`inline-block px-1.5 py-0.2 rounded text-[0.65rem] font-bold ${
+                        className={`inline-block px-1.5 py-0.2 rounded text-[11px] font-bold ${
                           r.isEducacaoInfantil
                             ? 'bg-[#eaf6ef] text-[#005035]'
                             : 'bg-[#c3e5f4]/60 text-[#003440]'
@@ -2633,12 +2633,12 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                               e.stopPropagation();
                               onOpenStudentPdf?.(r.classId, r.student.id);
                             }}
-                            className="doc-hyperlink font-extrabold text-[#003440] block truncate max-w-[230px]"
+                            className="doc-hyperlink font-semibold text-[#003440] block truncate max-w-[230px]"
                             title="Abrir Documento Escaneado no Google Drive"
                           >
                             {r.student.name}
                           </a>
-                          <span className="text-[0.68rem] text-[#5a676b] block">
+                          <span className="text-[11px] text-[#5a676b] block">
                             Nº {r.student.number.toString().padStart(2, '0')} · Nasc: {r.student.dataNascimento}
                           </span>
                         </div>
@@ -2649,7 +2649,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       <span className="font-bold text-[#003440] block">
                         NIS: {r.student.nis || '—'}
                       </span>
-                      <span className="text-[0.68rem] text-[#5a676b]">
+                      <span className="text-[11px] text-[#5a676b]">
                         RA {r.student.ra}-{r.student.digRa}
                       </span>
                     </td>
@@ -2679,7 +2679,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                           </span>
                         </div>
                         <span
-                          className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[0.68rem] font-extrabold ${
+                          className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[11px] font-semibold ${
                             mb.isBelowLegalThreshold
                               ? 'bg-[#ba1a1a] text-white'
                               : 'bg-[#f1f4f3] text-[#003440]'
@@ -2691,21 +2691,21 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     ))}
 
                     <td className="py-2.5 px-2.5 text-center border-l border-[#edeeec] font-mono tabular-nums">
-                      <span className="font-extrabold text-[#ba1a1a]">
+                      <span className="font-semibold text-[#ba1a1a]">
                         {r.totalFaltasBimestre}f
                       </span>
                       <span className="mx-1 text-[#a8b5b9]">/</span>
-                      <span className="font-extrabold text-[#005035]">
+                      <span className="font-semibold text-[#005035]">
                         {r.totalAtestadosBimestre} atest.
                       </span>
-                      <span className="block text-[0.66rem] text-[#5a676b]">
+                      <span className="block text-[11px] text-[#5a676b]">
                         ({r.totalDiasBimestre}d letivos)
                       </span>
                     </td>
 
                     <td className="py-2.5 px-2.5 text-center font-mono tabular-nums">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[0.78rem] font-black ${
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                           r.isBelowLegalThresholdBimestre
                             ? 'bg-[#ba1a1a] text-white'
                             : 'bg-[#eaf6ef] text-[#005035]'
@@ -2717,7 +2717,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
                     <td className="py-2.5 px-3">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.68rem] font-extrabold ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                           r.isBelowLegalThresholdBimestre
                             ? 'bg-[#ffdad6] text-[#ba1a1a]'
                             : 'bg-[#eaf6ef] text-[#005035]'
@@ -2732,7 +2732,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             : `Regular (≥${r.minLegalPresencePercent}%)`}
                         </span>
                       </span>
-                      <span className="block text-[0.68rem] text-[#436370] mt-0.5 truncate max-w-[240px]">
+                      <span className="block text-[11px] text-[#436370] mt-0.5 truncate max-w-[240px]">
                         {r.bolsaFamiliaMotivoPadrao}
                       </span>
                     </td>
@@ -2761,7 +2761,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           >
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-0.5 rounded-full bg-[#003440] text-white text-[0.75rem] font-black uppercase">
+                <span className="px-3 py-0.5 rounded-full bg-[#003440] text-white text-xs font-semibold uppercase">
                   {activeTab === 'nominal_infantil'
                     ? 'Aba Oficial Google Sheets: Faltas_Atestados_Infantil'
                     : activeTab === 'nominal_fundamental'
@@ -2770,28 +2770,28 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 </span>
                 {activeTab === 'frequencia' && (
                   <>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#166534] text-white text-[0.75rem] font-black uppercase flex items-center gap-1.5 shadow-xs">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#166534] text-white text-xs font-semibold uppercase flex items-center gap-1.5 shadow-xs">
                       <span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
                       Importação de Outra Planilha SED
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-white text-[#166534] text-[0.75rem] font-extrabold border border-[#86efac] flex items-center gap-1">
+                    <span className="px-2.5 py-0.5 rounded-full bg-white text-[#166534] text-xs font-semibold border border-[#86efac] flex items-center gap-1">
                       <span className="material-symbols-outlined text-[15px] text-[#166534]">sync</span>
                       Sync Automático Contínuo (App + Firebase)
                     </span>
                   </>
                 )}
-                <span className="px-2.5 py-0.5 rounded-full bg-white text-[#003440] text-[0.75rem] font-extrabold border border-[#c0c8cb]">
+                <span className="px-2.5 py-0.5 rounded-full bg-white text-[#003440] text-xs font-semibold border border-[#c0c8cb]">
                   {stageTurmasList.length} Turmas • {stageStats.totalEstudantes} Estudantes Tabulados
                 </span>
               </div>
-              <h2 className="text-[1.25rem] sm:text-[1.4rem] font-black mt-1.5 leading-tight">
+              <h2 className="text-lg sm:text-xl font-semibold mt-1.5 leading-tight">
                 {activeTab === 'nominal_infantil'
                   ? 'Tabulação Nominal de Faltas e Atestados — EDUCAÇÃO INFANTIL (Grupo 04 e Grupo 05)'
                   : activeTab === 'nominal_fundamental'
                   ? 'Tabulação Nominal de Faltas e Atestados — ENSINO FUNDAMENTAL (1º ao 5º Ano)'
                   : 'Base Geral SED (48 Colunas) — Matrículas Importadas de Outra Planilha'}
               </h2>
-              <p className="text-[0.86rem] font-semibold opacity-90 mt-0.5">
+              <p className="text-sm font-semibold opacity-90 mt-0.5">
                 {activeTab === 'frequencia'
                   ? 'Esta aba é alimentada automaticamente pela planilha externa oficial da SED (via =IMPORTRANGE ou exportação da rede). O aplicativo monitora atualizações a cada 6,5 segundos e reflete instantaneamente as novas matrículas, presenças e atestados no Firebase Firestore sem sobrescrever ou quebrar sua fórmula.'
                   : 'Relação nominal completa de cada estudante com Quantidade (Qtd.) e Porcentagem (%) de Presenças, Faltas Totais, Atestados Apresentados (Faltas Justificadas) e Faltas sem Atestado, respeitando o recorte individual da matrícula.'}
@@ -2805,19 +2805,19 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[#15803d] text-[24px]">cloud_sync</span>
-                  <h3 className="text-[1.05rem] font-black text-[#14532d]">
+                  <h3 className="text-base font-semibold text-[#14532d]">
                     Sincronização 100% Automática da SED com o Firebase & Proteção Ativa
                   </h3>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[0.72rem] font-black uppercase bg-[#15803d] text-white">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase bg-[#15803d] text-white">
                     <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                     Auto-Sync Ativo
                   </span>
                 </div>
-                <p className="text-[0.82rem] font-medium text-[#166534] max-w-3xl leading-relaxed">
+                <p className="text-sm font-medium text-[#166534] max-w-3xl leading-relaxed">
                   🛡️ <strong>Aba Protegida:</strong> Ao redefinir as 12 abas ou salvar dados, a aba <code>SED_Matriculas_e_Frequencia</code> <strong>não é apagada nem sobrescrita</strong>. Ela atua como fonte primária de verdade, alimentando o cálculo automático das outras 11 abas oficiais (Educação Infantil, Ensino Fundamental, Busca Ativa, etc.) e o Firebase Firestore.
                 </p>
                 {lastAutoSyncSedAt && (
-                  <p className="text-[0.75rem] font-bold text-[#15803d] flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-[#15803d] flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[15px]">check_circle</span>
                     Última sincronia automática SED ➔ Firebase: {new Date(lastAutoSyncSedAt).toLocaleTimeString('pt-BR')} (verificação contínua em segundo plano)
                   </p>
@@ -2827,7 +2827,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleCopyImportRangeFormula}
-                  className="px-3.5 py-2 rounded-xl bg-white border-2 border-[#86efac] text-[#15803d] text-[0.8rem] font-black hover:bg-[#dcfce7] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-white border-2 border-[#86efac] text-[#15803d] text-sm font-semibold hover:bg-[#dcfce7] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                   title="Copiar fórmula =IMPORTRANGE padrão para colar na célula A1 do Google Sheets"
                 >
                   <span className="material-symbols-outlined text-[18px]">content_copy</span>
@@ -2837,7 +2837,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   type="button"
                   disabled={isSyncingCloud}
                   onClick={handleReadFromGoogleSheet}
-                  className="px-4 py-2 rounded-xl bg-[#15803d] text-white text-[0.8rem] font-black hover:bg-[#14532d] transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#15803d] text-white text-sm font-semibold hover:bg-[#14532d] transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">sync</span>
                   {isSyncingCloud ? 'Sincronizando...' : 'Sincronizar SED Agora'}
@@ -2850,115 +2850,115 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Card 1: Total de Estudantes & Dias no Recorte */}
             <div className="p-3.5 rounded-2xl bg-[#f8faf9] border border-[#c0c8cb] flex flex-col justify-between">
-              <span className="text-[0.74rem] font-black text-[#436370] uppercase">
+              <span className="text-xs font-semibold text-[#436370] uppercase">
                 1. Estudantes Tabulados
               </span>
               <div className="my-1">
-                <span className="text-[1.65rem] font-black text-[#003440] leading-none">
+                <span className="text-2xl font-semibold text-[#003440] leading-none">
                   {stageStats.totalEstudantes}
                 </span>
-                <span className="text-[0.8rem] font-bold text-[#41484b] ml-1.5">
+                <span className="text-sm font-bold text-[#41484b] ml-1.5">
                   estudantes
                 </span>
               </div>
-              <span className="text-[0.75rem] font-bold text-[#003440] bg-[#edeeec] px-2 py-0.5 rounded-lg inline-block">
+              <span className="text-xs font-bold text-[#003440] bg-[#edeeec] px-2 py-0.5 rounded-lg inline-block">
                 Soma Recorte: {stageStats.totalDiasRecorte} dias letivos
               </span>
             </div>
 
             {/* Card 2: Presenças no Período (Qtd + %) */}
             <div className="p-3.5 rounded-2xl bg-[#eaf6ef] border border-[#a4f3ca] flex flex-col justify-between">
-              <span className="text-[0.74rem] font-black text-[#005035] uppercase">
+              <span className="text-xs font-semibold text-[#005035] uppercase">
                 2. Presenças (Qtd e %)
               </span>
               <div className="my-1 flex items-baseline justify-between">
                 <div>
-                  <span className="text-[1.65rem] font-black text-[#005035] leading-none">
+                  <span className="text-2xl font-semibold text-[#005035] leading-none">
                     {stageStats.totalPresencas}
                   </span>
-                  <span className="text-[0.76rem] font-bold text-[#003723] block">
+                  <span className="text-xs font-bold text-[#003723] block">
                     presenças no mês
                   </span>
                 </div>
-                <span className="px-2.5 py-1 rounded-xl bg-[#005035] text-white font-black text-[1.1rem]">
+                <span className="px-2.5 py-1 rounded-xl bg-[#005035] text-white font-semibold text-lg">
                   {stageStats.pctPresenca}%
                 </span>
               </div>
-              <span className="text-[0.74rem] font-bold text-[#003723]">
+              <span className="text-xs font-bold text-[#003723]">
                 Taxa de Frequência do Segmento
               </span>
             </div>
 
             {/* Card 3: Total de Faltas no Mês (Qtd + %) */}
             <div className="p-3.5 rounded-2xl bg-[#fff8f7] border border-[#ffdad6] flex flex-col justify-between">
-              <span className="text-[0.74rem] font-black text-[#ba1a1a] uppercase">
+              <span className="text-xs font-semibold text-[#ba1a1a] uppercase">
                 3. Total de Faltas (Qtd e %)
               </span>
               <div className="my-1 flex items-baseline justify-between">
                 <div>
-                  <span className="text-[1.65rem] font-black text-[#ba1a1a] leading-none">
+                  <span className="text-2xl font-semibold text-[#ba1a1a] leading-none">
                     {stageStats.totalFaltas}
                   </span>
-                  <span className="text-[0.76rem] font-bold text-[#ba1a1a] block">
+                  <span className="text-xs font-bold text-[#ba1a1a] block">
                     faltas acumuladas
                   </span>
                 </div>
-                <span className="px-2.5 py-1 rounded-xl bg-[#ba1a1a] text-white font-black text-[1.1rem]">
+                <span className="px-2.5 py-1 rounded-xl bg-[#ba1a1a] text-white font-semibold text-lg">
                   {stageStats.pctFaltasSobreDias}%
                 </span>
               </div>
-              <span className="text-[0.74rem] font-bold text-[#41484b]">
+              <span className="text-xs font-bold text-[#41484b]">
                 {stageStats.estudantesComFaltas} estudantes com falta ({stageStats.pctEstudantesComFaltas}%)
               </span>
             </div>
 
             {/* Card 4: Atestados Apresentados (Qtd + % sobre faltas e % sobre dias) */}
             <div className="p-3.5 rounded-2xl bg-[#eaf6ef] border-2 border-[#005035]/30 flex flex-col justify-between">
-              <span className="text-[0.74rem] font-black text-[#005035] uppercase">
+              <span className="text-xs font-semibold text-[#005035] uppercase">
                 4. Atestados (Qtd e %)
               </span>
               <div className="my-1 flex items-baseline justify-between">
                 <div>
-                  <span className="text-[1.65rem] font-black text-[#005035] leading-none">
+                  <span className="text-2xl font-semibold text-[#005035] leading-none">
                     {stageStats.totalAtestados}
                   </span>
-                  <span className="text-[0.76rem] font-bold text-[#003723] block">
+                  <span className="text-xs font-bold text-[#003723] block">
                     atestados entregues
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="px-2.5 py-0.5 rounded-xl bg-[#005035] text-white font-black text-[1rem] block">
+                  <span className="px-2.5 py-0.5 rounded-xl bg-[#005035] text-white font-semibold text-[1rem] block">
                     {stageStats.pctAtestadosSobreFaltas}% das faltas
                   </span>
-                  <span className="text-[0.7rem] font-extrabold text-[#005035] block mt-0.5">
+                  <span className="text-xs font-semibold text-[#005035] block mt-0.5">
                     ({stageStats.pctAtestadosSobreDias}% dos dias letivos)
                   </span>
                 </div>
               </div>
-              <span className="text-[0.74rem] font-bold text-[#003723]">
+              <span className="text-xs font-bold text-[#003723]">
                 {stageStats.estudantesComAtestados} estudantes c/ atestado ({stageStats.pctEstudantesComAtestados}%)
               </span>
             </div>
 
             {/* Card 5: Faltas Sem Atestado & Alertas */}
             <div className="p-3.5 rounded-2xl bg-[#fff4e5] border border-[#ffd89e] flex flex-col justify-between">
-              <span className="text-[0.74rem] font-black text-[#7a4100] uppercase">
+              <span className="text-xs font-semibold text-[#7a4100] uppercase">
                 5. Faltas S/ Atestado (Qtd e %)
               </span>
               <div className="my-1 flex items-baseline justify-between">
                 <div>
-                  <span className="text-[1.65rem] font-black text-[#7a4100] leading-none">
+                  <span className="text-2xl font-semibold text-[#7a4100] leading-none">
                     {stageStats.totalSemAtestado}
                   </span>
-                  <span className="text-[0.76rem] font-bold text-[#7a4100] block">
+                  <span className="text-xs font-bold text-[#7a4100] block">
                     não justificadas
                   </span>
                 </div>
-                <span className="px-2.5 py-1 rounded-xl bg-[#7a4100] text-white font-black text-[1rem]">
+                <span className="px-2.5 py-1 rounded-xl bg-[#7a4100] text-white font-semibold text-[1rem]">
                   {stageStats.pctSemAtestadoSobreFaltas}% das faltas
                 </span>
               </div>
-              <span className="text-[0.74rem] font-bold text-[#ba1a1a]">
+              <span className="text-xs font-bold text-[#ba1a1a]">
                 {stageStats.estudantesEmAlerta} em alerta legal (&lt;60% Ed. Inf. / &lt;75% Fund.)
               </span>
             </div>
@@ -2971,10 +2971,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 notification_important
               </span>
               <div>
-                <span className="text-[0.78rem] font-black text-[#003440] uppercase tracking-tight block">
+                <span className="text-xs font-semibold text-[#003440] uppercase tracking-tight block">
                   Sistema de Alertas Visuais na Grade de Dados — Faltas Consecutivas (3, 5 e 10 Dias)
                 </span>
-                <span className="text-[0.72rem] text-[#41484b] font-semibold">
+                <span className="text-xs text-[#41484b] font-semibold">
                   Clique em uma faixa de cor abaixo para filtrar automaticamente na tabela os estudantes por nível de gravidade:
                 </span>
               </div>
@@ -2986,7 +2986,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 onClick={() =>
                   setFilterStatus(filterStatus === 'consec_3d' ? 'all' : 'consec_3d')
                 }
-                className={`px-3 py-1.5 rounded-xl font-black text-[0.74rem] flex items-center gap-1.5 border cursor-pointer transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 border cursor-pointer transition-all ${
                   filterStatus === 'consec_3d'
                     ? 'bg-[#f59e0b] text-white border-[#d97706] shadow-xs ring-2 ring-[#f59e0b]/40'
                     : 'bg-[#fffbeb] text-[#92400e] border-[#f59e0b]/50 hover:bg-[#fef3c7]'
@@ -3001,7 +3001,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 onClick={() =>
                   setFilterStatus(filterStatus === 'consec_5d' ? 'all' : 'consec_5d')
                 }
-                className={`px-3 py-1.5 rounded-xl font-black text-[0.74rem] flex items-center gap-1.5 border cursor-pointer transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 border cursor-pointer transition-all ${
                   filterStatus === 'consec_5d'
                     ? 'bg-[#ea580c] text-white border-[#c2410c] shadow-xs ring-2 ring-[#ea580c]/40'
                     : 'bg-[#fff7ed] text-[#9a3412] border-[#ea580c]/50 hover:bg-[#ffedd5]'
@@ -3016,7 +3016,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 onClick={() =>
                   setFilterStatus(filterStatus === 'consec_10d' ? 'all' : 'consec_10d')
                 }
-                className={`px-3 py-1.5 rounded-xl font-black text-[0.74rem] flex items-center gap-1.5 border cursor-pointer transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 border cursor-pointer transition-all ${
                   filterStatus === 'consec_10d'
                     ? 'bg-[#be123c] text-white border-[#9f1239] shadow-xs ring-2 ring-[#be123c]/40'
                     : 'bg-[#fff1f2] text-[#9f1239] border-[#e11d48]/50 hover:bg-[#ffe4e6]'
@@ -3030,7 +3030,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterStatus('all')}
-                  className="px-2.5 py-1.5 rounded-xl bg-[#003440] text-white font-bold text-[0.72rem] cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-[#003440] text-white font-bold text-xs cursor-pointer"
                 >
                   Limpar Filtro
                 </button>
@@ -3043,7 +3043,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <select
               value={filterTurma}
               onChange={(e) => setFilterTurma(e.target.value)}
-              className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#003440] font-bold rounded-xl border border-[#c0c8cb] text-[0.9rem] focus:outline-none"
+              className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#003440] font-bold rounded-xl border border-[#c0c8cb] text-sm focus:outline-none"
             >
               <option value="all">
                 Todas as Turmas do Segmento ({stageTurmasList.length} turmas)
@@ -3058,7 +3058,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <select
               value={filterTurno}
               onChange={(e) => setFilterTurno(e.target.value as any)}
-              className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#003440] font-bold rounded-xl border border-[#c0c8cb] text-[0.9rem] focus:outline-none"
+              className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#003440] font-bold rounded-xl border border-[#c0c8cb] text-sm focus:outline-none"
             >
               <option value="all">☀️/⛅ Todos os Turnos (Manhã e Tarde)</option>
               <option value="Manhã">☀️ Somente Turno Manhã</option>
@@ -3068,7 +3068,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#003440] font-bold rounded-xl border border-[#c0c8cb] text-[0.9rem] focus:outline-none"
+              className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#003440] font-bold rounded-xl border border-[#c0c8cb] text-sm focus:outline-none"
             >
               <option value="all">📋 Todos os Estudantes ({stageStats.totalEstudantes})</option>
               <option value="consec_all">🚨 Em Alerta de Faltas Seguidas (3, 5 ou 10+ dias)</option>
@@ -3085,14 +3085,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar estudante por nome, Nº ou RA..."
-              className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#191c1b] font-semibold rounded-xl border border-[#c0c8cb] text-[0.9rem] focus:outline-none focus:bg-white focus:border-[#003440]"
+              className="w-full min-h-[48px] px-3 bg-[#f3f4f2] text-[#191c1b] font-semibold rounded-xl border border-[#c0c8cb] text-sm focus:outline-none focus:bg-white focus:border-[#003440]"
             />
           </div>
 
           {/* Detailed Nominal Table with Quantity & Percentage for Every Student */}
           <div className="border-2 border-[#c0c8cb] rounded-2xl overflow-x-auto max-h-[560px] shadow-2xs">
-            <table className="w-full text-left text-[0.82rem] border-collapse min-w-[1260px]">
-              <thead className="bg-[#003440] text-white sticky top-0 z-10 font-extrabold uppercase tracking-tight">
+            <table className="w-full text-left text-sm border-collapse min-w-[1260px]">
+              <thead className="bg-[#003440] text-white sticky top-0 z-10 font-semibold uppercase tracking-tight">
                 <tr>
                   <th className="py-3 px-2.5">Segmento / Etapa</th>
                   <th className="py-3 px-2.5">Turma / Turno</th>
@@ -3148,7 +3148,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   >
                     <td className="py-2.5 px-2.5">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-md text-[0.68rem] font-black ${
+                        className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                           row.tipoEnsino === 'EDUCACAO INFANTIL'
                             ? 'bg-[#eaf6ef] text-[#005035]'
                             : 'bg-[#c3e5f4]/60 text-[#003440]'
@@ -3156,19 +3156,19 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       >
                         {row.tipoEnsino === 'EDUCACAO INFANTIL' ? 'ED. INFANTIL (≥60%)' : 'ENS. FUNDAMENTAL (≥75%)'}
                       </span>
-                      <span className="block text-[0.72rem] text-[#41484b] font-semibold mt-0.5">
+                      <span className="block text-xs text-[#41484b] font-semibold mt-0.5">
                         {row.etapaSerie}
                       </span>
                     </td>
 
                     <td className="py-2.5 px-2.5">
-                      <span className="font-black text-[#003440] block">{row.turma}</span>
-                      <span className="text-[0.72rem] text-[#71787b] font-semibold">
+                      <span className="font-semibold text-[#003440] block">{row.turma}</span>
+                      <span className="text-xs text-[#71787b] font-semibold">
                         {row.turno} • {row.sala}
                       </span>
                     </td>
 
-                    <td className="py-2.5 px-2 text-center font-black text-[#003440]">
+                    <td className="py-2.5 px-2 text-center font-semibold text-[#003440]">
                       {row.numero.toString().padStart(2, '0')}
                     </td>
 
@@ -3182,11 +3182,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             expandableOnClick
                           />
                           <div className="min-w-0">
-                            <span className="font-extrabold text-[#003440] block text-[0.92rem] truncate">
+                            <span className="font-semibold text-[#003440] block text-sm truncate">
                               {row.nome}
                             </span>
                             {row.deficiencia && (
-                              <span className="inline-block mt-0.5 px-2 py-0.2 rounded-full bg-[#a4f3ca] text-[#003723] text-[0.68rem] font-black">
+                              <span className="inline-block mt-0.5 px-2 py-0.2 rounded-full bg-[#a4f3ca] text-[#003723] text-[11px] font-semibold">
                                 {row.deficiencia}
                               </span>
                             )}
@@ -3207,7 +3207,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                               onOpenStudentPdf(row.classId, row.studentId);
                             }}
                             title={`Abrir Ficha Informativa Escaneada de ${row.nome} no Google Drive`}
-                            className="doc-hyperlink px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white font-black text-[0.72rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+                            className="doc-hyperlink px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:!text-white font-semibold text-xs flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
                           >
                             <span className="material-symbols-outlined text-[15px]">
                               document_scanner
@@ -3222,57 +3222,57 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     <td className="py-2.5 px-2.5 text-center">
                       {row.consecutiveTier === '10d' ? (
                         <div className="inline-flex flex-col items-center">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#be123c] text-white font-black text-[0.7rem] uppercase tabular-nums shadow-2xs">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#be123c] text-white font-semibold text-xs uppercase tabular-nums shadow-2xs">
                             <span className="material-symbols-outlined text-[13px]">gpp_maybe</span>
                             <span>10+ DIAS ({row.consecutiveDays}d)</span>
                           </span>
-                          <span className="text-[0.64rem] font-bold text-[#9f1239] mt-0.5">
+                          <span className="text-[11px] font-bold text-[#9f1239] mt-0.5">
                             Evasão Crítica • Conselho
                           </span>
                         </div>
                       ) : row.consecutiveTier === '5d' ? (
                         <div className="inline-flex flex-col items-center">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ea580c] text-white font-black text-[0.7rem] uppercase tabular-nums shadow-2xs">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#ea580c] text-white font-semibold text-xs uppercase tabular-nums shadow-2xs">
                             <span className="material-symbols-outlined text-[13px]">warning</span>
                             <span>5+ DIAS ({row.consecutiveDays}d)</span>
                           </span>
-                          <span className="text-[0.64rem] font-bold text-[#9a3412] mt-0.5">
+                          <span className="text-[11px] font-bold text-[#9a3412] mt-0.5">
                             Busca Ativa Urgente
                           </span>
                         </div>
                       ) : row.consecutiveTier === '3d' ? (
                         <div className="inline-flex flex-col items-center">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f59e0b] text-white font-black text-[0.7rem] uppercase tabular-nums shadow-2xs">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f59e0b] text-white font-semibold text-xs uppercase tabular-nums shadow-2xs">
                             <span className="material-symbols-outlined text-[13px]">schedule</span>
                             <span>3+ DIAS ({row.consecutiveDays}d)</span>
                           </span>
-                          <span className="text-[0.64rem] font-bold text-[#92400e] mt-0.5">
+                          <span className="text-[11px] font-bold text-[#92400e] mt-0.5">
                             Atenção • Contato Família
                           </span>
                         </div>
                       ) : (
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[0.68rem]">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[11px]">
                           Regular (&lt;3d)
                         </span>
                       )}
                     </td>
 
-                    <td className="py-2.5 px-2.5 text-center font-mono text-[0.76rem] text-[#41484b]">
+                    <td className="py-2.5 px-2.5 text-center font-mono text-xs text-[#41484b]">
                       {row.ra ? `${row.ra}-${row.digRa}/${row.ufRa}` : '—'}
                     </td>
 
-                    <td className="py-2.5 px-3 text-[0.76rem] font-semibold text-[#003440]">
+                    <td className="py-2.5 px-3 text-xs font-semibold text-[#003440]">
                       {row.filiacao1 || row.responsavel || '—'}
                     </td>
 
-                    <td className="py-2.5 px-3 text-[0.76rem] font-medium text-[#41484b]">
+                    <td className="py-2.5 px-3 text-xs font-medium text-[#41484b]">
                       {row.filiacao2 || '—'}
                     </td>
 
                     {/* Dias no Recorte */}
                     <td className="py-2.5 px-2.5 text-center">
                       <span
-                        className={`font-black px-2 py-0.5 rounded-lg text-[0.78rem] ${
+                        className={`font-semibold px-2 py-0.5 rounded-lg text-xs ${
                           row.diasLetivosMatriculados < row.diasLetivosMes
                             ? 'bg-[#c3e5f4] text-[#001f29]'
                             : 'text-[#003440]'
@@ -3281,18 +3281,18 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       >
                         {row.diasLetivosMatriculados} / {row.diasLetivosMes}d
                       </span>
-                      <span className="block text-[0.66rem] text-[#71787b] mt-0.5">
+                      <span className="block text-[11px] text-[#71787b] mt-0.5">
                         Matr.: {row.dataMatricula}
                       </span>
                     </td>
 
                     {/* Presenças: Quantidade + Porcentagem */}
                     <td className="py-2.5 px-2.5 text-center bg-[#eaf6ef]/40">
-                      <span className="font-black text-[#005035] text-[0.92rem]">
+                      <span className="font-semibold text-[#005035] text-sm">
                         {row.presencasMes}d
                       </span>
                       <span
-                        className={`ml-1.5 px-2 py-0.5 rounded-full text-[0.74rem] font-black ${
+                        className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
                           isLegalAlert
                             ? 'bg-[#ffdad6] text-[#ba1a1a]'
                             : 'bg-[#a4f3ca]/70 text-[#003723]'
@@ -3305,14 +3305,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     {/* Faltas no Mês: Quantidade + Porcentagem */}
                     <td className="py-2.5 px-2.5 text-center bg-[#fff8f7]/60">
                       <span
-                        className={`font-black text-[0.92rem] ${
+                        className={`font-semibold text-sm ${
                           row.faltasMes > 0 ? 'text-[#ba1a1a]' : 'text-[#71787b]'
                         }`}
                       >
                         {row.faltasMes}
                       </span>
                       <span
-                        className={`ml-1.5 px-2 py-0.5 rounded-full text-[0.74rem] font-black ${
+                        className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
                           row.faltasMes > 0
                             ? 'bg-[#ffdad6] text-[#ba1a1a]'
                             : 'bg-[#f3f4f2] text-[#71787b]'
@@ -3326,14 +3326,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     <td className="py-2.5 px-2.5 text-center bg-[#eaf6ef]/50">
                       <div className="flex items-center justify-center gap-1">
                         <span
-                          className={`font-black text-[0.92rem] ${
+                          className={`font-semibold text-sm ${
                             row.faltasJustificadas > 0 ? 'text-[#005035]' : 'text-[#71787b]'
                           }`}
                         >
                           {row.faltasJustificadas}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[0.72rem] font-black ${
+                          className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                             row.faltasJustificadas > 0
                               ? 'bg-[#005035] text-white'
                               : 'bg-[#f3f4f2] text-[#71787b]'
@@ -3343,7 +3343,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                           {row.percentAtestadosSobreFaltas}% das faltas
                         </span>
                       </div>
-                      <span className="block text-[0.66rem] font-bold text-[#005035] mt-0.5">
+                      <span className="block text-[11px] font-bold text-[#005035] mt-0.5">
                         ({row.percentAtestadosSobreDias}% dos dias letivos)
                       </span>
                     </td>
@@ -3351,7 +3351,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     {/* Faltas Sem Atestado */}
                     <td className="py-2.5 px-2.5 text-center">
                       <span
-                        className={`font-black text-[0.88rem] px-2 py-0.5 rounded-lg ${
+                        className={`font-semibold text-sm px-2 py-0.5 rounded-lg ${
                           row.faltasSemAtestado > 0
                             ? 'bg-[#fff4e5] text-[#7a4100] border border-[#ffd89e]'
                             : 'text-[#71787b]'
@@ -3364,7 +3364,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     {/* Situação & Observações */}
                     <td className="py-2.5 px-2.5 text-center">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-[0.7rem] font-black ${
+                        className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
                           isLegalAlert
                             ? 'bg-[#ffdad6] text-[#ba1a1a]'
                             : row.frequenciaPercent === 100
@@ -3375,7 +3375,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                         {row.situacao}
                       </span>
                       {row.observacoesAtestado && (
-                        <span className="block text-[0.68rem] text-[#005035] font-bold truncate max-w-[160px] mx-auto mt-0.5">
+                        <span className="block text-[11px] text-[#005035] font-bold truncate max-w-[160px] mx-auto mt-0.5">
                           {row.observacoesAtestado}
                         </span>
                       )}
@@ -3385,7 +3385,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 })}
               </tbody>
               {/* Sticky Summary Footer Row with Totals & Percentages */}
-              <tfoot className="bg-[#003440] text-white font-black text-[0.8rem] sticky bottom-0">
+              <tfoot className="bg-[#003440] text-white font-semibold text-sm sticky bottom-0">
                 <tr>
                   <td colSpan={7} className="py-3 px-3">
                     TOTAL CONSOLIDADO ({stageStats.totalEstudantes} ESTUDANTES EXIBIDOS • {stageStats.consecTotalCount} EM ALERTA 3/5/10 DIAS)
@@ -3413,7 +3413,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               </tfoot>
             </table>
           </div>
-          <p className="text-[0.8rem] text-[#41484b] text-center font-medium">
+          <p className="text-sm text-[#41484b] text-center font-medium">
             Exibindo {Math.min(250, filteredFrequenciaRows.length)} de {filteredFrequenciaRows.length} estudantes • Toque em qualquer estudante para abrir a Grade de Dados Interativa (48 campos SED + Faltas e Atestados).
           </p>
         </section>
@@ -3428,11 +3428,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <span className="material-symbols-outlined text-[24px] text-[#005035]">
                   calendar_month
                 </span>
-                <h2 className="text-lg sm:text-xl font-black text-[#003440]">
+                <h2 className="text-lg sm:text-xl font-semibold text-[#003440]">
                   Calendário Escolar Oficial · 200 Dias Letivos (2027)
                 </h2>
               </div>
-              <p className="text-[0.82rem] text-[#436370]">
+              <p className="text-sm text-[#436370]">
                 Aba Oficial na Planilha: <code className="bg-[#f1f4f3] px-1.5 py-0.5 rounded text-[#003440]">Dias_Letivos_SME_2027</code> · Alinhado com o Firebase Firestore.
               </p>
             </div>
@@ -3441,7 +3441,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <button
                 type="button"
                 onClick={onOpenConfigDaysModal}
-                className="min-h-[44px] px-4 py-2 bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.82rem] rounded-2xl flex items-center gap-2 cursor-pointer shadow-sm shrink-0"
+                className="min-h-[44px] px-4 py-2 bg-[#005035] hover:bg-[#003723] text-white font-semibold text-sm rounded-2xl flex items-center gap-2 cursor-pointer shadow-sm shrink-0"
               >
                 <span className="material-symbols-outlined text-[18px]">tune</span>
                 <span>Configurar 200 Dias Letivos &amp; Meses</span>
@@ -3450,7 +3450,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           </div>
 
           <div className="border border-[#c0c8cb] rounded-2xl overflow-x-auto max-h-[420px]">
-            <table className="w-full text-left text-[0.88rem] border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead className="bg-[#003440] text-white sticky top-0 font-bold">
                 <tr>
                   <th className="py-2.5 px-3">Data</th>
@@ -3493,8 +3493,8 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       {activeTab === 'turmas' && (
         <section className="bg-white rounded-2xl p-4 shadow-sm border border-[#e1e3e1] space-y-3">
           <div className="border-2 border-[#c0c8cb] rounded-2xl overflow-x-auto max-h-[520px]">
-            <table className="w-full text-left text-[0.84rem] border-collapse min-w-[920px]">
-              <thead className="bg-[#003440] text-white sticky top-0 font-extrabold uppercase tracking-tight">
+            <table className="w-full text-left text-sm border-collapse min-w-[920px]">
+              <thead className="bg-[#003440] text-white sticky top-0 font-semibold uppercase tracking-tight">
                 <tr>
                   <th className="py-3 px-3">Segmento</th>
                   <th className="py-3 px-3">Turma / Etapa</th>
@@ -3540,7 +3540,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     >
                       <td className="py-2.5 px-3">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-md text-[0.7rem] font-black ${
+                          className={`inline-block px-2 py-0.5 rounded-md text-xs font-semibold ${
                             isInfantil
                               ? 'bg-[#eaf6ef] text-[#005035]'
                               : 'bg-[#c3e5f4]/60 text-[#003440]'
@@ -3550,25 +3550,25 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                         </span>
                       </td>
                       <td className="py-2.5 px-3">
-                        <span className="font-black text-[#003440] block">{c.name}</span>
-                        <span className="text-[0.72rem] text-[#41484b]">{c.grade}</span>
+                        <span className="font-semibold text-[#003440] block">{c.name}</span>
+                        <span className="text-xs text-[#41484b]">{c.grade}</span>
                       </td>
                       <td className="py-2.5 px-2.5 text-[#41484b] font-semibold">
                         {c.shift.replace('Turno ', '')} • {c.room}
                       </td>
-                      <td className="py-2.5 px-2.5 text-center font-black text-[#003440]">
+                      <td className="py-2.5 px-2.5 text-center font-semibold text-[#003440]">
                         {c.totalStudents}
                       </td>
                       <td className="py-2.5 px-2.5 text-center font-bold text-[#41484b]">
                         {somaDiasRecorte}d
                       </td>
-                      <td className="py-2.5 px-2.5 text-center bg-[#eaf6ef]/40 font-black text-[#005035]">
+                      <td className="py-2.5 px-2.5 text-center bg-[#eaf6ef]/40 font-semibold text-[#005035]">
                         {somaPresencas}d ({pctPres}%)
                       </td>
-                      <td className="py-2.5 px-2.5 text-center bg-[#fff8f7]/60 font-black text-[#ba1a1a]">
+                      <td className="py-2.5 px-2.5 text-center bg-[#fff8f7]/60 font-semibold text-[#ba1a1a]">
                         {somaFaltas} ({pctFaltas}%)
                       </td>
-                      <td className="py-2.5 px-2.5 text-center bg-[#eaf6ef]/50 font-black text-[#005035]">
+                      <td className="py-2.5 px-2.5 text-center bg-[#eaf6ef]/50 font-semibold text-[#005035]">
                         {somaAtestados} ({pctAtest}% das faltas)
                       </td>
                     </tr>
@@ -3586,17 +3586,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           <div className="p-4 rounded-2xl bg-[#eaf6ef] border-2 border-[#a4f3ca] text-[#003723] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-0.5 rounded-full bg-[#005035] text-white text-[0.74rem] font-black uppercase">
+                <span className="px-3 py-0.5 rounded-full bg-[#005035] text-white text-xs font-semibold uppercase">
                   Aba Oficial Google Sheets: Emails_Permitidos_2027
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-white text-[#005035] text-[0.74rem] font-extrabold border border-[#a4f3ca]">
+                <span className="px-2.5 py-0.5 rounded-full bg-white text-[#005035] text-xs font-semibold border border-[#a4f3ca]">
                   {permittedEmailsList.filter((u) => u.active).length} Ativos • {permittedEmailsList.length} Cadastrados
                 </span>
               </div>
-              <h2 className="text-[1.25rem] sm:text-[1.35rem] font-black mt-1.5 leading-tight">
+              <h2 className="text-lg sm:text-xl font-semibold mt-1.5 leading-tight">
                 Aba do Banco de Dados — Lista Nominal de E-mails Institucionais Permitidos
               </h2>
-              <p className="text-[0.84rem] font-semibold opacity-90 mt-0.5">
+              <p className="text-sm font-semibold opacity-90 mt-0.5">
                 Relação oficial de contas Google Workspace (<strong>{INSTITUTIONAL_EMAIL_DOMAIN}</strong> e direção) com permissão de login no sistema e respectivo vínculo de turma.
               </p>
             </div>
@@ -3606,7 +3606,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <button
                   type="button"
                   onClick={onNavigateToAcessos}
-                  className="min-h-[44px] px-4 rounded-xl bg-[#003440] hover:bg-[#004c5c] text-white font-black text-[0.82rem] flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  className="min-h-[44px] px-4 rounded-xl bg-[#003440] hover:bg-[#004c5c] text-white font-semibold text-sm flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
                   <span>Gerenciar Acessos / Turmas</span>
@@ -3616,7 +3616,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <p className="text-[0.82rem] font-bold text-[#41484b]">
+            <p className="text-sm font-bold text-[#41484b]">
               Exibindo{' '}
               {
                 permittedEmailsList.filter(
@@ -3637,25 +3637,25 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 value={emailSearchTab6}
                 onChange={(e) => setEmailSearchTab6(e.target.value)}
                 placeholder="Filtrar e-mail ou educador na aba..."
-                className="w-full min-h-[40px] pl-9 pr-3 rounded-xl bg-[#f3f4f2] border border-[#c0c8cb] text-[0.82rem] font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
+                className="w-full min-h-[40px] pl-9 pr-3 rounded-xl bg-[#f3f4f2] border border-[#c0c8cb] text-sm font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
               />
             </div>
           </div>
 
           <div className="border-2 border-[#003440]/20 rounded-xl overflow-x-auto max-h-[620px]">
             <table className="w-full text-left border-collapse min-w-[860px]">
-              <thead className="sticky top-0 z-10 bg-[#003440] text-white text-[0.72rem] uppercase tracking-wider">
+              <thead className="sticky top-0 z-10 bg-[#003440] text-white text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-3 font-extrabold border-r border-white/15 w-14 text-center">Nº</th>
-                  <th className="py-3 px-3 font-extrabold border-r border-white/15">E-mail Institucional Permitido (Workspace)</th>
-                  <th className="py-3 px-3 font-extrabold border-r border-white/15">Nome do(a) Educador(a) / Servidor(a)</th>
-                  <th className="py-3 px-3 font-extrabold border-r border-white/15">Perfil / Permissão</th>
-                  <th className="py-3 px-3 font-extrabold border-r border-white/15">Turma Liberada (Limite)</th>
-                  <th className="py-3 px-3 font-extrabold border-r border-white/15 text-center">Status</th>
-                  <th className="py-3 px-3 font-extrabold text-center">Data Cadastro</th>
+                  <th className="py-3 px-3 font-semibold border-r border-white/15 w-14 text-center">Nº</th>
+                  <th className="py-3 px-3 font-semibold border-r border-white/15">E-mail Institucional Permitido (Workspace)</th>
+                  <th className="py-3 px-3 font-semibold border-r border-white/15">Nome do(a) Educador(a) / Servidor(a)</th>
+                  <th className="py-3 px-3 font-semibold border-r border-white/15">Perfil / Permissão</th>
+                  <th className="py-3 px-3 font-semibold border-r border-white/15">Turma Liberada (Limite)</th>
+                  <th className="py-3 px-3 font-semibold border-r border-white/15 text-center">Status</th>
+                  <th className="py-3 px-3 font-semibold text-center">Data Cadastro</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#edeeec] text-[0.8rem]">
+              <tbody className="divide-y divide-[#edeeec] text-sm">
                 {permittedEmailsList
                   .filter(
                     (u) =>
@@ -3668,7 +3668,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       key={u.id}
                       className={idx % 2 === 0 ? 'bg-white hover:bg-[#eaf6ef]/50' : 'bg-[#f8faf9] hover:bg-[#eaf6ef]/50'}
                     >
-                      <td className="py-2.5 px-3 font-black text-center text-[#71787b] border-r border-[#edeeec]">
+                      <td className="py-2.5 px-3 font-semibold text-center text-[#71787b] border-r border-[#edeeec]">
                         {idx + 1}
                       </td>
                       <td className="py-2.5 px-3 font-mono font-bold text-[#003440] border-r border-[#edeeec]">
@@ -3682,7 +3682,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       </td>
                       <td className="py-2.5 px-3 border-r border-[#edeeec]">
                         <span
-                          className={`px-2 py-0.5 rounded-md font-black text-[0.68rem] uppercase ${
+                          className={`px-2 py-0.5 rounded-md font-semibold text-[11px] uppercase ${
                             u.role === 'admin'
                               ? 'bg-[#003440] text-white'
                               : u.role === 'usuario'
@@ -3697,12 +3697,12 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             : 'PEB II (Só Visualização)'}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 font-extrabold text-[#003440] border-r border-[#edeeec]">
+                      <td className="py-2.5 px-3 font-semibold text-[#003440] border-r border-[#edeeec]">
                         {u.assignedClassName}
                       </td>
                       <td className="py-2.5 px-3 text-center border-r border-[#edeeec]">
                         <span
-                          className={`px-2 py-0.5 rounded-full font-black text-[0.68rem] ${
+                          className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${
                             u.active
                               ? 'bg-[#a4f3ca]/70 text-[#003723]'
                               : 'bg-[#ffdad6] text-[#ba1a1a]'
@@ -3728,17 +3728,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#003440]/10 pb-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-lg bg-[#005035] text-white font-black text-[0.68rem] uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#005035] text-white font-semibold text-[11px] uppercase tracking-wider">
                   Aba no Banco de Dados: {GENDER_SHEET_TAB_NAME}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-lg bg-[#eaf6ef] text-[#005035] border border-[#005035]/20 font-extrabold text-[0.68rem]">
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#eaf6ef] text-[#005035] border border-[#005035]/20 font-semibold text-[11px]">
                   Coluna A: Nome • Coluna B: M ou F
                 </span>
               </div>
-              <h2 className="text-[1.25rem] sm:text-[1.45rem] font-black text-[#003440]">
+              <h2 className="text-lg sm:text-xl font-semibold text-[#003440]">
                 Planilha de Consulta de Gênero (Estudante, Pai/Mãe, Tio/Tia, Avô/Avó, Vizinho/Vizinha)
               </h2>
-              <p className="text-[0.82rem] text-[#41484b] max-w-3xl">
+              <p className="text-sm text-[#41484b] max-w-3xl">
                 Coloque manualmente os nomes na <strong>1ª coluna (Coluna A)</strong> e <strong>M ou F na 2ª coluna (Coluna B)</strong>. O aplicativo consulta automaticamente esta aba para flexionar o gênero em todas as telas: <strong>O/A Estudante, Pai/Mãe, Tio/Tia, Avô/Avó, Vizinho/Vizinha, Irmão/Irmã, Padrasto/Madrasta e Professor/Professora</strong>.
               </p>
             </div>
@@ -3803,7 +3803,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     setIsSyncingCloud(false);
                   }
                 }}
-                className="px-4 min-h-[42px] rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-black text-[0.8rem] flex items-center gap-2 shadow-sm cursor-pointer"
+                className="px-4 min-h-[42px] rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-semibold text-sm flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
                 <span>Gravar Aba '{GENDER_SHEET_TAB_NAME}' no Google Sheets</span>
@@ -3815,16 +3815,16 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-7 bg-[#f5f7f6] p-4 rounded-2xl border border-[#003440]/15 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[0.76rem] font-black uppercase tracking-wider text-[#003440]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#003440]">
                   Adicionar ou Atualizar Nome Manualmente na Aba
                 </span>
-                <span className="text-[0.7rem] font-bold text-[#005035]">
+                <span className="text-xs font-bold text-[#005035]">
                   Efeito imediato em todo o App
                 </span>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 <div className="flex-1">
-                  <label className="block text-[0.68rem] font-extrabold uppercase text-[#5a676b] mb-1">
+                  <label className="block text-[11px] font-semibold uppercase text-[#5a676b] mb-1">
                     1ª Coluna (Coluna A): Nome ou Primeiro Nome
                   </label>
                   <input
@@ -3832,18 +3832,18 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     value={newGenderName}
                     onChange={(e) => setNewGenderName(e.target.value.toUpperCase())}
                     placeholder="Ex.: DARCI, JURACI, ARIEL, MARIA (AVÓ), JOÃO (TIO)..."
-                    className="w-full min-h-[42px] px-3.5 rounded-xl bg-white border border-[#c0c8cb] text-[0.85rem] font-bold text-[#003440] focus:outline-none focus:border-[#005035]"
+                    className="w-full min-h-[42px] px-3.5 rounded-xl bg-white border border-[#c0c8cb] text-sm font-bold text-[#003440] focus:outline-none focus:border-[#005035]"
                   />
                 </div>
                 <div className="w-full sm:w-40">
-                  <label className="block text-[0.68rem] font-extrabold uppercase text-[#5a676b] mb-1">
+                  <label className="block text-[11px] font-semibold uppercase text-[#5a676b] mb-1">
                     2ª Coluna (Coluna B): M ou F
                   </label>
                   <div className="grid grid-cols-2 gap-1.5 bg-white p-1 rounded-xl border border-[#c0c8cb] min-h-[42px]">
                     <button
                       type="button"
                       onClick={() => setNewGenderCode('F')}
-                      className={`rounded-lg font-black text-[0.82rem] transition-all cursor-pointer ${
+                      className={`rounded-lg font-semibold text-sm transition-all cursor-pointer ${
                         newGenderCode === 'F'
                           ? 'bg-[#b3261e] text-white shadow-xs'
                           : 'text-[#5a676b] hover:bg-[#f3f4f2]'
@@ -3854,7 +3854,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setNewGenderCode('M')}
-                      className={`rounded-lg font-black text-[0.82rem] transition-all cursor-pointer ${
+                      className={`rounded-lg font-semibold text-sm transition-all cursor-pointer ${
                         newGenderCode === 'M'
                           ? 'bg-[#003440] text-white shadow-xs'
                           : 'text-[#5a676b] hover:bg-[#f3f4f2]'
@@ -3881,7 +3881,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       setNewGenderName('');
                       enqueueGenderDictionaryWrite(updated, classesToSync);
                     }}
-                    className="w-full sm:w-auto px-4 min-h-[42px] rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-black text-[0.8rem] cursor-pointer shrink-0"
+                    className="w-full sm:w-auto px-4 min-h-[42px] rounded-xl bg-[#003440] hover:bg-[#1e4b58] text-white font-semibold text-sm cursor-pointer shrink-0"
                   >
                     Salvar M/F
                   </button>
@@ -3892,10 +3892,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             {/* Simulador ao Vivo de Concordância de Gênero & Parentesco */}
             <div className="lg:col-span-5 bg-[#eaf6ef]/70 p-4 rounded-2xl border border-[#005035]/20 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[0.74rem] font-black uppercase tracking-wider text-[#005035]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#005035]">
                   Teste de Consulta Automática (Parentesco &amp; Estudante)
                 </span>
-                <span className="text-[0.68rem] font-bold text-[#003440] bg-white px-2 py-0.5 rounded-md border border-[#003440]/10">
+                <span className="text-[11px] font-bold text-[#003440] bg-white px-2 py-0.5 rounded-md border border-[#003440]/10">
                   Tempo Real
                 </span>
               </div>
@@ -3904,7 +3904,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 value={genderTestSimulatorName}
                 onChange={(e) => setGenderTestSimulatorName(e.target.value.toUpperCase())}
                 placeholder="Digite ex.: CARLOS (TIO), SANDRA (VIZINHA), HELENA..."
-                className="w-full min-h-[38px] px-3 rounded-xl bg-white border border-[#005035]/30 text-[0.82rem] font-bold text-[#003440]"
+                className="w-full min-h-[38px] px-3 rounded-xl bg-white border border-[#005035]/30 text-sm font-bold text-[#003440]"
               />
               {(() => {
                 const simRel = resolveGuardianRelationshipInfo(
@@ -3916,9 +3916,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   estudante: simRel.cleanName,
                 });
                 return (
-                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[0.74rem]">
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
                     <span
-                      className={`px-2.5 py-1 rounded-lg font-black ${
+                      className={`px-2.5 py-1 rounded-lg font-semibold ${
                         simRel.gender === 'F'
                           ? 'bg-[#ffdad6] text-[#93000a]'
                           : 'bg-[#d3e4ff] text-[#001c38]'
@@ -3929,7 +3929,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     <span className="px-2.5 py-1 rounded-lg bg-white font-bold text-[#003440] border border-[#003440]/15">
                       Estudante: {simStudent.estudanteTitle} ({simStudent.matriculadoTerm})
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-[#005035] text-white font-black">
+                    <span className="px-2.5 py-1 rounded-lg bg-[#005035] text-white font-semibold">
                       Vínculo Familiar: {simRel.roleLabel}
                     </span>
                   </div>
@@ -3941,13 +3941,13 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           {/* Barra de Busca e Contadores M / F */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[0.82rem] font-bold text-[#41484b]">
+              <span className="text-sm font-bold text-[#41484b]">
                 Total de nomes mapeados: <strong>{genderEntries.length}</strong>
               </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#ffdad6]/60 text-[#93000a] font-black text-[0.72rem]">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#ffdad6]/60 text-[#93000a] font-semibold text-xs">
                 F (Feminino): {genderEntries.filter((e) => e.gender === 'F').length}
               </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#d3e4ff]/70 text-[#001c38] font-black text-[0.72rem]">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#d3e4ff]/70 text-[#001c38] font-semibold text-xs">
                 M (Masculino): {genderEntries.filter((e) => e.gender === 'M').length}
               </span>
             </div>
@@ -3960,7 +3960,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 value={genderSearchQuery}
                 onChange={(e) => setGenderSearchQuery(e.target.value)}
                 placeholder="Buscar nome na Coluna A..."
-                className="w-full min-h-[40px] pl-9 pr-3 rounded-xl bg-[#f3f4f2] border border-[#c0c8cb] text-[0.82rem] font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
+                className="w-full min-h-[40px] pl-9 pr-3 rounded-xl bg-[#f3f4f2] border border-[#c0c8cb] text-sm font-semibold focus:outline-none focus:bg-white focus:border-[#003440]"
               />
             </div>
           </div>
@@ -3968,23 +3968,23 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           {/* Tabela Oficial da Aba Consulta_Genero_Nomes_2027 (Coluna A: Nome | Coluna B: M ou F) */}
           <div className="border-2 border-[#003440]/20 rounded-2xl overflow-x-auto max-h-[560px]">
             <table className="w-full text-left border-collapse min-w-[760px]">
-              <thead className="sticky top-0 z-10 bg-[#003440] text-white text-[0.72rem] uppercase tracking-wider">
+              <thead className="sticky top-0 z-10 bg-[#003440] text-white text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="py-3 px-3 font-extrabold border-r border-white/15 w-16 text-center">
+                  <th className="py-3 px-3 font-semibold border-r border-white/15 w-16 text-center">
                     Linha
                   </th>
-                  <th className="py-3 px-4 font-extrabold border-r border-white/15">
+                  <th className="py-3 px-4 font-semibold border-r border-white/15">
                     Coluna A — NOME (Estudante / Responsável / Educador)
                   </th>
-                  <th className="py-3 px-4 font-extrabold border-r border-white/15 w-48 text-center">
+                  <th className="py-3 px-4 font-semibold border-r border-white/15 w-48 text-center">
                     Coluna B — GÊNERO (M ou F)
                   </th>
-                  <th className="py-3 px-4 font-extrabold">
+                  <th className="py-3 px-4 font-semibold">
                     Concordância Automática no App (Estudante • Família • Parentesco)
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#edeeec] text-[0.82rem]">
+              <tbody className="divide-y divide-[#edeeec] text-sm">
                 {genderEntries
                   .filter((item) =>
                     !genderSearchQuery.trim()
@@ -4007,7 +4007,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                         <td className="py-2.5 px-3 font-mono font-bold text-center text-[#71787b] border-r border-[#edeeec]">
                           {idx + 2}
                         </td>
-                        <td className="py-2.5 px-4 font-black text-[#003440] border-r border-[#edeeec]">
+                        <td className="py-2.5 px-4 font-semibold text-[#003440] border-r border-[#edeeec]">
                           {item.name}
                         </td>
                         <td className="py-2 px-4 text-center border-r border-[#edeeec]">
@@ -4024,7 +4024,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                                 setGenderEntries(updated);
                                 enqueueGenderDictionaryWrite(updated, classesToSync);
                               }}
-                              className={`px-3 py-1 rounded-lg font-black text-[0.75rem] cursor-pointer transition-all ${
+                              className={`px-3 py-1 rounded-lg font-semibold text-xs cursor-pointer transition-all ${
                                 isF
                                   ? 'bg-[#b3261e] text-white shadow-2xs'
                                   : 'text-[#5a676b] hover:bg-white'
@@ -4044,7 +4044,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                                 setGenderEntries(updated);
                                 enqueueGenderDictionaryWrite(updated, classesToSync);
                               }}
-                              className={`px-3 py-1 rounded-lg font-black text-[0.75rem] cursor-pointer transition-all ${
+                              className={`px-3 py-1 rounded-lg font-semibold text-xs cursor-pointer transition-all ${
                                 !isF
                                   ? 'bg-[#003440] text-white shadow-2xs'
                                   : 'text-[#5a676b] hover:bg-white'
@@ -4054,17 +4054,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             </button>
                           </div>
                         </td>
-                        <td className="py-2.5 px-4 text-[0.78rem] font-semibold text-[#374346]">
+                        <td className="py-2.5 px-4 text-xs font-semibold text-[#374346]">
                           {isF ? (
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded-md bg-[#ffdad6]/60 text-[#93000a] font-black">
+                              <span className="px-2 py-0.5 rounded-md bg-[#ffdad6]/60 text-[#93000a] font-semibold">
                                 A Estudante
                               </span>
                               <span>• Mãe • Tia • Avó • Vizinha • Irmã • Madrasta • Professora</span>
                             </div>
                           ) : (
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded-md bg-[#d3e4ff]/80 text-[#001c38] font-black">
+                              <span className="px-2 py-0.5 rounded-md bg-[#d3e4ff]/80 text-[#001c38] font-semibold">
                                 O Estudante
                               </span>
                               <span>• Pai • Tio • Avô • Vizinho • Irmão • Padrasto • Professor</span>
@@ -4089,17 +4089,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <span className="material-symbols-outlined text-[24px] text-[#005035]">
                   directions_bus
                 </span>
-                <h2 className="text-lg sm:text-xl font-black text-[#003440]">
+                <h2 className="text-lg sm:text-xl font-semibold text-[#003440]">
                   Transporte &amp; Ônibus Escolar Fretado (2027)
                 </h2>
               </div>
-              <p className="text-[0.82rem] text-[#436370]">
+              <p className="text-sm text-[#436370]">
                 Relação oficial de estudantes que utilizam as linhas de ônibus fretado municipal EMEB Prof. Joaquim Candelário de Freitas.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-[#eaf6ef] text-[#005035] font-black text-[0.78rem]">
+              <span className="px-3 py-1 rounded-full bg-[#eaf6ef] text-[#005035] font-semibold text-xs">
                 {onibusFretadoRows.length} Estudantes com Transporte
               </span>
             </div>
@@ -4111,9 +4111,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setBusRouteFilter('all')}
-                className={`px-3 py-1.5 rounded-xl font-bold text-[0.76rem] cursor-pointer transition-all ${
+                className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition-all ${
                   busRouteFilter === 'all'
-                    ? 'bg-[#003440] text-white font-extrabold'
+                    ? 'bg-[#003440] text-white font-semibold'
                     : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
                 }`}
               >
@@ -4124,9 +4124,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   key={route}
                   type="button"
                   onClick={() => setBusRouteFilter(route)}
-                  className={`px-3 py-1.5 rounded-xl font-bold text-[0.76rem] cursor-pointer transition-all ${
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition-all ${
                     busRouteFilter === route
-                      ? 'bg-[#005035] text-white font-extrabold'
+                      ? 'bg-[#005035] text-white font-semibold'
                       : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
                   }`}
                 >
@@ -4144,15 +4144,15 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 value={busSearchQuery}
                 onChange={(e) => setBusSearchQuery(e.target.value)}
                 placeholder="Filtrar por aluno, bairro ou RA..."
-                className="w-full pl-9 pr-3 py-1.5 bg-[#f5f7f6] text-[#191c1b] text-[0.8rem] rounded-xl border border-[#003440]/12 outline-none focus:border-[#005035]"
+                className="w-full pl-9 pr-3 py-1.5 bg-[#f5f7f6] text-[#191c1b] text-sm rounded-xl border border-[#003440]/12 outline-none focus:border-[#005035]"
               />
             </div>
           </div>
 
           {/* Table */}
           <div className="overflow-x-auto rounded-2xl border border-[#003440]/12">
-            <table className="w-full text-left text-[0.78rem]">
-              <thead className="bg-[#f5f7f6] text-[#003440] font-black uppercase text-[0.7rem] border-b border-[#003440]/10">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#f5f7f6] text-[#003440] font-semibold uppercase text-xs border-b border-[#003440]/10">
                 <tr>
                   <th className="py-2.5 px-3 w-12 text-center">Nº</th>
                   <th className="py-2.5 px-3">Turma</th>
@@ -4182,14 +4182,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     return (
                       <tr key={`${row.classId}_${row.studentId}`} className="hover:bg-[#f9fbfa] transition-colors">
                         <td className="py-2.5 px-3 text-center font-bold text-[#5a676b]">{row.seq}</td>
-                        <td className="py-2.5 px-3 font-extrabold text-[#003440]">{row.className}</td>
+                        <td className="py-2.5 px-3 font-semibold text-[#003440]">{row.className}</td>
                         <td className="py-2.5 px-3 font-bold text-[#191c1b]">
                           {row.name}
-                          <span className="text-[0.7rem] text-[#5a676b] block">Chamada: Nº {row.number}</span>
+                          <span className="text-xs text-[#5a676b] block">Chamada: Nº {row.number}</span>
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-[0.72rem] text-[#41484b]">{row.ra || '—'}</td>
+                        <td className="py-2.5 px-3 font-mono text-xs text-[#41484b]">{row.ra || '—'}</td>
                         <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-extrabold text-[0.72rem]">
+                          <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-semibold text-xs">
                             {row.rota}
                           </span>
                         </td>
@@ -4204,13 +4204,13 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                               href={waLinks[0].waUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#075E54] font-bold text-[0.72rem] transition-colors"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#075E54] font-bold text-xs transition-colors"
                             >
                               <span className="material-symbols-outlined text-[15px]">chat</span>
                               <span>WhatsApp</span>
                             </a>
                           ) : (
-                            <span className="text-[#5a676b] text-[0.7rem]">Sem telefone</span>
+                            <span className="text-[#5a676b] text-xs">Sem telefone</span>
                           )}
                         </td>
                       </tr>
@@ -4231,17 +4231,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <span className="material-symbols-outlined text-[28px] text-[#005035]">
                 cloud_sync
               </span>
-              <h3 className="text-[1.15rem] font-black">
+              <h3 className="text-lg font-semibold">
                 Confirmar Ação no Google (Admin)
               </h3>
             </div>
 
             {confirmModalAction === 'create_both_real' && (
-              <div className="space-y-2 text-[0.9rem] text-[#191c1b]">
+              <div className="space-y-2 text-sm text-[#191c1b]">
                 <p>
                   Você confirma a criação dos seguintes recursos reais na conta Google (<strong>{googleUserEmail || OFFICIAL_ADMIN_EMAIL}</strong>)?
                 </p>
-                <ul className="list-disc pl-5 space-y-1 text-[0.84rem] text-[#41484b]">
+                <ul className="list-disc pl-5 space-y-1 text-sm text-[#41484b]">
                   <li>
                     <strong>Planilha Google Sheets:</strong>{' '}
                     <code>BD_Oficial_SED_EMEB_Joaquim_Candelario_2027</code> com as 48 colunas SED (incluindo os estudantes reais do G4A e as 40 turmas) + aba dos 200 Dias Letivos.
@@ -4255,41 +4255,41 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             )}
 
             {confirmModalAction === 'create_drive_folder' && (
-              <div className="space-y-2 text-[0.9rem] text-[#191c1b]">
+              <div className="space-y-2 text-sm text-[#191c1b]">
                 <p>
                   Você confirma a criação da pasta real no seu <strong>Google Drive</strong> chamada:
                 </p>
-                <p className="p-2.5 bg-[#f3f4f2] rounded-xl font-black text-[#003440] border border-[#c0c8cb] text-[0.82rem]">
+                <p className="p-2.5 bg-[#f3f4f2] rounded-xl font-semibold text-[#003440] border border-[#c0c8cb] text-sm">
                   Fotos_Estudantes_EMEB_Joaquim_Candelario_Freitas_2027
                 </p>
               </div>
             )}
 
             {confirmModalAction === 'overwrite_existing' && (
-              <div className="space-y-2 text-[0.9rem] text-[#191c1b]">
+              <div className="space-y-2 text-sm text-[#191c1b]">
                 <p>
                   Você confirma a gravação/atualização na planilha do <strong>Google Sheets</strong>?
                 </p>
-                <p className="p-2.5 bg-[#f3f4f2] rounded-xl font-mono text-[0.78rem] text-[#003440] border border-[#c0c8cb] break-all">
+                <p className="p-2.5 bg-[#f3f4f2] rounded-xl font-mono text-xs text-[#003440] border border-[#c0c8cb] break-all">
                   ID: {extractSpreadsheetId(spreadsheetInput)}
                 </p>
-                <p className="text-[0.82rem] text-[#41484b]">
+                <p className="text-sm text-[#41484b]">
                   Serão gravadas as <strong>{classesToSync.length} turmas</strong> ({totalStudentsToSync} estudantes com todas as 48 colunas SED) e a aba dos <strong>200 Dias Letivos</strong>.
                 </p>
               </div>
             )}
 
             {confirmModalAction === 'redefine_and_sync_all' && (
-              <div className="space-y-2.5 text-[0.88rem] text-[#191c1b]">
+              <div className="space-y-2.5 text-sm text-[#191c1b]">
                 <p>
                   Você confirma a <strong>Redefinição Total e Sincronia Tripla</strong> (Planilha Google + Firebase Firestore + App)?
                 </p>
-                <div className="p-3 bg-[#eaf6ef] rounded-xl border border-[#005035]/20 space-y-1.5 text-[0.8rem] text-[#003440]">
-                  <p className="font-extrabold flex items-center gap-1.5 text-[#005035]">
+                <div className="p-3 bg-[#eaf6ef] rounded-xl border border-[#005035]/20 space-y-1.5 text-sm text-[#003440]">
+                  <p className="font-semibold flex items-center gap-1.5 text-[#005035]">
                     <span className="material-symbols-outlined text-[18px]">verified</span>
                     12 Abas Oficiais Regulamentares que serão Criadas e Alinhadas:
                   </p>
-                  <div className="grid grid-cols-2 gap-1 text-[0.74rem] font-medium text-[#41484b]">
+                  <div className="grid grid-cols-2 gap-1 text-xs font-medium text-[#41484b]">
                     <span>1. SED_Matriculas_e_Frequencia</span>
                     <span>2. Faltas_Atestados_Infantil</span>
                     <span>3. Faltas_Atestados_Fundamental</span>
@@ -4304,7 +4304,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     <span>12. Consulta_Genero_Nomes_2027</span>
                   </div>
                 </div>
-                <ul className="list-disc pl-5 space-y-1 text-[0.8rem] text-[#41484b]">
+                <ul className="list-disc pl-5 space-y-1 text-sm text-[#41484b]">
                   <li>Limpeza de linhas fantasmas anteriores (batchClear em todas as abas).</li>
                   <li>Alinhamento imediato no Firebase Firestore Cloud.</li>
                   <li>Diagnóstico completo de inconsistências cadastrais e legais gravado na aba oficial.</li>
@@ -4316,7 +4316,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setConfirmModalAction(null)}
-                className="flex-1 min-h-[48px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-extrabold rounded-xl cursor-pointer"
+                className="flex-1 min-h-[48px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-semibold rounded-xl cursor-pointer"
               >
                 Cancelar
               </button>
@@ -4331,7 +4331,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     ? executeConfirmedRedefineSheet
                     : executeConfirmedWriteSheet
                 }
-                className="flex-1 min-h-[48px] bg-[#005035] hover:bg-[#003723] text-white font-black rounded-xl shadow-md cursor-pointer"
+                className="flex-1 min-h-[48px] bg-[#005035] hover:bg-[#003723] text-white font-semibold rounded-xl shadow-md cursor-pointer"
               >
                 Confirmar
               </button>

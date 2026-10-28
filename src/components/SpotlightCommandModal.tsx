@@ -187,7 +187,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar estudante por nome, RA, mãe, pai, ônibus ou turma..."
-            className="flex-1 bg-transparent text-[#1d1d1f] text-[0.98rem] font-semibold placeholder:text-[#86868b] focus:outline-none"
+            className="flex-1 bg-transparent text-[#1d1d1f] text-base font-semibold placeholder:text-[#86868b] focus:outline-none"
           />
           {query && (
             <button
@@ -201,7 +201,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#6e6e73] font-bold text-[0.7rem] uppercase tracking-wider cursor-pointer shrink-0"
+            className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#6e6e73] font-bold text-xs uppercase tracking-wider cursor-pointer shrink-0"
           >
             ESC
           </button>
@@ -212,7 +212,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
           {/* Atalhos Rápidos de Telas */}
           {!normalizedQuery && (
             <div className="flex flex-wrap items-center gap-1.5 px-1">
-              <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#86868b] mr-1">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400 mr-1">
                 Ir para:
               </span>
               <button
@@ -221,7 +221,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                   onNavigateToScreen(userRole === 'usuario' ? 'detalhes' : 'turmas');
                   onClose();
                 }}
-                className="px-3 py-1 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white text-[0.74rem] font-bold transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
               >
                 Turmas
               </button>
@@ -232,7 +232,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                     onNavigateToScreen('frequencia_mensal');
                     onClose();
                   }}
-                  className="px-3 py-1 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white text-[0.74rem] font-bold transition-colors cursor-pointer"
+                  className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
                 >
                   Faltas do Mês
                 </button>
@@ -243,7 +243,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                   onNavigateToScreen('faltas_consecutivas');
                   onClose();
                 }}
-                className="px-3 py-1 rounded-full bg-[#fff2f2] hover:bg-[#ff3b30] text-[#ff3b30] hover:text-white text-[0.74rem] font-bold transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
               >
                 Faltas Consecutivas
               </button>
@@ -253,7 +253,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                   onNavigateToScreen('mapa_estudantes');
                   onClose();
                 }}
-                className="px-3 py-1 rounded-full bg-[#0071e3]/10 hover:bg-[#0071e3] text-[#0071e3] hover:text-white text-[0.74rem] font-bold transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
               >
                 Mapa de Trajetos &amp; KM
               </button>
@@ -264,7 +264,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                     onNavigateToScreen('bolsa_familia');
                     onClose();
                   }}
-                  className="px-3 py-1 rounded-full bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:text-white text-[0.74rem] font-bold transition-colors cursor-pointer"
+                  className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
                 >
                   Bolsa Família
                 </button>
@@ -275,7 +275,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
           {/* Turmas Encontradas */}
           {matchingClasses.length > 0 && (
             <div className="space-y-1.5">
-              <span className="px-2 text-[0.68rem] font-extrabold uppercase tracking-wider text-[#86868b] block">
+              <span className="px-2 text-xs font-medium uppercase tracking-wider text-slate-400 block">
                 Turmas ({matchingClasses.length})
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -287,13 +287,13 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                       onSelectClass(cls);
                       onClose();
                     }}
-                    className="p-2.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white text-left transition-colors cursor-pointer flex items-center justify-between gap-2 group"
+                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-900 text-slate-800 hover:text-white text-left transition-colors cursor-pointer flex items-center justify-between gap-2 group"
                   >
                     <div className="min-w-0">
-                      <span className="text-[0.82rem] font-extrabold block truncate">
+                      <span className="text-sm font-semibold block truncate">
                         {cls.name}
                       </span>
-                      <span className="text-[0.68rem] opacity-70 block truncate tabular-nums">
+                      <span className="text-xs opacity-70 block truncate tabular-nums font-mono">
                         {cls.students.length} estudantes · {cls.shift.replace('Turno ', '')}
                       </span>
                     </div>
@@ -309,22 +309,22 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
           {/* Estudantes Encontrados */}
           <div className="space-y-1.5">
             <div className="px-2 flex items-center justify-between">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#86868b]">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
                 {normalizedQuery
                   ? `Estudantes Encontrados (${matchingStudents.length})`
                   : 'Acesso Rápido a Estudantes'}
               </span>
-              <span className="text-[0.66rem] text-[#86868b] hidden sm:inline">
+              <span className="text-[11px] text-slate-400 hidden sm:inline">
                 Use ↑ ↓ e Enter para abrir o perfil
               </span>
             </div>
 
             {matchingStudents.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl bg-[#f5f5f7]">
-                <p className="text-[0.88rem] font-bold text-[#1d1d1f]">
+              <div className="p-8 text-center rounded-xl bg-slate-50">
+                <p className="text-sm font-semibold text-slate-900">
                   Nenhum estudante encontrado para “{query}”
                 </p>
-                <p className="text-[0.76rem] text-[#6e6e73] mt-0.5">
+                <p className="text-xs text-slate-500 mt-0.5">
                   Tente buscar por parte do nome, RA, nome da mãe ou rota de ônibus.
                 </p>
               </div>
@@ -351,43 +351,43 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                         );
                         onClose();
                       }}
-                      className={`p-2.5 sm:px-3.5 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                        isSelected ? 'bg-[#f0f6ff] ring-1 ring-[#0071e3]/30' : 'hover:bg-[#f5f5f7]'
+                      className={`p-2.5 sm:px-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                        isSelected ? 'bg-blue-50 ring-1 ring-blue-500/30' : 'hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className="w-8 h-8 rounded-xl bg-[#1d1d1f] text-white font-extrabold text-[0.74rem] tabular-nums flex items-center justify-center shrink-0">
+                        <span className="w-8 h-8 rounded-lg bg-slate-900 text-white font-mono font-semibold text-xs tabular-nums flex items-center justify-center shrink-0">
                           {item.student.number.toString().padStart(2, '0')}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-extrabold text-[0.88rem] text-[#1d1d1f] truncate">
+                            <span className="font-semibold text-sm text-slate-900 truncate">
                               {item.student.name}
                             </span>
                             <span
-                              className={`px-1.5 py-0.5 rounded font-extrabold text-[0.62rem] ${
+                              className={`px-1.5 py-0.5 rounded font-medium text-[11px] ${
                                 gStudent.code === 'F'
-                                  ? 'bg-[#ffdad6]/60 text-[#93000a]'
-                                  : 'bg-[#d3e4ff]/75 text-[#001c38]'
+                                  ? 'bg-rose-50 text-rose-800'
+                                  : 'bg-blue-50 text-blue-800'
                               }`}
                             >
                               {gStudent.estudanteTitle}
                             </span>
-                            <span className="px-2 py-0.5 rounded-md bg-black/[0.06] text-[#1d1d1f] font-bold text-[0.66rem]">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 font-medium text-[11px]">
                               {item.cls.name}
                             </span>
                             {item.consecutiveCount >= 3 && (
-                              <span className="px-2 py-0.5 rounded-full bg-[#ff3b30]/12 text-[#ff3b30] font-extrabold text-[0.65rem] tabular-nums">
+                              <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-semibold text-[11px] font-mono tabular-nums">
                                 {item.consecutiveCount} dias seguidos
                               </span>
                             )}
                             {item.student.rotaOnibus && (
-                              <span className="px-2 py-0.5 rounded-md bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.65rem]">
+                              <span className="px-2 py-0.5 rounded-md bg-sky-50 text-sky-800 font-medium text-[11px]">
                                 🚌 {item.student.rotaOnibus.split('-')[0].trim()}
                               </span>
                             )}
                           </div>
-                          <div className="text-[0.72rem] text-[#6e6e73] truncate tabular-nums mt-0.5">
+                          <div className="text-xs text-slate-500 truncate tabular-nums font-mono mt-0.5">
                             RA {item.student.ra}-{item.student.digRa}
                             {gGuardian.cleanName !== '—'
                               ? ` · ${gGuardian.shortRoleLabel}: ${gGuardian.cleanName}`
@@ -404,7 +404,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                             onOpenStudentPdf(item.student, item.cls.name);
                             onClose();
                           }}
-                          className={`px-2.5 py-1.5 rounded-xl font-bold text-[0.7rem] flex items-center gap-1 cursor-pointer ${
+                          className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer ${
                             item.hasPdf
                               ? 'bg-[#0071e3] text-white hover:bg-[#005bb5]'
                               : 'bg-[#fff2f2] text-[#ff3b30] border border-[#ff3b30]/25'
@@ -418,7 +418,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                           </span>
                         </button>
 
-                        <span className="px-2.5 py-1.5 rounded-xl bg-white border border-black/[0.08] text-[#1d1d1f] font-bold text-[0.7rem] flex items-center gap-1">
+                        <span className="px-2.5 py-1.5 rounded-xl bg-white border border-black/[0.08] text-[#1d1d1f] font-bold text-xs flex items-center gap-1">
                           <span>Ficha Completa</span>
                           <span className="material-symbols-outlined text-[14px]">
                             open_in_full

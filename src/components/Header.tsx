@@ -464,7 +464,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <StudentAvatar
                   name={userName || userEmail || 'Educador'}
                   size="sm"
-                  className="w-7 h-7 text-[0.7rem]"
+                  className="w-7 h-7 text-xs"
                 />
                 <span className="hidden sm:inline text-xs font-semibold text-slate-800 max-w-[90px] truncate">
                   {userRole === 'admin' ? 'Admin' : userRole === 'usuario' ? 'PEB I' : 'PEB II'}
@@ -485,7 +485,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <StudentAvatar
                         name={userName || userEmail || 'Educador'}
                         size="md"
-                        className="w-10 h-10 text-[0.85rem] shrink-0"
+                        className="w-10 h-10 text-sm shrink-0"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-slate-900 truncate">
@@ -816,7 +816,7 @@ export const Header: React.FC<HeaderProps> = ({
               <StudentAvatar
                 name={userName || userEmail || 'Educador'}
                 size="md"
-                className="w-12 h-12 text-[0.95rem]"
+                className="w-12 h-12 text-base"
               />
             </div>
 

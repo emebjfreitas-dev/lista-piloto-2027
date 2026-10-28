@@ -65,7 +65,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-[#edeeec]">
           <div className="flex items-center gap-2 text-[#003440]">
             <span className="material-symbols-outlined text-[26px]">add_circle</span>
-            <h3 className="text-[1.25rem] font-bold">Adicionar Turma (2027)</h3>
+            <h3 className="text-lg font-bold">Adicionar Turma (2027)</h3>
           </div>
           <button
             onClick={onClose}
@@ -78,7 +78,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
         <form onSubmit={handleSubmit} className="overflow-y-auto py-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[0.875rem] font-bold text-[#191c1b] mb-1">
+              <label className="block text-sm font-bold text-[#191c1b] mb-1">
                 Etapa / Ano
               </label>
               <select
@@ -105,7 +105,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[0.875rem] font-bold text-[#191c1b] mb-1">
+              <label className="block text-sm font-bold text-[#191c1b] mb-1">
                 Turma (Letra)
               </label>
               <input
@@ -122,7 +122,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[0.875rem] font-bold text-[#191c1b] mb-1">
+              <label className="block text-sm font-bold text-[#191c1b] mb-1">
                 Turno
               </label>
               <select
@@ -136,7 +136,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[0.875rem] font-bold text-[#191c1b] mb-1">
+              <label className="block text-sm font-bold text-[#191c1b] mb-1">
                 Sala
               </label>
               <input
@@ -152,10 +152,10 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
 
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="text-[0.875rem] font-bold text-[#191c1b]">
+              <label className="text-sm font-bold text-[#191c1b]">
                 Total de Estudantes Matriculados
               </label>
-              <span className="font-extrabold text-[#003440] text-[1.125rem]">
+              <span className="font-semibold text-slate-900 text-lg font-mono tabular-nums">
                 {studentCount} estudantes
               </span>
             </div>
@@ -173,13 +173,13 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 min-h-[50px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-bold text-[0.95rem] rounded-xl transition-colors cursor-pointer"
+              className="flex-1 min-h-[50px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-bold text-base rounded-xl transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 min-h-[50px] bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.95rem] rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 min-h-[50px] bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-base rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[20px]">save</span>
               <span>Cadastrar Turma</span>

@@ -308,7 +308,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
           <div class="w-14 h-14 rounded-2xl bg-[#003440] text-white shadow-2xl border-4 border-white ring-4 ring-[#003440]/30 flex items-center justify-center">
             <span class="material-symbols-outlined text-[30px]">school</span>
           </div>
-          <div class="mt-1 px-3 py-1 rounded-full bg-[#0f172a] text-white text-xs font-black tracking-wide whitespace-nowrap shadow-xl border-2 border-white">
+          <div class="mt-1 px-3 py-1 rounded-full bg-[#0f172a] text-white text-xs font-semibold tracking-wide whitespace-nowrap shadow-xl border-2 border-white">
             EMEB Candelário (Escola)
           </div>
         </div>
@@ -324,7 +324,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
 
     marker.bindPopup(`
       <div class="p-4 text-slate-900 space-y-2">
-        <div class="font-black text-base text-[#003440] flex items-center gap-2">
+        <div class="font-semibold text-base text-[#003440] flex items-center gap-2">
           <span class="material-symbols-outlined text-[22px]">school</span>
           <span>${CANDELARIO_SCHOOL_LOCATION.name}</span>
         </div>
@@ -380,11 +380,11 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
               item.photoUrl
                 ? `<img src="${item.photoUrl}" alt="${item.student.name}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
                    <div class="hidden w-full h-full bg-[#003440] text-white font-mono font-bold text-xs items-center justify-center">${item.initials}</div>`
-                : `<div class="w-full h-full bg-[#003440] text-white font-mono font-black text-xs flex items-center justify-center">${item.initials}</div>`
+                : `<div class="w-full h-full bg-[#003440] text-white font-mono font-semibold text-xs flex items-center justify-center">${item.initials}</div>`
             }
           </div>
           <!-- Número de Chamada Grande e Nítido -->
-          <span class="absolute -bottom-1 px-2 py-0.5 rounded-full font-mono font-black text-[11px] text-white shadow-md ${
+          <span class="absolute -bottom-1 px-2 py-0.5 rounded-full font-mono font-semibold text-[11px] text-white shadow-md ${
             isSelected
               ? 'bg-[#005bb5] ring-2 ring-white'
               : hasBus
@@ -410,7 +410,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
 
       marker.bindTooltip(
         `<div class="p-1 font-sans text-xs">
-           <strong class="text-sm font-black text-slate-900">${item.student.name}</strong><br/>
+           <strong class="text-sm font-semibold text-slate-900">${item.student.name}</strong><br/>
            Turma ${item.cls.name} • 🚶 ${item.estimates.walkMinutes} min a pé (${item.estimates.distanceRoadKm} km)
          </div>`,
         { direction: 'top', offset: [0, -50] }
@@ -494,7 +494,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
         const startIcon = L.divIcon({
           className: 'candelario-route-start-icon',
           html: `
-            <div class="px-2.5 py-1 rounded-xl bg-emerald-600 text-white font-black text-xs shadow-xl border-2 border-white flex items-center gap-1 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+            <div class="px-2.5 py-1 rounded-xl bg-emerald-600 text-white font-semibold text-xs shadow-xl border-2 border-white flex items-center gap-1 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
               <span>🟢 Início</span>
             </div>
           `,
@@ -507,7 +507,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
         const endIcon = L.divIcon({
           className: 'candelario-route-end-icon',
           html: `
-            <div class="px-2.5 py-1 rounded-xl bg-rose-600 text-white font-black text-xs shadow-xl border-2 border-white flex items-center gap-1 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+            <div class="px-2.5 py-1 rounded-xl bg-rose-600 text-white font-semibold text-xs shadow-xl border-2 border-white flex items-center gap-1 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
               <span>🏁 Chegada</span>
             </div>
           `,
@@ -525,7 +525,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
           const badgeIcon = L.divIcon({
             className: 'candelario-route-midpoint-icon',
             html: `
-              <div class="px-3 py-1.5 rounded-full bg-[#0f172a] text-white font-black text-xs shadow-2xl border-2 border-white flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+              <div class="px-3 py-1.5 rounded-full bg-[#0f172a] text-white font-semibold text-xs shadow-2xl border-2 border-white flex items-center gap-1.5 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
                 <span>${modeIcon} ${res.durationMinutes} min</span>
                 <span class="text-amber-300 font-bold">·</span>
                 <span>${res.distanceKm} km</span>
@@ -671,14 +671,14 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wide border border-emerald-300">
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-semibold uppercase tracking-wide border border-emerald-300">
                   100% Gratuito · Sem Custos · Código Aberto
                 </span>
                 <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-xs font-bold border border-slate-300">
                   OpenStreetMap + OSRM
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight mt-1">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-900 tracking-tight leading-tight mt-1">
                 Mapa e Caminho dos Alunos até a Escola
               </h1>
               <p className="text-sm sm:text-base text-slate-700 font-medium mt-0.5">
@@ -692,7 +692,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
             <button
               type="button"
               onClick={handleCenterOnSchool}
-              className="min-h-[48px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 border-slate-300 shadow-xs active:scale-98"
+              className="min-h-[48px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 border-slate-300 shadow-xs active:scale-98"
             >
               <span className="material-symbols-outlined text-[20px] text-[#0066cc]">my_location</span>
               <span>Ir para a Escola</span>
@@ -712,7 +712,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                   setSettingPointStep('none');
                 }
               }}
-              className={`min-h-[48px] px-4 rounded-2xl font-extrabold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 shadow-xs active:scale-98 ${
+              className={`min-h-[48px] px-4 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 shadow-xs active:scale-98 ${
                 isCustomPointsMode
                   ? 'bg-amber-100 text-amber-950 border-amber-400'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300'
@@ -725,7 +725,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
             <button
               type="button"
               onClick={() => setIsListViewOpen((prev) => !prev)}
-              className={`min-h-[48px] px-4 rounded-2xl font-extrabold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 shadow-xs active:scale-98 ${
+              className={`min-h-[48px] px-4 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer border-2 shadow-xs active:scale-98 ${
                 isListViewOpen
                   ? 'bg-[#0f172a] text-white border-[#0f172a]'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300'
@@ -758,7 +758,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
             <select
               value={filterClassId}
               onChange={(e) => setFilterClassId(e.target.value)}
-              className="w-full min-h-[50px] px-3.5 rounded-2xl bg-slate-50 text-sm sm:text-base font-extrabold text-slate-900 border-2 border-slate-300 focus:bg-white focus:outline-none focus:border-[#0066cc] cursor-pointer"
+              className="w-full min-h-[50px] px-3.5 rounded-2xl bg-slate-50 text-sm sm:text-base font-semibold text-slate-900 border-2 border-slate-300 focus:bg-white focus:outline-none focus:border-[#0066cc] cursor-pointer"
             >
               <option value="all">Todas as {classes.length} Turmas</option>
               {classes.map((c) => (
@@ -774,7 +774,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
             <button
               type="button"
               onClick={() => setFilterOnlyBus((prev) => !prev)}
-              className={`w-full min-h-[50px] px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 border-2 cursor-pointer transition-all active:scale-98 ${
+              className={`w-full min-h-[50px] px-4 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 border-2 cursor-pointer transition-all active:scale-98 ${
                 filterOnlyBus
                   ? 'bg-purple-100 text-purple-950 border-purple-500'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
@@ -793,7 +793,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
               <span className="material-symbols-outlined text-[26px] text-blue-600">straighten</span>
               <div>
                 <span className="text-xs font-bold text-slate-600 uppercase block">Distância Média</span>
-                <span className="text-lg font-black text-slate-900">{stats.avgDistanceKm} km até a escola</span>
+                <span className="text-lg font-semibold text-slate-900">{stats.avgDistanceKm} km até a escola</span>
               </div>
             </div>
             <span className="text-xs font-bold text-slate-500">Pelas Ruas</span>
@@ -804,7 +804,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
               <span className="material-symbols-outlined text-[26px] text-emerald-700">directions_walk</span>
               <div>
                 <span className="text-xs font-bold text-emerald-800 uppercase block">Tempo Médio a Pé</span>
-                <span className="text-lg font-black text-emerald-950">{stats.avgWalkMinutes} minutos</span>
+                <span className="text-lg font-semibold text-emerald-950">{stats.avgWalkMinutes} minutos</span>
               </div>
             </div>
             <span className="text-xs font-bold text-emerald-700">Caminhada</span>
@@ -815,7 +815,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
               <span className="material-symbols-outlined text-[26px] text-purple-700">directions_bus</span>
               <div>
                 <span className="text-xs font-bold text-purple-800 uppercase block">Transporte Escolar</span>
-                <span className="text-lg font-black text-purple-950">{stats.withBus} alunos</span>
+                <span className="text-lg font-semibold text-purple-950">{stats.withBus} alunos</span>
               </div>
             </div>
             <span className="text-xs font-bold text-purple-700">Ônibus Fretado</span>
@@ -828,7 +828,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
         <button
           type="button"
           onClick={() => setActiveMobileTab('map')}
-          className={`flex-1 min-h-[50px] rounded-2xl font-black text-base flex items-center justify-center gap-2 border-2 transition-all ${
+          className={`flex-1 min-h-[50px] rounded-2xl font-semibold text-base flex items-center justify-center gap-2 border-2 transition-all ${
             activeMobileTab === 'map'
               ? 'bg-[#0f172a] text-white border-[#0f172a] shadow-md'
               : 'bg-white text-slate-800 border-slate-300'
@@ -841,7 +841,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
         <button
           type="button"
           onClick={() => setActiveMobileTab('route')}
-          className={`flex-1 min-h-[50px] rounded-2xl font-black text-base flex items-center justify-center gap-2 border-2 transition-all ${
+          className={`flex-1 min-h-[50px] rounded-2xl font-semibold text-base flex items-center justify-center gap-2 border-2 transition-all ${
             activeMobileTab === 'route'
               ? 'bg-[#005bb5] text-white border-[#005bb5] shadow-md'
               : 'bg-white text-slate-800 border-slate-300'
@@ -863,7 +863,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-[26px] text-amber-700">touch_app</span>
                   <div>
-                    <span className="font-black text-sm block">Modo: Traçar Rota Livre Entre 2 Pontos</span>
+                    <span className="font-semibold text-sm block">Modo: Traçar Rota Livre Entre 2 Pontos</span>
                     <span className="text-xs font-semibold text-amber-900 block">
                       {settingPointStep === 'pointA' && '👉 Toque no mapa para marcar o Início (Ponto 1)'}
                       {settingPointStep === 'pointB' && '👉 Agora toque no mapa para marcar a Chegada (Ponto 2)'}
@@ -880,7 +880,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                       setCustomPointB(null);
                       setSettingPointStep('pointA');
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 font-black text-xs cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 font-semibold text-xs cursor-pointer"
                   >
                     Recomeçar
                   </button>
@@ -904,7 +904,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
 
             {/* Quick Floating Hint Overlay on Map */}
             <div className="absolute bottom-5 left-5 z-10 bg-white/95 backdrop-blur-md rounded-2xl p-3 border-2 border-slate-200 shadow-xl max-w-[280px]">
-              <span className="font-black text-slate-900 text-xs block mb-1">
+              <span className="font-semibold text-slate-900 text-xs block mb-1">
                 Legenda Simples:
               </span>
               <div className="space-y-1 text-xs font-bold text-slate-700">
@@ -942,16 +942,16 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <span className="font-mono font-black text-xl text-[#003440]">
+                          <span className="font-mono font-semibold text-xl text-[#003440]">
                             {selectedStudentMarker.initials}
                           </span>
                         )}
                       </div>
                       <div>
-                        <span className="text-xs font-black uppercase text-blue-700 block">
+                        <span className="text-xs font-semibold uppercase text-blue-700 block">
                           Aluno(a) Selecionado(a)
                         </span>
-                        <h2 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">
+                        <h2 className="text-lg sm:text-xl font-semibold text-slate-900 leading-tight">
                           {selectedStudentMarker.student.name}
                         </h2>
                         <p className="text-sm font-bold text-slate-600 mt-0.5">
@@ -961,10 +961,10 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                     </>
                   ) : (
                     <div>
-                      <span className="text-xs font-black uppercase text-amber-700 block">
+                      <span className="text-xs font-semibold uppercase text-amber-700 block">
                         Rota Personalizada
                       </span>
-                      <h2 className="text-lg font-black text-slate-900">
+                      <h2 className="text-lg font-semibold text-slate-900">
                         {customPointA?.label} ➔ {customPointB?.label}
                       </h2>
                     </div>
@@ -988,14 +988,14 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
 
               {/* Travel Mode Selector: 3 Big Buttons (Walking / Car / Bus) */}
               <div className="space-y-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-600 block">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 block">
                   Escolha como fazer o trajeto:
                 </span>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setTravelMode('foot')}
-                    className={`min-h-[52px] rounded-2xl font-black text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
+                    className={`min-h-[52px] rounded-2xl font-semibold text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
                       travelMode === 'foot'
                         ? 'bg-emerald-600 text-white border-emerald-700 shadow-md'
                         : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
@@ -1008,7 +1008,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setTravelMode('driving')}
-                    className={`min-h-[52px] rounded-2xl font-black text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
+                    className={`min-h-[52px] rounded-2xl font-semibold text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
                       travelMode === 'driving'
                         ? 'bg-[#0066cc] text-white border-[#0055aa] shadow-md'
                         : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
@@ -1021,7 +1021,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setTravelMode('bus')}
-                    className={`min-h-[52px] rounded-2xl font-black text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
+                    className={`min-h-[52px] rounded-2xl font-semibold text-sm flex flex-col items-center justify-center gap-0.5 border-2 transition-all cursor-pointer active:scale-97 ${
                       travelMode === 'bus'
                         ? 'bg-purple-700 text-white border-purple-800 shadow-md'
                         : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
@@ -1036,7 +1036,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
               {/* Route Summary Box: Distance & Duration */}
               <div className="p-4 rounded-2xl bg-blue-50 border-2 border-blue-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-blue-900 tracking-wider flex items-center gap-1.5">
+                  <span className="text-xs font-semibold uppercase text-blue-900 tracking-wider flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[18px]">straighten</span>
                     <span>Distância Real Pelas Ruas</span>
                   </span>
@@ -1050,14 +1050,14 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div className="bg-white rounded-xl p-3 border-2 border-blue-100 shadow-xs">
                     <span className="text-xs font-bold text-slate-500 block uppercase">Distância</span>
-                    <span className="text-2xl font-black text-slate-900">
+                    <span className="text-2xl font-semibold text-slate-900">
                       {routeData ? `${routeData.distanceKm} km` : selectedStudentMarker ? `${selectedStudentMarker.estimates.distanceRoadKm} km` : '--'}
                     </span>
                   </div>
 
                   <div className="bg-white rounded-xl p-3 border-2 border-blue-100 shadow-xs">
                     <span className="text-xs font-bold text-slate-500 block uppercase">Tempo Estimado</span>
-                    <span className="text-2xl font-black text-blue-700">
+                    <span className="text-2xl font-semibold text-blue-700">
                       {routeData ? `${routeData.durationMinutes} min` : selectedStudentMarker ? `${selectedStudentMarker.estimates.walkMinutes} min` : '--'}
                     </span>
                   </div>
@@ -1067,7 +1067,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleSpeakRoute}
-                  className={`w-full min-h-[48px] px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 cursor-pointer transition-all border-2 shadow-xs active:scale-98 ${
+                  className={`w-full min-h-[48px] px-4 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all border-2 shadow-xs active:scale-98 ${
                     isSpeaking
                       ? 'bg-rose-600 text-white border-rose-700 animate-pulse'
                       : 'bg-emerald-700 hover:bg-emerald-800 text-white border-emerald-800'
@@ -1082,7 +1082,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
 
               {/* Turn-by-Turn Steps List (Numbered with clear instructions) */}
               <div className="space-y-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-700 block">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 block">
                   Passo a Passo pelas Ruas (Gratuito):
                 </span>
 
@@ -1090,11 +1090,11 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                   {routeData && routeData.steps.length > 0 ? (
                     routeData.steps.map((step, idx) => (
                       <div key={idx} className="py-2.5 px-2 flex items-start gap-3">
-                        <span className="w-6 h-6 rounded-full bg-[#0f172a] text-white font-mono font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="w-6 h-6 rounded-full bg-[#0f172a] text-white font-mono font-semibold text-xs flex items-center justify-center shrink-0 mt-0.5">
                           {idx + 1}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black text-slate-900 leading-snug">
+                          <p className="text-sm font-semibold text-slate-900 leading-snug">
                             {step.instruction}
                           </p>
                           <span className="text-xs font-bold text-slate-500 block mt-0.5">
@@ -1116,7 +1116,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                 <div className="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200 space-y-3">
                   <div>
                     <span className="text-xs font-bold text-slate-500 uppercase block">Endereço do Aluno:</span>
-                    <p className="text-sm font-black text-slate-900 mt-0.5">
+                    <p className="text-sm font-semibold text-slate-900 mt-0.5">
                       {selectedStudentMarker.fullAddress}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
@@ -1126,7 +1126,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                       <button
                         type="button"
                         onClick={() => handleCopyCoords(selectedStudentMarker.lat, selectedStudentMarker.lng)}
-                        className="text-xs font-black text-blue-700 hover:underline cursor-pointer"
+                        className="text-xs font-semibold text-blue-700 hover:underline cursor-pointer"
                       >
                         {copiedCoords ? 'Copiado!' : 'Copiar'}
                       </button>
@@ -1154,7 +1154,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                           href={waList[0].waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 min-h-[44px] px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs"
+                          className="flex-1 min-h-[44px] px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs"
                         >
                           <span className="material-symbols-outlined text-[18px]">chat</span>
                           <span>WhatsApp Responsável</span>
@@ -1162,7 +1162,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
 
                         <a
                           href={`tel:${rawPhone.replace(/\D/g, '')}`}
-                          className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 border-2 border-slate-300"
+                          className="min-h-[44px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 border-2 border-slate-300"
                           title="Fazer ligação"
                         >
                           <span className="material-symbols-outlined text-[18px]">call</span>
@@ -1185,7 +1185,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                             selectedStudentMarker.cls.classesHeld || 20
                           )
                         }
-                        className="min-h-[46px] px-3 rounded-xl bg-[#003440] hover:bg-[#00222a] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
+                        className="min-h-[46px] px-3 rounded-xl bg-[#003440] hover:bg-[#00222a] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
                       >
                         <span className="material-symbols-outlined text-[18px]">open_in_full</span>
                         <span>Ficha Completa</span>
@@ -1198,7 +1198,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                         onClick={() =>
                           onOpenStudentPdf(selectedStudentMarker.student, selectedStudentMarker.cls.name)
                         }
-                        className="min-h-[46px] px-3 rounded-xl bg-[#0066cc] hover:bg-[#0055aa] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
+                        className="min-h-[46px] px-3 rounded-xl bg-[#0066cc] hover:bg-[#0055aa] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98"
                       >
                         <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
                         <span>Abrir PDF</span>
@@ -1219,7 +1219,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                       href={navUrls.openStreetMapDirectionsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-xs flex items-center justify-center gap-1.5 border-2 border-slate-300"
+                      className="min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs flex items-center justify-center gap-1.5 border-2 border-slate-300"
                     >
                       <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                       <span>OpenStreetMap</span>
@@ -1229,7 +1229,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                       href={navUrls.directionsToSchoolUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold text-xs flex items-center justify-center gap-1.5 border-2 border-slate-300"
+                      className="min-h-[44px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs flex items-center justify-center gap-1.5 border-2 border-slate-300"
                     >
                       <span className="material-symbols-outlined text-[16px]">navigation</span>
                       <span>Navegar no Celular</span>
@@ -1245,7 +1245,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                 <span className="material-symbols-outlined text-[36px]">touch_app</span>
               </div>
               <div>
-                <h3 className="text-lg sm:text-xl font-black text-slate-900">
+                <h3 className="text-lg sm:text-xl font-semibold text-slate-900">
                   Como Ver o Caminho e Distância
                 </h3>
                 <p className="text-sm sm:text-base font-medium text-slate-600 mt-2 leading-relaxed">
@@ -1259,7 +1259,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsListViewOpen(true)}
-                  className="w-full min-h-[50px] px-4 rounded-2xl bg-[#0f172a] hover:bg-black text-white text-base font-black flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-98"
+                  className="w-full min-h-[50px] px-4 rounded-2xl bg-[#0f172a] hover:bg-black text-white text-base font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-98"
                 >
                   <span className="material-symbols-outlined text-[20px]">format_list_bulleted</span>
                   <span>Ver Lista com {filteredMarkers.length} Alunos</span>
@@ -1272,7 +1272,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
           {isListViewOpen && (
             <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-lg border-2 border-slate-300 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b-2 border-slate-100">
-                <span className="text-sm font-black uppercase text-slate-800">
+                <span className="text-sm font-semibold uppercase text-slate-800">
                   Lista de Alunos ({filteredMarkers.length})
                 </span>
                 <button
@@ -1297,12 +1297,12 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                       }}
                       className={`p-3 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
                         isSelected
-                          ? 'bg-blue-100 border-2 border-blue-400 font-black'
+                          ? 'bg-blue-100 border-2 border-blue-400 font-semibold'
                           : 'hover:bg-slate-100'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white border-2 border-slate-300 shrink-0 flex items-center justify-center font-black text-xs">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white border-2 border-slate-300 shrink-0 flex items-center justify-center font-semibold text-xs">
                           {m.photoUrl ? (
                             <img src={m.photoUrl} alt={m.student.name} className="w-full h-full object-cover" />
                           ) : (
@@ -1310,7 +1310,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                           )}
                         </div>
                         <div className="min-w-0 text-sm">
-                          <span className="font-black text-slate-900 block truncate">
+                          <span className="font-semibold text-slate-900 block truncate">
                             {m.student.name}
                           </span>
                           <span className="text-xs font-bold text-slate-500 block truncate">
@@ -1320,7 +1320,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-sm font-black text-emerald-800 block">
+                        <span className="text-sm font-semibold text-emerald-800 block">
                           🚶 {m.estimates.walkMinutes} min
                         </span>
                         <span className="text-xs font-bold text-slate-500 block">

@@ -134,24 +134,24 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[0.74rem] font-extrabold text-[#374144]">
+                        <span className="text-xs font-semibold text-[#374144]">
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         {student.ra && (
-                          <span className="text-[0.68rem] bg-[#edeeec] px-1.5 py-0.2 rounded font-mono font-bold text-[#003440]">
+                          <span className="text-[11px] bg-[#edeeec] px-1.5 py-0.2 rounded font-mono font-bold text-[#003440]">
                             RA: {student.ra}-{student.digRa}
                           </span>
                         )}
                         {student.deficiencia && (
-                          <span className="text-[0.66rem] font-black text-[#003723] bg-[#a4f3ca] px-2 py-0.2 rounded-full">
+                          <span className="text-[11px] font-semibold text-[#003723] bg-[#a4f3ca] px-2 py-0.2 rounded-full">
                             {student.deficiencia}
                           </span>
                         )}
                       </div>
-                      <span className="text-[0.98rem] font-extrabold text-[#003440] truncate mt-0.5 block">
+                      <span className="text-base font-semibold text-[#003440] truncate mt-0.5 block">
                         {student.name}
                       </span>
-                      <p className="text-[0.78rem] font-semibold text-[#2c373a] truncate">
+                      <p className="text-xs font-semibold text-[#2c373a] truncate">
                         {student.filiacao1 || student.guardianName || 'Responsável cadastrado'}
                       </p>
                     </div>
@@ -159,7 +159,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
                   <div className="flex flex-col items-end shrink-0">
                     <span
-                      className={`text-[0.78rem] font-black px-2 py-0.5 rounded-lg ${
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${
                         student.totalAbsencesMonth > 0
                           ? 'bg-[#ffdad6] text-[#ba1a1a]'
                           : 'bg-[#eaf6ef] text-[#005035]'
@@ -182,11 +182,11 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
             <div className="mt-3 lg:mt-0 lg:col-span-5 p-4 sm:p-5 bg-[#f4f7f5] rounded-2xl border-2 border-[#003440]/25 flex flex-col justify-between gap-3 max-h-[42vh] lg:max-h-full overflow-y-auto">
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b-2 border-[#b4c0c4]/70">
-                  <span className="text-[0.82rem] font-black text-[#003440] uppercase tracking-wide">
+                  <span className="text-sm font-semibold text-[#003440] uppercase tracking-wide">
                     Ficha {getStudentGenderLabel(selectedStudent).doEstudante} — Nº{' '}
                     {selectedStudent.number.toString().padStart(2, '0')}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#c3e5f4] text-[#001f29] font-extrabold text-[0.74rem]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#c3e5f4] text-[#001f29] font-semibold text-xs">
                     {className}
                   </span>
                 </div>
@@ -200,10 +200,10 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                     onUploadPhotoClick={() => onOpenPhotoModal(selectedStudent)}
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-[1.12rem] font-extrabold text-[#003440] leading-tight block">
+                    <h4 className="text-lg font-semibold text-[#003440] leading-tight block">
                       {selectedStudent.name}
                     </h4>
-                    <p className="text-[0.8rem] font-mono font-bold text-[#2c373a] mt-0.5">
+                    <p className="text-sm font-mono font-bold text-[#2c373a] mt-0.5">
                       RA: {selectedStudent.ra || '—'}-{selectedStudent.digRa || ''}/{selectedStudent.ufRa || 'SP'} •{' '}
                       {getStudentGenderLabel(selectedStudent).label}
                     </p>
@@ -220,7 +220,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                             e.preventDefault();
                             onOpenStudentPdf(selectedStudent);
                           }}
-                          className="doc-hyperlink px-3 py-1.5 bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] rounded-xl text-[0.77rem] font-black flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          className="doc-hyperlink px-3 py-1.5 bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[16px]">
                             document_scanner
@@ -236,7 +236,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                             onClose();
                             onOpenStudentGrid(selectedStudent);
                           }}
-                          className="px-3 py-1.5 bg-[#003440] hover:bg-[#1e4b58] text-white rounded-xl text-[0.75rem] font-black flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          className="px-3 py-1.5 bg-[#003440] hover:bg-[#1e4b58] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[16px]">grid_on</span>
                           <span>Abrir 48 Campos SED</span>
@@ -247,29 +247,29 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                 </div>
 
                 {/* Key Student Data Grid (Mobile + Widescreen friendly) */}
-                <div className="grid grid-cols-2 gap-2 text-[0.8rem]">
+                <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="bg-white p-2.5 rounded-xl border border-[#d5dddf]">
-                    <span className="text-[0.68rem] font-extrabold text-[#647073] uppercase block">
+                    <span className="text-[11px] font-semibold text-[#647073] uppercase block">
                       Nascimento / Idade
                     </span>
-                    <span className="font-black text-[#003440]">
+                    <span className="font-semibold text-[#003440]">
                       {selectedStudent.dataNascimento || '—'}{' '}
                       {selectedStudent.idade ? `(${selectedStudent.idade})` : ''}
                     </span>
                   </div>
 
                   <div className="bg-white p-2.5 rounded-xl border border-[#d5dddf]">
-                    <span className="text-[0.68rem] font-extrabold text-[#647073] uppercase block">
+                    <span className="text-[11px] font-semibold text-[#647073] uppercase block">
                       Frequência no Mês
                     </span>
-                    <span className="font-black text-[#005035]">
+                    <span className="font-semibold text-[#005035]">
                       {selectedStudent.totalAbsencesMonth} faltas •{' '}
                       {selectedStudent.justifiedAbsences || 0} atestados
                     </span>
                   </div>
 
                   <div className="col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf]">
-                    <span className="text-[0.68rem] font-extrabold text-[#647073] uppercase block">
+                    <span className="text-[11px] font-semibold text-[#647073] uppercase block">
                       Filiação / Responsáveis (Gênero &amp; Vínculo via Planilha)
                     </span>
                     {(() => {
@@ -299,21 +299,21 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                   </div>
 
                   <div className="col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf]">
-                    <span className="text-[0.68rem] font-extrabold text-[#647073] uppercase block">
+                    <span className="text-[11px] font-semibold text-[#647073] uppercase block">
                       Telefones & Contato
                     </span>
-                    <span className="font-black text-[#003440]">
+                    <span className="font-semibold text-[#003440]">
                       {selectedStudent.telefones || selectedStudent.guardianPhone || '(11) 98765-4321'}
                     </span>
                     {selectedStudent.emailMunicipal && (
-                      <span className="block font-mono text-[0.72rem] text-[#005035] mt-0.5 truncate">
+                      <span className="block font-mono text-xs text-[#005035] mt-0.5 truncate">
                         {selectedStudent.emailMunicipal}
                       </span>
                     )}
                   </div>
 
                   <div className="col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf]">
-                    <span className="text-[0.68rem] font-extrabold text-[#647073] uppercase block">
+                    <span className="text-[11px] font-semibold text-[#647073] uppercase block">
                       Endereço Residencial
                     </span>
                     <span className="font-semibold text-[#151a18]">
@@ -331,7 +331,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
         <div className="pt-3 border-t-2 border-[#edeeec] mt-2 flex justify-end">
           <button
             onClick={onClose}
-            className="w-full sm:w-auto min-w-[200px] min-h-[48px] px-6 bg-[#003440] hover:bg-[#1e4b58] text-white font-black text-[0.95rem] rounded-xl flex items-center justify-center transition-colors cursor-pointer"
+            className="w-full sm:w-auto min-w-[200px] min-h-[48px] px-6 bg-[#003440] hover:bg-[#1e4b58] text-white font-semibold text-base rounded-xl flex items-center justify-center transition-colors cursor-pointer"
           >
             Fechar Visualização da Turma
           </button>

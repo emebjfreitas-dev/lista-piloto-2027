@@ -1,6 +1,6 @@
 {
-  "summary":  "Documentação das melhorias de reestruturação para o ano letivo de 2027:\n- Atualização integral das 40 turmas oficiais (20 Manhã e 20 Tarde) com professores regentes, especialistas e destaque das 3 turmas vagas (2F, G5E, 1E).\n- Padronização tipográfica institucional SED SP (Open Sans, Public Sans e numerais tabulares).\n- Nova Home Screen com relógio dinâmico, contadores por período, status das chamadas e mês de referência automático (mês anterior ao corrente).\n- Gerenciamento de acessos unificado com filtros de Turmas Vagas e atribuição docente.\n- Relatórios A4 e exportação Excel (.xlsx) totalmente adequados.",
-  "updatedAt":  "2026-10-26T12:38:38.653567504Z",
+  "summary":  "Padronização tipográfica e visual completa do sistema EMEB Prof. Joaquim Candelário de Freitas 2027.\n- Família única centralizada: Inter + JetBrains Mono (numerais tabulares) carregadas via Google Fonts e aplicadas no root CSS.\n- Eliminação total de pesos excessivos (font-black 900 e font-extrabold 800) em favor da hierarquia estrita: normal (400), medium (500) e semibold (600).\n- Escala tipográfica unificada: text-[11px] (micro/metadados), text-xs (menus, tabelas compactas, badges), text-sm (corpo principal, inputs), text-base (subtítulos e cards), text-lg (títulos de seção), text-xl/2xl (títulos de página e KPIs).\n- Eliminação completa de rems fracionários arbitrários (text-[0.62rem], text-[0.68rem], etc.).\n- Compilação e tipagem TypeScript 100% verificadas sem erros.",
+  "updatedAt":  "2026-10-28T18:18:11.601533016Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

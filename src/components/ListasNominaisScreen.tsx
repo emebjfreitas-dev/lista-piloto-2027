@@ -339,10 +339,10 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         <span className="material-symbols-outlined text-[36px] text-[#ff3b30]">
           lock
         </span>
-        <h2 className="text-[1.1rem] font-bold text-[#1d1d1f]">
+        <h2 className="text-lg font-bold text-[#1d1d1f]">
           Acesso Restrito à Gestão / Secretaria
         </h2>
-        <p className="text-[0.84rem] text-[#6e6e73]">
+        <p className="text-sm text-[#6e6e73]">
           O painel consolidado do Bolsa Família e metas bimestrais é exclusivo do perfil Administrador.
         </p>
       </div>
@@ -357,7 +357,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <span className="material-symbols-outlined text-[20px] text-[#28cd41]">
               check_circle
             </span>
-            <p className="text-[0.82rem] font-semibold leading-snug">{toastMsg}</p>
+            <p className="text-sm font-semibold leading-snug">{toastMsg}</p>
           </div>
         </div>
       )}
@@ -389,7 +389,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       <section className="card-welcoming bg-white p-4 sm:p-6 border border-black/[0.06] space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
           <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-[0.72rem] font-semibold text-[#6e6e73]">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#6e6e73]">
               <span className="text-[#1d1d1f] font-bold uppercase tracking-wider">
                 Bolsa Família &amp; Busca Ativa Bimestral
               </span>
@@ -400,10 +400,10 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 Ens. Fundamental &lt; 75% | Ed. Infantil &lt; 60%
               </span>
             </div>
-            <h1 className="text-[1.3rem] sm:text-[1.55rem] font-bold text-[#1d1d1f] tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#1d1d1f] tracking-tight leading-tight">
               Estudantes Abaixo da Meta de Presença — {currentBimester.shortLabel}
             </h1>
-            <p className="text-[0.8rem] text-[#6e6e73]">
+            <p className="text-sm text-[#6e6e73]">
               Relação simplificada em <strong>ordem alfabética (A–Z)</strong> por bimestre (Fev+Mar até Out+Nov/2027), destacando etapa de ensino e existência de atestado médico.
             </p>
           </div>
@@ -413,7 +413,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <button
               type="button"
               onClick={handleExportXLS}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-[0.8rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-sm flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
             >
               <span className="material-symbols-outlined text-[18px]">download</span>
               <span>Exportar .XLS</span>
@@ -423,7 +423,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               type="button"
               onClick={handleExportNewGoogleSheet}
               disabled={isExportingGoogleSheet}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#006644] hover:bg-[#005035] text-white font-semibold text-[0.8rem] flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95 disabled:opacity-60"
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#006644] hover:bg-[#005035] text-white font-semibold text-sm flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95 disabled:opacity-60"
             >
               <span
                 className={`material-symbols-outlined text-[18px] ${
@@ -444,7 +444,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         {/* Link imediato quando uma Nova Google Sheet é gerada */}
         {createdSheetUrl && (
           <div className="p-3.5 rounded-2xl bg-[#eaf6ef] border border-[#006644]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-[#005035] text-[0.82rem] font-semibold">
+            <div className="flex items-center gap-2 text-[#005035] text-sm font-semibold">
               <span className="material-symbols-outlined text-[20px]">
                 task_alt
               </span>
@@ -456,7 +456,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               href={createdSheetUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3.5 py-1.5 rounded-xl bg-[#006644] text-white font-bold text-[0.76rem] inline-flex items-center gap-1.5 self-start sm:self-auto hover:bg-[#005035]"
+              className="px-3.5 py-1.5 rounded-xl bg-[#006644] text-white font-bold text-xs inline-flex items-center gap-1.5 self-start sm:self-auto hover:bg-[#005035]"
             >
               <span>Abrir Planilha no Google Sheets</span>
               <span className="material-symbols-outlined text-[15px]">
@@ -468,7 +468,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
         {/* SELETOR VISUAL DE BIMESTRES (FEV+MAR ATÉ OUT+NOV DE 2027) */}
         <div className="pt-1">
-          <span className="text-[0.68rem] font-bold uppercase tracking-wider text-[#6e6e73] block mb-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6e6e73] block mb-2">
             Recorte Bimestral (2027)
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -486,13 +486,13 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                   }`}
                 >
                   <span
-                    className={`text-[0.65rem] font-bold uppercase block ${
+                    className={`text-[11px] font-bold uppercase block ${
                       isSelected ? 'text-white/75' : 'text-[#64748b]'
                     }`}
                   >
                     {bim.id === 'anual' ? 'Consolidado' : `${bim.id.replace('bim', 'º Bimestre')}`}
                   </span>
-                  <span className="text-[0.86rem] font-extrabold block mt-0.5">
+                  <span className="text-sm font-semibold block mt-0.5">
                     {bim.shortLabel}
                   </span>
                 </button>
@@ -520,17 +520,17 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#be123c]">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#be123c]">
                 Total Abaixo da Meta
               </span>
               <span className="material-symbols-outlined text-[18px] text-[#be123c]">
                 warning
               </span>
             </div>
-            <span className="text-[1.65rem] font-black text-[#be123c] tabular-nums block mt-0.5 leading-none">
+            <span className="text-2xl font-semibold text-[#be123c] tabular-nums block mt-0.5 leading-none">
               {kpiStats.totalBelowTarget}
             </span>
-            <span className="text-[0.72rem] font-medium text-[#9f1239] block mt-1">
+            <span className="text-xs font-medium text-[#9f1239] block mt-1">
               de {kpiStats.totalEvaluated} estudantes ativos
             </span>
           </button>
@@ -551,17 +551,17 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#0369a1]">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0369a1]">
                 Ens. Fundamental (&lt; 75%)
               </span>
               <span className="material-symbols-outlined text-[18px] text-[#0284c7]">
                 menu_book
               </span>
             </div>
-            <span className="text-[1.65rem] font-black text-[#0c4a6e] tabular-nums block mt-0.5 leading-none">
+            <span className="text-2xl font-semibold text-[#0c4a6e] tabular-nums block mt-0.5 leading-none">
               {kpiStats.belowFundamentalCount}
             </span>
-            <span className="text-[0.72rem] font-medium text-[#475569] block mt-1">
+            <span className="text-xs font-medium text-[#475569] block mt-1">
               1º ao 5º Ano abaixo de 75%
             </span>
           </button>
@@ -582,24 +582,24 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#b45309]">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#b45309]">
                 Ed. Infantil (&lt; 60%)
               </span>
               <span className="material-symbols-outlined text-[18px] text-[#d97706]">
                 child_care
               </span>
             </div>
-            <span className="text-[1.65rem] font-black text-[#92400e] tabular-nums block mt-0.5 leading-none">
+            <span className="text-2xl font-semibold text-[#92400e] tabular-nums block mt-0.5 leading-none">
               {kpiStats.belowInfantilCount}
             </span>
-            <span className="text-[0.72rem] font-medium text-[#475569] block mt-1">
+            <span className="text-xs font-medium text-[#475569] block mt-1">
               G4 e G5 abaixo de 60%
             </span>
           </button>
 
           {/* Card 4: Com Atestado vs Sem Atestado */}
           <div className="rounded-2xl bg-[#f8fafc] border border-black/[0.07] p-3.5 flex flex-col justify-between">
-            <span className="text-[0.68rem] font-extrabold uppercase tracking-wider text-[#475569] block">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#475569] block">
               Justificativa Médica (Atestado)
             </span>
             <div className="grid grid-cols-2 gap-2 mt-1.5">
@@ -616,10 +616,10 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     : 'bg-[#eaf6ef] text-[#005035] border-[#006644]/20'
                 }`}
               >
-                <span className="text-[1.1rem] font-black tabular-nums block leading-none">
+                <span className="text-lg font-semibold tabular-nums block leading-none">
                   {kpiStats.belowWithAtestadoCount}
                 </span>
-                <span className="text-[0.64rem] font-bold block mt-0.5">
+                <span className="text-[11px] font-bold block mt-0.5">
                   Com Atestado
                 </span>
               </button>
@@ -636,10 +636,10 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     : 'bg-[#fff1f2] text-[#be123c] border-[#be123c]/20'
                 }`}
               >
-                <span className="text-[1.1rem] font-black tabular-nums block leading-none">
+                <span className="text-lg font-semibold tabular-nums block leading-none">
                   {kpiStats.belowWithoutAtestadoCount}
                 </span>
-                <span className="text-[0.64rem] font-bold block mt-0.5">
+                <span className="text-[11px] font-bold block mt-0.5">
                   Sem Atestado
                 </span>
               </button>
@@ -654,7 +654,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <select
               value={selectedClassFilter}
               onChange={(e) => setSelectedClassFilter(e.target.value)}
-              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-[0.8rem] rounded-xl border border-black/[0.07] cursor-pointer"
+              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-sm rounded-xl border border-black/[0.07] cursor-pointer"
             >
               <option value="all">Todas as Turmas ({classes.length} turmas)</option>
               {classes.map((c) => (
@@ -670,7 +670,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <select
               value={selectedSegmentFilter}
               onChange={(e) => setSelectedSegmentFilter(e.target.value as any)}
-              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-[0.8rem] rounded-xl border border-black/[0.07] cursor-pointer"
+              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-sm rounded-xl border border-black/[0.07] cursor-pointer"
             >
               <option value="all">Todas as Etapas (Inf. &lt;60% | Fund. &lt;75%)</option>
               <option value="fundamental">Ensino Fundamental (Meta &lt; 75%)</option>
@@ -683,7 +683,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <select
               value={selectedAtestadoFilter}
               onChange={(e) => setSelectedAtestadoFilter(e.target.value as any)}
-              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-[0.8rem] rounded-xl border border-black/[0.07] cursor-pointer"
+              className="w-full min-h-[42px] px-3 bg-[#f1f5f9] text-[#0f172a] font-bold text-sm rounded-xl border border-black/[0.07] cursor-pointer"
             >
               <option value="all">Com e Sem Atestado</option>
               <option value="com_atestado">Com Atestado Médico</option>
@@ -696,7 +696,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <select
               value={onlyBelowTarget ? 'abaixo_meta' : 'todos'}
               onChange={(e) => setOnlyBelowTarget(e.target.value === 'abaixo_meta')}
-              className="w-full min-h-[42px] px-3 bg-[#fff1f2] text-[#be123c] font-extrabold text-[0.8rem] rounded-xl border border-[#be123c]/25 cursor-pointer"
+              className="w-full min-h-[42px] px-3 bg-[#fff1f2] text-[#be123c] font-semibold text-sm rounded-xl border border-[#be123c]/25 cursor-pointer"
             >
               <option value="abaixo_meta">Apenas Abaixo da Meta</option>
               <option value="todos">Todos os Estudantes (A–Z)</option>
@@ -713,7 +713,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar aluno..."
-              className="w-full min-h-[42px] pl-9 pr-7 bg-[#f1f5f9] text-[#0f172a] text-[0.8rem] rounded-xl border border-transparent focus:border-[#0f172a]/30 focus:bg-white focus:outline-none font-medium"
+              className="w-full min-h-[42px] pl-9 pr-7 bg-[#f1f5f9] text-[#0f172a] text-sm rounded-xl border border-transparent focus:border-[#0f172a]/30 focus:bg-white focus:outline-none font-medium"
             />
             {searchQuery && (
               <button
@@ -731,7 +731,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       {/* TABELA NOMINAL SIMPLIFICADA E VISUAL EM ORDEM ALFABÉTICA (A-Z) */}
       <div className="bg-white rounded-3xl border border-black/[0.07] overflow-hidden shadow-xs">
         <div className="px-5 py-3.5 bg-[#f8fafc] border-b border-black/[0.06] flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-[0.8rem] font-bold text-[#0f172a]">
+          <div className="flex items-center gap-2 text-sm font-bold text-[#0f172a]">
             <span className="material-symbols-outlined text-[18px] text-[#0071e3]">
               sort_by_alpha
             </span>
@@ -740,7 +740,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               {filteredRows.length === 1 ? 'estudante listado' : 'estudantes listados'}
             </span>
           </div>
-          <span className="text-[0.74rem] text-[#64748b] font-medium">
+          <span className="text-xs text-[#64748b] font-medium">
             Clique em qualquer estudante para abrir a Ficha Individual Completa
           </span>
         </div>
@@ -750,17 +750,17 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <span className="material-symbols-outlined text-[38px] text-[#28cd41]">
               verified
             </span>
-            <h3 className="text-[1.02rem] font-bold text-[#1d1d1f]">
+            <h3 className="text-base font-bold text-[#1d1d1f]">
               Nenhum estudante abaixo da meta para os filtros selecionados
             </h3>
-            <p className="text-[0.82rem] text-[#6e6e73]">
+            <p className="text-sm text-[#6e6e73]">
               Altere o bimestre, a turma ou selecione &ldquo;Todos os Estudantes (A–Z)&rdquo; para visualizar toda a relação.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-[0.8rem] border-collapse min-w-[980px]">
-              <thead className="bg-[#f8fafc] text-[#475569] border-b border-black/[0.07] font-bold uppercase tracking-wider text-[0.68rem]">
+            <table className="w-full text-left text-sm border-collapse min-w-[980px]">
+              <thead className="bg-[#f8fafc] text-[#475569] border-b border-black/[0.07] font-bold uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="py-3 px-4 w-12 text-center">#</th>
                   <th className="py-3 px-4">Estudante (Ordem Alfabética A–Z)</th>
@@ -804,7 +804,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                           : 'hover:bg-[#f8fafc]'
                       }`}
                     >
-                      <td className="py-3 px-4 text-center font-mono text-[0.74rem] font-bold text-[#64748b]">
+                      <td className="py-3 px-4 text-center font-mono text-xs font-bold text-[#64748b]">
                         {(idx + 1).toString().padStart(2, '0')}
                       </td>
 
@@ -817,10 +817,10 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                             expandableOnClick={false}
                           />
                           <div className="min-w-0">
-                            <span className="font-bold text-[#0f172a] block truncate text-[0.85rem]">
+                            <span className="font-bold text-[#0f172a] block truncate text-sm">
                               {student.name}
                             </span>
-                            <div className="flex items-center gap-1.5 text-[0.7rem] text-[#64748b]">
+                            <div className="flex items-center gap-1.5 text-xs text-[#64748b]">
                               <span>RA {student.ra}-{student.digRa}</span>
                               {student.nis && (
                                 <>
@@ -840,7 +840,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                         <span className="font-bold text-[#0f172a] block">
                           {cls.name}
                         </span>
-                        <span className="text-[0.7rem] text-[#64748b] block">
+                        <span className="text-xs text-[#64748b] block">
                           {rep.isEducacaoInfantil
                             ? 'Ed. Infantil (Meta ≥60%)'
                             : 'Ens. Fundamental (Meta ≥75%)'}
@@ -855,7 +855,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                             className="py-3 px-3 text-center font-mono border-x border-black/[0.04]"
                           >
                             <span
-                              className={`font-extrabold text-[0.84rem] block ${
+                              className={`font-semibold text-sm block ${
                                 mb.isBelowLegalThreshold
                                   ? 'text-[#be123c]'
                                   : 'text-[#0f172a]'
@@ -863,14 +863,14 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                             >
                               {mb.frequenciaPercent}%
                             </span>
-                            <span className="text-[0.68rem] text-[#64748b] block">
+                            <span className="text-[11px] text-[#64748b] block">
                               {mb.faltas}F · {mb.atestados}A
                             </span>
                           </td>
                         ))
                       ) : (
                         <td className="py-3 px-3 text-center font-mono border-x border-black/[0.04]">
-                          <span className="font-extrabold text-[0.82rem] text-[#be123c] block">
+                          <span className="font-semibold text-sm text-[#be123c] block">
                             {row.worstMonthName}: {row.worstMonthPercent}%
                           </span>
                         </td>
@@ -878,10 +878,10 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
                       {/* Total de Faltas no Bimestre */}
                       <td className="py-3 px-3 text-center font-mono">
-                        <span className="font-extrabold text-[0.88rem] text-[#be123c]">
+                        <span className="font-semibold text-sm text-[#be123c]">
                           {rep.totalFaltasBimestre}
                         </span>
-                        <span className="text-[0.7rem] text-[#64748b] block">
+                        <span className="text-xs text-[#64748b] block">
                           em {rep.totalDiasBimestre}d letivos
                         </span>
                       </td>
@@ -890,19 +890,19 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                       <td className="py-3 px-3 text-center">
                         {hasAtestado ? (
                           <div className="inline-flex flex-col items-center">
-                            <span className="text-[0.76rem] font-extrabold text-[#006644]">
+                            <span className="text-xs font-semibold text-[#006644]">
                               SIM ({rep.totalAtestadosBimestre} atestado{rep.totalAtestadosBimestre > 1 ? 's' : ''})
                             </span>
-                            <span className="text-[0.66rem] text-[#64748b]">
+                            <span className="text-[11px] text-[#64748b]">
                               {rep.totalSemAtestadoBimestre} s/ justificativa
                             </span>
                           </div>
                         ) : (
                           <div className="inline-flex flex-col items-center">
-                            <span className="text-[0.76rem] font-extrabold text-[#be123c]">
+                            <span className="text-xs font-semibold text-[#be123c]">
                               NÃO
                             </span>
-                            <span className="text-[0.66rem] text-[#9f1239]">
+                            <span className="text-[11px] text-[#9f1239]">
                               100% sem atestado
                             </span>
                           </div>
@@ -914,13 +914,13 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                         <div className="flex flex-col items-center gap-1">
                           <div className="flex items-baseline gap-1.5 font-mono">
                             <span
-                              className={`text-[0.95rem] font-black ${
+                              className={`text-base font-semibold ${
                                 isBelowTarget ? 'text-[#be123c]' : 'text-[#006644]'
                               }`}
                             >
                               {rep.frequenciaBimestrePercent}%
                             </span>
-                            <span className="text-[0.68rem] text-[#64748b]">
+                            <span className="text-[11px] text-[#64748b]">
                               / meta {rep.minLegalPresencePercent}%
                             </span>
                           </div>

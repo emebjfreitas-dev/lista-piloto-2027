@@ -251,13 +251,13 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                 <span className="material-symbols-outlined text-[24px]">picture_as_pdf</span>
               </div>
               <div className="min-w-0">
-                <span className="text-[0.7rem] font-bold uppercase tracking-wider text-[#ff3b30] block">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#ff3b30] block">
                   {embedUrl ? 'Alterar Vínculo de Ficha PDF' : 'Ficha Informativa Pendente'} • {className}
                 </span>
-                <h3 className="text-[1.08rem] sm:text-[1.18rem] font-bold text-[#1d1d1f] truncate">
+                <h3 className="text-base sm:text-lg font-bold text-[#1d1d1f] truncate">
                   {student.name}
                 </h3>
-                <p className="text-[0.74rem] text-[#6e6e73]">
+                <p className="text-xs text-[#6e6e73]">
                   Nº {student.number.toString().padStart(2, '0')} • RA {student.ra || '—'}-{student.digRa || ''}
                 </p>
               </div>
@@ -273,7 +273,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
 
           {!showManualLinker && (
             <div className="p-4 rounded-2xl bg-[#fff8f7] border border-[#ff3b30]/20 space-y-2">
-              <p className="text-[0.86rem] text-[#1d1d1f] font-medium leading-relaxed">
+              <p className="text-sm text-[#1d1d1f] font-medium leading-relaxed">
                 {isCheckingDrive
                   ? 'Verificando na pasta da turma no Google Drive se o PDF foi enviado...'
                   : 'Este(a) estudante ainda está sem Ficha Informativa vinculada automaticamente. Caso o arquivo no Google Drive esteja com nome abreviado ou grafia diferente, vincule manualmente abaixo em 1 clique ou solicite à família no WhatsApp.'}
@@ -287,7 +287,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                       href={ph.waUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#25D366]/14 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-semibold text-[0.78rem] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                      className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#25D366]/14 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">chat</span>
                       <span>Pedir à família no WhatsApp ({ph.display})</span>
@@ -299,16 +299,16 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
           )}
 
           {/* Localização de Ficha PDF do Google Drive */}
-          <div className="bg-[#f5f5f7] rounded-2xl p-4 border border-black/[0.06] space-y-3">
+          <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/90 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h4 className="text-[0.86rem] font-extrabold text-[#1d1d1f] flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[18px] text-[#0071e3]">
+                <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px] text-blue-600">
                     folder_open
                   </span>
                   <span>Localizar PDF da Pasta do Google Drive ({discoveredPdfs.length} arquivos)</span>
                 </h4>
-                <p className="text-[0.72rem] text-[#6e6e73]">
+                <p className="text-xs text-slate-500">
                   Localização rápida de fichas escaneadas sincronizadas no Google Drive.
                 </p>
               </div>
@@ -318,7 +318,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                   type="button"
                   onClick={handleRefreshDrivePdfs}
                   disabled={isCheckingDrive}
-                  className="h-8 px-3 rounded-xl bg-white hover:bg-[#e8e8ed] text-[#1d1d1f] border border-black/[0.08] font-bold text-[0.72rem] flex items-center gap-1 cursor-pointer shrink-0"
+                  className="h-8 px-3 rounded-xl bg-white hover:bg-[#e8e8ed] text-[#1d1d1f] border border-black/[0.08] font-bold text-xs flex items-center gap-1 cursor-pointer shrink-0"
                 >
                   <span
                     className={`material-symbols-outlined text-[15px] text-[#0071e3] ${
@@ -341,7 +341,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                 value={pdfSearchQuery}
                 onChange={(e) => setPdfSearchQuery(e.target.value)}
                 placeholder="Pesquisar PDF por nome, parte do nome, subpasta da turma ou ID..."
-                className="w-full h-10 pl-9 pr-8 bg-white border border-black/[0.08] rounded-xl text-[0.8rem] font-medium text-[#1d1d1f] focus:border-[#0071e3] focus:outline-none"
+                className="w-full h-10 pl-9 pr-8 bg-white border border-black/[0.08] rounded-xl text-sm font-medium text-[#1d1d1f] focus:border-[#0071e3] focus:outline-none"
               />
               {pdfSearchQuery && (
                 <button
@@ -355,7 +355,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             </div>
 
             {filteredPdfs.length === 0 ? (
-              <div className="p-4 text-center bg-white rounded-xl border border-black/[0.05] text-[0.76rem] text-[#6e6e73]">
+              <div className="p-4 text-center bg-white rounded-xl border border-black/[0.05] text-xs text-[#6e6e73]">
                 Nenhum PDF encontrado na lista com esse termo. Refine a busca ou clique em "Recarregar Drive".
               </div>
             ) : (
@@ -372,10 +372,10 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                       }`}
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-[0.78rem] font-bold text-[#1d1d1f] truncate">
+                        <p className="text-xs font-bold text-[#1d1d1f] truncate">
                           {pdf.name}
                         </p>
-                        <p className="text-[0.68rem] text-[#6e6e73] truncate">
+                        <p className="text-[11px] text-[#6e6e73] truncate">
                           Pasta: <strong>{pdf.subfolderName || 'Fichas Informativas'}</strong> • ID: {pdf.id.slice(0, 8)}...
                         </p>
                       </div>
@@ -384,7 +384,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                           href={pdf.webViewLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-[0.7rem] font-semibold"
+                          className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold"
                           title="Pré-visualizar PDF em nova guia"
                         >
                           Ver
@@ -392,7 +392,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                         <button
                           type="button"
                           onClick={() => handleConfirmManualPdf(pdf)}
-                          className="px-3 py-1 rounded-lg bg-[#0071e3] hover:bg-[#005bb5] text-white text-[0.72rem] font-bold cursor-pointer"
+                          className="px-3 py-1 rounded-lg bg-[#0071e3] hover:bg-[#005bb5] text-white text-xs font-bold cursor-pointer"
                         >
                           {isCurrent ? 'Selecionado' : 'Selecionar'}
                         </button>
@@ -406,7 +406,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
           </div>
 
           {statusFeedback && (
-            <div className="p-3 rounded-xl bg-[#eaf6ef] text-[#005035] text-[0.78rem] font-bold border border-[#005035]/20">
+            <div className="p-3 rounded-xl bg-[#eaf6ef] text-[#005035] text-xs font-bold border border-[#005035]/20">
               {statusFeedback}
             </div>
           )}
@@ -416,7 +416,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               <button
                 type="button"
                 onClick={() => setShowManualLinker(false)}
-                className="min-h-[42px] px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-bold text-[0.82rem] cursor-pointer"
+                className="min-h-[42px] px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-bold text-sm cursor-pointer"
               >
                 Voltar para o PDF
               </button>
@@ -424,7 +424,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[42px] px-5 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-bold text-[0.84rem] cursor-pointer"
+              className="min-h-[42px] px-5 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-bold text-sm cursor-pointer"
             >
               Fechar
             </button>
@@ -454,20 +454,20 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[0.72rem] font-semibold text-[#6e6e73] uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#6e6e73] uppercase tracking-wider">
                   {className} • Nº {student.number.toString().padStart(2, '0')}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[0.64rem] font-bold uppercase bg-[#eaf6ef] text-[#005035]">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-[#eaf6ef] text-[#005035]">
                   Ficha Digitalizada
                 </span>
                 {student.fichaPdfSubfolder && (
-                  <span className="text-[0.7rem] text-[#86868b] truncate hidden md:inline">
+                  <span className="text-xs text-[#86868b] truncate hidden md:inline">
                     • {student.fichaPdfSubfolder}
                   </span>
                 )}
               </div>
 
-              <h3 className="text-[1rem] sm:text-[1.12rem] font-bold text-[#1d1d1f] truncate leading-tight mt-0.5">
+              <h3 className="text-[1rem] sm:text-lg font-bold text-[#1d1d1f] truncate leading-tight mt-0.5">
                 {student.name}
               </h3>
             </div>
@@ -523,7 +523,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               allow="autoplay"
             />
           </div>
-          <div className="pt-2 px-1 flex items-center justify-between text-[0.72rem] text-[#86868b]">
+          <div className="pt-2 px-1 flex items-center justify-between text-xs text-[#86868b]">
             <span>Ficha Informativa Oficial Digitalizada · SME Jundiaí</span>
             {driveFileId && (
               <a

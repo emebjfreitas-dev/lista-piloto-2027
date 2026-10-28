@@ -229,7 +229,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <p className="text-xs font-semibold text-slate-600">
             Secretaria de Educação
           </p>
-          <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 pt-1 leading-snug">
+          <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 pt-1 leading-snug">
             EMEB Prof. Joaquim Candelário de Freitas
           </h1>
         </div>
@@ -246,7 +246,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* Card do Usuário Lembrado (quando aplicável) */}
         {rememberedUser && rememberedUser.active && (
-          <div className="w-full mb-4 bg-slate-50 rounded-2xl p-3 border border-slate-200 text-left flex items-center justify-between gap-3">
+          <div className="w-full mb-4 bg-slate-50 rounded-xl p-3 border border-slate-200 text-left flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <StudentAvatar
                 name={rememberedUser.name}
@@ -254,10 +254,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 className="w-10 h-10 text-xs shrink-0 ring-1 ring-slate-300"
               />
               <div className="min-w-0">
-                <span className="text-[11px] font-bold text-slate-500 block leading-none">
+                <span className="text-[11px] font-medium text-slate-500 block leading-none">
                   Conectado como
                 </span>
-                <p className="text-sm font-extrabold text-slate-900 truncate mt-0.5">
+                <p className="text-sm font-semibold text-slate-900 truncate mt-0.5">
                   {rememberedUser.name}
                 </p>
                 <p className="text-xs text-slate-600 font-medium truncate">

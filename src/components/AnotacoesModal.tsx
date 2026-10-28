@@ -35,7 +35,7 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-[#edeeec]">
           <div className="flex items-center gap-2 text-[#003440]">
             <span className="material-symbols-outlined text-[26px]">rate_review</span>
-            <h3 className="text-[1.25rem] font-bold">
+            <h3 className="text-lg font-bold">
               Anotações da Turma — {classGroup.name}
             </h3>
           </div>
@@ -49,7 +49,7 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
 
         {/* Content */}
         <div className="py-4 space-y-3">
-          <p className="text-[0.9rem] text-[#41484b]">
+          <p className="text-sm text-[#41484b]">
             Registre ocorrências da turma, recados da coordenação ou observações para as reuniões pedagógicas:
           </p>
 
@@ -58,11 +58,11 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Digite os comentários e recados sobre a turma aqui..."
-            className="w-full p-3.5 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] text-[#191c1b] text-[0.95rem] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#003440]/20 resize-none leading-relaxed"
+            className="w-full p-3.5 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] text-[#191c1b] text-base focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#003440]/20 resize-none leading-relaxed"
           />
 
           {savedSuccess && (
-            <div className="p-3 bg-[#a4f3ca]/40 text-[#003723] rounded-xl font-bold text-[0.9rem] flex items-center gap-2">
+            <div className="p-3 bg-[#a4f3ca]/40 text-[#003723] rounded-xl font-bold text-sm flex items-center gap-2">
               <span className="material-symbols-outlined text-[20px]">check_circle</span>
               <span>Anotações salvas com sucesso no diário!</span>
             </div>
@@ -74,14 +74,14 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
           <button
             onClick={onClose}
             type="button"
-            className="flex-1 min-h-[50px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-bold text-[0.95rem] rounded-xl transition-colors cursor-pointer"
+            className="flex-1 min-h-[50px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-bold text-base rounded-xl transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             type="button"
-            className="flex-1 min-h-[50px] bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-[0.95rem] rounded-xl shadow-sm transition-all cursor-pointer"
+            className="flex-1 min-h-[50px] bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-base rounded-xl shadow-sm transition-all cursor-pointer"
           >
             Salvar Anotações
           </button>

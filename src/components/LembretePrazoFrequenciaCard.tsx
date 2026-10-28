@@ -63,7 +63,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
 
   if (isDismissed) {
     return (
-      <div className="flex items-center justify-between px-3 py-1.5 rounded-2xl bg-[#f5f5f7] text-[0.72rem] text-[#6e6e73]">
+      <div className="flex items-center justify-between px-3 py-1.5 rounded-2xl bg-[#f5f5f7] text-xs text-[#6e6e73]">
         <div className="flex items-center gap-1.5">
           <Bell className="w-3.5 h-3.5 text-[#0071e3]" />
           <span>Lembrete de prazos minimizado</span>
@@ -139,23 +139,23 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`px-2.5 py-0.5 rounded-full font-black text-[0.68rem] uppercase tracking-wider ${badgeBg}`}
+                className={`px-2.5 py-0.5 rounded-full font-medium text-xs uppercase tracking-wider ${badgeBg}`}
               >
                 {isOpen ? 'Janela Aberta' : 'Lembrete de Prazo'}
               </span>
 
-              <span className="text-[0.72rem] font-bold text-[#6e6e73]">
+              <span className="text-xs text-slate-500 font-medium">
                 {win.currentDateFormatted} · Mês de {win.targetMonthName}
               </span>
 
               {pendingSummary.pendingCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-white/80 text-[#1d1d1f] text-[0.68rem] font-extrabold tabular-nums border border-black/[0.06]">
+                <span className="px-2 py-0.5 rounded-full bg-white text-slate-700 text-xs font-medium tabular-nums border border-slate-200">
                   {pendingSummary.pendingCount} fechamento(s) pendente(s)
                 </span>
               )}
             </div>
 
-            <h2 className={`text-[0.98rem] sm:text-[1.08rem] font-black tracking-tight leading-snug mt-1 ${titleColor}`}>
+            <h2 className={`text-base font-semibold tracking-tight leading-snug mt-1 ${titleColor}`}>
               {isOpen ? (
                 <span>
                   Prazo de Fechamento Aberto — Encerramento em {win.closingDateFormatted}
@@ -167,7 +167,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               )}
             </h2>
 
-            <p className="text-[0.78rem] text-[#6e6e73] leading-relaxed mt-0.5">
+            <p className="text-xs sm:text-sm text-slate-600 leading-normal mt-0.5">
               {isOpen ? (
                 <span>
                   Os educadores devem concluir o lançamento de faltas e atestados antes do prazo final ({win.closingDateFormatted}, 2º dia letivo). A sincronização com a SED e Google Sheets ocorre automaticamente.
@@ -187,9 +187,9 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             <button
               type="button"
               onClick={() => onOpenMonthlyAttendance(pendingSummary.firstPendingClass || targetClass)}
-              className="h-[38px] px-4 rounded-full bg-[#005035] hover:bg-[#003d28] text-white font-extrabold text-[0.78rem] flex items-center gap-1.5 shadow-2xs transition-all active:scale-97 cursor-pointer"
+              className="h-8 px-3.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <CalendarCheck className="w-4 h-4 text-white" />
+              <CalendarCheck className="w-3.5 h-3.5 text-white" />
               <span>
                 {userRole === 'usuario' ? 'Lançar Minhas Faltas' : 'Conferir Fechamentos'}
               </span>
@@ -201,7 +201,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               type="button"
               onClick={onNavigateToAcessos}
               title="Configurar Janela de Lançamento e Prazos"
-              className="h-[38px] px-3 rounded-full bg-white/80 hover:bg-white text-[#1d1d1f] font-bold text-[0.74rem] flex items-center gap-1.5 border border-black/[0.08] transition-all cursor-pointer shadow-2xs"
+              className="h-[38px] px-3 rounded-full bg-white/80 hover:bg-white text-[#1d1d1f] font-bold text-xs flex items-center gap-1.5 border border-black/[0.08] transition-all cursor-pointer shadow-2xs"
             >
               <Settings className="w-3.5 h-3.5 text-[#6e6e73]" />
               <span>Ajustar Prazos</span>

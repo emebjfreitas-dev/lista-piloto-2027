@@ -170,7 +170,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
         {/* Cabeçalho do Resumo de Faltas Críticas */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-black/[0.06]">
           <div className="space-y-0.5">
-            <div className="flex flex-wrap items-center gap-2 text-[0.75rem] font-semibold text-[#ff3b30]">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#ff3b30]">
               <span className="material-symbols-outlined text-[18px]">warning</span>
               <span>Busca Ativa Escolar · Monitoramento de Faltas Consecutivas</span>
               <span aria-hidden="true" className="text-[#d2d2d7]">·</span>
@@ -178,10 +178,10 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 Limiar: {threshold}+ dias seguidos
               </span>
             </div>
-            <h2 className="text-[1.1rem] sm:text-[1.25rem] font-bold text-[#1d1d1f] tracking-tight">
+            <h2 className="text-lg sm:text-lg font-bold text-[#1d1d1f] tracking-tight">
               Resumo de Faltas Críticas ({criticalItems.length})
             </h2>
-            <p className="text-[0.8rem] text-[#6e6e73]">
+            <p className="text-sm text-[#6e6e73]">
               Alerta visual para cada estudante que atingiu o limiar de faltas seguidas. Clique sobre o estudante para inspecionar os dias faltosos, histórico anual e retorno da família.
             </p>
           </div>
@@ -189,7 +189,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
           {/* Controles: Seletor de Limiar Configurado (3+, 5+, 10+ dias) & Filtros Rápidos */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <div className="flex items-center gap-1 bg-[#f5f5f7] p-1 rounded-xl">
-              <span className="text-[0.72rem] font-semibold text-[#6e6e73] px-2">
+              <span className="text-xs font-semibold text-[#6e6e73] px-2">
                 Limiar:
               </span>
               {[3, 5, 10].map((val) => (
@@ -197,7 +197,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   key={val}
                   type="button"
                   onClick={() => handleUpdateThreshold(val)}
-                  className={`px-2.5 py-1 rounded-lg text-[0.74rem] font-semibold font-mono tabular-nums transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold font-mono tabular-nums transition-colors cursor-pointer ${
                     threshold === val
                       ? val === 10
                         ? 'bg-[#be123c] text-white shadow-2xs'
@@ -247,10 +247,10 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
         {/* Lista de Cards de Alerta Visual por Estudante */}
         {filteredItems.length === 0 ? (
           <div className="py-6 px-4 text-center bg-[#f5f5f7]/60 rounded-2xl space-y-1">
-            <p className="text-[0.9rem] font-semibold text-[#1d1d1f]">
+            <p className="text-sm font-semibold text-[#1d1d1f]">
               Nenhum estudante atingiu o limiar de {threshold}+ faltas críticas neste filtro
             </p>
-            <p className="text-[0.78rem] text-[#6e6e73]">
+            <p className="text-xs text-[#6e6e73]">
               Todos os estudantes monitorados estão abaixo do limite configurado ou já foram filtrados.
             </p>
           </div>
@@ -305,10 +305,10 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     <div className="flex items-center gap-2.5 min-w-0">
                       <StudentAvatar student={student} size="sm" />
                       <div className="min-w-0">
-                        <h3 className="text-[0.88rem] font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors truncate">
+                        <h3 className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors truncate">
                           {student.name}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[0.72rem] text-[#6e6e73] font-medium">
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#6e6e73] font-medium">
                           <span className="font-semibold text-[#1d1d1f]">{cls.name}</span>
                           <span aria-hidden="true">·</span>
                           <span className="font-mono tabular-nums">
@@ -326,7 +326,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
                     <div className="text-right shrink-0">
                       <span
-                        className={`px-2 py-0.5 rounded-full font-mono font-black text-[0.72rem] tabular-nums inline-block ${badgeTierColor}`}
+                        className={`px-2 py-0.5 rounded-full font-mono font-semibold text-xs tabular-nums inline-block ${badgeTierColor}`}
                       >
                         {consecutiveDaysCount >= 10
                           ? `10+ DIAS (${consecutiveDaysCount}d)`
@@ -334,14 +334,14 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                           ? `5+ DIAS (${consecutiveDaysCount}d)`
                           : `3+ DIAS (${consecutiveDaysCount}d)`}
                       </span>
-                      <span className="text-[0.68rem] text-[#6e6e73] font-mono tabular-nums block mt-0.5">
+                      <span className="text-[11px] text-[#6e6e73] font-mono tabular-nums block mt-0.5">
                         Ano: {totalConsecutiveDaysYear}d ({occurrences.length || 1}x)
                       </span>
                     </div>
                   </div>
 
                   {/* Linha de Datas e Status do Retorno da Família */}
-                  <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between gap-2 text-[0.74rem]">
+                  <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between gap-2 text-xs">
                     <div className="min-w-0 flex-1 truncate">
                       <span className="text-[#6e6e73]">Datas: </span>
                       <span className="font-mono font-semibold text-[#1d1d1f]">
@@ -364,7 +364,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   </div>
 
                   {hasFamilyFeedback && (
-                    <p className="text-[0.74rem] text-[#1d1d1f] bg-white/90 px-2.5 py-1.5 rounded-xl line-clamp-1 font-medium">
+                    <p className="text-xs text-[#1d1d1f] bg-white/90 px-2.5 py-1.5 rounded-xl line-clamp-1 font-medium">
                       “{familyFeedbackText}”
                     </p>
                   )}
@@ -380,7 +380,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             <button
               type="button"
               onClick={() => setShowAllStudents(!showAllStudents)}
-              className="text-[0.8rem] font-semibold text-[#0066cc] hover:underline cursor-pointer flex items-center gap-1"
+              className="text-sm font-semibold text-[#0066cc] hover:underline cursor-pointer flex items-center gap-1"
             >
               <span>
                 {showAllStudents
@@ -392,7 +392,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
               </span>
             </button>
           ) : (
-            <span className="text-[0.75rem] text-[#6e6e73]">
+            <span className="text-xs text-[#6e6e73]">
               Clique em qualquer estudante acima para abrir os detalhes completos da ocorrência.
             </span>
           )}
@@ -406,7 +406,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   criticalItems[0].student
                 )
               }
-              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.78rem] flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <span className="material-symbols-outlined text-[17px] text-[#ff3b30]">
                 event_busy
@@ -432,13 +432,13 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
               <div className="flex items-center gap-3 min-w-0">
                 <StudentAvatar student={selectedDetailItem.student} size="md" />
                 <div className="min-w-0">
-                  <span className="text-[0.72rem] font-semibold text-[#ff3b30] block">
+                  <span className="text-xs font-semibold text-[#ff3b30] block">
                     Alerta de Faltas Críticas · Turma {selectedDetailItem.cls.name}
                   </span>
-                  <h3 className="text-[1.1rem] sm:text-[1.2rem] font-bold text-[#1d1d1f] truncate">
+                  <h3 className="text-lg sm:text-lg font-bold text-[#1d1d1f] truncate">
                     {selectedDetailItem.student.name}
                   </h3>
-                  <p className="text-[0.76rem] text-[#6e6e73] font-mono tabular-nums">
+                  <p className="text-xs text-[#6e6e73] font-mono tabular-nums">
                     Nº {selectedDetailItem.student.number.toString().padStart(2, '0')} · RA{' '}
                     {selectedDetailItem.student.ra || '—'} · Regente:{' '}
                     {selectedDetailItem.cls.teacherName || 'PEB I'}
@@ -459,28 +459,28 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             {/* Resumo Numérico do Estudante */}
             <div className="grid grid-cols-3 gap-2.5 text-center">
               <div className="bg-[#fff8f7] rounded-2xl p-3 border border-[#ff3b30]/20">
-                <span className="text-[0.68rem] font-semibold text-[#6e6e73] block">
+                <span className="text-[11px] font-semibold text-[#6e6e73] block">
                   Sequência Atual
                 </span>
-                <span className="text-[1.35rem] font-bold text-[#ff3b30] font-mono tabular-nums">
+                <span className="text-xl font-bold text-[#ff3b30] font-mono tabular-nums">
                   {selectedDetailItem.consecutiveDaysCount} dias
                 </span>
               </div>
 
               <div className="bg-[#f5f5f7] rounded-2xl p-3">
-                <span className="text-[0.68rem] font-semibold text-[#6e6e73] block">
+                <span className="text-[11px] font-semibold text-[#6e6e73] block">
                   Ocorrências no Ano
                 </span>
-                <span className="text-[1.25rem] font-bold text-[#1d1d1f] font-mono tabular-nums">
+                <span className="text-lg font-bold text-[#1d1d1f] font-mono tabular-nums">
                   {selectedDetailItem.occurrences.length || 1}x ({selectedDetailItem.totalConsecutiveDaysYear} dias)
                 </span>
               </div>
 
               <div className="bg-[#f5f5f7] rounded-2xl p-3">
-                <span className="text-[0.68rem] font-semibold text-[#6e6e73] block">
+                <span className="text-[11px] font-semibold text-[#6e6e73] block">
                   Faltas no Mês
                 </span>
-                <span className="text-[1.15rem] font-bold text-[#1d1d1f] font-mono tabular-nums">
+                <span className="text-lg font-bold text-[#1d1d1f] font-mono tabular-nums">
                   {selectedDetailItem.student.totalAbsencesMonth || 0} faltas ·{' '}
                   {selectedDetailItem.student.justifiedAbsences || 0} atest.
                 </span>
@@ -489,11 +489,11 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
             {/* Contato Rápido com a Família (WhatsApp Direto) */}
             <div className="bg-[#f5f5f7] rounded-2xl p-3.5 space-y-1.5">
-              <span className="text-[0.72rem] font-semibold text-[#6e6e73] block">
+              <span className="text-xs font-semibold text-[#6e6e73] block">
                 Responsável Familiar &amp; Contato Direto
               </span>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[0.85rem] font-bold text-[#1d1d1f]">
+                <span className="text-sm font-bold text-[#1d1d1f]">
                   {selectedDetailItem.student.filiacao1 ||
                     selectedDetailItem.student.guardianName ||
                     'Familiar Responsável'}
@@ -507,7 +507,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   const digits = firstPhone.replace(/\D/g, '');
                   if (!digits) {
                     return (
-                      <span className="text-[0.76rem] text-[#6e6e73]">
+                      <span className="text-xs text-[#6e6e73]">
                         Telefone não informado
                       </span>
                     );
@@ -521,7 +521,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       href={waHref}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[0.8rem] font-mono font-bold text-[#128C7E] hover:underline"
+                      className="inline-flex items-center gap-1.5 text-sm font-mono font-bold text-[#128C7E] hover:underline"
                     >
                       <span className="material-symbols-outlined text-[16px]">chat</span>
                       <span>{firstPhone} (WhatsApp)</span>
@@ -533,16 +533,16 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
             {/* Histórico Acumulado de Sequências de Faltas Seguidas e Feedbacks da Família */}
             <div className="space-y-2">
-              <h4 className="text-[0.82rem] font-bold text-[#1d1d1f]">
+              <h4 className="text-sm font-bold text-[#1d1d1f]">
                 Histórico de Sequências e Devolutivas da Família no Ano
               </h4>
 
               {selectedDetailItem.occurrences.length === 0 ? (
                 <div className="rounded-2xl bg-[#fff8f7] p-3.5 border border-[#ff3b30]/20 space-y-1">
-                  <p className="text-[0.82rem] font-semibold text-[#1d1d1f]">
+                  <p className="text-sm font-semibold text-[#1d1d1f]">
                     {selectedDetailItem.monthlyUnjustifiedAbsences} faltas não justificadas registradas no mês
                   </p>
-                  <p className="text-[0.76rem] text-[#6e6e73]">
+                  <p className="text-xs text-[#6e6e73]">
                     {userRole === 'peb2'
                       ? 'Aguardando seleção dos dias específicos pelo(a) professor(a) regente ou retorno da secretaria.'
                       : 'Clique em "Gerenciar em Faltas Seguidas" abaixo para apontar os dias exatos ou registrar o retorno da família.'}
@@ -559,23 +559,23 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                         className="rounded-2xl bg-[#f5f5f7] p-3.5 space-y-1.5"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[0.78rem] font-bold text-[#1d1d1f]">
+                          <span className="text-xs font-bold text-[#1d1d1f]">
                             {seq}ª Sequência · {occ.selectedDates.join(', ')} (
                             {occ.selectedDates.length} dias)
                           </span>
-                          <span className="text-[0.7rem] text-[#6e6e73] font-mono">
+                          <span className="text-xs text-[#6e6e73] font-mono">
                             {occ.reportedAt || 'Registrado'}
                           </span>
                         </div>
                         {fb ? (
-                          <div className="bg-white rounded-xl p-2.5 text-[0.8rem] text-[#1d1d1f]">
-                            <span className="font-semibold text-[#1d8338] block text-[0.72rem]">
+                          <div className="bg-white rounded-xl p-2.5 text-sm text-[#1d1d1f]">
+                            <span className="font-semibold text-[#1d8338] block text-xs">
                               Devolutiva da Família ({occ.feedbackUpdatedAt || 'Secretaria'}):
                             </span>
                             <p className="mt-0.5 leading-relaxed">{fb}</p>
                           </div>
                         ) : (
-                          <p className="text-[0.76rem] text-[#ff3b30] font-medium">
+                          <p className="text-xs text-[#ff3b30] font-medium">
                             Aguardando contato e devolutiva da secretaria com a família.
                           </p>
                         )}
@@ -601,7 +601,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       item.cls.classesHeld || 20
                     );
                   }}
-                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.8rem] cursor-pointer transition-colors"
+                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-sm cursor-pointer transition-colors"
                 >
                   Ficha Completa (48 Dados)
                 </button>
@@ -615,7 +615,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     setSelectedDetailItem(null);
                     onOpenStudentPdf(item.student, item.cls.name);
                   }}
-                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.8rem] cursor-pointer transition-colors"
+                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-sm cursor-pointer transition-colors"
                 >
                   Ficha PDF Escaneada
                 </button>
@@ -629,7 +629,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     setSelectedDetailItem(null);
                     onSelectStudentForConsecutiveScreen(item.cls, item.student);
                   }}
-                  className="min-h-[40px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-[0.8rem] flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="min-h-[40px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-sm flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <span className="material-symbols-outlined text-[17px]">
                     open_in_new

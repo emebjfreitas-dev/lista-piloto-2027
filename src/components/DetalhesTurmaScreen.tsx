@@ -326,29 +326,29 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     return (
       <div
         onClick={(e) => e.stopPropagation()}
-        className="rounded-2xl bg-[#f8faf9] border border-[#003440]/15 p-4 sm:p-5 space-y-3.5 text-[0.74rem] animate-gentle-fade text-[#1d1d1f]"
+        className="rounded-xl bg-slate-50 border border-slate-200/90 p-4 sm:p-5 space-y-4 text-xs animate-gentle-fade text-slate-900 mt-2 shadow-xs"
       >
         {/* Cabeçalho da Expansão: Aluno, Matrícula, Idade e Ficha */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-black/[0.06] gap-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200/80 gap-2.5">
           <div className="flex items-center gap-3">
-            <span className="w-8 h-8 rounded-xl bg-[#003440] text-white font-mono font-bold text-[0.8rem] flex items-center justify-center shrink-0 tabular-nums">
+            <span className="w-8 h-8 rounded-lg bg-slate-900 text-white font-mono font-semibold text-sm flex items-center justify-center shrink-0 tabular-nums">
               {student.number.toString().padStart(2, '0')}
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-extrabold text-[0.95rem] text-[#003440]">
+                <span className="font-semibold text-base text-slate-900">
                   {student.name}
                 </span>
-                <span className="text-[0.68rem] font-bold px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035]">
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800">
                   {studentGenderInfo.estudanteTitle}
                 </span>
                 {student.ra && (
-                  <span className="font-mono text-[0.7rem] text-[#436370] bg-white px-2 py-0.5 rounded border border-black/5 tabular-nums">
+                  <span className="font-mono text-xs text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200 tabular-nums">
                     RA {student.ra}-{student.digRa}
                   </span>
                 )}
               </div>
-              <p className="text-[0.72rem] text-[#6e6e73] font-medium mt-0.5">
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Nascimento: {student.dataNascimento || '—'}{' '}
                 {student.idade ? `(${student.idade} anos)` : ''} · Turma {classGroup.name}
               </p>
@@ -363,13 +363,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   e.stopPropagation();
                   onOpenStudentPdf(student);
                 }}
-                className={`h-[32px] px-3 rounded-xl font-bold text-[0.72rem] flex items-center gap-1.5 cursor-pointer transition-all ${
+                className={`h-8 px-3 rounded-lg font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors ${
                   hasPdf
-                    ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white shadow-2xs'
-                    : 'bg-[#fff2f2] hover:bg-[#ff3b30] text-[#ff3b30] hover:text-white border border-[#ff3b30]/30'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
                 }`}
               >
-                <span className="material-symbols-outlined text-[15px]">
+                <span className="material-symbols-outlined text-[16px]">
                   {hasPdf ? 'picture_as_pdf' : 'warning'}
                 </span>
                 <span>{hasPdf ? 'Abrir Ficha PDF' : 'Sem Ficha PDF'}</span>
@@ -383,9 +383,9 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   e.stopPropagation();
                   onOpenStudentGrid(student);
                 }}
-                className="h-[32px] px-3 rounded-xl bg-[#003440] hover:bg-[#00222a] text-white font-bold text-[0.72rem] flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
               >
-                <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                <span className="material-symbols-outlined text-[16px]">open_in_full</span>
                 <span>Ficha Completa (48 Dados)</span>
               </button>
             )}
@@ -397,11 +397,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           {/* Painel 1: Scorecard de Frequência & LDB */}
           <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#6e6e73]">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6e6e73]">
                 Frequência no Mês
               </span>
               <span
-                className={`px-2 py-0.5 rounded text-[0.64rem] font-bold tabular-nums ${
+                className={`px-2 py-0.5 rounded text-[11px] font-bold tabular-nums ${
                   isCompliant
                     ? 'bg-[#eaf6ef] text-[#005035]'
                     : 'bg-[#fff2f2] text-[#ff3b30]'
@@ -414,13 +414,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <div>
               <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-2xl font-black font-mono tracking-tight tabular-nums ${
+                  className={`text-2xl font-semibold font-mono tracking-tight tabular-nums ${
                     isCompliant ? 'text-[#005035]' : 'text-[#ba1a1a]'
                   }`}
                 >
                   {m.frequenciaPercent}%
                 </span>
-                <span className="text-[0.7rem] text-[#6e6e73] font-medium">
+                <span className="text-xs text-[#6e6e73] font-medium">
                   {m.presencas} de {m.diasLetivosMatriculados} dias letivos
                 </span>
               </div>
@@ -436,7 +436,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               </div>
             </div>
 
-            <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between text-[0.68rem] text-[#6e6e73] tabular-nums">
+            <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between text-[11px] text-[#6e6e73] tabular-nums">
               <span>Total Faltas: <strong className="text-[#ba1a1a]">{m.faltas}</strong></span>
               <span>Atestados: <strong className="text-[#005035]">{m.atestados}</strong></span>
               <span>Sem Just.: <strong className="text-[#c2410c]">{Math.max(0, m.faltas - m.atestados)}</strong></span>
@@ -445,13 +445,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
           {/* Painel 2: Núcleo Familiar & Contato Direto */}
           <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
-            <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#005035]">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#005035]">
               Família &amp; Contatos
             </span>
 
             <div className="space-y-1">
               <div>
-                <span className="text-[0.62rem] font-extrabold uppercase text-[#6e6e73] block">
+                <span className="text-[11px] font-semibold uppercase text-[#6e6e73] block">
                   {guardian1Info.roleLabel}
                 </span>
                 <span className="font-bold text-[#1d1d1f] block truncate">
@@ -459,7 +459,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 </span>
               </div>
               <div>
-                <span className="text-[0.62rem] font-extrabold uppercase text-[#6e6e73] block">
+                <span className="text-[11px] font-semibold uppercase text-[#6e6e73] block">
                   {guardian2Info.roleLabel}
                 </span>
                 <span className="font-bold text-[#1d1d1f] block truncate">
@@ -475,7 +475,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     href={waList[0].waUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 h-[28px] px-2.5 rounded-lg bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-[0.7rem] flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                    className="flex-1 h-[28px] px-2.5 rounded-lg bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
                     title={`Abrir conversa no WhatsApp: ${waList[0].display}`}
                   >
                     <span className="material-symbols-outlined text-[14px]">chat</span>
@@ -483,14 +483,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </a>
                   <a
                     href={`tel:${(student.telefones || student.guardianPhone || '').replace(/\D/g, '')}`}
-                    className="h-[28px] px-2 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-[0.7rem] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    className="h-[28px] px-2 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-xs flex items-center justify-center transition-colors cursor-pointer shrink-0"
                     title="Discar ligação telefônica"
                   >
                     <span className="material-symbols-outlined text-[14px]">call</span>
                   </a>
                 </div>
               ) : (
-                <span className="text-[0.68rem] text-[#86868b] italic">Sem telefone cadastrado</span>
+                <span className="text-[11px] text-[#86868b] italic">Sem telefone cadastrado</span>
               )}
             </div>
           </div>
@@ -498,7 +498,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           {/* Painel 3: Endereço & Logística Escolar (Tempo e Percurso até a EMEB Candelário) */}
           <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#0369a1]">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0369a1]">
                 Residência &amp; Deslocamento
               </span>
               {onNavigateToMap && (
@@ -508,7 +508,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     e.stopPropagation();
                     onNavigateToMap(student);
                   }}
-                  className="px-2 py-0.5 rounded-md bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0066cc] font-bold text-[0.66rem] flex items-center gap-1 cursor-pointer transition-colors"
+                  className="px-2 py-0.5 rounded-md bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0066cc] font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
                   title="Ver no mapa georreferenciado interativo com percurso"
                 >
                   <span className="material-symbols-outlined text-[13px]">map</span>
@@ -522,14 +522,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               const estimates = calculateTravelEstimates(coords.lat, coords.lng);
               return (
                 <div className="space-y-1.5">
-                  <div className="text-[0.72rem] text-[#1d1d1f]">
+                  <div className="text-xs text-[#1d1d1f]">
                     <span className="text-[#6e6e73] font-medium block">Endereço Residencial:</span>
                     <span className="font-semibold block line-clamp-2">
                       {student.logradouro || 'Logradouro não informado'}
                       {student.numeroResidencia ? `, nº ${student.numeroResidencia}` : ''}
                       {student.bairro ? ` · ${student.bairro}` : ''}
                     </span>
-                    <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[0.66rem] font-mono text-[#6e6e73]">
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] font-mono text-[#6e6e73]">
                       <span>Lat: {coords.lat.toFixed(5)}</span>
                       <span>·</span>
                       <span>Lng: {coords.lng.toFixed(5)}</span>
@@ -538,7 +538,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
 
                   {/* Tempo de Percurso até a EMEB Candelário */}
-                  <div className="p-1.5 rounded-lg bg-[#f0f9ff] border border-sky-100 flex items-center justify-between text-[0.68rem] text-sky-900 font-semibold">
+                  <div className="p-1.5 rounded-lg bg-[#f0f9ff] border border-sky-100 flex items-center justify-between text-[11px] text-sky-900 font-semibold">
                     <span className="flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px] text-sky-700">directions_walk</span>
                       <span>{estimates.walkMinutes} min a pé</span>
@@ -555,7 +555,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               );
             })()}
 
-            <div className="pt-2 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-1 text-[0.68rem]">
+            <div className="pt-2 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-1 text-[11px]">
               {student.rotaOnibus ? (
                 <span className="px-2 py-0.5 rounded-md bg-[#f0f9ff] text-[#0369a1] font-bold">
                   🚌 {student.rotaOnibus}
@@ -565,7 +565,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               )}
 
               {student.nis && (
-                <span className="px-1.5 py-0.5 rounded bg-[#eaf6ef] text-[#005035] font-mono font-bold text-[0.64rem]">
+                <span className="px-1.5 py-0.5 rounded bg-[#eaf6ef] text-[#005035] font-mono font-bold text-[11px]">
                   NIS {student.nis}
                 </span>
               )}
@@ -574,13 +574,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
           {/* Painel 4: Inclusão, AEE & Situação */}
           <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
-            <span className="text-[0.66rem] font-extrabold uppercase tracking-wider text-[#5b21b6]">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#5b21b6]">
               Inclusão (AEE) &amp; Situação
             </span>
 
             <div className="space-y-1">
               <div>
-                <span className="text-[0.62rem] font-extrabold uppercase text-[#6e6e73] block">
+                <span className="text-[11px] font-semibold uppercase text-[#6e6e73] block">
                   Educação Especial / AEE:
                 </span>
                 <span className="font-semibold text-[#1d1d1f] block truncate">
@@ -588,7 +588,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 </span>
               </div>
               <div>
-                <span className="text-[0.62rem] font-extrabold uppercase text-[#6e6e73] block">
+                <span className="text-[11px] font-semibold uppercase text-[#6e6e73] block">
                   Situação Cadastral:
                 </span>
                 <span className="font-bold text-[#1d1d1f] block">
@@ -598,7 +598,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               </div>
             </div>
 
-            <div className="pt-2 border-t border-black/[0.05] text-[0.68rem] text-[#6e6e73] truncate">
+            <div className="pt-2 border-t border-black/[0.05] text-[11px] text-[#6e6e73] truncate">
               {student.emailMunicipal ? (
                 <span className="font-mono text-[#0066cc] block truncate">
                   {student.emailMunicipal}
@@ -624,7 +624,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <span className="material-symbols-outlined text-[18px] text-[#0071e3]">
               swap_horiz
             </span>
-            <span className="text-[0.78rem] font-semibold text-[#1d1d1f]">
+            <span className="text-xs font-semibold text-[#1d1d1f]">
               Suas Turmas ({assignedClasses.length}):
             </span>
           </div>
@@ -1179,10 +1179,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <div
                 key={student.id}
                 onClick={() => {
-                  if (onOpenStudentGrid) onOpenStudentGrid(student);
+                  setExpandedStudentId((prev) => (prev === student.id ? null : student.id));
                 }}
-                title={`Toque no cartão para abrir a Ficha Completa (48 dados SED) de ${studentGenderInfo.estudanteTerm}`}
-                className={`rounded-xl border p-4 flex flex-col justify-between gap-3 cursor-pointer select-none transition-colors h-full min-h-[220px] ${cardColorClasses}`}
+                title={isExpanded ? 'Clique para recolher detalhes' : `Clique para expandir dados de ${studentGenderInfo.estudanteTerm}`}
+                className={`rounded-xl border p-4 flex flex-col justify-between gap-3 cursor-pointer select-none transition-all duration-200 ${
+                  isExpanded
+                    ? 'col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 bg-white border-slate-300 ring-1 ring-slate-900/10 shadow-sm'
+                    : 'h-full min-h-[220px]'
+                } ${cardColorClasses}`}
               >
                 {/* Faixa para Estudantes Não Ativos */}
                 {isNonActive && (
@@ -1230,26 +1234,26 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex flex-wrap items-center gap-1">
                         <span
-                          className={`inline-flex items-center justify-center px-2 py-0.5 rounded-lg font-mono font-extrabold text-[0.72rem] tabular-nums ${numberBadgeClasses}`}
+                          className={`inline-flex items-center justify-center px-2 py-0.5 rounded-lg font-mono font-semibold text-xs tabular-nums ${numberBadgeClasses}`}
                         >
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         {student.ra && (
                           <span
-                            className={`font-mono text-[0.69rem] font-bold px-1.5 py-0.5 rounded-md tabular-nums ${
+                            className={`font-mono text-[11px] font-medium px-1.5 py-0.5 rounded-md tabular-nums ${
                               isNonActive
-                                ? 'bg-white/80 text-[#1c1c1e] border border-black/10'
-                                : 'text-[#436370] bg-[#f2f4f3]'
+                                ? 'bg-white/80 text-slate-800 border border-slate-200'
+                                : 'text-slate-600 bg-slate-100'
                             }`}
                           >
                             RA {student.ra}-{student.digRa}
                           </span>
                         )}
                         <span
-                          className={`px-1.5 py-0.5 rounded-md font-extrabold text-[0.62rem] ${
+                          className={`px-1.5 py-0.5 rounded-md font-medium text-[11px] ${
                             studentGenderInfo.code === 'F'
-                              ? 'bg-[#ffdad6]/60 text-[#93000a]'
-                              : 'bg-[#d3e4ff]/75 text-[#001c38]'
+                              ? 'bg-rose-50 text-rose-800'
+                              : 'bg-blue-50 text-blue-800'
                           }`}
                           title={`Gênero consultado na planilha: ${studentGenderInfo.label}`}
                         >
@@ -1268,30 +1272,30 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           }}
                           title={
                             isExpanded
-                              ? 'Recolher resumo rápido'
-                              : 'Abrir resumo rápido sem sair da tela'
+                              ? 'Recolher detalhes'
+                              : 'Expandir dados completos'
                           }
-                          className={`h-6 px-2 rounded-full font-extrabold text-[0.62rem] flex items-center gap-0.5 transition-all cursor-pointer border ${
+                          className={`h-7 px-2.5 rounded-lg font-medium text-xs flex items-center gap-1 transition-colors cursor-pointer border ${
                             isExpanded
-                              ? 'bg-[#003440] text-white border-[#003440]'
-                              : 'bg-[#f2f4f3] hover:bg-[#e2e7e5] text-[#003440] border-black/[0.08]'
+                              ? 'bg-slate-900 text-white border-slate-900'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
                           }`}
                         >
                           <span
-                            className={`material-symbols-outlined text-[14px] transition-transform duration-200 ${
+                            className={`material-symbols-outlined text-[16px] transition-transform duration-200 ${
                               isExpanded ? 'rotate-180' : ''
                             }`}
                           >
                             expand_more
                           </span>
-                          <span>{isExpanded ? 'Fechar' : 'Resumo'}</span>
+                          <span>{isExpanded ? 'Recolher' : 'Expandir'}</span>
                         </button>
                       </div>
                     </div>
 
                     {/* Nome Oficial do(a) Estudante (Altura padronizada em 2 linhas para simetria total) */}
                     <h3
-                      className={`text-[0.94rem] font-extrabold leading-snug line-clamp-2 min-h-[2.45rem] mt-1 ${
+                      className={`text-base font-semibold leading-snug line-clamp-2 min-h-[2.45rem] mt-1 ${
                         isTransferred
                           ? 'text-[#78350f]'
                           : isRemanejado
@@ -1305,26 +1309,26 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     {/* Etiquetas por Exceção (Zero Ruído: só aparecem quando o/a estudante possui a condição) */}
                     <div className="flex flex-wrap items-center gap-1 mt-1">
                       {isTransferred ? (
-                        <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.62rem] font-extrabold uppercase shadow-2xs">
+                        <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[11px] font-semibold uppercase shadow-2xs">
                           {studentGenderInfo.transferidoTerm}
                         </span>
                       ) : isRemanejado ? (
-                        <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.62rem] font-extrabold uppercase shadow-2xs">
+                        <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[11px] font-semibold uppercase shadow-2xs">
                           {studentGenderInfo.remanejadoTerm}
                         </span>
                       ) : isOtherNonActive ? (
-                        <span className="px-2 py-0.5 rounded-full bg-[#475569] text-white text-[0.62rem] font-extrabold uppercase shadow-2xs">
+                        <span className="px-2 py-0.5 rounded-full bg-[#475569] text-white text-[11px] font-semibold uppercase shadow-2xs">
                           {sit}
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] text-[0.62rem] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] text-[11px] font-bold">
                           {studentGenderInfo.ativoTerm}
                         </span>
                       )}
 
                       {consecDaysCount >= 3 && (
                         <span
-                          className={`px-2 py-0.5 rounded-md font-extrabold text-[0.63rem] tabular-nums flex items-center gap-0.5 ${
+                          className={`px-2 py-0.5 rounded-md font-semibold text-[11px] tabular-nums flex items-center gap-0.5 ${
                             consecDaysCount >= 5
                               ? 'bg-[#ff3b30] text-white'
                               : 'bg-[#ff9500]/15 text-[#c93400]'
@@ -1337,12 +1341,12 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         </span>
                       )}
                       {student.deficiencia && (
-                        <span className="px-2 py-0.5 rounded-md bg-[#f5f3ff] text-[#5b21b6] font-bold text-[0.63rem] truncate max-w-[140px]">
+                        <span className="px-2 py-0.5 rounded-md bg-[#f5f3ff] text-[#5b21b6] font-bold text-[11px] truncate max-w-[140px]">
                           Educação Especial (AEE)
                         </span>
                       )}
                       {student.rotaOnibus && (
-                        <span className="px-2 py-0.5 rounded-md bg-[#f0f9ff] text-[#0369a1] font-bold text-[0.63rem] truncate">
+                        <span className="px-2 py-0.5 rounded-md bg-[#f0f9ff] text-[#0369a1] font-bold text-[11px] truncate">
                           🚌 {student.rotaOnibus.split('-')[0].trim()}
                         </span>
                       )}
@@ -1352,7 +1356,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
                 {/* Bloco Minimalista de Filiação / Vínculo Familiar (Pai / Mãe / Tio / Tia / Avô / Avó / Vizinho / Vizinha) e Contato Rápido */}
                 <div
-                  className={`rounded-2xl border p-2.5 space-y-1 text-[0.74rem] ${
+                  className={`rounded-2xl border p-2.5 space-y-1 text-xs ${
                     isTransferred
                       ? 'bg-white/85 border-[#d97706]/25'
                       : isRemanejado
@@ -1361,7 +1365,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[#005035] font-extrabold shrink-0 min-w-[42px]">
+                    <span className="text-[#005035] font-semibold shrink-0 min-w-[42px]">
                       {guardian1Info.shortRoleLabel}:
                     </span>
                     <span className="font-semibold text-[#1d1d1f] truncate block flex-1">
@@ -1369,7 +1373,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[#003440] font-extrabold shrink-0 min-w-[42px]">
+                    <span className="text-[#003440] font-semibold shrink-0 min-w-[42px]">
                       {guardian2Info.shortRoleLabel}:
                     </span>
                     <span className="font-semibold text-[#1d1d1f] truncate block flex-1">
@@ -1378,7 +1382,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="pt-1 border-t border-black/[0.05] flex items-center justify-between gap-2 text-[0.7rem]"
+                    className="pt-1 border-t border-black/[0.05] flex items-center justify-between gap-2 text-xs"
                   >
                     {(() => {
                       const waList = buildWhatsAppLinksFromPhoneString(
@@ -1524,7 +1528,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             return (
               <div
                 key={student.id}
-                onClick={() => onOpenStudentGrid && onOpenStudentGrid(student)}
+                onClick={() =>
+                  setExpandedStudentId((prev) => (prev === student.id ? null : student.id))
+                }
+                title={isExpanded ? 'Clique para recolher detalhes' : 'Clique para expandir dados'}
                 className={`p-3.5 sm:px-5 flex flex-col gap-2.5 cursor-pointer transition-colors ${
                   isTransferred
                     ? 'bg-gradient-to-r from-[#fef3c7]/80 to-[#fffbeb] border-l-4 border-l-[#b45309] hover:from-[#fde68a]/70'
@@ -1540,7 +1547,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <span
-                      className={`w-8 h-8 rounded-xl text-white font-mono font-extrabold text-[0.76rem] flex items-center justify-center shrink-0 tabular-nums ${
+                      className={`w-8 h-8 rounded-xl text-white font-mono font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums ${
                         isTransferred
                           ? 'bg-[#b45309]'
                           : isRemanejado
@@ -1564,11 +1571,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-extrabold text-[0.92rem] text-[#003440] truncate">
+                        <span className="font-semibold text-sm text-[#003440] truncate">
                           {student.name}
                         </span>
                         <span
-                          className={`px-1.5 py-0.5 rounded font-extrabold text-[0.63rem] ${
+                          className={`px-1.5 py-0.5 rounded font-semibold text-[11px] ${
                             studentGenderInfo.code === 'F'
                               ? 'bg-[#ffdad6]/60 text-[#93000a]'
                               : 'bg-[#d3e4ff]/75 text-[#001c38]'
@@ -1576,21 +1583,21 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         >
                           {studentGenderInfo.estudanteTitle}
                         </span>
-                        <span className="font-mono text-[0.72rem] text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5">
+                        <span className="font-mono text-xs text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5">
                           RA {student.ra}-{student.digRa}
                         </span>
                         {isTransferred && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[0.64rem] font-black uppercase">
+                          <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[11px] font-semibold uppercase">
                             {studentGenderInfo.transferidoTerm.toUpperCase()} (Baixa de Matrícula)
                           </span>
                         )}
                         {isRemanejado && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[0.64rem] font-black uppercase">
+                          <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[11px] font-semibold uppercase">
                             {studentGenderInfo.remanejadoTerm.toUpperCase()} de Turma
                           </span>
                         )}
                       </div>
-                      <div className="text-[0.74rem] text-[#5a676b] truncate mt-0.5">
+                      <div className="text-xs text-[#5a676b] truncate mt-0.5">
                         <strong>{guardian1Info.shortRoleLabel}:</strong> {guardian1Info.cleanName} ·{' '}
                         <strong>{guardian2Info.shortRoleLabel}:</strong> {guardian2Info.cleanName} ·{' '}
                         <span className="font-mono text-[#005035]">
@@ -1609,7 +1616,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           prev === student.id ? null : student.id
                         );
                       }}
-                      className="px-2.5 py-1.5 rounded-xl bg-[#f2f4f3] hover:bg-[#e3e8e6] text-[#003440] font-bold text-[0.72rem] flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-xl bg-[#f2f4f3] hover:bg-[#e3e8e6] text-[#003440] font-bold text-xs flex items-center gap-1 cursor-pointer"
                     >
                       <span
                         className={`material-symbols-outlined text-[16px] transition-transform ${
@@ -1630,7 +1637,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           onOpenStudentPdf(student);
                         }}
                         title={`Abrir PDF da Ficha Informativa (${student.name}.pdf)`}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-[0.74rem] flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-2xs ${
+                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-2xs ${
                           (student.fichaPdfDriveUrl &&
                             student.fichaPdfDriveUrl.trim().length > 0) ||
                           (student.fichaPdfDriveId &&
@@ -1657,8 +1664,12 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         </span>
                       </button>
                     )}
-                    <span className="material-symbols-outlined text-[18px] text-[#8e8e93]">
-                      chevron_right
+                    <span
+                      className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
+                        isExpanded ? 'rotate-180 text-blue-600' : 'text-slate-400'
+                      }`}
+                    >
+                      expand_more
                     </span>
                   </div>
                 </div>
@@ -1681,31 +1692,31 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       {viewMode === 'table' && (
         <div className="bg-white rounded-3xl border border-black/[0.06] overflow-x-auto shadow-2xs">
           {/* Legenda Visual Rápida de Faltas Consecutivas (3, 5 e 10 Dias) */}
-          <div className="px-4 py-3 bg-[#f7f9f8] border-b border-black/[0.06] flex flex-wrap items-center justify-between gap-2 text-[0.74rem]">
-            <div className="flex items-center gap-1.5 font-extrabold text-[#003440]">
+          <div className="px-4 py-3 bg-[#f7f9f8] border-b border-black/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5 font-semibold text-[#003440]">
               <span className="material-symbols-outlined text-[17px] text-[#ba1a1a]">
                 notification_important
               </span>
               <span>Código de Cores — Faltas Seguidas na Tabela:</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fffbeb] text-[#92400e] border border-[#f59e0b]/40 font-black">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fffbeb] text-[#92400e] border border-[#f59e0b]/40 font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
                 <span>3+ Dias Seguidos (Atenção)</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff7ed] text-[#9a3412] border border-[#ea580c]/40 font-black">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff7ed] text-[#9a3412] border border-[#ea580c]/40 font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#ea580c]" />
                 <span>5+ Dias Seguidos (Busca Ativa)</span>
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff1f2] text-[#9f1239] border border-[#e11d48]/40 font-black">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff1f2] text-[#9f1239] border border-[#e11d48]/40 font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#e11d48]" />
                 <span>10+ Dias Seguidos (Evasão Crítica)</span>
               </span>
             </div>
           </div>
 
-          <table className="w-full text-left text-[0.78rem] border-collapse min-w-[1160px]">
-            <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-extrabold uppercase tracking-wider text-[0.68rem]">
+          <table className="w-full text-left text-xs border-collapse min-w-[1160px]">
+            <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-semibold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="py-3 px-3 text-center">Nº</th>
                 <th className="py-3 px-3">Estudante &amp; Ficha Informativa (PDF)</th>
@@ -1799,7 +1810,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                               expand_more
                             </span>
                           </button>
-                          <span className="font-mono font-extrabold text-[#003440] text-[0.78rem] tabular-nums">
+                          <span className="font-mono font-semibold text-[#003440] text-xs tabular-nums">
                             {student.number.toString().padStart(2, '0')}
                           </span>
                         </div>
@@ -1817,7 +1828,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                                 {student.name}
                               </span>
                               <span
-                                className={`inline-block px-1.5 py-0.2 rounded font-extrabold text-[0.61rem] ${
+                                className={`inline-block px-1.5 py-0.2 rounded font-semibold text-[11px] ${
                                   studentGenderInfo.code === 'F'
                                     ? 'bg-[#ffdad6]/60 text-[#93000a]'
                                     : 'bg-[#d3e4ff]/75 text-[#001c38]'
@@ -1836,7 +1847,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                                 onOpenStudentPdf(student);
                               }}
                               title={`Abrir PDF da Ficha Informativa (${student.name}.pdf)`}
-                              className={`px-2.5 py-1 rounded-lg font-bold text-[0.7rem] flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
+                              className={`px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
                                 (student.fichaPdfDriveUrl &&
                                   student.fichaPdfDriveUrl.trim().length > 0) ||
                                 (student.fichaPdfDriveId &&
@@ -1857,14 +1868,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         {consecInfo.tier !== 'none' ? (
                           <div className="inline-flex flex-col items-center">
                             <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-black text-[0.68rem] uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-semibold text-[11px] uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
                             >
                               <span className="material-symbols-outlined text-[13px]">
                                 {consecInfo.icon}
                               </span>
                               <span>{consecInfo.shortBadge}</span>
                             </span>
-                            <span className="text-[0.63rem] font-semibold text-[#41484b] mt-0.5">
+                            <span className="text-[11px] font-semibold text-[#41484b] mt-0.5">
                               {consecInfo.tier === '10d'
                                 ? 'Evasão Crítica'
                                 : consecInfo.tier === '5d'
@@ -1873,7 +1884,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                             </span>
                           </div>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[0.66rem]">
+                          <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-[11px]">
                             Em dia (sem alerta)
                           </span>
                         )}
@@ -1882,18 +1893,18 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         {student.ra}-{student.digRa}
                       </td>
                       <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
-                        <span className="text-[0.63rem] font-black uppercase text-[#005035] block">
+                        <span className="text-[11px] font-semibold uppercase text-[#005035] block">
                           {guardian1Info.roleLabel}
                         </span>
                         <span>{guardian1Info.cleanName}</span>
                       </td>
                       <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
-                        <span className="text-[0.63rem] font-black uppercase text-[#003440] block">
+                        <span className="text-[11px] font-semibold uppercase text-[#003440] block">
                           {guardian2Info.roleLabel}
                         </span>
                         <span>{guardian2Info.cleanName}</span>
                       </td>
-                      <td className="py-2.5 px-2.5 font-mono text-[0.72rem]">
+                      <td className="py-2.5 px-2.5 font-mono text-xs">
                         <div className="text-[#005035] font-semibold">
                           {student.telefones || '—'}
                         </div>
@@ -1909,7 +1920,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       </td>
                       <td className="py-2.5 px-2.5 text-center">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[0.68rem] font-extrabold uppercase ${
+                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase ${
                             isTransferred
                               ? 'bg-[#b45309] text-white'
                               : isRemanejado
@@ -1955,7 +1966,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <span className="material-symbols-outlined text-[24px] text-[#a4f3ca]">
               download_done
             </span>
-            <p className="text-[0.82rem] font-bold leading-snug">{exportSuccessToast}</p>
+            <p className="text-sm font-bold leading-snug">{exportSuccessToast}</p>
           </div>
         </div>
       )}
@@ -2016,14 +2027,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[0.68rem] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#005035] text-white">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#005035] text-white">
                         Exportação Exclusiva da Turma · Formato .XLS
                       </span>
-                      <span className="text-[0.72rem] font-bold text-[#5a676b]">
+                      <span className="text-xs font-bold text-[#5a676b]">
                         {selectedColDefs.length} colunas selecionadas · {previewData.rows.length} estudantes
                       </span>
                     </div>
-                    <h2 className="text-[1.2rem] sm:text-[1.35rem] font-extrabold text-[#003440] tracking-tight leading-tight mt-0.5">
+                    <h2 className="text-lg sm:text-xl font-semibold text-[#003440] tracking-tight leading-tight mt-0.5">
                       Baixar Planilha da Turma {classGroup.name} (.xls)
                     </h2>
                   </div>
@@ -2033,7 +2044,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   <button
                     type="button"
                     onClick={handleExecuteDownloadXLS}
-                    className="min-h-[42px] px-4 py-2 rounded-xl bg-[#005035] hover:bg-[#003d28] text-white font-extrabold text-[0.84rem] flex items-center gap-2 shadow-sm cursor-pointer transition-all active:scale-97"
+                    className="min-h-[42px] px-4 py-2 rounded-xl bg-[#005035] hover:bg-[#003d28] text-white font-semibold text-sm flex items-center gap-2 shadow-sm cursor-pointer transition-all active:scale-97"
                   >
                     <span className="material-symbols-outlined text-[19px]">download</span>
                     <span>Baixar Planilha (.{exportFileFormat})</span>
@@ -2055,7 +2066,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 {/* 1. Modelos Rápidos (Presets de Colunas) */}
                 <div className="bg-white rounded-2xl p-4 border border-black/[0.06] space-y-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[0.76rem] font-extrabold uppercase tracking-wider text-[#003440] flex items-center gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#003440] flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[17px] text-[#005035]">
                         auto_awesome
                       </span>
@@ -2068,21 +2079,21 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         onClick={() =>
                           saveSelectedColumns(CLASS_EXPORT_COLUMNS.map((c) => c.id))
                         }
-                        className="px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#d5f0e0] text-[#005035] font-bold text-[0.72rem] cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#d5f0e0] text-[#005035] font-bold text-xs cursor-pointer"
                       >
                         Marcar Todas ({CLASS_EXPORT_COLUMNS.length})
                       </button>
                       <button
                         type="button"
                         onClick={() => saveSelectedColumns(DEFAULT_CLASS_EXPORT_COLUMN_IDS)}
-                        className="px-2.5 py-1 rounded-lg bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#003440] font-bold text-[0.72rem] cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#003440] font-bold text-xs cursor-pointer"
                       >
                         Restaurar Padrão
                       </button>
                       <button
                         type="button"
                         onClick={() => saveSelectedColumns(['numeroChamada', 'estudante'])}
-                        className="px-2.5 py-1 rounded-lg bg-[#fff8f7] hover:bg-[#ffdad6] text-[#ba1a1a] font-bold text-[0.72rem] cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#fff8f7] hover:bg-[#ffdad6] text-[#ba1a1a] font-bold text-xs cursor-pointer"
                       >
                         Mínimo (Nº + Nome)
                       </button>
@@ -2106,14 +2117,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           }`}
                         >
                           <div className="flex items-center justify-between gap-1">
-                            <span className="font-extrabold text-[0.78rem] text-[#003440]">
+                            <span className="font-semibold text-xs text-[#003440]">
                               {preset.label}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-[#003440]/10 text-[#003440] font-mono font-bold text-[0.66rem]">
+                            <span className="px-1.5 py-0.5 rounded bg-[#003440]/10 text-[#003440] font-mono font-bold text-[11px]">
                               {preset.columnIds.length} colunas
                             </span>
                           </div>
-                          <p className="text-[0.68rem] text-[#5a676b] line-clamp-2 leading-snug">
+                          <p className="text-[11px] text-[#5a676b] line-clamp-2 leading-snug">
                             {preset.description}
                           </p>
                         </button>
@@ -2125,13 +2136,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 {/* 2. Opções de Ordenação das Linhas, Filtro de Situação e Formato (.xls / .xlsx) */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div className="bg-white rounded-2xl p-3.5 border border-black/[0.06] space-y-1">
-                    <label className="text-[0.7rem] font-extrabold uppercase tracking-wider text-[#5a676b] block">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-[#5a676b] block">
                       Ordem dos Estudantes (Linhas)
                     </label>
                     <select
                       value={exportSortBy}
                       onChange={(e) => setExportSortBy(e.target.value as ClassExportSortOrder)}
-                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f5f7f6] border border-black/[0.08] text-[0.8rem] font-bold text-[#003440]"
+                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f5f7f6] border border-black/[0.08] text-sm font-bold text-[#003440]"
                     >
                       <option value="number_asc">Nº da Chamada (01, 02, 03...)</option>
                       <option value="name_asc">Ordem Alfabética (A → Z)</option>
@@ -2142,7 +2153,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
 
                   <div className="bg-white rounded-2xl p-3.5 border border-black/[0.06] space-y-1">
-                    <label className="text-[0.7rem] font-extrabold uppercase tracking-wider text-[#5a676b] block">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-[#5a676b] block">
                       Filtrar Estudantes na Planilha
                     </label>
                     <select
@@ -2150,7 +2161,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       onChange={(e) =>
                         setExportStatusFilter(e.target.value as ClassExportStatusFilter)
                       }
-                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f5f7f6] border border-black/[0.08] text-[0.8rem] font-bold text-[#003440]"
+                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f5f7f6] border border-black/[0.08] text-sm font-bold text-[#003440]"
                     >
                       <option value="all">
                         Todos da Turma ({classGroup.students.length})
@@ -2170,7 +2181,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
 
                   <div className="bg-white rounded-2xl p-3.5 border border-black/[0.06] space-y-1">
-                    <label className="text-[0.7rem] font-extrabold uppercase tracking-wider text-[#5a676b] block">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-[#5a676b] block">
                       Formato do Arquivo Excel
                     </label>
                     <div className="ios-segmented w-full flex">
@@ -2197,10 +2208,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
                   <div className="bg-white rounded-2xl p-3.5 border border-black/[0.06] flex items-center justify-between gap-2">
                     <div>
-                      <span className="text-[0.75rem] font-extrabold text-[#003440] block">
+                      <span className="text-xs font-semibold text-[#003440] block">
                         Aba Resumo / Alta da Turma
                       </span>
-                      <span className="text-[0.68rem] text-[#5a676b] block">
+                      <span className="text-[11px] text-[#5a676b] block">
                         Ativos, Fem., Masc., Transf., Reman.
                       </span>
                     </div>
@@ -2218,7 +2229,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   {/* Coluna Esquerda (7 cols): Selecionar Colunas / Campos disponíveis */}
                   <div className="lg:col-span-7 bg-white rounded-2xl p-4 border border-black/[0.06] space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <h3 className="text-[0.84rem] font-extrabold text-[#003440] flex items-center gap-1.5">
+                      <h3 className="text-sm font-semibold text-[#003440] flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-[18px] text-[#005035]">
                           checklist
                         </span>
@@ -2234,7 +2245,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           value={columnSearchTerm}
                           onChange={(e) => setColumnSearchTerm(e.target.value)}
                           placeholder="Buscar coluna (ex: Mãe, Pai, RA)..."
-                          className="w-full min-h-[34px] pl-8 pr-2.5 rounded-xl bg-[#f5f7f6] text-[0.76rem] font-medium text-[#1c1c1e] focus:outline-none focus:bg-white border border-black/[0.06]"
+                          className="w-full min-h-[34px] pl-8 pr-2.5 rounded-xl bg-[#f5f7f6] text-xs font-medium text-[#1c1c1e] focus:outline-none focus:bg-white border border-black/[0.06]"
                         />
                       </div>
                     </div>
@@ -2244,7 +2255,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       <button
                         type="button"
                         onClick={() => setActiveCategoryFilter('all')}
-                        className={`px-2.5 py-1 rounded-lg text-[0.7rem] font-bold whitespace-nowrap cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer ${
                           activeCategoryFilter === 'all'
                             ? 'bg-[#003440] text-white'
                             : 'bg-[#f2f4f3] text-[#436370] hover:bg-[#e5e9e7]'
@@ -2257,7 +2268,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           key={cat}
                           type="button"
                           onClick={() => setActiveCategoryFilter(cat)}
-                          className={`px-2.5 py-1 rounded-lg text-[0.7rem] font-bold whitespace-nowrap cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer ${
                             activeCategoryFilter === cat
                               ? 'bg-[#005035] text-white'
                               : 'bg-[#f2f4f3] text-[#436370] hover:bg-[#e5e9e7]'
@@ -2290,17 +2301,17 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                                 className="w-4 h-4 accent-[#005035] rounded cursor-pointer shrink-0"
                               />
                               <div className="min-w-0">
-                                <span className="font-bold text-[0.76rem] block truncate">
+                                <span className="font-bold text-xs block truncate">
                                   {col.shortLabel}
                                 </span>
-                                <span className="font-mono text-[0.64rem] opacity-75 block truncate">
+                                <span className="font-mono text-[11px] opacity-75 block truncate">
                                   {col.label}
                                 </span>
                               </div>
                             </div>
 
                             {isChecked && (
-                              <span className="px-1.5 py-0.5 rounded-md bg-[#005035] text-white font-mono font-extrabold text-[0.65rem] shrink-0">
+                              <span className="px-1.5 py-0.5 rounded-md bg-[#005035] text-white font-mono font-semibold text-[11px] shrink-0">
                                 {orderPos + 1}ª
                               </span>
                             )}
@@ -2314,13 +2325,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   <div className="lg:col-span-5 bg-white rounded-2xl p-4 border border-black/[0.06] space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-[0.84rem] font-extrabold text-[#003440] flex items-center gap-1.5">
+                        <h3 className="text-sm font-semibold text-[#003440] flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-[18px] text-[#005035]">
                             swap_vert
                           </span>
                           <span>3. Ordem das Colunas ({selectedColDefs.length})</span>
                         </h3>
-                        <p className="text-[0.68rem] text-[#5a676b]">
+                        <p className="text-[11px] text-[#5a676b]">
                           Use as setas ↑ ↓ ou arraste para mudar a ordem das colunas no .xls
                         </p>
                       </div>
@@ -2344,14 +2355,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           className="p-2 rounded-xl bg-[#f7f9f8] hover:bg-[#eef3f1] border border-black/[0.06] flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing"
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-6 h-6 rounded-lg bg-[#003440] text-white font-mono font-extrabold text-[0.7rem] flex items-center justify-center shrink-0">
+                            <span className="w-6 h-6 rounded-lg bg-[#003440] text-white font-mono font-semibold text-xs flex items-center justify-center shrink-0">
                               {idx + 1}
                             </span>
                             <div className="min-w-0">
-                              <span className="font-bold text-[0.76rem] text-[#003440] block truncate">
+                              <span className="font-bold text-xs text-[#003440] block truncate">
                                 {col.shortLabel}
                               </span>
-                              <span className="font-mono text-[0.63rem] text-[#5a676b] block truncate">
+                              <span className="font-mono text-[11px] text-[#5a676b] block truncate">
                                 Coluna Excel: {col.label}
                               </span>
                             </div>
@@ -2410,7 +2421,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 {/* 4. Pré-visualização em Tempo Real da Planilha (.xls) */}
                 <div className="bg-white rounded-2xl p-4 border border-black/[0.06] space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[0.76rem] font-extrabold uppercase tracking-wider text-[#003440] flex items-center gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#003440] flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[17px] text-[#005035]">
                         preview
                       </span>
@@ -2419,14 +2430,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         {exportFileFormat.toUpperCase()} (Primeiros 4 registros)
                       </span>
                     </span>
-                    <span className="text-[0.7rem] font-semibold text-[#5a676b]">
+                    <span className="text-xs font-semibold text-[#5a676b]">
                       Total a exportar: {previewData.rows.length} linhas ×{' '}
                       {previewData.headers.length} colunas
                     </span>
                   </div>
 
                   <div className="border border-black/[0.08] rounded-xl overflow-x-auto">
-                    <table className="w-full text-left text-[0.72rem] border-collapse">
+                    <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-[#003440] text-white font-bold uppercase whitespace-nowrap">
                         <tr>
                           {previewData.headers.map((h, i) => (
@@ -2461,7 +2472,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
               {/* Rodapé do Modal */}
               <div className="bg-white px-5 py-3.5 border-t border-black/[0.06] flex flex-wrap items-center justify-between gap-3">
-                <div className="text-[0.76rem] text-[#5a676b] font-medium">
+                <div className="text-xs text-[#5a676b] font-medium">
                   Arquivo:{' '}
                   <strong className="font-mono text-[#003440]">
                     Planilha_{classGroup.name.replace(/\s+/g, '_')}_2027.{exportFileFormat}
@@ -2472,14 +2483,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsExportXlsModalOpen(false)}
-                    className="min-h-[42px] px-4 rounded-xl bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#3c3c43] font-bold text-[0.82rem] cursor-pointer"
+                    className="min-h-[42px] px-4 rounded-xl bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#3c3c43] font-bold text-sm cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="button"
                     onClick={handleExecuteDownloadXLS}
-                    className="min-h-[42px] px-5 rounded-xl bg-[#005035] hover:bg-[#003d28] text-white font-extrabold text-[0.86rem] flex items-center gap-2 shadow-sm cursor-pointer transition-all active:scale-97"
+                    className="min-h-[42px] px-5 rounded-xl bg-[#005035] hover:bg-[#003d28] text-white font-semibold text-sm flex items-center gap-2 shadow-sm cursor-pointer transition-all active:scale-97"
                   >
                     <span className="material-symbols-outlined text-[20px]">download</span>
                     <span>

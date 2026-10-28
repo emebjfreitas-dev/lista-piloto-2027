@@ -1,79 +1,74 @@
-# REESTRUTURAÇÃO, ATUALIZAÇÃO E PADRONIZAÇÃO COMPLETA DO SISTEMA ESCOLAR (2027)
+# PADRONIZAÇÃO TIPOGRÁFICA E REFINAMENTO VISUAL COMPLETO (2027)
 
-Revisão e modernização integral do sistema da EMEB Prof. Joaquim Candelário de Freitas, atendendo a todos os requisitos arquiteturais, visuais, tipográficos e funcionais solicitados para o ano letivo de 2027.
-
----
-
-## 1. Atualização Completa das Informações para 2027 (Quadro Oficial de 40 Turmas)
-
-- **Fonte Oficial Única de Dados (`officialMatrix2027.ts`)**:
-  - Exatamente **40 turmas oficiais cadastradas**: **20 no período da manhã** e **20 no período da tarde**.
-  - **Manhã (20 turmas)**:
-    - 4A (Adília), 3A (Ana Lúcia), 5B (Ana Maria), G4B (Bianca), 4C (Cleonice), G4A (Denise), 2C (Elaine Cristiane), G5A (Gésica), 4B (Helena), 3C (Iara), G4C (Luana), G5B (Lucimeire), 5C (Marcos), 3B (Marina), 1B (Rosângela), 5A (Sandra), 1C (Sílvia Aparecida), 2A (Sílvia Helena), 1A (Simone), 2B (Viviane).
-  - **Tarde (20 turmas)**:
-    - 5E (Amanda), G4D (Ana Laura), 3F (Ana Paula), G4E (Bárbara), 3E (Camilo), 1D (Carol), 4F (Fábio), G5D (Fernanda), 1F (Giulia), 5D (Karina), 3D (Maria Aparecida), 4D (Maria Júlia), 4E (Maria Paula), G5C (Mariana Cristina), 4G (Rafaela), 2D (Rita), 2E (Vanessa), **2F (TURMA VAGA)**, **G5E (TURMA VAGA)**, **1E (TURMA VAGA)**.
-- **Tratamento das Turmas Vagas**:
-  - As 3 turmas vagas (`2F`, `G5E` e `1E`) são mantidas estritamente com identificação `TURMA VAGA` (sem professores fictícios).
-  - Diferenciação clara entre turma vaga e turma inativa: turmas vagas possuem badge de destaque âmbar (`TURMA VAGA (Aguardando Atribuição)`) e ação direta de atribuição para administradores.
-  - Adicionado filtro rápido exclusivo `⚠️ Turmas Vagas (3)` no Quadro Geral.
-- **Persistência Garantida**:
-  - Chaves de armazenamento atualizadas para `emeb_candelario_sed_classes_2027_v7` e `emeb_candelario_authorized_users_2027_v4`, garantindo consistência sem corromper presenças, faltas, fotos ou pareceres pedagógicos dos estudantes.
+Padronização e refinamento visual absoluto do aplicativo web da **EMEB Prof. Joaquim Candelário de Freitas** (Ano Letivo 2027).
 
 ---
 
-## 2. Padronização da Tipografia Institucional (Padrão SED SP)
+## 1. Família Tipográfica Única e Centralizada
 
-- **Famílias Tipográficas Oficiais**:
-  - `Open Sans` e `Public Sans` carregadas do Google Fonts, com alinhamento visual idêntico ao portal SED da Secretaria da Educação do Estado de São Paulo.
-  - `JetBrains Mono` reservada para números tabulares (RA, NIS, códigos SED, percentuais de frequência e contadores).
-- **Centralização de Tokens**:
-  - Variáveis globais `--font-sans` e `--font-display` definidas no CSS principal e aplicadas transversalmente a todos os módulos, menus, formulários, botões, modais e relatórios.
-
----
-
-## 3. Reformulação da Página Inicial (Home)
-
-- **Painel de Boas-Vindas e Indicadores Temporais**:
-  - Relógio digital em tempo real com horas, minutos e segundos (`HH:mm:ss`), data completa por extenso, dia da semana e ano letivo de 2027.
-  - Cartão informativo do **Mês de Referência Padrão** (`Setembro/2026`), com explicação de que o fechamento refere-se ao mês imediatamente anterior ao corrente.
-- **Métricas Oficiais de Turmas**:
-  - Total de **40 turmas ativas**, discriminando a divisão exata de **20 no período da manhã** e **20 no período da tarde**.
-  - Quadro de regência: **37 docentes atribuídos** e **3 turmas vagas aguardando atribuição**.
-  - Indicadores de fechamento de frequência (concluídas vs. pendentes), taxa média de presença escolar e atalhos rápidos com alto contraste e zero sobreposição de botões.
+- **Família Principal do Sistema**:
+  - `Inter` carregada via Google Fonts (`index.html`) com suporte óptico completo (`ital,opsz,wght@0,14..32,400..700;1,14..32,400..700`).
+  - Fallbacks nativos modernos de alto desempenho: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`.
+  - Configurada no `:root` via `--font-sans` e aplicada universalmente a todo o DOM (`html`, `body`, títulos, parágrafos, inputs, botões, modais, tabelas e relatórios).
+  - Suporte a ligaduras e clareza tipográfica refinada: `font-feature-settings: "cv02", "cv03", "cv04", "cv11"`.
+- **Família Numérica e Tabular**:
+  - `JetBrains Mono` reservada para dados numéricos tabulares (RAs, números de chamada, percentuais de presença/falta MEC, datas e métricas dos 200 dias letivos).
+  - Classes `.tabular-nums` e `.font-mono` padronizadas para alinhamento sem trepidação ou desalinhamento de dígitos.
 
 ---
 
-## 4. Regra de Mês de Referência Padrão (Mês Imediatamente Anterior)
+## 2. Escala Tipográfica Padronizada
 
-- Criada a função utilitária `getDefaultReferencePeriod()` em `attendanceRules.ts`.
-- Aplicação automática da regra: o sistema sempre seleciona como referência padrão o mês anterior ao mês do sistema (ex.: em Outubro, a referência é Setembro; em Janeiro, a referência é Dezembro do ano anterior).
-- Navegação entre períodos preservada em todas as telas (`RegistroFrequenciaMensalScreen`, `ResumoMensalScreen`, etc.).
+Substituição de todos os valores fracionários e arbitrários de `rem` (`text-[0.61rem]` até `text-[1.75rem]`) pela escala proporcional oficial do design system:
 
----
-
-## 5. Tela de Controle de Acesso e Usuários (`UsuariosAcessoScreen.tsx`)
-
-- Totalmente atualizada para 40 turmas oficiais.
-- Sub-aba do Quadro Geral com filtro rápido por período (`Todas (40)`, `☀️ Manhã (20)`, `⛅ Tarde (20)` e `⚠️ Turmas Vagas (3)`).
-- Tabela com colunas oficiais completas, pesquisa instantânea, sincronização com matriz oficial e modal de edição para atribuir docentes a turmas vagas.
-- Perfil administrativo atualizado para conceder acesso às 40 turmas.
-
----
-
-## 6. Exportação de Documentos (PDF / Impressão A4 e Planilha XLSX)
-
-- **Impressão A4 / PDF (`RelatorioImpressaoModal.tsx`)**:
-  - Cabeçalho oficial com brasão municipal, identificação da escola e do ano letivo de 2027.
-  - Dinamização do mês de referência padrão.
-  - Linhas de assinatura para Docente Regente (com nome do professor atribuído) e Direção/Coordenação.
-  - Estilização de quebra de página (`break-inside-avoid`) para evitar cortes indesejados de tabelas na impressão A4.
-- **Exportação Excel (.XLS / .XLSX)**:
-  - Todas as abas consolidadas com suporte às 40 turmas e 200 dias letivos anuais.
+| Token / Classe | Tamanho | Uso Principal no Sistema |
+| :--- | :--- | :--- |
+| `text-2xl font-semibold` | 24px (1.5rem) | Títulos principais de tela e indicadores numéricos estratégicos (KPIs) |
+| `text-xl font-semibold` | 20px (1.25rem) | Títulos de página secundários e modais principais |
+| `text-lg font-semibold` | 18px (1.125rem) | Cabeçalhos de seção e títulos de cards |
+| `text-base font-semibold/normal` | 16px (1.0rem) | Títulos de blocos, valores de inputs amplos |
+| `text-sm font-normal` | 14px (0.875rem) | Corpo de texto padrão, labels principais, botões de ação |
+| `text-xs font-normal/medium` | 12px (0.75rem) | Tabelas com alta densidade de dados, menus, chips de status, datas |
+| `text-[11px] font-medium` | 11px (0.6875rem) | Metadados, subtítulos de indicadores, legendas de gráficos |
 
 ---
 
-## 7. Verificação e Qualidade do Código
+## 3. Disciplina de Pesos Tipográficos (Eliminação de Negritos Excessivos)
+
+- **Regra dos 3 Pesos Estratégicos**:
+  - `font-normal` (400): Textos corridos, descrições institucionais, corpo de células de tabelas, observações.
+  - `font-medium` (500): Elementos de destaque discreto, rótulos de campos, botões secundários, filtros segmentados, badges informativos.
+  - `font-semibold` (600): Títulos de seções, ações primárias, identificadores de turmas e números em destaque.
+- **Eliminação Completa de Negritos Pesados**:
+  - `font-black` (900) e `font-extrabold` (800) foram 100% extirpados de todas as 26 telas, componentes e modais do sistema.
+
+---
+
+## 4. Coerência Visual em Todos os Componentes
+
+- **Telas Padronizadas**:
+  - `HomeScreen.tsx` (Painel Executivo de Gestão)
+  - `MinhasTurmasScreen.tsx` e `DetalhesTurmaScreen.tsx` (Ficha da Turma e dos Estudantes)
+  - `RegistroFrequenciaMensalScreen.tsx` (Informar Faltas do Mês)
+  - `FaltasConsecutivasScreen.tsx` (Busca Ativa e Ocorrências ECA)
+  - `MapaEstudantesScreen.tsx` (Rotas e Geolocalização de Estudantes)
+  - `ResumoMensalScreen.tsx` (Resumo Mensal e Indicadores MEC)
+  - `PlanilhaGoogleScreen.tsx` (Conexão Drive e Planilha)
+  - `DiasLetivosScreen.tsx` e `ConfigurarDiasLetivosTurmasModal.tsx` (Calendário dos 200 Dias Letivos)
+  - `UsuariosAcessoScreen.tsx` (Atribuição e Acessos)
+  - `ListasNominaisScreen.tsx`, `AlunosModal.tsx`, `GradeDadosCriancaModal.tsx`, `UploadFotoModal.tsx`, `VisualizarPdfNominalModal.tsx`, `RelatorioImpressaoModal.tsx`, `SpotlightCommandModal.tsx`.
+
+## 6. Expansão Única e Fluida de Dados ao Clicar
+
+- **Comportamento Accordion Único**: Ao clicar em qualquer estudante (na visualização em Cartões/Grid, Lista Compacta ou Tabela Nominal), o sistema expande inline de forma suave e exclusiva os dados completos daquele aluno, recolhendo automaticamente o anterior.
+- **Transição Fluida**: O cartão se expande com animação sutil (`animate-gentle-fade` e `duration-200`), ocupando a largura total das colunas no grid para leitura clara e espaçada.
+- **Painéis Integrados**: Exibição imediata da frequência mensal com aferição da LDB, filiação com link direto para WhatsApp e ligação, endereço com estimativa de percurso a pé/carro e atalho para o mapa interativo, situação cadastral e botões para a Ficha Completa e PDF escaneado.
+- **Indicador Visual**: Ícone de chevron rotativo suave (`expand_more` que rotaciona 180 graus ao expandir).
+
+---
+
+## 7. Verificação e Conformidade Técnica
 
 - `tsc --noEmit` executado via `lint_applet` com **zero erros**.
 - `compile_applet` executado com **sucesso**.
-- Servidor reiniciado e validado.
+- Dev server ativo e sincronizado.
