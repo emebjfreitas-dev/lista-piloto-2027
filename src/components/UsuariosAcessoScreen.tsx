@@ -740,10 +740,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       {/* Feedback Toast */}
       {feedbackMsg && (
         <div
-          className={`p-4 rounded-2xl border-2 font-bold text-sm flex items-center justify-between gap-2 shadow-sm ${
+          className={`p-4 rounded-2xl font-bold text-sm flex items-center justify-between gap-2 shadow-md ${
             feedbackMsg.type === 'success'
-              ? 'bg-[#e8f8ef] border-[#005035] text-[#003440]'
-              : 'bg-[#ffdad6] border-[#ba1a1a] text-[#93000a]'
+              ? 'bg-emerald-100 text-emerald-950'
+              : 'bg-rose-100 text-rose-950'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -755,7 +755,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           <button
             type="button"
             onClick={() => setFeedbackMsg(null)}
-            className="text-xs underline font-semibold cursor-pointer"
+            className="text-xs underline font-bold cursor-pointer"
           >
             Fechar
           </button>
@@ -763,21 +763,21 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* Top Executive Header */}
-      <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-6 border border-black/[0.06] space-y-4">
+      <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-[#003440] text-white text-xs font-semibold uppercase tracking-wider">
+              <span className="px-3 py-1 rounded-full bg-slate-950 text-white text-xs font-bold uppercase tracking-wider">
                 Quadro Oficial Docente &amp; Controle de Acessos 2027
               </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] text-xs font-bold">
+              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 text-xs font-bold">
                 {classes.length} Turmas ({manhaTurmasCount} Manhã · {tardeTurmasCount} Tarde) · {authorizedUsers.length} Contas
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-[#003440] tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight leading-tight">
               Professores, Turmas SED &amp; Gerenciamento de Acessos
             </h1>
-            <p className="text-sm text-[#436370] font-medium max-w-3xl">
+            <p className="text-sm text-slate-600 font-medium max-w-3xl">
               Base unificada com as {classes.length} turmas oficiais de 2027 (20 Manhã · 20 Tarde, com 3 turmas vagas aguardando atribuição), docentes regentes (PEB I), especialistas de Arte, Educação Física e Língua Inglesa (PEB II), códigos SED e monitoramento de acessos em tempo real.
             </p>
           </div>
@@ -792,7 +792,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   'Planilha do Quadro Oficial de Turmas, Professores e Acessos (.xls) baixada com sucesso!'
                 );
               }}
-              className="min-h-[44px] px-4 rounded-2xl bg-[#005035] hover:bg-[#003d28] text-white font-semibold text-sm flex items-center gap-2 shadow-xs cursor-pointer transition-all active:scale-97"
+              className="min-h-[44px] px-4 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-sm flex items-center gap-2 shadow-xs cursor-pointer transition-all active:scale-97"
             >
               <span className="material-symbols-outlined text-[19px]">download</span>
               <span>Baixar Quadro Completo (.XLS)</span>
@@ -803,7 +803,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 type="button"
                 onClick={handleRestoreOfficialSchoolMatrix}
                 title={`Sincronizar as ${classes.length} turmas oficiais e especialistas com o Quadro Oficial 2027`}
-                className="min-h-[44px] px-3.5 rounded-2xl bg-[#f2f4f3] hover:bg-[#e3e8e6] text-[#003440] font-semibold text-sm flex items-center gap-1.5 border border-black/[0.08] cursor-pointer"
+                className="min-h-[44px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-sm flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <span className="material-symbols-outlined text-[18px]">sync_saved_locally</span>
                 <span>Sincronizar Quadro Oficial</span>
@@ -814,7 +814,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               <button
                 type="button"
                 onClick={onNavigateToDatabaseEmailsTab}
-                className="min-h-[44px] px-3.5 rounded-2xl bg-[#eaf6ef] hover:bg-[#d4f0df] text-[#005035] font-semibold text-sm flex items-center gap-1.5 cursor-pointer"
+                className="min-h-[44px] px-4 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold text-sm flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
                 <span className="material-symbols-outlined text-[18px]">table_chart</span>
                 <span>Planilha</span>
@@ -825,74 +825,74 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
         {/* Summary KPI Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1">
-          <div className="p-3 rounded-2xl bg-[#f5f7f6] border border-black/[0.05]">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#5a676b] block">
+          <div className="p-3.5 rounded-2xl bg-slate-100 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
               Turmas Oficiais
             </span>
-            <span className="text-xl font-semibold text-[#003440] tabular-nums">
+            <span className="text-xl font-bold text-slate-950 tabular-nums">
               {classes.length}
             </span>
-            <span className="text-[11px] font-semibold text-[#436370] block">
+            <span className="text-[11px] font-semibold text-slate-600 block">
               {manhaTurmasCount} Manhã · {tardeTurmasCount} Tarde
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-[#eaf6ef]/70 border border-[#005035]/15">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#005035] block">
+          <div className="p-3.5 rounded-2xl bg-emerald-100/80 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-950 block">
               Regentes (PEB I)
             </span>
-            <span className="text-xl font-semibold text-[#005035] tabular-nums">
+            <span className="text-xl font-bold text-emerald-950 tabular-nums">
               {authorizedUsers.filter((u) => u.role === 'usuario').length}
             </span>
-            <span className="text-[11px] font-semibold text-[#003723] block">
+            <span className="text-[11px] font-semibold text-emerald-900 block">
               Acesso direto à sua turma
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-[#fff4e5]/80 border border-[#d97706]/25">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#92400e] block">
+          <div className="p-3.5 rounded-2xl bg-amber-100/80 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-950 block">
               Especialistas (PEB II)
             </span>
-            <span className="text-xl font-semibold text-[#b45309] tabular-nums">
+            <span className="text-xl font-bold text-amber-950 tabular-nums">
               {specialistsUsers.length}
             </span>
-            <span className="text-[11px] font-semibold text-[#78350f] block">
+            <span className="text-[11px] font-semibold text-amber-900 block">
               Arte · Ed. Física · Inglês
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-[#eef6fa] border border-[#003440]/12">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#003440] block">
+          <div className="p-3.5 rounded-2xl bg-sky-100/80 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-950 block">
               Estudantes Ativos
             </span>
-            <span className="text-xl font-semibold text-[#003440] tabular-nums">
+            <span className="text-xl font-bold text-sky-950 tabular-nums">
               {totalActiveStudentsAll}
             </span>
-            <span className="text-[11px] font-semibold text-[#436370] block">
+            <span className="text-[11px] font-semibold text-sky-900 block">
               Matrículas ativas SED
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-[#f5f7f6] border border-black/[0.05]">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#5a676b] block">
+          <div className="p-3.5 rounded-2xl bg-slate-100 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
               Já Acessaram
             </span>
-            <span className="text-xl font-semibold text-[#005035] tabular-nums">
+            <span className="text-xl font-bold text-slate-950 tabular-nums">
               {totalUsersWhoAccessed}/{authorizedUsers.length}
             </span>
-            <span className="text-[11px] font-semibold text-[#436370] block">
+            <span className="text-[11px] font-semibold text-slate-600 block">
               {totalAccessesCount} logins · {activeNowSessionsCount} online
             </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-[#eaf6ef]/80 border border-[#005035]/20">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#005035] block">
+          <div className="p-3.5 rounded-2xl bg-emerald-100/90 shadow-2xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-950 block">
               Tempo Total de Tela
             </span>
-            <span className="text-lg font-semibold text-[#003440] tabular-nums block mt-0.5">
+            <span className="text-lg font-bold text-emerald-950 tabular-nums block mt-0.5">
               {formatDurationHuman(totalPlatformDurationSeconds)}
             </span>
-            <span className="text-[11px] font-semibold text-[#005035] block">
+            <span className="text-[11px] font-semibold text-emerald-900 block">
               Monitorado a cada 5s
             </span>
           </div>
@@ -1075,10 +1075,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
         {/* Controle Rápido da Janela do Botão Lançar Faltas */}
         <div
-          className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+          className={`p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
             windowEval.isAllowedToLaunch
-              ? 'bg-[#eaf6ef]/70 border-[#005035]/30'
-              : 'bg-[#fff8f0] border-[#d97706]/30'
+              ? 'bg-emerald-100 text-emerald-950'
+              : 'bg-amber-100 text-amber-950'
           }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -1166,7 +1166,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       {activeSubTab === 'quadro_turmas' && (
         <div className="space-y-5">
           {/* Barra de Filtro Rápido do Quadro de Turmas */}
-          <section className="card-welcoming bg-white rounded-3xl p-4 sm:p-5 border border-black/[0.06] space-y-4">
+          <section className="card-welcoming bg-white rounded-3xl p-5 shadow-sm space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 {(
@@ -1187,8 +1187,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                           ? 'bg-amber-600 text-white shadow-2xs'
                           : 'bg-[#003440] text-white shadow-2xs'
                         : item.id === 'VAGAS' && vacantTurmasCount > 0
-                        ? 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
-                        : 'bg-[#f2f4f3] text-[#436370] hover:bg-[#e4e8e6]'
+                        ? 'bg-amber-100 text-amber-950 hover:bg-amber-200'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {item.label}
@@ -1205,7 +1205,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   value={matrixSearchTerm}
                   onChange={(e) => setMatrixSearchTerm(e.target.value)}
                   placeholder="Filtrar por sigla (G4C, 1A), professora, sala, código SED ou especialista..."
-                  className="w-full min-h-[42px] pl-10 pr-9 rounded-2xl bg-[#f5f7f6] border border-black/[0.08] text-sm font-semibold text-[#1c1c1e] focus:outline-none focus:bg-white focus:border-[#003440]"
+                  className="w-full min-h-[42px] pl-10 pr-9 rounded-2xl bg-slate-100 text-sm font-semibold text-slate-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#003440]"
                 />
                 {matrixSearchTerm && (
                   <button
@@ -1220,7 +1220,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             </div>
 
             {/* Tabela Completa das 40 Turmas Oficiais de 2027 com todas as Colunas Oficiais e Ações Diretas */}
-            <div className="border border-black/[0.08] rounded-2xl overflow-x-auto shadow-2xs">
+            <div className="rounded-2xl overflow-x-auto shadow-sm">
               <table className="w-full text-left text-xs border-collapse min-w-[1440px]">
                 <thead className="bg-[#003440] text-white font-semibold uppercase tracking-wider text-[11px]">
                   <tr>

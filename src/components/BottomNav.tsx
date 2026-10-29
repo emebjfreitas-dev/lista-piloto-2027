@@ -137,7 +137,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {/* Barra de Navegação Inferior (Mobile/Tablet) */}
       <nav
         aria-label="Barra de Navegação Inferior"
-        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-md border-t border-slate-200/90 lg:hidden shadow-md"
+        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-md lg:hidden shadow-lg"
       >
         <div className="flex items-center justify-around h-[64px] px-1 max-w-lg mx-auto">
           {coreNavItems.map((item) => {
@@ -229,8 +229,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             className="fixed inset-0 bg-black/30 backdrop-blur-xs transition-opacity"
             onClick={() => setShowMoreMenu(false)}
           />
-          <div className="relative bg-white rounded-t-3xl border-t border-black/[0.08] shadow-2xl p-5 pb-8 space-y-4 max-h-[80vh] overflow-y-auto animate-ios-sheet">
-            <div className="flex items-center justify-between border-b border-black/[0.06] pb-3">
+          <div className="relative bg-white rounded-t-3xl shadow-2xl p-5 pb-8 space-y-4 max-h-[80vh] overflow-y-auto animate-ios-sheet">
+            <div className="flex items-center justify-between pb-3">
               <div>
                 <h3 className="text-base font-bold text-[#1d1d1f]">Módulos Adicionais</h3>
                 <p className="text-xs text-[#86868b]">Ferramentas executivas e de auditoria</p>
@@ -288,7 +288,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             </div>
 
             {onLogout && (
-              <div className="pt-2 border-t border-black/[0.06]">
+              <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => {

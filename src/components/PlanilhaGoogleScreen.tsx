@@ -469,14 +469,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       if (result) {
         setNeedsAuth(false);
         setGoogleUserEmail(result.user.email || OFFICIAL_ADMIN_EMAIL);
-        if (isAdmin) {
-          setConfirmModalAction('create_both_real');
-        } else {
-          showToast(
-            'success',
-            `Autenticado com Google (${result.user.email || OFFICIAL_ADMIN_EMAIL})!`
-          );
-        }
+        showToast(
+          'success',
+          `Conectado ao Google (${result.user.email || OFFICIAL_ADMIN_EMAIL})!`
+        );
       }
     } catch (err: any) {
       showToast(
@@ -4223,100 +4219,79 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
         </section>
       )}
 
-      {/* Mandatory User Confirmation Dialog before creating/writing Google Sheets or Drive data */}
+      {/* Diálogo de Confirmação Simples e Funcional */}
       {confirmModalAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl border-2 border-[#003440]/20 space-y-4">
-            <div className="flex items-center gap-2.5 text-[#003440] pb-2 border-b border-[#edeeec]">
-              <span className="material-symbols-outlined text-[28px] text-[#005035]">
-                cloud_sync
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4 animate-gentle-fade">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[24px]">cloud_sync</span>
               </span>
-              <h3 className="text-lg font-semibold">
-                Confirmar Ação no Google (Admin)
-              </h3>
+              <div>
+                <h3 className="text-lg font-bold text-slate-950 leading-tight">
+                  Confirmar Sincronização
+                </h3>
+                <span className="text-xs font-semibold text-slate-600 block">
+                  Google Workspace
+                </span>
+              </div>
             </div>
 
             {confirmModalAction === 'create_both_real' && (
-              <div className="space-y-2 text-sm text-[#191c1b]">
-                <p>
-                  Você confirma a criação dos seguintes recursos reais na conta Google (<strong>{googleUserEmail || OFFICIAL_ADMIN_EMAIL}</strong>)?
+              <div className="space-y-2 text-sm">
+                <p className="text-slate-950 font-bold text-base leading-snug">
+                  Deseja criar a Planilha Oficial e a Pasta de Fotos no Google Drive da escola?
                 </p>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-[#41484b]">
-                  <li>
-                    <strong>Planilha Google Sheets:</strong>{' '}
-                    <code>BD_Oficial_SED_EMEB_Joaquim_Candelario_2027</code> com as 48 colunas SED (incluindo os estudantes reais do G4A e as 40 turmas) + aba dos 200 Dias Letivos.
-                  </li>
-                  <li>
-                    <strong>Pasta Real no Google Drive:</strong>{' '}
-                    <code>Fotos_Estudantes_EMEB_Joaquim_Candelario_Freitas_2027</code> para armazenar as fotos dos estudantes.
-                  </li>
-                </ul>
+                <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
+                  Conta vinculada:{' '}
+                  <span className="font-bold text-slate-950 block truncate mt-0.5">
+                    {googleUserEmail || OFFICIAL_ADMIN_EMAIL}
+                  </span>
+                </p>
               </div>
             )}
 
             {confirmModalAction === 'create_drive_folder' && (
-              <div className="space-y-2 text-sm text-[#191c1b]">
-                <p>
-                  Você confirma a criação da pasta real no seu <strong>Google Drive</strong> chamada:
+              <div className="space-y-2 text-sm">
+                <p className="text-slate-950 font-bold text-base leading-snug">
+                  Deseja criar a Pasta de Fotos dos Alunos no Google Drive da escola?
                 </p>
-                <p className="p-2.5 bg-[#f3f4f2] rounded-xl font-semibold text-[#003440] border border-[#c0c8cb] text-sm">
-                  Fotos_Estudantes_EMEB_Joaquim_Candelario_Freitas_2027
+                <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
+                  Conta vinculada:{' '}
+                  <span className="font-bold text-slate-950 block truncate mt-0.5">
+                    {googleUserEmail || OFFICIAL_ADMIN_EMAIL}
+                  </span>
                 </p>
               </div>
             )}
 
             {confirmModalAction === 'overwrite_existing' && (
-              <div className="space-y-2 text-sm text-[#191c1b]">
-                <p>
-                  Você confirma a gravação/atualização na planilha do <strong>Google Sheets</strong>?
+              <div className="space-y-2 text-sm">
+                <p className="text-slate-950 font-bold text-base leading-snug">
+                  Deseja atualizar a planilha no Google Sheets com as turmas e frequências?
                 </p>
-                <p className="p-2.5 bg-[#f3f4f2] rounded-xl font-mono text-xs text-[#003440] border border-[#c0c8cb] break-all">
-                  ID: {extractSpreadsheetId(spreadsheetInput)}
-                </p>
-                <p className="text-sm text-[#41484b]">
-                  Serão gravadas as <strong>{classesToSync.length} turmas</strong> ({totalStudentsToSync} estudantes com todas as 48 colunas SED) e a aba dos <strong>200 Dias Letivos</strong>.
+                <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
+                  {classesToSync.length} turmas com 200 dias letivos serão sincronizadas.
                 </p>
               </div>
             )}
 
             {confirmModalAction === 'redefine_and_sync_all' && (
-              <div className="space-y-2.5 text-sm text-[#191c1b]">
-                <p>
-                  Você confirma a <strong>Redefinição Total e Sincronia Tripla</strong> (Planilha Google + Firebase Firestore + App)?
+              <div className="space-y-2 text-sm">
+                <p className="text-slate-950 font-bold text-base leading-snug">
+                  Deseja redefinir e sincronizar as abas da planilha com o banco de dados da escola?
                 </p>
-                <div className="p-3 bg-[#eaf6ef] rounded-xl border border-[#005035]/20 space-y-1.5 text-sm text-[#003440]">
-                  <p className="font-semibold flex items-center gap-1.5 text-[#005035]">
-                    <span className="material-symbols-outlined text-[18px]">verified</span>
-                    12 Abas Oficiais Regulamentares que serão Criadas e Alinhadas:
-                  </p>
-                  <div className="grid grid-cols-2 gap-1 text-xs font-medium text-[#41484b]">
-                    <span>1. SED_Matriculas_e_Frequencia</span>
-                    <span>2. Faltas_Atestados_Infantil</span>
-                    <span>3. Faltas_Atestados_Fundamental</span>
-                    <span>4. Busca_Ativa_Faltas_Consecutivas_2027</span>
-                    <span>5. Turmas_Salas_2027</span>
-                    <span>6. Dias_Letivos_SME_2027</span>
-                    <span>7. Diagnostico_Inconsistencias_2027</span>
-                    <span>8. Bolsa_Familia_Bimestral_2027</span>
-                    <span>9. Onibus_Fretado_2027</span>
-                    <span>10. Emails_Permitidos_2027</span>
-                    <span>11. Monitoramento_Acessos_2027</span>
-                    <span>12. Consulta_Genero_Nomes_2027</span>
-                  </div>
-                </div>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-[#41484b]">
-                  <li>Limpeza de linhas fantasmas anteriores (batchClear em todas as abas).</li>
-                  <li>Alinhamento imediato no Firebase Firestore Cloud.</li>
-                  <li>Diagnóstico completo de inconsistências cadastrais e legais gravado na aba oficial.</li>
-                </ul>
+                <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
+                  Alinha todas as 12 abas oficiais com o banco em nuvem.
+                </p>
               </div>
             )}
 
-            <div className="flex gap-2.5 pt-2">
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 type="button"
                 onClick={() => setConfirmModalAction(null)}
-                className="flex-1 min-h-[48px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-semibold rounded-xl cursor-pointer"
+                className="h-12 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold rounded-xl cursor-pointer transition-colors text-sm flex items-center justify-center active:scale-95"
               >
                 Cancelar
               </button>
@@ -4331,7 +4306,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     ? executeConfirmedRedefineSheet
                     : executeConfirmedWriteSheet
                 }
-                className="flex-1 min-h-[48px] bg-[#005035] hover:bg-[#003723] text-white font-semibold rounded-xl shadow-md cursor-pointer"
+                className="h-12 bg-emerald-800 hover:bg-emerald-900 text-white font-bold rounded-xl shadow-xs cursor-pointer transition-colors text-sm flex items-center justify-center active:scale-95"
               >
                 Confirmar
               </button>

@@ -475,10 +475,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#f5f5f7] w-full max-w-4xl rounded-3xl shadow-2xl border border-black/[0.08] overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-[#f5f5f7] w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Top Apple-Style Bar + Navegação */}
-        <div className="px-4 sm:px-6 py-3 bg-white/95 backdrop-blur-md border-b border-black/[0.05] flex flex-wrap items-center justify-between gap-2.5">
+        <div className="px-4 sm:px-6 py-3 bg-white/95 backdrop-blur-md flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2 min-w-0">
             <span className="px-3 py-1 rounded-xl bg-[#1d1d1f] text-white font-semibold text-xs tabular-nums">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
@@ -561,55 +561,55 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         <div className="overflow-y-auto flex-1 p-5 sm:p-7 space-y-6">
           {/* BANNER DE ALERTA NO TOPO DA GRADE DE DADOS — EXCEDEU 3 FALTAS CONSECUTIVAS */}
           {exceedsThreeConsecutive && (
-            <div className="rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-[#fff7ed] via-[#fff1f2] to-[#fef2f2] border-2 border-[#ea580c]/50 shadow-md flex flex-col gap-3.5 animate-gentle-fade">
+            <div className="rounded-3xl p-5 bg-gradient-to-r from-orange-100 via-rose-100 to-amber-100 shadow-sm flex flex-col gap-3.5 animate-gentle-fade">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-[#ea580c] text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
                     <span className="material-symbols-outlined text-[22px]">notification_important</span>
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#ea580c] text-white text-[11px] font-semibold uppercase tracking-wider">
+                      <span className="px-3 py-1 rounded-full bg-orange-600 text-white text-[11px] font-bold uppercase tracking-wider">
                         ⚠️ ALERTA DE FREQUÊNCIA · EXCEDEU 3 FALTAS CONSECUTIVAS
                       </span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-white/90 border border-[#ea580c]/30 font-mono font-semibold text-xs text-[#c2410c] tabular-nums">
+                      <span className="px-3 py-1 rounded-full bg-white font-mono font-bold text-xs text-orange-950 tabular-nums shadow-2xs">
                         {effectiveConsecutiveDays} DIAS SEGUIDOS
                       </span>
                     </div>
-                    <h2 className="text-base sm:text-lg font-semibold text-[#1d1d1f] tracking-tight leading-snug mt-1">
+                    <h2 className="text-base sm:text-lg font-bold text-slate-950 tracking-tight leading-snug mt-1">
                       Ação Sugerida: Contato de Busca Ativa com a Família
                     </h2>
-                    <p className="text-xs sm:text-sm text-[#431407] font-medium leading-relaxed mt-0.5">
-                      O(A) estudante acumulou <strong className="font-semibold">{effectiveConsecutiveDays} faltas consecutivas</strong> sem justificativa legal. Pelo protocolo de Busca Ativa da SME Jundiaí, é prioritário o acolhimento imediato com os responsáveis para averiguar motivos e restabelecer o vínculo escolar.
+                    <p className="text-xs sm:text-sm text-amber-950 font-medium leading-relaxed mt-0.5">
+                      O(A) estudante acumulou <strong className="font-bold">{effectiveConsecutiveDays} faltas consecutivas</strong> sem justificativa legal. Pelo protocolo de Busca Ativa da SME Jundiaí, é prioritário o acolhimento imediato com os responsáveis para averiguar motivos e restabelecer o vínculo escolar.
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Informações Resumidas do Contato */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
-                <div className="bg-white/80 rounded-xl p-2.5 border border-[#ea580c]/15">
-                  <span className="text-[11px] font-bold uppercase text-[#86868b] block">Datas de Ausência</span>
-                  <span className="font-mono font-bold text-[#1d1d1f] block mt-0.5 truncate" title={datesList}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
+                  <span className="text-[11px] font-bold uppercase text-slate-600 block">Datas de Ausência</span>
+                  <span className="font-mono font-bold text-slate-950 block mt-0.5 truncate" title={datesList}>
                     {datesList}
                   </span>
                 </div>
-                <div className="bg-white/80 rounded-xl p-2.5 border border-[#ea580c]/15">
-                  <span className="text-[11px] font-bold uppercase text-[#86868b] block">Responsável Principal</span>
-                  <span className="font-bold text-[#1d1d1f] block mt-0.5 truncate" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
+                  <span className="text-[11px] font-bold uppercase text-slate-600 block">Responsável Principal</span>
+                  <span className="font-bold text-slate-950 block mt-0.5 truncate" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
                     {guardian1Info.parentesco}: {guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}
                   </span>
                 </div>
-                <div className="bg-white/80 rounded-xl p-2.5 border border-[#ea580c]/15">
-                  <span className="text-[11px] font-bold uppercase text-[#86868b] block">Status do Acompanhamento</span>
-                  <span className={`font-bold block mt-0.5 truncate ${hasFamilyFeedback ? 'text-[#005035]' : 'text-[#ea580c]'}`}>
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
+                  <span className="text-[11px] font-bold uppercase text-slate-600 block">Status do Acompanhamento</span>
+                  <span className={`font-bold block mt-0.5 truncate ${hasFamilyFeedback ? 'text-emerald-900' : 'text-orange-900'}`}>
                     {hasFamilyFeedback ? `Feedback: "${familyFeedbackText}"` : 'Pendente de contato'}
                   </span>
                 </div>
               </div>
 
               {/* Barra de Ações Rápidas de Busca Ativa */}
-              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#ea580c]/20">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
                 {buscaAtivaWaLinks.length > 0 ? (
                   buscaAtivaWaLinks.map((link, idx) => (
                     <a
@@ -617,7 +617,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       href={link.waUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#005035] hover:bg-[#003d29] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all hover:scale-[1.01] cursor-pointer"
+                      className="min-h-[40px] px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                       title={`Abrir WhatsApp com mensagem preenchida de Busca Ativa para ${link.display}`}
                     >
                       <span className="material-symbols-outlined text-[18px]">chat</span>
@@ -625,7 +625,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     </a>
                   ))
                 ) : (
-                  <span className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#6e6e73] text-white font-bold text-xs flex items-center gap-1.5 opacity-80">
+                  <span className="min-h-[40px] px-4 py-2 rounded-xl bg-slate-600 text-white font-bold text-xs flex items-center gap-1.5 opacity-80">
                     <span className="material-symbols-outlined text-[17px]">chat</span>
                     <span>Sem Telefone Cadastrado</span>
                   </span>
@@ -634,10 +634,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 {primaryPhoneDigits && (
                   <a
                     href={`tel:${primaryPhoneDigits}`}
-                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#f5f5f7] border border-black/10 text-[#1d1d1f] font-bold text-xs flex items-center justify-center gap-1 transition-all cursor-pointer"
+                    className="min-h-[40px] px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
                     title="Realizar ligação telefônica para o responsável"
                   >
-                    <span className="material-symbols-outlined text-[16px] text-[#005035]">call</span>
+                    <span className="material-symbols-outlined text-[18px] text-emerald-800">call</span>
                     <span>Ligar</span>
                   </a>
                 )}
@@ -645,14 +645,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSendPushAlert}
-                  className={`min-h-[38px] px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
+                  className={`min-h-[40px] px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs ${
                     pushAlertSent
-                      ? 'bg-[#eaf6ef] text-[#005035] border-[#005035]/30'
-                      : 'bg-white hover:bg-[#f5f5f7] text-[#c2410c] border-[#ea580c]/30'
+                      ? 'bg-emerald-200 text-emerald-950'
+                      : 'bg-white hover:bg-slate-100 text-orange-950'
                   }`}
                   title="Disparar notificação push imediata para a equipe escolar e coordenação"
                 >
-                  <span className="material-symbols-outlined text-[16px]">
+                  <span className="material-symbols-outlined text-[18px]">
                     {pushAlertSent ? 'check_circle' : 'notifications_active'}
                   </span>
                   <span>
@@ -669,14 +669,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       onClose();
                       onNavigateToConsecutiveAbsences();
                     }}
-                    className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#f5f5f7] border border-black/10 text-[#1d1d1f] font-bold text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ml-auto"
+                    className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ml-auto shadow-xs"
                     title="Ir para a aba de Faltas Seguidas para registrar ocorrência ou feedback oficial"
                   >
-                    <span className="material-symbols-outlined text-[16px] text-[#003440]">
+                    <span className="material-symbols-outlined text-[18px] text-slate-900">
                       history_edu
                     </span>
                     <span>Ficha de Faltas Seguidas</span>
-                    <span className="material-symbols-outlined text-[15px] text-[#8e8e93]">
+                    <span className="material-symbols-outlined text-[16px] text-slate-500">
                       arrow_forward
                     </span>
                   </button>
@@ -700,7 +700,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   if (hasPhoto) setIsLightboxOpen(true);
                   else internalPhotoInputRef.current?.click();
                 }}
-                className="relative w-full flex-1 min-h-[320px] sm:min-h-[380px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#1d1d1f] to-[#2c2c2e] shadow-md border border-black/[0.06] flex items-center justify-center group cursor-pointer"
+                className="relative w-full flex-1 min-h-[320px] sm:min-h-[380px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#1d1d1f] to-[#2c2c2e] shadow-md flex items-center justify-center group cursor-pointer"
               >
                 {hasPhoto ? (
                   <>
@@ -756,20 +756,20 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             {/* COLUNA DIREITA (7 cols): COMPOSIÇÃO ORGÂNICA E VISUAL */}
             <div className="md:col-span-7 flex flex-col justify-between space-y-4">
               {/* 1. Identidade Principal + Pílulas Numéricas Ultra-Legíveis (Manrope Tabular) */}
-              <div className="bg-white rounded-[24px] p-5 border border-black/[0.05] shadow-2xs space-y-4">
+              <div className="bg-white rounded-[24px] p-5 shadow-sm space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#eaf6ef] text-[#005035] font-bold text-xs uppercase tracking-wider">
+                    <span className="px-3 py-1 rounded-full bg-[#eaf6ef] text-[#005035] font-bold text-xs uppercase tracking-wider">
                       {draft.situacao || 'MATRÍCULA ATIVA'}
                     </span>
                     {(() => {
                       const gInfo = getStudentGenderLabel(draft);
                       return (
                         <span
-                          className={`px-2.5 py-0.5 rounded-full font-bold text-xs ${
+                          className={`px-3 py-1 rounded-full font-bold text-xs ${
                             gInfo.code === 'F'
-                              ? 'bg-[#fce7f3] text-[#9d174d]'
-                              : 'bg-[#e0f2fe] text-[#0369a1]'
+                              ? 'bg-pink-100 text-pink-950'
+                              : 'bg-sky-100 text-sky-950'
                           }`}
                         >
                           {gInfo.estudanteTitle} · {gInfo.label} ({gInfo.code})
@@ -777,7 +777,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       );
                     })()}
                     {draft.deficiencia && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#f5f3ff] text-[#5b21b6] font-bold text-xs">
+                      <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-950 font-bold text-xs">
                         AEE · {draft.deficiencia}
                       </span>
                     )}
@@ -785,17 +785,17 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                   {/* Badge Visual de Risco / Faltas Consecutivas Imediatamente Visível no Topo do Card (3, 5 e 10 dias) */}
                   <span
-                    className={`px-3 py-1 rounded-full font-semibold text-xs tabular-nums flex items-center gap-1.5 ${
+                    className={`px-3.5 py-1 rounded-full font-bold text-xs tabular-nums flex items-center gap-1.5 shadow-2xs ${
                       currentConsecutiveDaysCount >= 10
-                        ? 'bg-[#be123c] text-white shadow-2xs ring-2 ring-[#e11d48]/30'
+                        ? 'bg-rose-700 text-white'
                         : currentConsecutiveDaysCount >= 5
-                        ? 'bg-[#ea580c] text-white shadow-2xs'
+                        ? 'bg-orange-600 text-white'
                         : isConsecutiveRisk
-                        ? 'bg-[#fffbeb] text-[#92400e] border border-[#f59e0b]/50'
-                        : 'bg-[#f5f5f7] text-[#6e6e73]'
+                        ? 'bg-amber-200 text-amber-950'
+                        : 'bg-slate-100 text-slate-700'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[15px]">
+                    <span className="material-symbols-outlined text-[16px]">
                       {currentConsecutiveDaysCount >= 10
                         ? 'gpp_maybe'
                         : isConsecutiveRisk
@@ -811,39 +811,39 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   </span>
                 </div>
 
-                <h1 className="text-xl sm:text-2xl font-semibold text-[#1d1d1f] tracking-tight leading-tight">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight leading-tight">
                   {draft.name}
                 </h1>
 
                 {/* Cartões Visuais de Números-Chave (RA, Nascimento, Frequência e Faltas Seguidas) */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                  <div className="rounded-2xl bg-[#f5f5f7] p-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Registro (RA)
                     </span>
-                    <span className="text-base sm:text-base font-semibold text-[#1d1d1f] tabular-nums block mt-0.5">
+                    <span className="text-base font-bold text-slate-950 tabular-nums block mt-0.5">
                       {draft.ra ? `${draft.ra}-${draft.digRa}` : '—'}
                     </span>
                   </div>
 
-                  <div className="rounded-2xl bg-[#f5f5f7] p-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Nascimento
                     </span>
-                    <span className="text-base sm:text-base font-semibold text-[#1d1d1f] tabular-nums block mt-0.5">
+                    <span className="text-base font-bold text-slate-950 tabular-nums block mt-0.5">
                       {draft.dataNascimento || '—'}
                     </span>
                   </div>
 
-                  <div className="rounded-2xl bg-[#f5f5f7] p-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Frequência no Mês
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
-                      <span className="text-base sm:text-base font-semibold text-[#005035] tabular-nums">
+                      <span className="text-base font-bold text-emerald-900 tabular-nums">
                         {metrics.frequenciaPercent}%
                       </span>
-                      <span className="text-xs font-semibold text-[#6e6e73] tabular-nums">
+                      <span className="text-xs font-bold text-slate-600 tabular-nums">
                         ({metrics.faltas} {metrics.faltas === 1 ? 'falta' : 'faltas'})
                       </span>
                     </div>
@@ -851,47 +851,47 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                   {/* Card Dedicado de Faltas Consecutivas (Marcas de 3, 5 e 10 dias) */}
                   <div
-                    className={`rounded-2xl p-3 border ${
+                    className={`rounded-2xl p-3 shadow-2xs ${
                       currentConsecutiveDaysCount >= 10
-                        ? 'bg-[#fff1f2] border-[#e11d48]/45'
+                        ? 'bg-rose-100 text-rose-950'
                         : currentConsecutiveDaysCount >= 5
-                        ? 'bg-[#fff7ed] border-[#ea580c]/40'
+                        ? 'bg-orange-100 text-orange-950'
                         : isConsecutiveRisk
-                        ? 'bg-[#fffbeb] border-[#f59e0b]/45'
-                        : 'bg-[#f5f5f7] border-transparent'
+                        ? 'bg-amber-100 text-amber-950'
+                        : 'bg-slate-100 text-slate-900'
                     }`}
                   >
                     <span
                       className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 ${
                         currentConsecutiveDaysCount >= 10
-                          ? 'text-[#be123c]'
+                          ? 'text-rose-950'
                           : currentConsecutiveDaysCount >= 5
-                          ? 'text-[#c2410c]'
+                          ? 'text-orange-950'
                           : isConsecutiveRisk
-                          ? 'text-[#92400e]'
-                          : 'text-[#86868b]'
+                          ? 'text-amber-950'
+                          : 'text-slate-600'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[13px]">
+                      <span className="material-symbols-outlined text-[14px]">
                         {isConsecutiveRisk ? 'notification_important' : 'event_available'}
                       </span>
                       <span>Faltas Seguidas</span>
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span
-                        className={`text-base sm:text-base font-semibold tabular-nums ${
+                        className={`text-base font-bold tabular-nums ${
                           currentConsecutiveDaysCount >= 10
-                            ? 'text-[#be123c]'
+                            ? 'text-rose-950'
                             : currentConsecutiveDaysCount >= 5
-                            ? 'text-[#ea580c]'
+                            ? 'text-orange-950'
                             : isConsecutiveRisk
-                            ? 'text-[#d97706]'
-                            : 'text-[#1d1d1f]'
+                            ? 'text-amber-950'
+                            : 'text-slate-950'
                         }`}
                       >
                         {currentConsecutiveDaysCount} {currentConsecutiveDaysCount === 1 ? 'dia' : 'dias'}
                       </span>
-                      <span className="text-[11px] font-semibold text-[#6e6e73] tabular-nums truncate">
+                      <span className="text-[11px] font-bold text-slate-600 tabular-nums truncate">
                         {currentConsecutiveDaysCount >= 10
                           ? 'crítico 10+d'
                           : currentConsecutiveDaysCount >= 5
@@ -907,18 +907,18 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 {/* Alerta Contextual de Datas Faltosas e Retorno da Família se houver Faltas Seguidas */}
                 {isConsecutiveRisk && latestConsecutiveOccurrence && (
                   <div
-                    className={`rounded-2xl p-3 border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+                    className={`rounded-2xl p-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
                       latestConsecutiveOccurrence.familyFeedback
-                        ? 'bg-[#eaf6ef]/70 border-[#28cd41]/30 text-[#1d1d1f]'
-                        : 'bg-[#fff2f2] border-[#ff3b30]/25 text-[#1d1d1f]'
+                        ? 'bg-emerald-100 text-emerald-950'
+                        : 'bg-rose-100 text-rose-950'
                     }`}
                   >
                     <div className="flex items-start gap-2 min-w-0">
                       <span
-                        className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${
+                        className={`material-symbols-outlined text-[20px] shrink-0 mt-0.5 ${
                           latestConsecutiveOccurrence.familyFeedback
-                            ? 'text-[#1d8338]'
-                            : 'text-[#ff3b30]'
+                            ? 'text-emerald-800'
+                            : 'text-rose-700'
                         }`}
                       >
                         {latestConsecutiveOccurrence.familyFeedback
@@ -928,11 +928,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       <div className="min-w-0">
                         <span className="font-bold block">
                           Datas seguidas ({latestConsecutiveOccurrence.sequenceNumber}ª ocorrência):{' '}
-                          <span className="tabular-nums font-semibold">
+                          <span className="tabular-nums font-bold">
                             {latestConsecutiveOccurrence.selectedDates.join(', ')}
                           </span>
                         </span>
-                        <span className="text-xs text-[#6e6e73] block mt-0.5">
+                        <span className="text-xs text-slate-700 font-medium block mt-0.5">
                           {latestConsecutiveOccurrence.familyFeedback
                             ? `Retorno da família: "${latestConsecutiveOccurrence.familyFeedback}"`
                             : 'Aguardando retorno / justificativa da família na Busca Ativa.'}
@@ -948,10 +948,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenStudentPdf(draft)}
-                  className={`w-full p-4 rounded-[24px] border text-left flex items-center justify-between gap-3.5 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
+                  className={`w-full p-4 rounded-3xl text-left flex items-center justify-between gap-3.5 transition-all cursor-pointer shadow-sm active:scale-[0.99] ${
                     hasPdf
-                      ? 'bg-[#0071e3] hover:bg-[#005bb5] border-[#0071e3] text-white'
-                      : 'bg-[#fff2f2] hover:bg-[#ffe5e5] border-[#ff3b30]/35 text-[#1d1d1f]'
+                      ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white'
+                      : 'bg-rose-100 hover:bg-rose-200 text-rose-950'
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
@@ -994,7 +994,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               )}
 
               {/* 3. Cartão Orgânico da Família, WhatsApp e Endereço */}
-              <div className="bg-white rounded-[24px] p-5 border border-black/[0.05] shadow-2xs space-y-4">
+              <div className="bg-white rounded-[24px] p-5 shadow-sm space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {(() => {
                     const g1 = resolveGuardianRelationshipInfo(
@@ -1010,28 +1010,28 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     return (
                       <>
                         <div className="flex items-start gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0 mt-0.5">
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
                             <span className="material-symbols-outlined text-[18px]">person</span>
                           </div>
                           <div className="min-w-0">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
                               {g1.roleLabel} · Filiação 1 ({g1.gender})
                             </span>
-                            <p className="text-sm font-bold text-[#1d1d1f] leading-snug mt-0.5">
+                            <p className="text-sm font-bold text-slate-950 leading-snug mt-0.5">
                               {g1.cleanName || 'Não informado'}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex items-start gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0 mt-0.5">
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
                             <span className="material-symbols-outlined text-[18px]">person</span>
                           </div>
                           <div className="min-w-0">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
                               {g2.roleLabel} · Filiação 2 ({g2.gender})
                             </span>
-                            <p className="text-sm font-bold text-[#1d1d1f] leading-snug mt-0.5">
+                            <p className="text-sm font-bold text-slate-950 leading-snug mt-0.5">
                               {g2.cleanName || 'Não informado'}
                             </p>
                           </div>
@@ -1042,16 +1042,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 </div>
 
                 {/* Linha de Telefones com Botões Diretos de WhatsApp */}
-                <div className="pt-3 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-2.5">
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#25D366]/15 text-[#128C7E] flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-[#25D366]/20 text-[#128C7E] flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined text-[18px]">call</span>
                     </div>
                     <div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
                         Contato Rápido (WhatsApp)
                       </span>
-                      <span className="text-sm font-bold text-[#1d1d1f] tabular-nums">
+                      <span className="text-sm font-bold text-slate-950 tabular-nums">
                         {draft.telefones || draft.guardianPhone || 'Sem telefone cadastrado'}
                       </span>
                     </div>
@@ -1065,7 +1065,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           href={ph.waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold text-xs tabular-nums flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                          className="px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold text-xs tabular-nums flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                         >
                           <span className="material-symbols-outlined text-[16px]">chat</span>
                           <span>Chamar {ph.display}</span>
@@ -1077,23 +1077,23 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                 {/* Endereço e Rota de Ônibus */}
                 {(fullAddress || draft.rotaOnibus) && (
-                  <div className="pt-3 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-2">
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                      <div className="w-8 h-8 rounded-xl bg-[#f5f5f7] text-[#6e6e73] flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
                         <span className="material-symbols-outlined text-[18px]">location_on</span>
                       </div>
                       <div className="min-w-0">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868b] block">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
                           Endereço Residencial
                         </span>
-                        <p className="text-sm font-semibold text-[#1d1d1f] leading-snug mt-0.5">
+                        <p className="text-sm font-bold text-slate-950 leading-snug mt-0.5">
                           {fullAddress || '—'}
                         </p>
                       </div>
                     </div>
 
                     {draft.rotaOnibus && (
-                      <span className="px-3 py-1 rounded-xl bg-[#f0f9ff] text-[#0369a1] font-bold text-xs tabular-nums shrink-0">
+                      <span className="px-3 py-1 rounded-xl bg-sky-100 text-sky-950 font-bold text-xs tabular-nums shrink-0">
                         🚌 {draft.rotaOnibus}
                       </span>
                     )}
@@ -1106,7 +1106,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAllSedFields((prev) => !prev)}
-                  className="px-3.5 py-2 rounded-xl bg-white hover:bg-[#e8e8ed] text-[#6e6e73] hover:text-[#1d1d1f] border border-black/[0.05] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
                 >
                   <span className="material-symbols-outlined text-[18px]">
                     {showAllSedFields ? 'expand_less' : 'expand_more'}
@@ -1134,9 +1134,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
           {/* SEÇÃO EXPANSÍVEL OPCIONAL: GRADE DE 48 CAMPOS SED */}
           {showAllSedFields && (
-            <section className="bg-white rounded-[24px] p-5 shadow-2xs border border-black/[0.06] space-y-3.5 animate-gentle-fade">
+            <section className="bg-white rounded-[24px] p-5 shadow-sm space-y-3.5 animate-gentle-fade">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-[#1d1d1f] flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-slate-950 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[19px] text-[#0071e3]">
                     grid_on
                   </span>
@@ -1148,7 +1148,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   value={searchField}
                   onChange={(e) => setSearchField(e.target.value)}
                   placeholder="Filtrar campo (ex: CPF, SUS, CEP)..."
-                  className="px-3.5 py-1.5 bg-[#f5f5f7] rounded-xl border border-black/[0.08] text-sm font-medium focus:bg-white focus:outline-none"
+                  className="px-3.5 py-1.5 bg-slate-100 rounded-xl text-sm font-medium focus:bg-white focus:outline-none"
                 />
               </div>
 
@@ -1164,10 +1164,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     key={cat.id}
                     type="button"
                     onClick={() => setActiveCategory(cat.id as GridCategory)}
-                    className={`px-3 py-1 rounded-lg font-semibold text-xs cursor-pointer transition-colors ${
+                    className={`px-3 py-1 rounded-lg font-bold text-xs cursor-pointer transition-colors ${
                       activeCategory === cat.id
-                        ? 'bg-[#1d1d1f] text-white'
-                        : 'bg-[#f5f5f7] text-[#6e6e73] hover:bg-[#e8e8ed]'
+                        ? 'bg-slate-950 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {cat.label}
@@ -1192,20 +1192,20 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           setEditingKey(field.key);
                         }
                       }}
-                      className={`p-2.5 rounded-xl border transition-all ${
+                      className={`p-2.5 rounded-xl transition-all shadow-2xs ${
                         isEditingThis
-                          ? 'bg-white border-[#0071e3] shadow-2xs'
+                          ? 'bg-white ring-2 ring-[#0071e3]'
                           : canEdit
-                          ? 'bg-[#fbfbfd] hover:bg-[#f5f5f7] border-black/[0.06] cursor-pointer'
-                          : 'bg-[#fbfbfd] border-black/[0.05]'
+                          ? 'bg-slate-100 hover:bg-slate-200 cursor-pointer'
+                          : 'bg-slate-100'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-tight">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tight">
                           {field.label}
                         </span>
                         {canEdit && (
-                          <span className="material-symbols-outlined text-[13px] text-[#86868b]">
+                          <span className="material-symbols-outlined text-[13px] text-slate-500">
                             edit
                           </span>
                         )}
@@ -1222,12 +1222,12 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') setEditingKey(null);
                           }}
-                          className="w-full mt-1 px-2 py-1 bg-[#f5f5f7] text-[#1d1d1f] font-semibold text-sm tabular-nums rounded-lg border border-[#0071e3] focus:outline-none"
+                          className="w-full mt-1 px-2 py-1 bg-white text-slate-950 font-bold text-sm tabular-nums rounded-lg ring-2 ring-[#0071e3] focus:outline-none"
                         />
                       ) : (
                         <p
-                          className={`text-sm font-semibold tabular-nums mt-0.5 break-words ${
-                            displayVal === '—' ? 'text-[#c7c7cc] font-normal' : 'text-[#1d1d1f]'
+                          className={`text-sm font-bold tabular-nums mt-0.5 break-words ${
+                            displayVal === '—' ? 'text-slate-400 font-normal' : 'text-slate-950'
                           }`}
                         >
                           {displayVal}
@@ -1255,7 +1255,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             <img
               src={effectivePhotoUrl}
               alt={draft.name}
-              className="max-h-[78vh] w-auto rounded-3xl shadow-2xl border border-white/15 object-contain"
+              className="max-h-[78vh] w-auto rounded-3xl shadow-2xl object-contain"
               referrerPolicy="no-referrer"
             />
             <div className="mt-4 flex items-center gap-3">

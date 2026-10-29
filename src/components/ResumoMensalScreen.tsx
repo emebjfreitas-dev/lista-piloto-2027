@@ -424,11 +424,11 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       </div>
 
       {/* CABEÇALHO EXECUTIVO POWER BI (SÓBRIO, SEM ATALHOS REDUNDANTES) */}
-      <section className="bg-slate-900 text-white rounded-2xl p-5 sm:p-6 border border-slate-800 shadow-sm">
+      <section className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-400">
-              <span className="bg-sky-950 text-sky-400 px-2.5 py-0.5 rounded border border-sky-800/60 uppercase tracking-widest text-[11px]">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-300">
+              <span className="bg-sky-950 text-sky-300 px-2.5 py-0.5 rounded-lg uppercase tracking-widest text-[11px] font-bold">
                 DIREÇÃO &amp; COORDENAÇÃO
               </span>
               <span className="text-slate-600">•</span>
@@ -472,10 +472,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       </section>
 
       {/* BARRA DE SLICERS (POWER BI - MINIMALISTA E SÓBRIA) */}
-      <section className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-xs">
-        <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-100 text-xs font-bold text-slate-600">
-          <div className="flex items-center gap-1.5 uppercase tracking-wider text-slate-700">
-            <span className="material-symbols-outlined text-slate-500 text-[18px]">
+      <section className="bg-white rounded-3xl p-5 shadow-sm space-y-3">
+        <div className="flex items-center justify-between pb-2 text-xs font-bold text-slate-800">
+          <div className="flex items-center gap-1.5 uppercase tracking-wider text-slate-900 font-bold">
+            <span className="material-symbols-outlined text-slate-700 text-[18px]">
               tune
             </span>
             <span>Segmentadores Analíticos</span>
@@ -488,7 +488,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 setSegmentFilter('all');
                 setShiftFilter('all');
               }}
-              className="text-sky-600 hover:text-sky-800 cursor-pointer flex items-center gap-1 text-xs font-semibold"
+              className="text-sky-700 hover:text-sky-950 font-bold cursor-pointer flex items-center gap-1 text-xs"
             >
               <span className="material-symbols-outlined text-[15px]">refresh</span>
               Restaurar Visão Geral
@@ -499,13 +499,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Slicer: Mês Letivo */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
               Mês Letivo (2027)
             </label>
             <select
               value={selectedMonthName}
               onChange={(e) => setSelectedMonthName(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-11 px-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-600 cursor-pointer transition-all shadow-2xs"
             >
               {MONTHLY_SCHOOL_DAYS_2027.map((m) => (
                 <option key={m.month} value={m.month}>
@@ -517,13 +517,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Segmento & Metas MEC */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
               Segmento • Metas MEC
             </label>
             <select
               value={segmentFilter}
               onChange={(e) => setSegmentFilter(e.target.value as any)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-11 px-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-600 cursor-pointer transition-all shadow-2xs"
             >
               <option value="all">Todos os Segmentos (Infantil + Fundamental)</option>
               <option value="fundamental">Ensino Fundamental (Piso Legal LDB ≥ 75%)</option>
@@ -533,13 +533,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Turno */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
               Turno Escolar
             </label>
             <select
               value={shiftFilter}
               onChange={(e) => setShiftFilter(e.target.value as any)}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-11 px-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-600 cursor-pointer transition-all shadow-2xs"
             >
               <option value="all">Todos os Turnos (Manhã + Tarde)</option>
               <option value="MANHÃ">Período Manhã</option>
@@ -549,7 +549,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Turma */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
               Recorte de Turma
             </label>
             <select
@@ -562,7 +562,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   if (found) onSelectClass(found);
                 }
               }}
-              className="w-full h-10 px-3 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer transition-all"
+              className="w-full h-11 px-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-600 cursor-pointer transition-all shadow-2xs"
             >
               <option value="all_classes">
                 Todas as Turmas ({allClasses.length} turmas consolidadas)
@@ -578,38 +578,38 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       </section>
 
       {/* BLOCO SCORECARD MEC: KPIS OFICIAIS DE DESEMPENHO (DESIGN MINIMALISTA POWER BI) */}
-      <section className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+      <section className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-2">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sky-600 text-[22px]">
+            <span className="material-symbols-outlined text-sky-700 text-[24px]">
               analytics
             </span>
             <div>
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
                 Scorecard Executivo MEC — Indicadores Oficiais de Desempenho
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-600 font-medium">
                 Métricas oficiais de permanência escolar, frequência mínima por aluno e proteção contra abandono.
               </p>
             </div>
           </div>
-          <span className="text-[11px] font-mono text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100 self-start sm:self-auto">
+          <span className="text-[11px] font-mono text-slate-700 font-bold bg-slate-100 px-3 py-1.5 rounded-xl self-start sm:self-auto">
             {kpiData.totalActiveStudents} estudantes ativos
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           {/* KPI 1: Taxa de Permanência Escolar */}
-          <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
+          <div className="bg-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
                 Permanência Escolar
               </span>
               <span
-                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold ${
                   kpiData.permanenceRate >= 95
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-rose-100 text-rose-800'
+                    ? 'bg-emerald-200 text-emerald-950'
+                    : 'bg-rose-200 text-rose-950'
                 }`}
               >
                 {kpiData.permanenceRate >= 95 ? 'Conforme' : 'Atenção'}
@@ -618,24 +618,24 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-semibold text-slate-900 font-mono tracking-tight tabular-nums">
+                <span className="text-2xl font-bold text-slate-950 font-mono tracking-tight tabular-nums">
                   {kpiData.permanenceRate}%
                 </span>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-slate-600 font-bold">
                   meta ≥95%
                 </span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden">
+              <div className="w-full bg-slate-200 rounded-full h-2 mt-2 overflow-hidden">
                 <div
-                  className={`h-1.5 rounded-full ${
-                    kpiData.permanenceRate >= 95 ? 'bg-emerald-600' : 'bg-rose-600'
+                  className={`h-2 rounded-full ${
+                    kpiData.permanenceRate >= 95 ? 'bg-emerald-700' : 'bg-rose-700'
                   }`}
                   style={{ width: `${Math.min(100, kpiData.permanenceRate)}%` }}
                 />
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60">
+            <p className="text-[11px] text-slate-700 font-semibold pt-1">
               {kpiData.severeDropRiskCount === 0
                 ? 'Sem risco de evasão crítica'
                 : `${kpiData.severeDropRiskCount} em risco de evasão`}
@@ -643,47 +643,47 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           </div>
 
           {/* KPI 2: Frequência Mínima por Aluno (Piso LDB) */}
-          <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
+          <div className="bg-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
                 Alunos no Piso MEC
               </span>
-              <span className="text-[11px] font-mono text-slate-500 font-bold">
+              <span className="text-[11px] font-mono text-slate-700 font-bold">
                 {kpiData.studentsMeetingMecTargetCount}/{kpiData.totalActiveStudents}
               </span>
             </div>
 
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-semibold text-slate-900 font-mono tracking-tight tabular-nums">
+                <span className="text-2xl font-bold text-slate-950 font-mono tracking-tight tabular-nums">
                   {kpiData.studentsMeetingMecTargetPercent}%
                 </span>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-slate-600 font-bold">
                   atingem piso
                 </span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden">
+              <div className="w-full bg-slate-200 rounded-full h-2 mt-2 overflow-hidden">
                 <div
-                  className="h-1.5 rounded-full bg-sky-600"
+                  className="h-2 rounded-full bg-sky-700"
                   style={{ width: `${kpiData.studentsMeetingMecTargetPercent}%` }}
                 />
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60 truncate">
-              Média geral escolar: <strong className="text-slate-800">{kpiData.overallFrequencyRate}%</strong>
+            <p className="text-[11px] text-slate-700 font-semibold pt-1 truncate">
+              Média geral escolar: <strong className="text-slate-950">{kpiData.overallFrequencyRate}%</strong>
             </p>
           </div>
 
           {/* KPI 3: Alunos Abaixo da Meta MEC */}
-          <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
+          <div className="bg-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
                 Abaixo do Piso MEC
               </span>
               <span
-                className={`material-symbols-outlined text-[18px] ${
-                  kpiData.totalBelowLegal === 0 ? 'text-emerald-600' : 'text-rose-600'
+                className={`material-symbols-outlined text-[20px] ${
+                  kpiData.totalBelowLegal === 0 ? 'text-emerald-700' : 'text-rose-700'
                 }`}
               >
                 {kpiData.totalBelowLegal === 0 ? 'check_circle' : 'warning'}
@@ -693,104 +693,90 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-2xl font-semibold font-mono tracking-tight tabular-nums ${
-                    kpiData.totalBelowLegal === 0 ? 'text-slate-900' : 'text-rose-700'
+                  className={`text-2xl font-bold font-mono tracking-tight tabular-nums ${
+                    kpiData.totalBelowLegal === 0 ? 'text-slate-950' : 'text-rose-900'
                   }`}
                 >
                   {kpiData.totalBelowLegal}
                 </span>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-slate-600 font-bold">
                   em risco legal
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[11px] text-slate-700 font-semibold mt-1">
                 {kpiData.totalActiveStudents > 0
                   ? `${((kpiData.totalBelowLegal / kpiData.totalActiveStudents) * 100).toFixed(1)}% do total`
                   : '0%'}
               </p>
             </div>
 
-            <div className="text-[11px] pt-2 border-t border-slate-200/60 flex justify-between font-medium">
-              <span className="text-slate-700">Fund: {kpiData.totalBelowFundamental}</span>
-              <span className="text-slate-700">Infantil: {kpiData.totalBelowInfantil}</span>
+            <div className="text-[11px] pt-1 flex justify-between font-bold">
+              <span className="text-slate-800">Fund: {kpiData.totalBelowFundamental}</span>
+              <span className="text-slate-800">Infantil: {kpiData.totalBelowInfantil}</span>
             </div>
           </div>
 
           {/* KPI 4: Atestados & Cobertura Legal */}
-          <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between">
+          <div className="bg-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
                 Cobertura Atestados
               </span>
-              <span className="material-symbols-outlined text-[18px] text-emerald-600">
+              <span className="material-symbols-outlined text-[20px] text-emerald-800">
                 medical_services
               </span>
             </div>
 
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-semibold text-slate-900 font-mono tracking-tight tabular-nums">
+                <span className="text-2xl font-bold text-slate-950 font-mono tracking-tight tabular-nums">
                   {kpiData.justifiedSharePercent}%
                 </span>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-slate-600 font-bold">
                   justificadas
                 </span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 flex overflow-hidden">
+              <div className="w-full bg-slate-200 rounded-full h-2 mt-2 flex overflow-hidden">
                 <div
-                  className="bg-emerald-600 h-1.5"
+                  className="bg-emerald-700 h-2"
                   style={{ width: `${kpiData.justifiedSharePercent}%` }}
                 />
                 <div
-                  className="bg-rose-500 h-1.5"
+                  className="bg-rose-600 h-2"
                   style={{ width: `${100 - kpiData.justifiedSharePercent}%` }}
                 />
               </div>
             </div>
 
-            <div className="text-[11px] pt-2 border-t border-slate-200/60 flex justify-between font-medium">
-              <span className="text-emerald-700">Com atestado: {kpiData.totalAtestados}</span>
-              <span className="text-rose-700">S/ atestado: {kpiData.totalSemAtestado}</span>
+            <div className="text-[11px] pt-1 flex justify-between font-bold">
+              <span className="text-emerald-900">Com atestado: {kpiData.totalAtestados}</span>
+              <span className="text-rose-900">S/ atestado: {kpiData.totalSemAtestado}</span>
             </div>
           </div>
 
           {/* KPI 5: Busca Ativa / Consecutivas */}
           <div
-            className={`rounded-xl p-4 border flex flex-col justify-between transition-all ${
+            className={`rounded-2xl p-4 flex flex-col justify-between shadow-xs transition-all ${
               kpiData.totalConsecutiveAlerts > 0
                 ? kpiData.tier10Count > 0
-                  ? 'bg-rose-50/70 border-rose-300 animate-pulse-subtle-rose'
-                  : 'bg-amber-50/70 border-amber-300 animate-pulse-subtle-amber'
-                : 'bg-slate-50/70 border-slate-200/80'
+                  ? 'bg-rose-100/90 text-rose-950'
+                  : 'bg-amber-100/90 text-amber-950'
+                : 'bg-slate-100 text-slate-900'
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                {kpiData.totalConsecutiveAlerts > 0 && (
-                  <span className="relative flex h-2 w-2">
-                    <span
-                      className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                        kpiData.tier10Count > 0 ? 'bg-rose-500' : 'bg-amber-500'
-                      }`}
-                    />
-                    <span
-                      className={`relative inline-flex rounded-full h-2 w-2 ${
-                        kpiData.tier10Count > 0 ? 'bg-rose-600' : 'bg-amber-600'
-                      }`}
-                    />
-                  </span>
-                )}
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-900">
                   Busca Ativa (ECA)
                 </span>
               </div>
               <span
-                className={`material-symbols-outlined text-[18px] ${
+                className={`material-symbols-outlined text-[20px] ${
                   kpiData.totalConsecutiveAlerts === 0
-                    ? 'text-emerald-600'
+                    ? 'text-emerald-800'
                     : kpiData.tier10Count > 0
-                    ? 'text-rose-600'
-                    : 'text-amber-600'
+                    ? 'text-rose-900'
+                    : 'text-amber-900'
                 }`}
               >
                 {kpiData.totalConsecutiveAlerts === 0 ? 'verified' : 'crisis_alert'}
@@ -800,29 +786,29 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <div className="my-2.5">
               <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-2xl font-semibold font-mono tracking-tight tabular-nums ${
+                  className={`text-2xl font-bold font-mono tracking-tight tabular-nums ${
                     kpiData.totalConsecutiveAlerts === 0
-                      ? 'text-slate-900'
+                      ? 'text-slate-950'
                       : kpiData.tier10Count > 0
-                      ? 'text-rose-800'
-                      : 'text-amber-800'
+                      ? 'text-rose-950'
+                      : 'text-amber-950'
                   }`}
                 >
                   {kpiData.totalConsecutiveAlerts}
                 </span>
-                <span className="text-xs text-slate-600 font-medium">
+                <span className="text-xs text-slate-700 font-bold">
                   casos ativos
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[11px] text-slate-700 font-medium mt-1">
                 Faltas consecutivas não abonadas
               </p>
             </div>
 
-            <div className="text-[11px] pt-2 border-t border-slate-200/60 flex justify-between font-bold">
-              <span className="text-amber-700">3d: {kpiData.tier3Count}</span>
-              <span className="text-orange-700">5d: {kpiData.tier5Count}</span>
-              <span className="text-rose-700">10d+: {kpiData.tier10Count}</span>
+            <div className="text-[11px] pt-1 flex justify-between font-bold">
+              <span className="text-amber-950">3d: {kpiData.tier3Count}</span>
+              <span className="text-orange-950">5d: {kpiData.tier5Count}</span>
+              <span className="text-rose-950">10d+: {kpiData.tier10Count}</span>
             </div>
           </div>
         </div>
@@ -831,17 +817,17 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       {/* PAINEL CENTRAL: GRÁFICO POR TURMA & MATRIZ EXECUTIVA */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Gráfico de Colunas Power BI */}
-        <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-white rounded-3xl p-6 shadow-sm flex flex-col justify-between">
           <div className="space-y-0.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
                 Desempenho por Turma ({selectedMonthName})
               </h2>
-              <span className="text-[11px] text-slate-400 font-medium">
+              <span className="text-[11px] text-slate-500 font-bold">
                 Clique na coluna para isolar
               </span>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-600 font-medium">
               Linha tracejada de referência institucional (meta 85%).
             </p>
           </div>
@@ -858,16 +844,16 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   <span className="w-6 text-right text-[10px] font-mono text-slate-400">
                     {val}%
                   </span>
-                  <div className="flex-1 border-t border-dashed border-slate-200" />
+                  <div className="flex-1 h-px bg-slate-200/60" />
                 </div>
               ))}
 
               {/* Linha Meta 85% */}
               <div
-                className="absolute left-8 right-0 border-t-2 border-dashed border-slate-800 z-10 flex items-center justify-end"
+                className="absolute left-8 right-0 h-0.5 bg-slate-800 z-10 flex items-center justify-end"
                 style={{ bottom: '85%' }}
               >
-                <span className="bg-slate-800 text-white text-[9px] font-bold px-1.5 py-0.5 rounded -mt-4 mr-1">
+                <span className="bg-slate-900 text-white text-[9px] font-bold px-2 py-0.5 rounded-md -mt-4 mr-1">
                   Meta 85%
                 </span>
               </div>
@@ -940,7 +926,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+          <div className="pt-2 flex items-center justify-between text-[11px] text-slate-600 font-bold">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-xs bg-[#047857]" /> ≥85%
@@ -957,13 +943,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         </div>
 
         {/* Matriz Consolidada de Turmas */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col justify-between">
-          <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-2">
+        <div className="lg:col-span-7 bg-white rounded-3xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="p-5 flex items-center justify-between gap-2">
             <div>
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
                 Matriz Consolidada de Turmas ({selectedMonthName})
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-600 font-medium">
                 Frequência escolar, faltas, cobertura documental e risco legal por turma.
               </p>
             </div>
@@ -971,7 +957,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setScopeFilter('all_classes')}
-                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer"
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs cursor-pointer shadow-2xs"
               >
                 Ver Todas
               </button>
@@ -980,7 +966,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold uppercase text-[11px] sticky top-0 z-10">
+              <thead className="bg-slate-100 text-slate-800 font-bold uppercase text-[11px] sticky top-0 z-10">
                 <tr>
                   <th className="py-2.5 px-3">Turma</th>
                   <th className="py-2.5 px-2 text-center">Ativos</th>
@@ -1004,49 +990,49 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                         onSelectClass(row.cls);
                       }}
                       className={`cursor-pointer transition-colors ${
-                        isSelected ? 'bg-sky-50/70' : 'hover:bg-slate-50/80'
+                        isSelected ? 'bg-sky-50' : 'hover:bg-slate-50'
                       }`}
                     >
                       <td className="py-2.5 px-3">
-                        <span className="font-bold text-slate-900 block">
+                        <span className="font-bold text-slate-950 block">
                           {row.className}
                         </span>
-                        <span className="text-[11px] text-slate-500 block">
+                        <span className="text-[11px] text-slate-600 block">
                           {row.shift} · Prof. {row.teacherName}
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 text-center font-mono font-medium text-slate-600">
+                      <td className="py-2.5 px-2 text-center font-mono font-medium text-slate-700">
                         {row.activeStudents}
                       </td>
                       <td className="py-2.5 px-2 text-center font-mono">
                         <span
                           className={`font-semibold ${
                             row.frequencyRate >= 85
-                              ? 'text-emerald-700'
+                              ? 'text-emerald-800 font-bold'
                               : isCompliant
-                              ? 'text-amber-700'
-                              : 'text-rose-700'
+                              ? 'text-amber-800 font-bold'
+                              : 'text-rose-800 font-bold'
                           }`}
                         >
                           {row.frequencyRate}%
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 text-center font-mono font-semibold text-slate-900">
+                      <td className="py-2.5 px-2 text-center font-mono font-semibold text-slate-950">
                         {row.totalFaltas}
                       </td>
-                      <td className="py-2.5 px-2 text-center font-mono font-semibold text-emerald-700">
+                      <td className="py-2.5 px-2 text-center font-mono font-semibold text-emerald-800">
                         {row.totalAtestados}
                       </td>
-                      <td className="py-2.5 px-2 text-center font-mono font-semibold text-rose-700">
+                      <td className="py-2.5 px-2 text-center font-mono font-semibold text-rose-800">
                         {row.totalSemAtestado}
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono">
                         {row.belowLegalCount > 0 ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-rose-200 text-rose-950">
                             {row.belowLegalCount} aluno(s)
                           </span>
                         ) : (
-                          <span className="text-emerald-700 font-bold text-xs">
+                          <span className="text-emerald-800 font-bold text-xs">
                             Nenhum
                           </span>
                         )}
@@ -1063,18 +1049,18 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       {/* PAINEL DE OPERAÇÃO: BUSCA ATIVA COM EXPANSÃO VISUAL DE DADOS DO ESTUDANTE */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Tabela de Estudantes em Alerta com Expansão Detalhada */}
-        <div className="lg:col-span-8 bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col justify-between">
-          <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="lg:col-span-8 bg-white rounded-3xl shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-600 text-[20px]">
+                <span className="material-symbols-outlined text-amber-700 text-[22px]">
                   contact_support
                 </span>
-                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
                   Painel de Busca Ativa &amp; Alertas de Frequência ({filteredStudents.length})
                 </h2>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-600 font-medium">
                 Clique na linha do estudante para visualizar a expansão completa de dados e contatos.
               </p>
             </div>
@@ -1087,21 +1073,21 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar aluno ou RA..."
-                  className="h-8 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="h-10 pl-9 pr-3 bg-slate-100 rounded-xl text-xs text-slate-950 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600 shadow-2xs"
                 />
-                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">
+                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">
                   search
                 </span>
               </div>
 
-              <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-[11px] font-bold">
+              <div className="inline-flex rounded-xl bg-slate-100 p-1 text-[11px] font-bold">
                 <button
                   type="button"
                   onClick={() => setAlertFilterMode('all_alerts')}
-                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     alertFilterMode === 'all_alerts'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
+                      ? 'bg-slate-950 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
                   Alertas
@@ -1109,10 +1095,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setAlertFilterMode('below_mec')}
-                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     alertFilterMode === 'below_mec'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
+                      ? 'bg-slate-950 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
                   &lt; Meta MEC
@@ -1120,10 +1106,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setAlertFilterMode('consecutive')}
-                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     alertFilterMode === 'consecutive'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
+                      ? 'bg-slate-950 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
                   Consecutivas
@@ -1131,10 +1117,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setAlertFilterMode('no_certificate')}
-                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     alertFilterMode === 'no_certificate'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
+                      ? 'bg-slate-950 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
                   S/ Atestado
@@ -1142,10 +1128,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setAlertFilterMode('all')}
-                  className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                     alertFilterMode === 'all'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
+                      ? 'bg-slate-950 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
                   Todos
@@ -1154,33 +1140,24 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </div>
           </div>
 
-          {/* Cartão de Alerta Imediato para a Gestão Escolar (Pulsação Suave) */}
+          {/* Cartão de Alerta Imediato para a Gestão Escolar */}
           {kpiData.totalConsecutiveAlerts > 0 && (
             <div
-              className={`mx-4 sm:mx-5 my-3 p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+              className={`mx-5 my-3 p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                 kpiData.tier10Count > 0
-                  ? 'bg-rose-50/70 border-rose-300 animate-pulse-subtle-rose text-rose-950'
-                  : 'bg-amber-50/70 border-amber-300 animate-pulse-subtle-amber text-amber-950'
+                  ? 'bg-rose-100/90 text-rose-950'
+                  : 'bg-amber-100/90 text-amber-950'
               }`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="relative flex h-2.5 w-2.5 shrink-0">
-                  <span
-                    className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                      kpiData.tier10Count > 0 ? 'bg-rose-500' : 'bg-amber-500'
-                    }`}
-                  />
-                  <span
-                    className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                      kpiData.tier10Count > 0 ? 'bg-rose-600' : 'bg-amber-600'
-                    }`}
-                  />
+                <span className="material-symbols-outlined text-[22px] shrink-0">
+                  warning
                 </span>
                 <div className="min-w-0">
                   <span className="text-xs font-bold block">
                     Atenção Imediata da Gestão: {kpiData.totalConsecutiveAlerts} caso(s) ativo(s) de Busca Ativa (ECA)
                   </span>
-                  <span className="text-xs opacity-80 block truncate">
+                  <span className="text-xs opacity-90 block truncate font-medium">
                     {kpiData.tier10Count > 0
                       ? `${kpiData.tier10Count} aluno(s) no gatilho crítico (≥10 faltas consecutivas) exigindo notificação urgente ao Conselho Tutelar.`
                       : `${kpiData.totalConsecutiveAlerts} estudante(s) com faltas consecutivas sem atestado médico aguardando busca ativa.`}
@@ -1190,17 +1167,17 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
               <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-bold">
                 {kpiData.tier10Count > 0 && (
-                  <span className="px-2 py-0.5 rounded bg-rose-200/80 text-rose-900 border border-rose-300">
+                  <span className="px-2.5 py-1 rounded-xl bg-rose-200 text-rose-950">
                     {kpiData.tier10Count} Crítico (10d)
                   </span>
                 )}
                 {kpiData.tier5Count > 0 && (
-                  <span className="px-2 py-0.5 rounded bg-orange-200/80 text-orange-900 border border-orange-300">
+                  <span className="px-2.5 py-1 rounded-xl bg-orange-200 text-orange-950">
                     {kpiData.tier5Count} Intermediário (5d)
                   </span>
                 )}
                 {kpiData.tier3Count > 0 && (
-                  <span className="px-2 py-0.5 rounded bg-amber-200/80 text-amber-900 border border-amber-300">
+                  <span className="px-2.5 py-1 rounded-xl bg-amber-200 text-amber-950">
                     {kpiData.tier3Count} Preventivo (3d)
                   </span>
                 )}
@@ -1210,20 +1187,20 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {filteredStudents.length === 0 ? (
             <div className="p-8 text-center space-y-2">
-              <span className="material-symbols-outlined text-4xl text-emerald-600">
+              <span className="material-symbols-outlined text-4xl text-emerald-700">
                 check_circle
               </span>
-              <p className="text-sm font-bold text-slate-800">
+              <p className="text-sm font-bold text-slate-900">
                 Nenhum estudante em situação de risco com estes filtros
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-600 font-medium">
                 Todos os estudantes selecionados estão em conformidade com as metas.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold uppercase text-[11px] sticky top-0 z-10">
+                <thead className="bg-slate-100 text-slate-800 font-bold uppercase text-[11px] sticky top-0 z-10">
                   <tr>
                     <th className="py-2.5 px-3">Estudante</th>
                     <th className="py-2.5 px-2">Turma</th>
@@ -1242,31 +1219,31 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                         <tr
                           onClick={() => setExpandedStudentId(isExpanded ? null : item.student.id)}
                           className={`cursor-pointer transition-colors ${
-                            isExpanded ? 'bg-sky-50/80 font-medium' : 'hover:bg-slate-50/80'
+                            isExpanded ? 'bg-sky-50 font-medium' : 'hover:bg-slate-50'
                           }`}
                         >
                           <td className="py-2.5 px-3">
                             <div className="flex items-center gap-2.5 min-w-0">
                               <StudentAvatar student={item.student} size="sm" expandableOnClick={false} />
                               <div className="min-w-0">
-                                <span className="font-bold text-slate-900 block truncate">
+                                <span className="font-bold text-slate-950 block truncate">
                                   {item.student.name}
                                 </span>
-                                <span className="text-[11px] text-slate-400 block font-mono">
+                                <span className="text-[11px] text-slate-500 block font-mono">
                                   RA {item.student.ra || 'S/N'}-{item.student.digRa || '0'}
                                 </span>
                               </div>
                             </div>
                           </td>
-                          <td className="py-2.5 px-2 font-medium text-slate-700">
+                          <td className="py-2.5 px-2 font-bold text-slate-800">
                             {item.cls.name}
                           </td>
-                          <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-700">
+                          <td className="py-2.5 px-2 text-center font-mono font-bold text-rose-800">
                             {item.faltas}
                           </td>
                           <td className="py-2.5 px-2 text-center font-mono">
                             {item.atestados > 0 ? (
-                              <span className="text-emerald-700 font-bold">
+                              <span className="text-emerald-800 font-bold">
                                 {item.atestados}d
                               </span>
                             ) : (
@@ -1274,10 +1251,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                             )}
                           </td>
                           <td className="py-2.5 px-2 text-center font-mono">
-                            <span className={`font-semibold ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-800'}`}>
+                            <span className={`font-semibold ${item.isBelowLegal ? 'text-rose-800 font-bold' : 'text-slate-900 font-bold'}`}>
                               {item.frequenciaPercent}%
                             </span>
-                            <span className="text-[11px] text-slate-400 ml-1">
+                            <span className="text-[11px] text-slate-500 ml-1 font-semibold">
                               (piso ≥{item.minLegalPercent}%)
                             </span>
                           </td>
@@ -1285,32 +1262,25 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                             <div className="flex flex-wrap items-center gap-1.5">
                               {item.hasConsecutiveAlert && (
                                 <span
-                                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold ${
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-bold ${
                                     item.consecutiveAlertTier === '10d'
-                                      ? 'bg-rose-100 text-rose-900 border border-rose-300 animate-pulse-subtle-rose'
+                                      ? 'bg-rose-200 text-rose-950'
                                       : item.consecutiveAlertTier === '5d'
-                                      ? 'bg-orange-100 text-orange-900 border border-orange-300 animate-pulse-subtle-amber'
-                                      : 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse-subtle-amber'
+                                      ? 'bg-orange-200 text-orange-950'
+                                      : 'bg-amber-200 text-amber-950'
                                   }`}
                                 >
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      item.consecutiveAlertTier === '10d'
-                                        ? 'bg-rose-600 animate-ping'
-                                        : 'bg-amber-600 animate-pulse'
-                                    }`}
-                                  />
                                   {item.alertLabel || `${item.consecutiveAlertDays}d Consecutivas`}
                                 </span>
                               )}
                               {item.isBelowLegal && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-rose-200 text-rose-950">
                                   &lt; Piso MEC ({item.minLegalPercent}%)
                                 </span>
                               )}
                               {item.familyFeedback && (
                                 <span
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700"
+                                  className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-slate-200 text-slate-900"
                                   title={item.familyFeedback}
                                 >
                                   C/ Retorno
@@ -1319,7 +1289,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                             </div>
                           </td>
                           <td className="py-2.5 px-2 text-center text-slate-400">
-                            <span className={`material-symbols-outlined text-[18px] transition-transform ${isExpanded ? 'rotate-180 text-sky-600' : ''}`}>
+                            <span className={`material-symbols-outlined text-[18px] transition-transform ${isExpanded ? 'rotate-180 text-sky-700' : ''}`}>
                               expand_more
                             </span>
                           </td>
@@ -1327,21 +1297,21 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
                         {/* EXPANSÃO VISUAL MELHORADA DO ESTUDANTE (DEDICADA, SEM NAVEGAÇÃO EXTERNA) */}
                         {isExpanded && (
-                          <tr className="bg-slate-50/90 border-y border-slate-200">
+                          <tr className="bg-slate-100/50">
                             <td colSpan={7} className="p-4 sm:p-5">
-                              <div className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-4">
+                              <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-md space-y-4">
                                 {/* Topo da Expansão */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-3">
                                   <div className="flex items-center gap-3">
                                     <StudentAvatar student={item.student} size="md" expandableOnClick={false} />
                                     <div>
-                                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                      <h3 className="text-sm font-bold text-slate-950 flex items-center gap-2">
                                         <span>{item.student.name}</span>
-                                        <span className="text-[11px] font-normal text-slate-500">
+                                        <span className="text-[11px] font-normal text-slate-600">
                                           (Nº {item.student.numeroChamada || item.student.number || '—'})
                                         </span>
                                       </h3>
-                                      <p className="text-xs text-slate-500 font-mono">
+                                      <p className="text-xs text-slate-600 font-mono">
                                         RA: {item.student.ra || 'S/N'}-{item.student.digRa || '0'} • Turma {item.cls.name} ({item.cls.shift}) • Nasc: {item.student.dataNascimento || '—'} {item.student.idade ? `(${item.student.idade} anos)` : ''}
                                       </p>
                                     </div>
@@ -1355,9 +1325,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                           e.stopPropagation();
                                           onOpenStudentPdf(item.student);
                                         }}
-                                        className="px-2.5 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all border border-sky-200"
+                                        className="px-3 py-1.5 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-950 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
                                       >
-                                        <span className="material-symbols-outlined text-[15px]">picture_as_pdf</span>
+                                        <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
                                         <span>Ficha PDF</span>
                                       </button>
                                     )}
@@ -1369,9 +1339,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                           e.stopPropagation();
                                           onOpenStudentGrid(item.student);
                                         }}
-                                        className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                                        className="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
                                       >
-                                        <span className="material-symbols-outlined text-[15px]">open_in_full</span>
+                                        <span className="material-symbols-outlined text-[16px]">open_in_full</span>
                                         <span>Ficha Completa (48 Dados)</span>
                                       </button>
                                     )}
@@ -1407,133 +1377,91 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                 {/* Grade de Indicadores Visuais do Aluno */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                                   {/* Visual Gauge de Frequência */}
-                                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                                  <div className="p-4 bg-slate-100 rounded-2xl space-y-2 shadow-xs">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
                                       Balanço de Frequência no Mês
                                     </span>
                                     <div className="flex items-baseline justify-between">
-                                      <span className={`text-xl font-semibold font-mono ${item.isBelowLegal ? 'text-rose-700' : 'text-slate-900'}`}>
+                                      <span className={`text-xl font-bold font-mono ${item.isBelowLegal ? 'text-rose-800' : 'text-slate-950'}`}>
                                         {item.frequenciaPercent}%
                                       </span>
-                                      <span className="text-[11px] text-slate-500">
+                                      <span className="text-[11px] text-slate-600 font-bold">
                                         {item.presencas} presenças em {item.diasLetivos} dias
                                       </span>
                                     </div>
                                     <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden flex">
                                       <div
-                                        className="bg-emerald-600 h-2"
+                                        className="bg-emerald-700 h-2"
                                         style={{ width: `${item.frequenciaPercent}%` }}
                                       />
                                       <div
-                                        className="bg-rose-500 h-2"
+                                        className="bg-rose-600 h-2"
                                         style={{ width: `${100 - item.frequenciaPercent}%` }}
                                       />
                                     </div>
-                                    <div className="flex justify-between text-[11px] text-slate-600 pt-1">
-                                      <span>Atestados: <strong className="text-emerald-700">{item.atestados}d</strong></span>
-                                      <span>Sem justificativa: <strong className="text-rose-700">{item.semAtestado}d</strong></span>
+                                    <div className="flex justify-between text-[11px] text-slate-700 font-semibold pt-1">
+                                      <span>Atestados: <strong className="text-emerald-900">{item.atestados}d</strong></span>
+                                      <span>Sem justificativa: <strong className="text-rose-900">{item.semAtestado}d</strong></span>
                                     </div>
                                   </div>
 
                                   {/* Situação Legal MEC */}
-                                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                                  <div className="p-4 bg-slate-100 rounded-2xl space-y-2 shadow-xs">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
                                       Conformidade Legal MEC (LDB)
                                     </span>
                                     <div className="flex items-center gap-2">
-                                      <span className={`material-symbols-outlined text-[20px] ${item.isBelowLegal ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                      <span className={`material-symbols-outlined text-[20px] ${item.isBelowLegal ? 'text-rose-700' : 'text-emerald-700'}`}>
                                         {item.isBelowLegal ? 'gpp_bad' : 'verified_user'}
                                       </span>
-                                      <span className={`text-xs font-bold ${item.isBelowLegal ? 'text-rose-800' : 'text-emerald-800'}`}>
+                                      <span className={`text-xs font-bold ${item.isBelowLegal ? 'text-rose-900' : 'text-emerald-950'}`}>
                                         {item.isBelowLegal ? 'Abaixo do Piso Legal' : 'Conforme a LDB'}
                                       </span>
                                     </div>
-                                    <p className="text-xs text-slate-600">
+                                    <p className="text-xs text-slate-700 font-medium">
                                       {item.isInfantil
                                         ? 'Educação Infantil: Piso mínimo LDB Art. 31 de 60% de frequência.'
                                         : 'Ensino Fundamental: Piso mínimo LDB Art. 24 de 75% de frequência.'}
                                     </p>
-                                    <p className="text-[11px] text-slate-400">
+                                    <p className="text-[11px] text-slate-500 font-medium">
                                       {item.isBelowLegal
                                         ? 'Requer acompanhamento pedagógico e intervenção da gestão escolar.'
                                         : 'Frequência regular dentro dos parâmetros institucionais.'}
                                     </p>
                                   </div>
 
-                                  {/* Alerta de Busca Ativa ECA com Pulsação Suave */}
+                                  {/* Alerta de Busca Ativa ECA */}
                                   <div
-                                    className={`p-3.5 rounded-xl border space-y-2 transition-all ${
+                                    className={`p-4 rounded-2xl space-y-2 shadow-xs transition-all ${
                                       item.hasConsecutiveAlert
                                         ? item.consecutiveAlertTier === '10d'
-                                          ? 'bg-rose-50/80 border-rose-300 animate-pulse-subtle-rose'
-                                          : 'bg-amber-50/80 border-amber-300 animate-pulse-subtle-amber'
-                                        : 'bg-slate-50 border-slate-200/70'
+                                          ? 'bg-rose-100/90 text-rose-950'
+                                          : 'bg-amber-100/90 text-amber-950'
+                                        : 'bg-slate-100 text-slate-900'
                                     }`}
                                   >
                                     <div className="flex items-center justify-between">
-                                      <span
-                                        className={`text-[11px] font-bold uppercase tracking-wider block ${
-                                          item.hasConsecutiveAlert
-                                            ? item.consecutiveAlertTier === '10d'
-                                              ? 'text-rose-800'
-                                              : 'text-amber-800'
-                                            : 'text-slate-500'
-                                        }`}
-                                      >
+                                      <span className="text-[11px] font-bold uppercase tracking-wider block">
                                         Protocolo de Busca Ativa
                                       </span>
-                                      {item.hasConsecutiveAlert && (
-                                        <span className="relative flex h-2 w-2">
-                                          <span
-                                            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                                              item.consecutiveAlertTier === '10d'
-                                                ? 'bg-rose-500'
-                                                : 'bg-amber-500'
-                                            }`}
-                                          />
-                                          <span
-                                            className={`relative inline-flex rounded-full h-2 w-2 ${
-                                              item.consecutiveAlertTier === '10d'
-                                                ? 'bg-rose-600'
-                                                : 'bg-amber-600'
-                                            }`}
-                                          />
-                                        </span>
-                                      )}
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <span
                                         className={`material-symbols-outlined text-[20px] ${
                                           item.hasConsecutiveAlert
                                             ? item.consecutiveAlertTier === '10d'
-                                              ? 'text-rose-600'
-                                              : 'text-amber-600'
-                                            : 'text-emerald-600'
+                                              ? 'text-rose-900'
+                                              : 'text-amber-900'
+                                            : 'text-emerald-800'
                                         }`}
                                       >
                                         {item.hasConsecutiveAlert ? 'notification_important' : 'task_alt'}
                                       </span>
-                                      <span
-                                        className={`text-xs font-bold ${
-                                          item.hasConsecutiveAlert
-                                            ? item.consecutiveAlertTier === '10d'
-                                              ? 'text-rose-900'
-                                              : 'text-amber-900'
-                                            : 'text-slate-700'
-                                        }`}
-                                      >
+                                      <span className="text-xs font-bold">
                                         {item.hasConsecutiveAlert ? item.alertLabel : 'Sem Alerta de Consecutivas'}
                                       </span>
                                     </div>
-                                    <p
-                                      className={`text-xs ${
-                                        item.hasConsecutiveAlert
-                                          ? item.consecutiveAlertTier === '10d'
-                                            ? 'text-rose-900'
-                                            : 'text-amber-900'
-                                          : 'text-slate-600'
-                                      }`}
-                                    >
+                                    <p className="text-xs font-medium">
                                       {item.hasConsecutiveAlert
                                         ? item.consecutiveAlertTier === '10d'
                                           ? 'Gatilho crítico: Notificação formal ao Conselho Tutelar e Busca Ativa emergencial.'
@@ -1546,9 +1474,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                 </div>
 
                                 {/* Dados Cadastrais, Família e Logística Escolar */}
-                                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                                <div className="p-4 bg-slate-100 rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs shadow-xs">
                                   <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
                                       Telefones &amp; Contato Direto
                                     </span>
                                     {(() => {
@@ -1563,7 +1491,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                       }
                                       return (
                                         <div className="space-y-1">
-                                          <div className="font-semibold text-slate-800 font-mono text-xs">
+                                          <div className="font-bold text-slate-950 font-mono text-xs">
                                             {rawPhone}
                                           </div>
                                           <div className="flex items-center gap-1.5 pt-0.5">
@@ -1571,7 +1499,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                               href={waList[0].waUrl}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-[11px] transition-colors"
+                                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25d366]/20 hover:bg-[#25d366]/30 text-[#075e54] font-bold text-[11px] transition-colors"
                                               title={`Abrir WhatsApp: ${waList[0].display}`}
                                             >
                                               <span className="material-symbols-outlined text-[13px]">chat</span>
@@ -1579,7 +1507,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                             </a>
                                             <a
                                               href={`tel:${rawPhone.replace(/\D/g, '')}`}
-                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[11px] transition-colors"
+                                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-950 font-bold text-[11px] transition-colors"
                                               title="Ligar"
                                             >
                                               <span className="material-symbols-outlined text-[13px]">call</span>
@@ -1592,35 +1520,35 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                   </div>
 
                                   <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
                                       Filiação / Responsável
                                     </span>
-                                    <span className="font-semibold text-slate-800 truncate block">
+                                    <span className="font-bold text-slate-950 truncate block">
                                       {item.student.filiacao1 || item.student.guardianName || 'Responsável não informado'}
                                     </span>
                                     {item.student.filiacao2 && (
-                                      <span className="text-[11px] text-slate-500 truncate block">
+                                      <span className="text-[11px] text-slate-600 truncate block">
                                         {item.student.filiacao2}
                                       </span>
                                     )}
                                   </div>
 
                                   <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
                                       Programas Sociais / AEE
                                     </span>
                                     <div className="space-y-1">
-                                      <span className="font-semibold text-slate-800 block">
+                                      <span className="font-bold text-slate-950 block">
                                         {item.student.nis ? (
-                                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-[11px] font-bold border border-emerald-200">
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-emerald-200 text-emerald-950 font-mono text-[11px] font-bold">
                                             Bolsa Família (NIS {item.student.nis})
                                           </span>
                                         ) : (
-                                          <span className="text-slate-500">Sem NIS informado</span>
+                                          <span className="text-slate-600">Sem NIS informado</span>
                                         )}
                                       </span>
                                       {item.student.deficiencia && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 text-[11px] font-bold border border-purple-200 block truncate">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-purple-200 text-purple-950 text-[11px] font-bold block truncate">
                                           AEE: {item.student.deficiencia}
                                         </span>
                                       )}
@@ -1628,20 +1556,20 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                                   </div>
 
                                   <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
                                       Logística &amp; Endereço
                                     </span>
-                                    <span className="font-semibold text-slate-800 block">
+                                    <span className="font-bold text-slate-950 block">
                                       {item.student.rotaOnibus ? (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-sky-50 text-sky-800 font-bold text-[11px] border border-sky-200">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-sky-200 text-sky-950 font-bold text-[11px]">
                                           🚌 Ônibus Fretado: {item.student.rotaOnibus}
                                         </span>
                                       ) : (
-                                        <span className="text-slate-500">Transporte individual</span>
+                                        <span className="text-slate-600">Transporte individual</span>
                                       )}
                                     </span>
                                     {(item.student.logradouro || item.student.bairro) && (
-                                      <span className="text-[11px] text-slate-500 block truncate mt-0.5">
+                                      <span className="text-[11px] text-slate-600 block truncate mt-0.5 font-medium">
                                         {item.student.logradouro} {item.student.numeroResidencia ? `nº ${item.student.numeroResidencia}` : ''} {item.student.bairro ? `· ${item.student.bairro}` : ''}
                                       </span>
                                     )}
@@ -1650,13 +1578,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
                                 {/* Retorno da Família Registrado */}
                                 {item.familyFeedback && (
-                                  <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
-                                    <span className="material-symbols-outlined text-amber-700 text-[18px] shrink-0 mt-0.5">
+                                  <div className="p-4 bg-amber-100 rounded-2xl text-xs text-amber-950 flex items-start gap-2 shadow-xs">
+                                    <span className="material-symbols-outlined text-amber-800 text-[18px] shrink-0 mt-0.5">
                                       feedback
                                     </span>
                                     <div>
                                       <span className="font-bold block">Último retorno da família / justificativa:</span>
-                                      <p className="mt-0.5 text-slate-800">{item.familyFeedback}</p>
+                                      <p className="mt-0.5 text-slate-900 font-medium">{item.familyFeedback}</p>
                                     </div>
                                   </div>
                                 )}
@@ -1674,23 +1602,23 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         </div>
 
         {/* Parecer Pedagógico & Despacho da Gestão */}
-        <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3">
+        <div className="lg:col-span-4 bg-white rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                 Despacho da Gestão • {currentClass.name}
               </span>
               {notesSavedFeedback && (
-                <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">done</span>
                   Salvo
                 </span>
               )}
             </div>
-            <h3 className="text-sm font-bold text-slate-900">
+            <h3 className="text-sm font-bold text-slate-950">
               Acompanhamento &amp; Despacho ({selectedMonthName})
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-600 font-medium">
               Parecer executivo da coordenação/direção sobre busca ativa e retenção para a Turma {currentClass.name}.
             </p>
           </div>
@@ -1704,10 +1632,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               setNotesSavedFeedback(true);
             }}
             placeholder="Registre aqui as providências da gestão, contatos com famílias, encaminhamentos ao Conselho Tutelar ou justificativas administrativas..."
-            className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-sm focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 focus:outline-none resize-none leading-relaxed transition-all"
+            className="w-full p-3.5 rounded-2xl bg-slate-100 text-slate-950 text-sm focus:bg-white focus:ring-2 focus:ring-sky-600 focus:outline-none resize-none leading-relaxed transition-all shadow-2xs"
           />
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+          <div className="pt-2 flex items-center justify-between text-xs text-slate-600 font-semibold">
             <span>
               Regente: {currentClass.teacherFirstName || currentClass.teacherName || 'Não atribuído'}
             </span>
@@ -1717,9 +1645,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       </section>
 
       {/* Rodapé com Navegação entre Períodos e Retorno */}
-      <section className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section className="bg-white rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-slate-900">
+          <h3 className="text-base font-bold text-slate-950">
             Fechamento de {selectedMonthName}/2027
           </h3>
           <p className="text-xs text-slate-600 font-medium mt-0.5">
@@ -1735,10 +1663,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 setSelectedMonthName(previousPeriodName);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="h-9 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200/90 transition-colors"
+              className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
               title={`Ir para ${previousPeriodName}`}
             >
-              <span className="material-symbols-outlined text-[16px] text-slate-500">history</span>
+              <span className="material-symbols-outlined text-[16px] text-slate-600">history</span>
               <span>Período Anterior ({previousPeriodName})</span>
             </button>
           )}
@@ -1747,7 +1675,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             <button
               type="button"
               onClick={onBack}
-              className="h-9 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+              className="h-10 px-5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-xs"
             >
               <span className="material-symbols-outlined text-[16px]">arrow_back</span>
               <span>Voltar</span>

@@ -110,3 +110,13 @@ Substituição de todos os valores fracionários e arbitrários de `rem` (`text-
 - `tsc --noEmit` executado via `lint_applet` com **zero erros**.
 - `compile_applet` executado com **sucesso total**.
 - Dev server ativo e sincronizado.
+
+---
+
+## 9. Correção da Sobreposição Pop (Google Sync)
+
+- **Eliminação do Auto-Disparo no Login**:
+  - O modal não abre mais automaticamente de surpresa após o login Google; o usuário permanece no controle de suas ações.
+- **Simplificação e Humanização da Confirmação**:
+  - Removido o blackout agressivo e a sobreposição longa com nomes técnicos de arquivos e códigos (`BD_Oficial_SED...`, `Fotos_Estudantes_...`).
+  - Substituído por um cartão de confirmação compacto, elegante e direto em português claro com botões grandes de alto contraste (`Confirmar` em verde esmeralda e `Cancelar` em tom sólido).

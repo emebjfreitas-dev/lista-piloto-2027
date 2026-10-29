@@ -500,20 +500,20 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
       {/* Seletor de Escopo */}
       {availableClasses.length > 1 && onSelectClass && (
-        <div className="bg-white rounded-xl border border-slate-200/90 p-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500 pl-1">
+            <span className="text-sm font-bold text-slate-800 pl-1">
               Escopo:
             </span>
             {userRole !== 'usuario' && (
-              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setViewAllClassesMode(true)}
-                  className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                  className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer ${
                     viewAllClassesMode
-                      ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-slate-950 text-white shadow-xs font-bold'
+                      : 'text-slate-700 hover:text-slate-950 font-bold'
                   }`}
                 >
                   Todas ({availableClasses.length})
@@ -521,10 +521,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 <button
                   type="button"
                   onClick={() => setViewAllClassesMode(false)}
-                  className={`h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                  className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer ${
                     !viewAllClassesMode
-                      ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-slate-950 text-white shadow-xs font-bold'
+                      : 'text-slate-700 hover:text-slate-950 font-bold'
                   }`}
                 >
                   Por Turma ({classGroup.name})
@@ -540,7 +540,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 const target = availableClasses.find((c) => c.id === e.target.value);
                 if (target) onSelectClass(target);
               }}
-              className="h-8 px-2.5 rounded-lg bg-slate-50 border border-slate-200/90 text-slate-800 text-xs font-medium cursor-pointer focus:outline-none"
+              className="h-10 px-3.5 rounded-xl bg-slate-100 text-slate-950 text-sm font-bold cursor-pointer focus:outline-none shadow-xs"
             >
               {availableClasses.map((cls) => (
                 <option key={cls.id} value={cls.id}>
@@ -687,36 +687,36 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
         </div>
 
         {/* 4 Indicadores de Acúmulo */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500 block">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-4 rounded-2xl bg-rose-100/80 shadow-xs flex flex-col justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-950 block">
               Sequências no Ano
             </span>
-            <span className="text-2xl font-semibold text-rose-700 font-mono tabular-nums">
+            <span className="text-2xl font-bold text-rose-950 font-mono tabular-nums mt-1">
               {summaryStats.totalOccurrencesCount}
             </span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500 block">
-              Estudantes Acompanhados
+          <div className="p-4 rounded-2xl bg-slate-100 shadow-xs flex flex-col justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
+              Estudantes
             </span>
-            <span className="text-2xl font-semibold text-slate-900 font-mono tabular-nums">
+            <span className="text-2xl font-bold text-slate-950 font-mono tabular-nums mt-1">
               {summaryStats.studentsWithAnyOccurrence}
             </span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500 block">
+          <div className="p-4 rounded-2xl bg-emerald-100/80 shadow-xs flex flex-col justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-950 block">
               Feedbacks Recebidos
             </span>
-            <span className="text-2xl font-semibold text-emerald-700 font-mono tabular-nums">
+            <span className="text-2xl font-bold text-emerald-950 font-mono tabular-nums mt-1">
               {summaryStats.totalWithFeedback}
             </span>
           </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500 block">
-              Aguardando Secretaria
+          <div className="p-4 rounded-2xl bg-amber-100/80 shadow-xs flex flex-col justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-950 block">
+              Aguardando
             </span>
-            <span className="text-2xl font-semibold text-amber-700 font-mono tabular-nums">
+            <span className="text-2xl font-bold text-amber-950 font-mono tabular-nums mt-1">
               {summaryStats.totalWaitingFeedback}
             </span>
           </div>
@@ -747,13 +747,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       </section>
 
       {/* Lista de Estudantes e Suas Sequências Acumuladas de Ocorrências */}
-      <div className="bg-white rounded-3xl overflow-hidden divide-y divide-black/[0.04]">
+      <div className="space-y-3">
         {filteredEntries.length === 0 ? (
-          <div className="p-10 text-center space-y-1">
-            <p className="text-base font-bold text-[#1d1d1f]">
+          <div className="p-10 text-center space-y-1 bg-white rounded-2xl shadow-sm">
+            <p className="text-base font-bold text-slate-950">
               Nenhum estudante encontrado neste filtro
             </p>
-            <p className="text-sm text-[#6e6e73]">
+            <p className="text-sm font-semibold text-slate-700">
               Altere o filtro acima para visualizar todos os estudantes.
             </p>
           </div>
@@ -776,8 +776,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             return (
               <div
                 key={compositeKey}
-                className={`transition-colors ${
-                  hasOccurrences ? 'bg-[#fffafa]' : 'hover:bg-[#fbfbfd]'
+                className={`rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden ${
+                  hasOccurrences ? 'bg-rose-50/80 text-slate-950' : 'bg-white hover:bg-slate-50 text-slate-950'
                 }`}
               >
                 {/* Linha Principal do Estudante */}
@@ -1178,8 +1178,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             onClick={(e) => e.stopPropagation()}
             className="bg-white w-full max-w-xl rounded-3xl shadow-[0_24px_64px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col max-h-[90vh]"
           >
-            {/* Topo Minimalista do Modal */}
-            <div className="p-5 sm:p-6 border-b border-black/[0.05] flex items-start justify-between gap-3">
+            {/* Topo do Modal */}
+            <div className="p-5 sm:p-6 pb-4 flex items-start justify-between gap-3">
               <div className="flex items-center gap-3.5 min-w-0">
                 <StudentAvatar student={activeModalData.student} size="lg" />
                 <div className="min-w-0">

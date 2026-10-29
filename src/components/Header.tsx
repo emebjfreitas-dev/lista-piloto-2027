@@ -298,7 +298,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                   {showAdminNavDropdown && (
                     <div
-                      className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl border border-slate-200/90 shadow-lg p-1 space-y-0.5 z-50 animate-in fade-in duration-100"
+                      className="absolute right-0 mt-1.5 w-56 bg-white rounded-2xl shadow-xl p-1.5 space-y-0.5 z-50 animate-in fade-in duration-100"
                       onMouseLeave={() => setShowAdminNavDropdown(false)}
                     >
                       <button
@@ -390,9 +390,9 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={onOpenSpotlightSearch}
                 aria-label="Buscar Aluno ou Turma"
-                className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-300"
+                className="h-8 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
               >
-                <span className="material-symbols-outlined text-[17px] text-slate-900">search</span>
+                <span className="material-symbols-outlined text-[17px] text-slate-950">search</span>
                 <span>Buscar</span>
               </button>
             )}
@@ -409,10 +409,10 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'Nuvem conectada e sincronizada. Clique para atualizar fotos e planilha.'
                   : 'Conectar ao Google Drive institucional'
               }
-              className={`h-8 px-2.5 rounded-lg flex items-center gap-1.5 text-xs font-normal border transition-colors cursor-pointer ${
+              className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer shadow-2xs ${
                 syncSnapshot.pendingCount > 0
-                  ? 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
-                  : 'bg-white text-slate-600 border-slate-200/80 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-amber-100 text-amber-950 hover:bg-amber-200'
+                  : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
               }`}
             >
               <span
@@ -429,9 +429,9 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'cloud'}
               </span>
               {syncSnapshot.pendingCount > 0 ? (
-                <span className="font-medium text-[11px]">{syncSnapshot.pendingCount} pendente(s)</span>
+                <span className="font-bold text-[11px]">{syncSnapshot.pendingCount} pendente(s)</span>
               ) : (
-                <span className="hidden lg:inline text-[11px] text-slate-500">Drive</span>
+                <span className="hidden lg:inline text-[11px] text-slate-600 font-semibold">Drive</span>
               )}
             </button>
 
@@ -455,17 +455,17 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 aria-label="Menu do perfil e sair"
-                className="h-9 pl-1 pr-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="h-9 pl-1 pr-2 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
               >
                 <StudentAvatar
                   name={userName || userEmail || 'Educador'}
                   size="sm"
                   className="w-7 h-7 text-xs"
                 />
-                <span className="hidden sm:inline text-xs font-semibold text-slate-800 max-w-[90px] truncate">
+                <span className="hidden sm:inline text-xs font-bold text-slate-950 max-w-[90px] truncate">
                   {userRole === 'admin' ? 'Admin' : userRole === 'usuario' ? 'PEB I' : 'PEB II'}
                 </span>
-                <span className="material-symbols-outlined text-[16px] text-slate-500">
+                <span className="material-symbols-outlined text-[16px] text-slate-700">
                   expand_more
                 </span>
               </button>
@@ -476,8 +476,8 @@ export const Header: React.FC<HeaderProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setShowProfileMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="p-3 rounded-xl bg-slate-50 flex items-center gap-3">
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-3xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="p-3 rounded-2xl bg-slate-100 flex items-center gap-3">
                       <StudentAvatar
                         name={userName || userEmail || 'Educador'}
                         size="md"
@@ -514,7 +514,7 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                     </div>
 
-                    <div className="my-1 border-t border-slate-100" />
+                    <div className="my-1.5 h-px bg-slate-100" />
 
                     {!isAdmin &&
                       onRestoreAdminRole &&
@@ -584,7 +584,7 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={() => setIsMobileDrawerOpen(true)}
               aria-label="Abrir menu de navegação"
-              className="h-8 w-8 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-700 flex items-center justify-center cursor-pointer transition-colors xl:hidden"
+              className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 flex items-center justify-center cursor-pointer transition-colors xl:hidden shadow-2xs"
               title="Abrir Menu"
             >
               <span className="material-symbols-outlined text-[18px]">menu</span>
@@ -603,7 +603,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="fixed top-0 right-0 bottom-0 w-full max-w-xs bg-white shadow-2xl p-4 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-200">
             <div className="space-y-4">
               {/* Header do Drawer */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center justify-between pb-3">
                 <div className="flex items-center gap-2">
                   <img
                     src={APP_LOGO_URL}
@@ -701,7 +701,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Seção de Gestão (Admin) */}
               {isAdmin && (
-                <div className="space-y-1 pt-2 border-t border-slate-100">
+                <div className="space-y-1 pt-2">
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block px-2 py-1">
                     Gestão Escolar
                   </span>
@@ -775,7 +775,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Rodapé do Drawer */}
-            <div className="pt-4 border-t border-slate-100 space-y-2">
+            <div className="pt-4 space-y-2">
               <div className="px-2 py-1 flex items-center justify-between text-xs text-slate-500">
                 <span>{userName}</span>
                 <span className="font-semibold text-slate-800">
@@ -806,7 +806,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[380px] bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden text-center p-6 space-y-4 animate-in zoom-in-95 duration-150"
+            className="w-full max-w-[380px] bg-white rounded-3xl shadow-2xl overflow-hidden text-center p-6 space-y-4 animate-in zoom-in-95 duration-150"
           >
             <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
               <StudentAvatar
@@ -827,10 +827,10 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Verificador de sincronização pendente */}
             <div
-              className={`p-3 rounded-xl text-left flex items-center gap-2.5 ${
+              className={`p-3 rounded-2xl text-left flex items-center gap-2.5 shadow-2xs ${
                 syncSnapshot.pendingCount > 0
-                  ? 'bg-amber-50 text-amber-900 border border-amber-200'
-                  : 'bg-slate-50 text-slate-700 border border-slate-200'
+                  ? 'bg-amber-100 text-amber-950'
+                  : 'bg-slate-100 text-slate-950'
               }`}
             >
               <span
