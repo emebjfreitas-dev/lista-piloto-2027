@@ -84,8 +84,29 @@ Substituição de todos os valores fracionários e arbitrários de `rem` (`text-
 
 ---
 
-## 7. Verificação e Conformidade Técnica
+## 7. Painel Tátil para Educadores & Contraste Aprimorado de Tons
 
+- **Eliminação de Contornos Desnecessários ("Sem Contornos Bobos")**:
+  - Remoção de bordas duplas, contornos aramados (`border-2 border-slate-300`, `border-2 border-slate-400`) e linhas divisórias frágeis.
+  - A separação visual e a tridimensionalidade agora ocorrem pelo contraste puro de superfícies sólidas (`bg-white` e `bg-slate-50` sobre canvas neutro `bg-slate-200/70`) e elevação suave (`shadow-sm`).
+- **Contraste Aprimorado de Tons (Preto no Branco)**:
+  - Eliminação de tons de cinza claro ou apagados; todos os textos principais e números utilizam `text-slate-950`, `text-slate-900` e `text-slate-800`.
+  - Botões táteis com fundos sólidos de alto contraste (`bg-slate-950 text-white`, `bg-emerald-800 text-white` e `bg-rose-700 text-white`).
+- **Remoção de Atalhos Obscuros**:
+  - Eliminação de teclas técnicas e abreviações confusas (`⌘K`, `Ctrl+K`, `<kbd>`) para idosos; a busca agora é um botão direto e visível: `[ 🔍 Buscar ]`.
+- **Seletor de Turmas em 1 Toque**:
+  - Filtro amplo de turnos (`[ Todas (40) ]`, `[ ☀️ Manhã (20) ]`, `[ 🌤️ Tarde (20) ]`) e cartões de turma amplos com botões táteis para visualização de alunos ou lançamento direto de faltas.
+
+---
+
+## 8. Verificação e Conformidade Técnica
+
+- **Alto Contraste Tonal Concluído em TODAS as Telas e Níveis**:
+  - `HomeScreen.tsx`: Painel de seleção tátil com botões e superfícies sólidas, sem contornos finos nem wireframes.
+  - `Header.tsx` & `BottomNav.tsx`: Sem atalhos de teclado confusos (`⌘K`, `<kbd>`), contraste nítido (`text-slate-950 font-bold`).
+  - `MinhasTurmasScreen.tsx`: Cards de turmas elevados e botões de ação sólidos (`bg-emerald-800` e `bg-slate-100`).
+  - `RegistroFrequenciaMensalScreen.tsx`: Tanto na visualização compacta quanto em cartões, contadores de faltas e atestados foram atualizados com superfícies de tom sólido (`bg-rose-100 text-rose-950`, `bg-sky-100 text-sky-950`), sem contornos finos duplos (`border-2 border-slate-300` / `border-rose-300`).
+  - `DetalhesTurmaScreen.tsx`: Painéis de ficha, contatos familiares, percurso georreferenciado e cards de estudantes convertidos para superfícies com profundidade tonal e texto preto/ardósia escuro de alto contraste, sem bordas desnecessárias.
 - `tsc --noEmit` executado via `lint_applet` com **zero erros**.
-- `compile_applet` executado com **sucesso**.
+- `compile_applet` executado com **sucesso total**.
 - Dev server ativo e sincronizado.

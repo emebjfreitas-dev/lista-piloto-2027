@@ -726,9 +726,9 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </div>
       </section>
 
-      {/* VISUALIZAÇÃO 1: LISTA LIMPA E DIRETA (SOMENTE CONTADORES DE FALTAS DO MÊS E ATESTADOS) */}
+      {/* VISUALIZAÇÃO 1: LISTA LIMPA E DIRETA COM SUPERFÍCIES DE ALTO CONTRASTE TONAL */}
       {attendanceViewMode === 'compact' && (
-        <div className="bg-white rounded-3xl border border-black/[0.07] divide-y divide-black/[0.05] overflow-hidden shadow-xs">
+        <div className="space-y-3">
           {displayedStudents.map((student) => {
             const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
             const pctFalta =
@@ -747,32 +747,32 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             return (
               <div
                 key={student.id}
-                className={`p-3.5 sm:px-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 transition-colors ${
+                className={`p-4 sm:px-6 rounded-2xl shadow-sm hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all ${
                   isTransferred
-                    ? 'bg-gradient-to-r from-[#fef3c7]/80 to-[#fffbeb] border-l-4 border-l-[#b45309]'
+                    ? 'bg-amber-100/90 text-amber-950'
                     : isRemanejado
-                    ? 'bg-gradient-to-r from-[#ede9fe]/80 to-[#f5f3ff] border-l-4 border-l-[#6d28d9]'
+                    ? 'bg-purple-100/90 text-purple-950'
                     : isOtherNonActive
-                    ? 'bg-[#e2e8f0]/75 border-l-4 border-l-[#475569]'
+                    ? 'bg-slate-200 text-slate-900'
                     : m.isBelowLegalThreshold
-                    ? 'bg-[#fff1f2]/60'
-                    : 'hover:bg-[#f8fafc]'
+                    ? 'bg-rose-100/70 text-slate-950'
+                    : 'bg-white hover:bg-slate-50 text-slate-950'
                 }`}
               >
                 {/* Identificação Enxuta do Estudante + Indicativo Visual */}
                 <div
                   onClick={() => onOpenStudentGrid(student)}
-                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                  className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer"
                 >
                   <span
-                    className={`w-8 h-8 rounded-xl text-white font-mono font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums ${
+                    className={`w-9 h-9 rounded-xl text-white font-mono font-bold text-sm flex items-center justify-center shrink-0 tabular-nums shadow-xs ${
                       isTransferred
-                        ? 'bg-[#b45309]'
+                        ? 'bg-amber-900'
                         : isRemanejado
-                        ? 'bg-[#6d28d9]'
+                        ? 'bg-purple-900'
                         : isOtherNonActive
-                        ? 'bg-[#475569]'
-                        : 'bg-[#0b3b49]'
+                        ? 'bg-slate-700'
+                        : 'bg-slate-950'
                     }`}
                   >
                     {student.number.toString().padStart(2, '0')}
@@ -785,16 +785,16 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-base text-[#0f172a] truncate">
+                      <span className="font-bold text-base sm:text-lg text-slate-950 truncate">
                         {student.name}
                       </span>
                       {isTransferred && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[11px] font-semibold uppercase">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-amber-900 text-white text-xs font-bold uppercase tracking-wide">
                           Transferido
                         </span>
                       )}
                       {isRemanejado && (
-                        <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[11px] font-semibold uppercase">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-purple-900 text-white text-xs font-bold uppercase tracking-wide">
                           Remanejado
                         </span>
                       )}
@@ -803,21 +803,21 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     {/* Indicadores Claros de Presença e Falta do Estudante */}
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-xs font-semibold tabular-nums ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-xs font-bold tabular-nums ${
                           m.isBelowLegalThreshold
-                            ? 'bg-[#ffe4e6] text-[#be123c]'
-                            : 'bg-[#eaf6ef] text-[#006644]'
+                            ? 'bg-rose-200 text-rose-950'
+                            : 'bg-emerald-100 text-emerald-950'
                         }`}
                       >
                         <span>Presença: {m.frequenciaPercent}%</span>
-                        <span className="opacity-75">({m.presencas} de {m.diasLetivosMatriculados} dias)</span>
+                        <span className="opacity-80">({m.presencas} de {m.diasLetivosMatriculados} dias)</span>
                       </span>
 
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-xs font-semibold tabular-nums ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-xs font-bold tabular-nums ${
                           m.faltas > 0
-                            ? 'bg-[#fff1f2] text-[#be123c] border border-[#e11d48]/20'
-                            : 'bg-[#f1f5f9] text-[#64748b]'
+                            ? 'bg-rose-200/90 text-rose-950'
+                            : 'bg-slate-200 text-slate-800'
                         }`}
                       >
                         <span>Faltas: {m.faltas} ({pctFalta}%)</span>
@@ -827,32 +827,32 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   </div>
                 </div>
 
-                {/* APENAS OS 2 CONTADORES INTERATIVOS: 1) FALTAS DO MÊS e 2) ATESTADOS — GRANDES E NÍTIDOS PARA IDOSOS */}
-                <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 sm:gap-3.5 shrink-0 w-full lg:w-auto pt-2.5 lg:pt-0 border-t lg:border-t-0 border-slate-200">
+                {/* CONTADORES INTERATIVOS DE ALTO CONTRASTE TONAL — SEM CONTORNOS, TÁTEIS */}
+                <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5 sm:gap-3 shrink-0 w-full lg:w-auto">
                   {/* Contador 1: Faltas do Mês */}
                   <div
-                    className={`flex items-center justify-between sm:justify-start gap-2 sm:gap-2.5 px-3 sm:px-3.5 py-2 rounded-2xl border-2 transition-colors ${
+                    className={`flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 px-3.5 py-2.5 rounded-2xl transition-colors ${
                       m.faltas > 0
-                        ? 'bg-rose-50 border-rose-300'
-                        : 'bg-slate-50 border-slate-300'
+                        ? 'bg-rose-100 text-rose-950'
+                        : 'bg-slate-100 text-slate-900'
                     }`}
                   >
                     <div className="pr-1 min-w-0">
-                      <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-rose-800 block leading-tight">
+                      <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-rose-950 block leading-tight">
                         Faltas
                       </span>
-                      <span className="text-xs font-bold text-slate-600 tabular-nums block truncate">
+                      <span className="text-xs font-bold text-slate-700 tabular-nums block truncate">
                         máx {m.diasLetivosMatriculados}d
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleDeltaAbsence(student.id, -1)}
                         disabled={!effectiveCanEdit || m.faltas === 0}
                         aria-label={`Diminuir falta de ${student.name}`}
-                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-2xl flex items-center justify-center shadow-xs border-2 border-slate-300 disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white hover:bg-slate-200 text-slate-950 font-bold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         —
                       </button>
@@ -866,8 +866,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onChange={(e) => handleDirectSetAbsence(student.id, e.target.value)}
                         aria-label={`Digitar faltas de ${student.name}`}
                         title="Toque para digitar o número de faltas diretamente"
-                        className={`w-12 sm:w-14 h-11 sm:h-12 rounded-xl text-center font-mono font-semibold text-xl sm:text-2xl tabular-nums bg-white border-2 border-slate-300 focus:border-rose-600 focus:outline-none transition-all ${
-                          m.faltas > 0 ? 'text-rose-700 font-semibold' : 'text-slate-900'
+                        className={`w-12 sm:w-14 h-11 sm:h-12 rounded-xl text-center font-mono font-bold text-xl sm:text-2xl tabular-nums bg-white shadow-xs focus:ring-2 focus:ring-rose-600 focus:outline-none transition-all ${
+                          m.faltas > 0 ? 'text-rose-950 font-bold' : 'text-slate-950 font-bold'
                         }`}
                       />
 
@@ -876,7 +876,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAbsence(student.id, 1)}
                         disabled={!effectiveCanEdit || isMaxFaltasReached}
                         aria-label={`Adicionar falta para ${student.name}`}
-                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-900 hover:bg-black text-white font-semibold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-slate-950 hover:bg-black text-white font-bold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         +
                       </button>
@@ -885,28 +885,28 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
                   {/* Contador 2: Atestados */}
                   <div
-                    className={`flex items-center justify-between sm:justify-start gap-2 sm:gap-2.5 px-3 sm:px-3.5 py-2 rounded-2xl border-2 transition-colors ${
+                    className={`flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 px-3.5 py-2.5 rounded-2xl transition-colors ${
                       m.atestados > 0
-                        ? 'bg-blue-50 border-blue-300'
-                        : 'bg-slate-50 border-slate-300'
+                        ? 'bg-sky-100 text-sky-950'
+                        : 'bg-slate-100 text-slate-900'
                     }`}
                   >
                     <div className="pr-1 min-w-0">
-                      <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-blue-800 block leading-tight">
+                      <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-sky-950 block leading-tight">
                         Atestado
                       </span>
-                      <span className="text-xs font-bold text-slate-600 tabular-nums block truncate">
+                      <span className="text-xs font-bold text-slate-700 tabular-nums block truncate">
                         {m.faltas === 0 ? '0 faltas' : `de ${m.faltas}`}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleDeltaAtestado(student.id, -1)}
                         disabled={!effectiveCanEdit || m.atestados === 0}
                         aria-label={`Diminuir atestado de ${student.name}`}
-                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white hover:bg-slate-100 text-blue-900 font-semibold text-2xl flex items-center justify-center shadow-xs border-2 border-blue-300 disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white hover:bg-slate-200 text-sky-950 font-bold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         —
                       </button>
@@ -920,8 +920,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onChange={(e) => handleDirectSetAtestado(student.id, e.target.value)}
                         aria-label={`Digitar atestados de ${student.name}`}
                         title="Toque para digitar o número de atestados diretamente"
-                        className={`w-12 sm:w-14 h-11 sm:h-12 rounded-xl text-center font-mono font-semibold text-xl sm:text-2xl tabular-nums bg-white border-2 border-slate-300 focus:border-blue-600 focus:outline-none transition-all ${
-                          m.atestados > 0 ? 'text-blue-700 font-semibold' : 'text-slate-500'
+                        className={`w-12 sm:w-14 h-11 sm:h-12 rounded-xl text-center font-mono font-bold text-xl sm:text-2xl tabular-nums bg-white shadow-xs focus:ring-2 focus:ring-sky-600 focus:outline-none transition-all ${
+                          m.atestados > 0 ? 'text-sky-950 font-bold' : 'text-slate-950 font-bold'
                         }`}
                       />
 
@@ -930,7 +930,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAtestado(student.id, 1)}
                         disabled={!effectiveCanEdit || m.faltas === 0 || isMaxAtestadosReached}
                         aria-label={`Adicionar atestado para ${student.name}`}
-                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white font-semibold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
+                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-sky-800 hover:bg-sky-900 text-white font-bold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         +
                       </button>
@@ -964,16 +964,16 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             return (
               <div
                 key={student.id}
-                className={`card-welcoming rounded-3xl p-4 border space-y-3 ${
+                className={`rounded-2xl p-5 shadow-sm hover:shadow-md space-y-3.5 transition-all ${
                   isTransferred
-                    ? 'bg-gradient-to-br from-[#fef3c7] via-[#fffbeb] to-[#fde68a]/60 border-2 border-[#d97706]/55'
+                    ? 'bg-amber-100/90 text-amber-950'
                     : isRemanejado
-                    ? 'bg-gradient-to-br from-[#ede9fe] via-[#f5f3ff] to-[#ddd6fe]/60 border-2 border-[#7c3aed]/50'
+                    ? 'bg-purple-100/90 text-purple-950'
                     : isOtherNonActive
-                    ? 'bg-[#e2e8f0] border-[#64748b]/50'
+                    ? 'bg-slate-200 text-slate-900'
                     : m.isBelowLegalThreshold
-                    ? 'bg-[#fff9f9] border-[#e11d48]/40'
-                    : 'bg-white border-black/[0.07]'
+                    ? 'bg-rose-100/70 text-slate-950'
+                    : 'bg-white hover:bg-slate-50 text-slate-950'
                 }`}
               >
                 {/* Topo do Card: Clique abre o perfil da criança + Nome + Indicativo de % */}
@@ -988,21 +988,21 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded-lg bg-[#0b3b49] text-white font-mono text-xs font-semibold tabular-nums">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-slate-950 text-white font-mono text-xs font-bold tabular-nums">
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         {isTransferred && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#b45309] text-white text-[11px] font-semibold uppercase">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-amber-900 text-white text-[11px] font-bold uppercase">
                             Transferido
                           </span>
                         )}
                         {isRemanejado && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#6d28d9] text-white text-[11px] font-semibold uppercase">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-purple-900 text-white text-[11px] font-bold uppercase">
                             Remanejado
                           </span>
                         )}
                       </div>
-                      <h3 className="text-base font-semibold text-[#0f172a] leading-snug truncate mt-1">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-950 leading-snug truncate mt-1">
                         {student.name}
                       </h3>
                     </div>
@@ -1011,45 +1011,45 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   {/* Indicativo de Presença & Falta */}
                   <div className="text-right shrink-0">
                     <span
-                      className={`px-2.5 py-1 rounded-xl font-mono font-semibold text-base tabular-nums inline-block ${
+                      className={`px-3 py-1 rounded-xl font-mono font-bold text-base tabular-nums inline-block ${
                         m.isBelowLegalThreshold
-                          ? 'bg-[#ffe4e6] text-[#be123c]'
-                          : 'bg-[#eaf6ef] text-[#006644]'
+                          ? 'bg-rose-200 text-rose-950'
+                          : 'bg-emerald-100 text-emerald-950'
                       }`}
                     >
                       {m.frequenciaPercent}%
                     </span>
-                    <span className="block font-mono text-[11px] font-bold text-[#475569] mt-0.5 tabular-nums">
+                    <span className="block font-mono text-xs font-bold text-slate-700 mt-1 tabular-nums">
                       {m.presencas}/{m.diasLetivosMatriculados}d • {pctFalta}% falta
                     </span>
                   </div>
                 </div>
 
                 {/* Barra de Progresso de Presença do Estudante */}
-                <div className="w-full h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
+                <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
-                      m.isBelowLegalThreshold ? 'bg-[#be123c]' : 'bg-[#006644]'
+                      m.isBelowLegalThreshold ? 'bg-rose-600' : 'bg-emerald-700'
                     }`}
                     style={{ width: `${Math.min(100, m.frequenciaPercent)}%` }}
                   />
                 </div>
 
-                {/* APENAS OS 2 CONTADORES: FALTAS DO MÊS E ATESTADOS — GRANDES E NÍTIDOS PARA IDOSOS */}
+                {/* CONTADORES: FALTAS DO MÊS E ATESTADOS — SEM CONTORNOS, SUPERFÍCIES SÓLIDAS */}
                 <div className="grid grid-cols-2 gap-2.5 pt-1">
                   {/* 1. Contador Faltas do Mês */}
                   <div
-                    className={`p-3 rounded-2xl border-2 flex flex-col justify-between ${
+                    className={`p-3 rounded-2xl flex flex-col justify-between transition-colors ${
                       m.faltas > 0
-                        ? 'bg-rose-50 border-rose-300'
-                        : 'bg-slate-50 border-slate-300'
+                        ? 'bg-rose-100 text-rose-950'
+                        : 'bg-slate-100 text-slate-900'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs sm:text-sm font-semibold uppercase text-rose-800">
-                        Faltas Mês
+                      <span className="text-xs sm:text-sm font-bold uppercase text-rose-950">
+                        Faltas
                       </span>
-                      <span className="font-mono text-xs font-bold text-slate-600">
+                      <span className="font-mono text-xs font-bold text-slate-700">
                         máx {m.diasLetivosMatriculados}d
                       </span>
                     </div>
@@ -1060,7 +1060,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAbsence(student.id, -1)}
                         disabled={!effectiveCanEdit || m.faltas === 0}
                         aria-label={`Diminuir falta de ${student.name}`}
-                        className="w-12 h-12 rounded-2xl bg-white text-slate-900 font-semibold text-2xl flex items-center justify-center border-2 border-slate-300 shadow-xs disabled:opacity-25 cursor-pointer active:scale-95"
+                        className="w-12 h-12 rounded-xl bg-white text-slate-950 font-bold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         —
                       </button>
@@ -1073,8 +1073,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => handleDirectSetAbsence(student.id, e.target.value)}
                         aria-label={`Digitar faltas de ${student.name}`}
-                        className={`w-14 h-12 rounded-xl text-center font-mono text-2xl font-semibold tabular-nums bg-white border-2 border-slate-300 focus:border-rose-600 focus:outline-none ${
-                          m.faltas > 0 ? 'text-rose-700' : 'text-slate-900'
+                        className={`w-14 h-12 rounded-xl text-center font-mono text-2xl font-bold tabular-nums bg-white shadow-xs focus:ring-2 focus:ring-rose-600 focus:outline-none ${
+                          m.faltas > 0 ? 'text-rose-950' : 'text-slate-950'
                         }`}
                       />
 
@@ -1083,7 +1083,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAbsence(student.id, 1)}
                         disabled={!effectiveCanEdit || isMaxFaltasReached}
                         aria-label={`Adicionar falta para ${student.name}`}
-                        className="w-12 h-12 rounded-2xl bg-slate-900 text-white font-semibold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95"
+                        className="w-12 h-12 rounded-xl bg-slate-950 text-white font-bold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         +
                       </button>
@@ -1092,17 +1092,17 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
                   {/* 2. Contador Atestados */}
                   <div
-                    className={`p-3 rounded-2xl border-2 flex flex-col justify-between ${
+                    className={`p-3 rounded-2xl flex flex-col justify-between transition-colors ${
                       m.atestados > 0
-                        ? 'bg-blue-50 border-blue-300'
-                        : 'bg-slate-50 border-slate-300'
+                        ? 'bg-sky-100 text-sky-950'
+                        : 'bg-slate-100 text-slate-900'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs sm:text-sm font-semibold uppercase text-blue-800">
+                      <span className="text-xs sm:text-sm font-bold uppercase text-sky-950">
                         Atestados
                       </span>
-                      <span className="font-mono text-xs font-bold text-slate-600">
+                      <span className="font-mono text-xs font-bold text-slate-700">
                         {m.faltas === 0 ? '0 faltas' : `máx ${m.faltas}`}
                       </span>
                     </div>
@@ -1113,7 +1113,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAtestado(student.id, -1)}
                         disabled={!effectiveCanEdit || m.atestados === 0}
                         aria-label={`Diminuir atestado de ${student.name}`}
-                        className="w-12 h-12 rounded-2xl bg-white text-blue-900 font-semibold text-2xl flex items-center justify-center border-2 border-blue-300 shadow-xs disabled:opacity-25 cursor-pointer active:scale-95"
+                        className="w-12 h-12 rounded-xl bg-white text-sky-950 font-bold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         —
                       </button>
@@ -1126,8 +1126,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => handleDirectSetAtestado(student.id, e.target.value)}
                         aria-label={`Digitar atestados de ${student.name}`}
-                        className={`w-14 h-12 rounded-xl text-center font-mono text-2xl font-semibold tabular-nums bg-white border-2 border-slate-300 focus:border-blue-600 focus:outline-none ${
-                          m.atestados > 0 ? 'text-blue-700' : 'text-slate-500'
+                        className={`w-14 h-12 rounded-xl text-center font-mono text-2xl font-bold tabular-nums bg-white shadow-xs focus:ring-2 focus:ring-sky-600 focus:outline-none ${
+                          m.atestados > 0 ? 'text-sky-950' : 'text-slate-950'
                         }`}
                       />
 
@@ -1136,7 +1136,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAtestado(student.id, 1)}
                         disabled={!effectiveCanEdit || m.faltas === 0 || isMaxAtestadosReached}
                         aria-label={`Adicionar atestado para ${student.name}`}
-                        className="w-12 h-12 rounded-2xl bg-blue-700 text-white font-semibold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95"
+                        className="w-12 h-12 rounded-xl bg-sky-800 text-white font-bold text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         +
                       </button>

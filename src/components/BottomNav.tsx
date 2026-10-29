@@ -153,19 +153,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 }}
                 aria-current={isActive ? 'page' : undefined}
                 className={`group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95 ${
-                  isActive ? 'text-blue-700' : 'text-slate-600 hover:text-slate-900'
+                  isActive ? 'text-slate-950 font-bold' : 'text-slate-800 hover:text-black font-semibold'
                 }`}
               >
                 <div
                   className={`flex items-center justify-center w-10 h-7 rounded-xl transition-colors ${
-                    isActive ? 'bg-blue-50 text-blue-700' : 'bg-transparent text-slate-600'
+                    isActive ? 'bg-slate-900 text-white' : 'bg-transparent text-slate-800'
                   }`}
                 >
                   <IconComp className="w-5 h-5" />
                 </div>
                 <span
                   className={`text-[11px] tracking-tight leading-none mt-1 truncate ${
-                    isActive ? 'font-semibold text-blue-700' : 'font-medium text-slate-600'
+                    isActive ? 'font-bold text-slate-950' : 'font-semibold text-slate-800'
                   }`}
                 >
                   {item.label}
@@ -181,13 +181,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => setShowMoreMenu((prev) => !prev)}
               className={`group flex flex-col items-center justify-center flex-1 h-full py-1.5 transition-all cursor-pointer select-none active:scale-95 ${
                 isMoreActive || showMoreMenu
-                  ? 'text-[#0050c8]'
-                  : 'text-slate-700 hover:text-black'
+                  ? 'text-slate-950 font-bold'
+                  : 'text-slate-800 hover:text-black font-semibold'
               }`}
             >
               <div
                 className={`flex items-center justify-center w-10 h-8 rounded-2xl transition-colors ${
-                  isMoreActive || showMoreMenu ? 'bg-[#0071e3]/15 text-[#0050c8]' : 'bg-transparent text-slate-700'
+                  isMoreActive || showMoreMenu ? 'bg-slate-900 text-white' : 'bg-transparent text-slate-800'
                 }`}
               >
                 <MoreHorizontal className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -195,8 +195,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <span
                 className={`text-xs tracking-tight leading-none mt-1 truncate ${
                   isMoreActive || showMoreMenu
-                    ? 'font-semibold text-blue-700'
-                    : 'font-medium text-slate-600'
+                    ? 'font-bold text-slate-950'
+                    : 'font-semibold text-slate-800'
                 }`}
               >
                 Mais

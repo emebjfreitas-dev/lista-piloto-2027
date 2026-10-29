@@ -326,29 +326,29 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     return (
       <div
         onClick={(e) => e.stopPropagation()}
-        className="rounded-xl bg-slate-50 border border-slate-200/90 p-4 sm:p-5 space-y-4 text-xs animate-gentle-fade text-slate-900 mt-2 shadow-xs"
+        className="rounded-2xl bg-slate-100 p-4 sm:p-5 space-y-4 text-xs animate-gentle-fade text-slate-950 mt-3 shadow-inner"
       >
         {/* Cabeçalho da Expansão: Aluno, Matrícula, Idade e Ficha */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200/80 gap-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-2.5">
           <div className="flex items-center gap-3">
-            <span className="w-8 h-8 rounded-lg bg-slate-900 text-white font-mono font-semibold text-sm flex items-center justify-center shrink-0 tabular-nums">
+            <span className="w-9 h-9 rounded-xl bg-slate-950 text-white font-mono font-bold text-sm flex items-center justify-center shrink-0 tabular-nums shadow-xs">
               {student.number.toString().padStart(2, '0')}
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-base text-slate-900">
+                <span className="font-bold text-base sm:text-lg text-slate-950">
                   {student.name}
                 </span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-200 text-emerald-950">
                   {studentGenderInfo.estudanteTitle}
                 </span>
                 {student.ra && (
-                  <span className="font-mono text-xs text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200 tabular-nums">
+                  <span className="font-mono text-xs font-bold text-slate-900 bg-white px-2 py-0.5 rounded-md shadow-xs tabular-nums">
                     RA {student.ra}-{student.digRa}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
+              <p className="text-xs text-slate-800 font-bold mt-0.5">
                 Nascimento: {student.dataNascimento || '—'}{' '}
                 {student.idade ? `(${student.idade} anos)` : ''} · Turma {classGroup.name}
               </p>
@@ -363,10 +363,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   e.stopPropagation();
                   onOpenStudentPdf(student);
                 }}
-                className={`h-8 px-3 rounded-lg font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors ${
+                className={`h-9 px-3.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors ${
                   hasPdf
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                    ? 'bg-blue-700 hover:bg-blue-800 text-white'
+                    : 'bg-rose-100 hover:bg-rose-200 text-rose-950'
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">
@@ -383,7 +383,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   e.stopPropagation();
                   onOpenStudentGrid(student);
                 }}
-                className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="h-9 px-3.5 rounded-xl bg-slate-950 hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
               >
                 <span className="material-symbols-outlined text-[16px]">open_in_full</span>
                 <span>Ficha Completa (48 Dados)</span>
@@ -395,16 +395,16 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         {/* Grade de 4 Painéis Visuais: Frequência, Filiação/Contatos, Endereço/Transporte e Inclusão */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           {/* Painel 1: Scorecard de Frequência & LDB */}
-          <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
+          <div className="bg-white rounded-2xl p-4 flex flex-col justify-between gap-2.5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6e6e73]">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Frequência no Mês
               </span>
               <span
-                className={`px-2 py-0.5 rounded text-[11px] font-bold tabular-nums ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold tabular-nums ${
                   isCompliant
-                    ? 'bg-[#eaf6ef] text-[#005035]'
-                    : 'bg-[#fff2f2] text-[#ff3b30]'
+                    ? 'bg-emerald-100 text-emerald-950'
+                    : 'bg-rose-200 text-rose-950'
                 }`}
               >
                 {isCompliant ? `LDB Conforme (≥${minLegalPresence}%)` : `Abaixo LDB (<${minLegalPresence}%)`}
@@ -414,92 +414,92 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <div>
               <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-2xl font-semibold font-mono tracking-tight tabular-nums ${
-                    isCompliant ? 'text-[#005035]' : 'text-[#ba1a1a]'
+                  className={`text-2xl font-bold font-mono tracking-tight tabular-nums ${
+                    isCompliant ? 'text-emerald-900' : 'text-rose-900'
                   }`}
                 >
                   {m.frequenciaPercent}%
                 </span>
-                <span className="text-xs text-[#6e6e73] font-medium">
-                  {m.presencas} de {m.diasLetivosMatriculados} dias letivos
+                <span className="text-xs text-slate-700 font-bold">
+                  {m.presencas} de {m.diasLetivosMatriculados} dias
                 </span>
               </div>
 
               {/* Barra de Progresso Visual */}
-              <div className="w-full bg-[#f2f4f3] rounded-full h-2 mt-2 overflow-hidden flex">
+              <div className="w-full bg-slate-200 rounded-full h-2 mt-2 overflow-hidden flex">
                 <div
                   className={`h-2 rounded-full transition-all ${
-                    isCompliant ? 'bg-[#005035]' : 'bg-[#ba1a1a]'
+                    isCompliant ? 'bg-emerald-700' : 'bg-rose-600'
                   }`}
                   style={{ width: `${Math.min(100, Math.max(0, m.frequenciaPercent))}%` }}
                 />
               </div>
             </div>
 
-            <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between text-[11px] text-[#6e6e73] tabular-nums">
-              <span>Total Faltas: <strong className="text-[#ba1a1a]">{m.faltas}</strong></span>
-              <span>Atestados: <strong className="text-[#005035]">{m.atestados}</strong></span>
-              <span>Sem Just.: <strong className="text-[#c2410c]">{Math.max(0, m.faltas - m.atestados)}</strong></span>
+            <div className="pt-2 flex items-center justify-between text-xs text-slate-800 font-bold tabular-nums">
+              <span>Faltas: <strong className="text-rose-900">{m.faltas}</strong></span>
+              <span>Atestados: <strong className="text-emerald-900">{m.atestados}</strong></span>
+              <span>Sem Just.: <strong className="text-amber-900">{Math.max(0, m.faltas - m.atestados)}</strong></span>
             </div>
           </div>
 
           {/* Painel 2: Núcleo Familiar & Contato Direto */}
-          <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#005035]">
+          <div className="bg-white rounded-2xl p-4 flex flex-col justify-between gap-2.5 shadow-sm">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-900">
               Família &amp; Contatos
             </span>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div>
-                <span className="text-[11px] font-semibold uppercase text-[#6e6e73] block">
+                <span className="text-xs font-bold uppercase text-slate-700 block">
                   {guardian1Info.roleLabel}
                 </span>
-                <span className="font-bold text-[#1d1d1f] block truncate">
+                <span className="font-bold text-slate-950 block truncate text-sm">
                   {guardian1Info.cleanName}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] font-semibold uppercase text-[#6e6e73] block">
+                <span className="text-xs font-bold uppercase text-slate-700 block">
                   {guardian2Info.roleLabel}
                 </span>
-                <span className="font-bold text-[#1d1d1f] block truncate">
+                <span className="font-bold text-slate-950 block truncate text-sm">
                   {guardian2Info.cleanName}
                 </span>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between gap-2">
+            <div className="pt-2 flex items-center justify-between gap-2">
               {waList.length > 0 ? (
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   <a
                     href={waList[0].waUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 h-[28px] px-2.5 rounded-lg bg-[#25d366]/15 hover:bg-[#25d366]/25 text-[#075e54] font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
+                    className="flex-1 h-8 px-3 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer truncate"
                     title={`Abrir conversa no WhatsApp: ${waList[0].display}`}
                   >
-                    <span className="material-symbols-outlined text-[14px]">chat</span>
+                    <span className="material-symbols-outlined text-[16px]">chat</span>
                     <span className="truncate">WhatsApp: {waList[0].display}</span>
                   </a>
                   <a
                     href={`tel:${(student.telefones || student.guardianPhone || '').replace(/\D/g, '')}`}
-                    className="h-[28px] px-2 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-xs flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    className="h-8 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs flex items-center justify-center transition-colors cursor-pointer shrink-0"
                     title="Discar ligação telefônica"
                   >
-                    <span className="material-symbols-outlined text-[14px]">call</span>
+                    <span className="material-symbols-outlined text-[16px]">call</span>
                   </a>
                 </div>
               ) : (
-                <span className="text-[11px] text-[#86868b] italic">Sem telefone cadastrado</span>
+                <span className="text-xs text-slate-700 font-bold italic">Sem telefone cadastrado</span>
               )}
             </div>
           </div>
 
           {/* Painel 3: Endereço & Logística Escolar (Tempo e Percurso até a EMEB Candelário) */}
-          <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
+          <div className="bg-white rounded-2xl p-4 flex flex-col justify-between gap-2.5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0369a1]">
-                Residência &amp; Deslocamento
+              <span className="text-xs font-bold uppercase tracking-wider text-sky-950">
+                Residência &amp; Percurso
               </span>
               {onNavigateToMap && (
                 <button
@@ -508,11 +508,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     e.stopPropagation();
                     onNavigateToMap(student);
                   }}
-                  className="px-2 py-0.5 rounded-md bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0066cc] font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-950 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
                   title="Ver no mapa georreferenciado interativo com percurso"
                 >
-                  <span className="material-symbols-outlined text-[13px]">map</span>
-                  <span>Ver no Mapa</span>
+                  <span className="material-symbols-outlined text-[14px]">map</span>
+                  <span>No Mapa</span>
                 </button>
               )}
             </div>
@@ -522,14 +522,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               const estimates = calculateTravelEstimates(coords.lat, coords.lng);
               return (
                 <div className="space-y-1.5">
-                  <div className="text-xs text-[#1d1d1f]">
-                    <span className="text-[#6e6e73] font-medium block">Endereço Residencial:</span>
-                    <span className="font-semibold block line-clamp-2">
+                  <div className="text-xs text-slate-950">
+                    <span className="text-slate-700 font-bold block">Endereço Residencial:</span>
+                    <span className="font-bold block line-clamp-2">
                       {student.logradouro || 'Logradouro não informado'}
                       {student.numeroResidencia ? `, nº ${student.numeroResidencia}` : ''}
                       {student.bairro ? ` · ${student.bairro}` : ''}
                     </span>
-                    <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] font-mono text-[#6e6e73]">
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs font-mono font-bold text-slate-700">
                       <span>Lat: {coords.lat.toFixed(5)}</span>
                       <span>·</span>
                       <span>Lng: {coords.lng.toFixed(5)}</span>
@@ -538,34 +538,34 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
 
                   {/* Tempo de Percurso até a EMEB Candelário */}
-                  <div className="p-1.5 rounded-lg bg-[#f0f9ff] border border-sky-100 flex items-center justify-between text-[11px] text-sky-900 font-semibold">
+                  <div className="p-2 rounded-xl bg-sky-100 flex items-center justify-between text-xs text-sky-950 font-bold">
                     <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-sky-700">directions_walk</span>
-                      <span>{estimates.walkMinutes} min a pé</span>
+                      <span className="material-symbols-outlined text-[15px] text-sky-800">directions_walk</span>
+                      <span>{estimates.walkMinutes} min pé</span>
                     </span>
-                    <span className="text-sky-300">|</span>
+                    <span className="text-sky-400">|</span>
                     <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-sky-700">directions_car</span>
+                      <span className="material-symbols-outlined text-[15px] text-sky-800">directions_car</span>
                       <span>{estimates.carMinutes} min carro</span>
                     </span>
-                    <span className="text-sky-300">|</span>
-                    <span className="font-mono font-bold text-sky-800">{estimates.distanceRoadKm} km</span>
+                    <span className="text-sky-400">|</span>
+                    <span className="font-mono font-bold text-sky-950">{estimates.distanceRoadKm} km</span>
                   </div>
                 </div>
               );
             })()}
 
-            <div className="pt-2 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-1 text-[11px]">
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-1 text-xs">
               {student.rotaOnibus ? (
-                <span className="px-2 py-0.5 rounded-md bg-[#f0f9ff] text-[#0369a1] font-bold">
+                <span className="px-2.5 py-0.5 rounded-lg bg-sky-100 text-sky-950 font-bold">
                   🚌 {student.rotaOnibus}
                 </span>
               ) : (
-                <span className="text-[#86868b]">Transporte individual</span>
+                <span className="text-slate-700 font-bold">Transporte individual</span>
               )}
 
               {student.nis && (
-                <span className="px-1.5 py-0.5 rounded bg-[#eaf6ef] text-[#005035] font-mono font-bold text-[11px]">
+                <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 font-mono font-bold text-xs">
                   NIS {student.nis}
                 </span>
               )}
@@ -573,34 +573,34 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
 
           {/* Painel 4: Inclusão, AEE & Situação */}
-          <div className="bg-white rounded-xl p-3.5 border border-black/[0.06] flex flex-col justify-between gap-2 shadow-2xs">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#5b21b6]">
+          <div className="bg-white rounded-2xl p-4 flex flex-col justify-between gap-2.5 shadow-sm">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-950">
               Inclusão (AEE) &amp; Situação
             </span>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div>
-                <span className="text-[11px] font-semibold uppercase text-[#6e6e73] block">
+                <span className="text-xs font-bold uppercase text-slate-700 block">
                   Educação Especial / AEE:
                 </span>
-                <span className="font-semibold text-[#1d1d1f] block truncate">
+                <span className="font-bold text-slate-950 block truncate text-sm">
                   {student.deficiencia || 'Sem registro de deficiência / AEE'}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] font-semibold uppercase text-[#6e6e73] block">
+                <span className="text-xs font-bold uppercase text-slate-700 block">
                   Situação Cadastral:
                 </span>
-                <span className="font-bold text-[#1d1d1f] block">
+                <span className="font-bold text-slate-950 block text-sm">
                   {student.situacao || 'ATIVO'}
                   {student.dataMovimentacao ? ` em ${student.dataMovimentacao}` : ''}
                 </span>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-black/[0.05] text-[11px] text-[#6e6e73] truncate">
+            <div className="pt-2 text-xs text-slate-700 font-bold truncate">
               {student.emailMunicipal ? (
-                <span className="font-mono text-[#0066cc] block truncate">
+                <span className="font-mono text-blue-900 block truncate">
                   {student.emailMunicipal}
                 </span>
               ) : (
@@ -1135,22 +1135,22 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               .trim()}.jpg`;
 
             const cardColorClasses = isTransferred
-              ? 'bg-amber-50/40 border-amber-200/80 hover:border-amber-300'
+              ? 'bg-amber-100/70 text-amber-950 shadow-sm hover:shadow-md'
               : isRemanejado
-              ? 'bg-purple-50/40 border-purple-200/80 hover:border-purple-300'
+              ? 'bg-purple-100/70 text-purple-950 shadow-sm hover:shadow-md'
               : isOtherNonActive
-              ? 'bg-slate-50 border-slate-200/80 hover:border-slate-300'
+              ? 'bg-slate-200/80 text-slate-900 shadow-sm hover:shadow-md'
               : m.isBelowLegalThreshold
-              ? 'bg-rose-50/30 border-rose-200/80 hover:border-rose-300'
-              : 'bg-white border-slate-200/90 hover:border-slate-300';
+              ? 'bg-rose-100/60 text-slate-950 shadow-sm hover:shadow-md'
+              : 'bg-white hover:bg-slate-50 text-slate-950 shadow-sm hover:shadow-md';
 
             const numberBadgeClasses = isTransferred
-              ? 'bg-amber-100 text-amber-900 border border-amber-200'
+              ? 'bg-amber-900 text-white font-bold'
               : isRemanejado
-              ? 'bg-purple-100 text-purple-900 border border-purple-200'
+              ? 'bg-purple-900 text-white font-bold'
               : isOtherNonActive
-              ? 'bg-slate-200 text-slate-700'
-              : 'bg-slate-100 text-slate-800';
+              ? 'bg-slate-700 text-white font-bold'
+              : 'bg-slate-950 text-white font-bold';
 
             const cumulativeOccs = getStudentCumulativeOccurrences(student);
             const latestConsecOcc =
@@ -1182,9 +1182,9 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   setExpandedStudentId((prev) => (prev === student.id ? null : student.id));
                 }}
                 title={isExpanded ? 'Clique para recolher detalhes' : `Clique para expandir dados de ${studentGenderInfo.estudanteTerm}`}
-                className={`rounded-xl border p-4 flex flex-col justify-between gap-3 cursor-pointer select-none transition-all duration-200 ${
+                className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 cursor-pointer select-none transition-all duration-200 ${
                   isExpanded
-                    ? 'col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 bg-white border-slate-300 ring-1 ring-slate-900/10 shadow-sm'
+                    ? 'col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 bg-white shadow-md'
                     : 'h-full min-h-[220px]'
                 } ${cardColorClasses}`}
               >
@@ -1354,35 +1354,35 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 </div>
 
-                {/* Bloco Minimalista de Filiação / Vínculo Familiar (Pai / Mãe / Tio / Tia / Avô / Avó / Vizinho / Vizinha) e Contato Rápido */}
+                {/* Bloco Minimalista de Filiação / Vínculo Familiar e Contato Rápido */}
                 <div
-                  className={`rounded-2xl border p-2.5 space-y-1 text-xs ${
+                  className={`rounded-xl p-3 space-y-1.5 text-xs transition-colors ${
                     isTransferred
-                      ? 'bg-white/85 border-[#d97706]/25'
+                      ? 'bg-amber-100/90 text-amber-950'
                       : isRemanejado
-                      ? 'bg-white/85 border-[#7c3aed]/25'
-                      : 'bg-[#f8f9fa] border-black/[0.04]'
+                      ? 'bg-purple-100/90 text-purple-950'
+                      : 'bg-slate-100 text-slate-950'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[#005035] font-semibold shrink-0 min-w-[42px]">
+                    <span className="text-emerald-950 font-bold shrink-0 min-w-[42px]">
                       {guardian1Info.shortRoleLabel}:
                     </span>
-                    <span className="font-semibold text-[#1d1d1f] truncate block flex-1">
+                    <span className="font-bold text-slate-950 truncate block flex-1">
                       {guardian1Info.cleanName}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[#003440] font-semibold shrink-0 min-w-[42px]">
+                    <span className="text-slate-800 font-bold shrink-0 min-w-[42px]">
                       {guardian2Info.shortRoleLabel}:
                     </span>
-                    <span className="font-semibold text-[#1d1d1f] truncate block flex-1">
+                    <span className="font-bold text-slate-950 truncate block flex-1">
                       {guardian2Info.cleanName}
                     </span>
                   </div>
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="pt-1 border-t border-black/[0.05] flex items-center justify-between gap-2 text-xs"
+                    className="pt-1.5 flex items-center justify-between gap-2 text-xs"
                   >
                     {(() => {
                       const waList = buildWhatsAppLinksFromPhoneString(
@@ -1391,7 +1391,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       );
                       if (waList.length === 0) {
                         return (
-                          <span className="font-mono text-[#86868b] truncate">
+                          <span className="font-mono font-bold text-slate-600 truncate">
                             Sem telefone
                           </span>
                         );
@@ -1402,15 +1402,15 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           target="_blank"
                           rel="noopener noreferrer"
                           title={`Abrir WhatsApp (${guardian1Info.shortRoleLabel}/${guardian2Info.shortRoleLabel}): ${waList[0].display}`}
-                          className="inline-flex items-center gap-1 font-mono font-semibold text-[#128C7E] hover:text-[#25D366] hover:underline truncate cursor-pointer"
+                          className="inline-flex items-center gap-1 font-mono font-bold text-emerald-800 hover:text-emerald-950 hover:underline truncate cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-[14px]">chat</span>
+                          <span className="material-symbols-outlined text-[15px]">chat</span>
                           <span className="truncate">{waList[0].display}</span>
                         </a>
                       );
                     })()}
                     {student.dataNascimento && (
-                      <span className="font-mono text-[#86868b] shrink-0">
+                      <span className="font-mono font-bold text-slate-700 shrink-0">
                         {student.dataNascimento}
                       </span>
                     )}

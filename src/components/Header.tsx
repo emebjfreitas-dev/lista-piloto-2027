@@ -164,11 +164,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
+      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white shadow-xs">
         <div className="h-14 px-3 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-3">
           {/* Zona 1: Identidade Institucional */}
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-
             <div
               onClick={() => navigateTo('home')}
               className="flex items-center gap-2 cursor-pointer group select-none shrink-0"
@@ -185,11 +184,11 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-7 h-7 object-contain shrink-0"
               />
               <div className="flex items-baseline gap-1.5">
-                <span className="text-sm font-semibold tracking-tight text-slate-900 group-hover:text-blue-700 transition-colors whitespace-nowrap">
+                <span className="text-sm font-bold tracking-tight text-slate-950 group-hover:text-blue-700 transition-colors whitespace-nowrap">
                   Lista Piloto 2027
                 </span>
                 <span className="text-slate-400 font-light hidden sm:inline" aria-hidden="true">·</span>
-                <span className="text-xs text-slate-500 font-normal hidden sm:inline whitespace-nowrap">
+                <span className="text-xs text-slate-800 font-semibold hidden sm:inline whitespace-nowrap">
                   EMEB Candelário
                 </span>
               </div>
@@ -200,16 +199,16 @@ export const Header: React.FC<HeaderProps> = ({
           {onChangeScreen && (
             <nav
               aria-label="Navegação Principal"
-              className="hidden xl:flex items-center gap-1 shrink-0"
+              className="hidden xl:flex items-center gap-1.5 shrink-0"
             >
               {/* Início */}
               <button
                 type="button"
                 onClick={() => navigateTo('home')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
                   currentScreen === 'home'
-                    ? 'bg-slate-100 text-slate-900 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-slate-950 text-white font-bold'
+                    : 'text-slate-950 hover:bg-slate-100 font-bold'
                 }`}
               >
                 <span className="material-symbols-outlined text-[17px]">home</span>
@@ -220,10 +219,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => navigateTo('turmas')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
                   currentScreen === 'turmas' || currentScreen === 'detalhes'
-                    ? 'bg-slate-100 text-slate-900 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-slate-950 text-white font-bold'
+                    : 'text-slate-950 hover:bg-slate-100 font-bold'
                 }`}
               >
                 <span className="material-symbols-outlined text-[17px]">groups</span>
@@ -236,10 +235,10 @@ export const Header: React.FC<HeaderProps> = ({
                   type="button"
                   onClick={() => navigateTo('frequencia_mensal')}
                   title="Informar faltas do mês de referência"
-                  className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
                     currentScreen === 'frequencia_mensal'
-                      ? 'bg-slate-100 text-slate-900 font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      ? 'bg-slate-950 text-white font-bold'
+                      : 'text-slate-950 hover:bg-slate-100 font-bold'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[17px]">checklist</span>
@@ -251,10 +250,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => navigateTo('faltas_consecutivas')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
                   currentScreen === 'faltas_consecutivas'
-                    ? 'bg-slate-100 text-slate-900 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-slate-950 text-white font-bold'
+                    : 'text-slate-950 hover:bg-slate-100 font-bold'
                 }`}
               >
                 <span className="material-symbols-outlined text-[17px]">warning</span>
@@ -265,10 +264,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => navigateTo('mapa_estudantes')}
-                className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
                   currentScreen === 'mapa_estudantes'
-                    ? 'bg-slate-100 text-slate-900 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-slate-950 text-white font-bold'
+                    : 'text-slate-950 hover:bg-slate-100 font-bold'
                 }`}
               >
                 <span className="material-symbols-outlined text-[17px]">map</span>
@@ -281,7 +280,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowAdminNavDropdown((prev) => !prev)}
-                    className={`h-8 px-3 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1 ${
+                    className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 ${
                       [
                         'resumo',
                         'bolsa_familia',
@@ -289,8 +288,8 @@ export const Header: React.FC<HeaderProps> = ({
                         'usuarios_acesso',
                         'dias_letivos',
                       ].includes(currentScreen) || showAdminNavDropdown
-                        ? 'bg-slate-100 text-slate-900 font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-slate-950 text-white font-bold'
+                        : 'text-slate-950 hover:bg-slate-100 font-bold'
                     }`}
                   >
                     <span>Gestão</span>
@@ -385,19 +384,16 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Zona 3: Ações Rápidas & Perfil */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Busca Rápida Spotlight */}
+            {/* Busca Rápida */}
             {onOpenSpotlightSearch && (
               <button
                 type="button"
                 onClick={onOpenSpotlightSearch}
-                title="Busca Global (Ctrl+K ou ⌘K)"
-                className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-colors cursor-pointer"
+                aria-label="Buscar Aluno ou Turma"
+                className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-300"
               >
-                <span className="material-symbols-outlined text-[16px]">search</span>
-                <span className="hidden md:inline text-xs font-normal">Buscar</span>
-                <kbd className="hidden lg:inline-block px-1 py-0.2 rounded bg-white text-slate-400 text-[10px] font-mono border border-slate-200">
-                  ⌘K
-                </kbd>
+                <span className="material-symbols-outlined text-[17px] text-slate-900">search</span>
+                <span>Buscar</span>
               </button>
             )}
 
