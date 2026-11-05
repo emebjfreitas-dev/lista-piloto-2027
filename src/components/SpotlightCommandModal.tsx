@@ -170,15 +170,15 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[95] bg-black/55 backdrop-blur-md flex items-start justify-center pt-12 sm:pt-20 p-3 sm:p-4 animate-gentle-fade"
+      className="fixed inset-0 z-[95] bg-slate-900/35 backdrop-blur-xs flex items-start justify-center pt-12 sm:pt-20 p-3 sm:p-4 animate-gentle-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-white rounded-[28px] shadow-[0_28px_70px_rgba(0,0,0,0.28)] border border-black/[0.08] overflow-hidden flex flex-col max-h-[82vh]"
+        className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[82vh]"
       >
         {/* Barra Superior de Busca Instantânea */}
-        <div className="px-4 sm:px-5 py-3.5 border-b border-black/[0.06] flex items-center gap-3 bg-[#fbfbfd]">
-          <span className="material-symbols-outlined text-[22px] text-[#0071e3] shrink-0">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100 flex items-center gap-3 bg-white">
+          <span className="material-symbols-outlined text-[20px] text-blue-600 shrink-0">
             search
           </span>
           <input
@@ -187,21 +187,21 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar estudante por nome, RA, mãe, pai, ônibus ou turma..."
-            className="flex-1 bg-transparent text-[#1d1d1f] text-base font-semibold placeholder:text-[#86868b] focus:outline-none"
+            className="flex-1 bg-transparent text-slate-900 text-sm sm:text-base font-medium placeholder:text-slate-400 focus:outline-none"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
-              className="w-7 h-7 rounded-full bg-black/[0.06] hover:bg-black/[0.12] text-[#6e6e73] flex items-center justify-center cursor-pointer"
+              className="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">close</span>
+              <span className="material-symbols-outlined text-[15px]">close</span>
             </button>
           )}
           <button
             type="button"
             onClick={onClose}
-            className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#6e6e73] font-bold text-xs uppercase tracking-wider cursor-pointer shrink-0"
+            className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-500 font-medium text-[11px] uppercase tracking-wider cursor-pointer shrink-0"
           >
             ESC
           </button>
@@ -221,7 +221,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                   onNavigateToScreen(userRole === 'usuario' ? 'detalhes' : 'turmas');
                   onClose();
                 }}
-                className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
               >
                 Turmas
               </button>
@@ -232,7 +232,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                     onNavigateToScreen('frequencia_mensal');
                     onClose();
                   }}
-                  className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
                 >
                   Faltas do Mês
                 </button>
@@ -243,7 +243,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                   onNavigateToScreen('faltas_consecutivas');
                   onClose();
                 }}
-                className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
               >
                 Faltas Consecutivas
               </button>
@@ -253,7 +253,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                   onNavigateToScreen('mapa_estudantes');
                   onClose();
                 }}
-                className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
               >
                 Mapa de Trajetos &amp; KM
               </button>
@@ -264,7 +264,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                     onNavigateToScreen('bolsa_familia');
                     onClose();
                   }}
-                  className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
                 >
                   Bolsa Família
                 </button>

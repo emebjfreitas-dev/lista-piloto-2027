@@ -31,10 +31,8 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   onSavePhoto,
   onSyncDrivePhotos,
 }) => {
-  if (!isOpen || !student) return null;
-
   const [activeTab, setActiveTab] = useState<'drive_catalog' | 'device_upload'>('drive_catalog');
-  const [previewUrl, setPreviewUrl] = useState<string>(student.photo || '');
+  const [previewUrl, setPreviewUrl] = useState<string>(student?.photo || '');
   const [selectedDriveFile, setSelectedDriveFile] = useState<DiscoveredDrivePhotoFile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -58,7 +56,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
 
     if (!q) {
       // Prioritize files matching the student's first name or class
-      const firstToken = (student.name || '')
+      const firstToken = (student?.name || '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toUpperCase()
@@ -91,7 +89,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
         );
       })
       .slice(0, 60);
-  }, [discoveredPhotos, searchQuery, student.name]);
+  }, [discoveredPhotos, searchQuery, student?.name]);
 
   const compressImageFileToDataUrl = (file: File): Promise<string> => {
     return new Promise((resolve) => {
@@ -135,7 +133,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !student) return;
 
     setIsProcessing(true);
     setStatusMsg('Carregando e otimizando foto do dispositivo...');
@@ -192,7 +190,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   };
 
   const handleSave = () => {
-    if (!previewUrl) return;
+    if (!previewUrl || !student) return;
     if (selectedDriveFile) {
       onSavePhoto(
         student.id,
@@ -211,14 +209,16 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     }, 500);
   };
 
+  if (!isOpen || !student) return null;
+
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-black/[0.08] p-4 sm:p-6 overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200/90 p-4 sm:p-6 overflow-hidden flex flex-col max-h-[92vh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">

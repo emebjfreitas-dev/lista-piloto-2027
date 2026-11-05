@@ -713,76 +713,126 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   }, [authorizedUsers]);
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto pb-12 space-y-4 animate-gentle-fade">
-      {/* Breadcrumb Limpo */}
-      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
-        <div className="flex items-center gap-1.5">
-          {onBack && (
-            <>
-              <button
-                type="button"
-                onClick={onBack}
-                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-                <span>Voltar</span>
-              </button>
-              <span className="text-slate-300">/</span>
-            </>
-          )}
-          <span className="font-semibold text-slate-800">Professores &amp; Acessos</span>
-        </div>
-        <span className="text-slate-400 text-xs hidden sm:inline">
-          Quadro Docente &amp; Acessos Institucionais
-        </span>
-      </div>
-
-      {/* Feedback Toast */}
-      {feedbackMsg && (
-        <div
-          className={`p-4 rounded-2xl font-bold text-sm flex items-center justify-between gap-2 shadow-md ${
-            feedbackMsg.type === 'success'
-              ? 'bg-emerald-100 text-emerald-950'
-              : 'bg-rose-100 text-rose-950'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[22px]">
-              {feedbackMsg.type === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <span>{feedbackMsg.text}</span>
+    <div className="flex flex-col h-[calc(100dvh-5.5rem)] lg:h-[calc(100vh-6rem)] w-full max-w-[1600px] mx-auto bg-slate-50/70 rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden animate-gentle-fade">
+      {/* 1. CABEÇALHO FIXO (SHRINK-0) — NUNCA ROLA FORA DA TELA */}
+      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 border-b border-slate-200/90 space-y-2 z-10">
+        {/* Breadcrumb Limpo */}
+        <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+          <div className="flex items-center gap-1.5">
+            {onBack && (
+              <>
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                  <span>Voltar</span>
+                </button>
+                <span className="text-slate-300">/</span>
+              </>
+            )}
+            <span className="font-semibold text-slate-800">Professores &amp; Acessos</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setFeedbackMsg(null)}
-            className="text-xs underline font-bold cursor-pointer"
-          >
-            Fechar
-          </button>
+          <span className="text-slate-400 text-xs hidden sm:inline">
+            Quadro Docente &amp; Acessos Institucionais 2027
+          </span>
         </div>
-      )}
 
-      {/* Top Executive Header */}
-      <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-slate-950 text-white text-xs font-bold uppercase tracking-wider">
-                Quadro Oficial Docente &amp; Controle de Acessos 2027
-              </span>
-              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 text-xs font-bold">
-                {classes.length} Turmas ({manhaTurmasCount} Manhã · {tardeTurmasCount} Tarde) · {authorizedUsers.length} Contas
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight leading-tight">
-              Professores, Turmas SED &amp; Gerenciamento de Acessos
+        {/* Título & Sub-Abas Segmentadas em Linha Fixa */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight truncate">
+              Professores, Turmas SED &amp; Acessos
             </h1>
-            <p className="text-sm text-slate-600 font-medium max-w-3xl">
-              Base unificada com as {classes.length} turmas oficiais de 2027 (20 Manhã · 20 Tarde, com 3 turmas vagas aguardando atribuição), docentes regentes (PEB I), especialistas de Arte, Educação Física e Língua Inglesa (PEB II), códigos SED e monitoramento de acessos em tempo real.
-            </p>
+            <span className="text-xs text-slate-500 font-medium hidden md:inline">
+              · {classes.length} Turmas ({manhaTurmasCount} Manhã / {tardeTurmasCount} Tarde)
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200/80 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('quadro_turmas')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+                activeSubTab === 'quadro_turmas' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">school</span>
+              <span>1. Quadro Docente ({classes.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('contas_acesso')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+                activeSubTab === 'contas_acesso' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">manage_accounts</span>
+              <span>2. Contas &amp; Perfis ({authorizedUsers.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('monitoramento')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+                activeSubTab === 'monitoramento' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">monitoring</span>
+              <span>3. Tempo de Tela ({accessSessionLogs.length})</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. ÁREA DE ROLAGEM INTERNA CONTIDA */}
+      <main className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 focus:outline-none">
+        {/* Feedback Toast */}
+        {feedbackMsg && (
+          <div
+            className={`p-4 rounded-2xl font-bold text-sm flex items-center justify-between gap-2 shadow-md ${
+              feedbackMsg.type === 'success'
+                ? 'bg-emerald-100 text-emerald-950'
+                : 'bg-rose-100 text-rose-950'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[22px]">
+                {feedbackMsg.type === 'success' ? 'check_circle' : 'error'}
+              </span>
+              <span>{feedbackMsg.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFeedbackMsg(null)}
+              className="text-xs underline font-bold cursor-pointer"
+            >
+              Fechar
+            </button>
+          </div>
+        )}
+
+        {/* Top Executive Header Card */}
+        <section className="card-welcoming bg-white rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-950 text-white text-[11px] font-bold uppercase tracking-wider">
+                  Quadro Oficial Docente &amp; Acessos 2027
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-950 text-[11px] font-bold">
+                  {classes.length} Turmas ({manhaTurmasCount} Manhã · {tardeTurmasCount} Tarde)
+                </span>
+              </div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-950 tracking-tight">
+                Professores, Turmas SED &amp; Gerenciamento de Acessos
+              </h2>
+              <p className="text-xs text-slate-600 font-medium max-w-3xl">
+                Base unificada com as {classes.length} turmas oficiais de 2027 (20 Manhã · 20 Tarde), docentes regentes (PEB I), especialistas (PEB II), códigos SED e monitoramento de acessos.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -1279,11 +1329,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               onChange={(e) =>
                                 setMatrixDraft({ ...matrixDraft, teacherName: e.target.value })
                               }
-                              className="w-full px-2 py-1 rounded-lg bg-white border border-[#005035] font-bold text-[#003440] text-xs"
+                              className="w-full px-3 py-1.5 rounded-xl bg-slate-100 font-bold text-slate-950 text-xs focus:bg-white focus:outline-none shadow-2xs"
                             />
                           ) : cls.isVaga || cls.teacherName === 'TURMA VAGA' ? (
                             <div className="flex flex-col items-start gap-1">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-300 font-semibold text-xs">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100 text-amber-950 font-bold text-xs shadow-2xs">
                                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                                 TURMA VAGA (Aguardando Atribuição)
                               </span>
@@ -1291,7 +1341,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleStartEditMatrixRow(cls)}
-                                  className="text-[11px] text-[#005035] hover:text-[#003440] font-semibold underline flex items-center gap-1 cursor-pointer"
+                                  className="text-[11px] text-emerald-800 hover:text-emerald-950 font-bold underline flex items-center gap-1 cursor-pointer"
                                 >
                                   <span className="material-symbols-outlined text-[13px]">person_add</span>
                                   Designar Professor(a)
@@ -1300,23 +1350,23 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                             </div>
                           ) : (
                             <div>
-                              <span className="font-semibold text-[#003440] block">
+                              <span className="font-bold text-slate-900 block">
                                 {cls.teacherName || regenteUser?.name || '—'}
                               </span>
                               {regenteUser ? (
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="font-mono text-[11px] text-[#005035] font-bold">
+                                  <span className="font-mono text-[11px] text-emerald-800 font-bold">
                                     {regenteUser.email}
                                   </span>
                                   {(regenteUser.totalAccessCount || 0) > 0 && (
-                                    <span className="px-1.5 py-0.2 rounded bg-[#eaf6ef] text-[#005035] font-mono font-bold text-[11px]">
+                                    <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 font-mono font-bold text-[11px]">
                                       {regenteUser.totalAccessCount}x ·{' '}
                                       {formatDurationHuman(regenteUser.totalDurationSeconds)}
                                     </span>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-[#ba1a1a] font-semibold">
+                                <span className="text-[11px] text-rose-700 font-bold">
                                   Sem e-mail vinculado
                                 </span>
                               )}
@@ -1325,7 +1375,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         </td>
 
                         {/* TURMA */}
-                        <td className="py-2.5 px-2.5 font-semibold text-[#003440] whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 font-bold text-slate-900 whitespace-nowrap">
                           {cls.name}
                         </td>
 
@@ -1338,10 +1388,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               onChange={(e) =>
                                 setMatrixDraft({ ...matrixDraft, room: e.target.value })
                               }
-                              className="w-36 px-2 py-1 rounded-lg bg-white border border-[#005035] font-semibold text-xs"
+                              className="w-36 px-2.5 py-1.5 rounded-xl bg-slate-100 font-bold text-xs shadow-2xs focus:bg-white focus:outline-none"
                             />
                           ) : (
-                            <span className="font-semibold text-[#374346]">{cls.room}</span>
+                            <span className="font-semibold text-slate-700">{cls.room}</span>
                           )}
                         </td>
 
@@ -1356,7 +1406,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                   shift: e.target.value as 'Turno Manhã' | 'Turno Tarde',
                                 })
                               }
-                              className="px-2 py-1 rounded-lg bg-white border border-[#005035] font-bold text-xs"
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 font-bold text-xs shadow-2xs focus:bg-white focus:outline-none"
                             >
                               <option value="Turno Manhã">MANHÃ</option>
                               <option value="Turno Tarde">TARDE</option>
@@ -1383,10 +1433,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               onChange={(e) =>
                                 setMatrixDraft({ ...matrixDraft, turmaSedName: e.target.value })
                               }
-                              className="w-48 px-2 py-1 rounded-lg bg-white border border-[#005035] font-mono text-xs"
+                              className="w-48 px-2.5 py-1.5 rounded-xl bg-slate-100 font-mono text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
                             />
                           ) : (
-                            <span className="font-mono text-xs text-[#436370] block">
+                            <span className="font-mono text-xs text-slate-600 font-bold block">
                               {cls.turmaSedName || '—'}
                             </span>
                           )}
@@ -1394,11 +1444,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
                         {/* QTD */}
                         <td className="py-2.5 px-2 text-center font-mono">
-                          <span className="font-semibold text-[#005035] text-sm">
+                          <span className="font-bold text-emerald-800 text-sm">
                             {activeCount}
                           </span>
                           {cls.students.length !== activeCount && (
-                            <span className="block text-[11px] text-[#5a676b]">
+                            <span className="block text-[11px] text-slate-500 font-medium">
                               ({cls.students.length} total)
                             </span>
                           )}
@@ -1416,10 +1466,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                   classeSedCode: e.target.value,
                                 })
                               }
-                              className="w-28 px-2 py-1 rounded-lg bg-white border border-[#005035] font-mono text-xs"
+                              className="w-28 px-2.5 py-1.5 rounded-xl bg-slate-100 font-mono text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
                             />
                           ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-[#f2f4f3] text-[#003440] font-bold text-xs">
+                            <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-900 font-bold text-xs">
                               {cls.classeSedCode || '—'}
                             </span>
                           )}
@@ -1428,7 +1478,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         {/* PRONOME TRAT / PRENOME */}
                         <td className="py-2.5 px-2 whitespace-nowrap">
                           {isEditing && matrixDraft ? (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5">
                               <select
                                 value={matrixDraft.teacherPronoun}
                                 onChange={(e) =>
@@ -1437,7 +1487,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                     teacherPronoun: e.target.value,
                                   })
                                 }
-                                className="px-1.5 py-1 rounded bg-white border border-[#005035] text-[11px] font-bold"
+                                className="px-2 py-1.5 rounded-xl bg-slate-100 text-[11px] font-bold shadow-2xs focus:bg-white focus:outline-none"
                               >
                                 <option value="PROFESSORA">PROFESSORA</option>
                                 <option value="PROFESSOR">PROFESSOR</option>
@@ -1451,15 +1501,15 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                     teacherFirstName: e.target.value,
                                   })
                                 }
-                                className="w-24 px-1.5 py-1 rounded bg-white border border-[#005035] text-xs font-bold"
+                                className="w-24 px-2 py-1.5 rounded-xl bg-slate-100 text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
                               />
                             </div>
                           ) : (
                             <div>
-                              <span className="text-[11px] font-bold text-[#5a676b] block">
+                              <span className="text-[11px] font-bold text-slate-500 block">
                                 {cls.teacherPronoun || 'PROFESSORA'}
                               </span>
-                              <span className="font-semibold text-[#005035] text-xs">
+                              <span className="font-bold text-emerald-900 text-xs">
                                 {cls.teacherFirstName || '—'}
                               </span>
                             </div>
@@ -1475,10 +1525,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               onChange={(e) =>
                                 setMatrixDraft({ ...matrixDraft, artTeacher: e.target.value })
                               }
-                              className="w-40 px-2 py-1 rounded-lg bg-white border border-[#005035] text-xs font-semibold"
+                              className="w-40 px-2.5 py-1.5 rounded-xl bg-slate-100 text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
                             />
                           ) : (
-                            <span className="text-xs font-semibold text-[#1c1c1e] block">
+                            <span className="text-xs font-semibold text-slate-800 block">
                               {cls.artTeacher || '—'}
                             </span>
                           )}
@@ -1493,10 +1543,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               onChange={(e) =>
                                 setMatrixDraft({ ...matrixDraft, peTeacher: e.target.value })
                               }
-                              className="w-40 px-2 py-1 rounded-lg bg-white border border-[#005035] text-xs font-semibold"
+                              className="w-40 px-2.5 py-1.5 rounded-xl bg-slate-100 text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
                             />
                           ) : (
-                            <span className="text-xs font-semibold text-[#1c1c1e] block">
+                            <span className="text-xs font-semibold text-slate-800 block">
                               {cls.peTeacher || '—'}
                             </span>
                           )}
@@ -1514,10 +1564,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                   englishTeacher: e.target.value,
                                 })
                               }
-                              className="w-40 px-2 py-1 rounded-lg bg-white border border-[#005035] text-xs font-semibold"
+                              className="w-40 px-2.5 py-1.5 rounded-xl bg-slate-100 text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
                             />
                           ) : (
-                            <span className="text-xs font-semibold text-[#1c1c1e] block">
+                            <span className="text-xs font-semibold text-slate-800 block">
                               {cls.englishTeacher || '—'}
                             </span>
                           )}
@@ -1570,7 +1620,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                     type="button"
                                     onClick={() => onSimulateTeacherProfile(regenteUser)}
                                     title={`Entrar na visão de ${regenteUser.name} (${cls.name})`}
-                                    className="px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:text-white font-semibold text-xs flex items-center gap-1 border border-[#005035]/25 cursor-pointer transition-colors"
+                                    className="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                                   >
                                     <span className="material-symbols-outlined text-[14px]">
                                       visibility
@@ -1591,17 +1641,17 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           </section>
 
           {/* Quadro Consolidado de Especialistas PEB II (Arte, Educação Física e Língua Inglesa) */}
-          <section className="card-welcoming bg-white rounded-3xl p-5 border border-black/[0.06] space-y-3.5">
+          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#b45309] block">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block">
                   Quadro de Especialistas PEB II (Arte · Educação Física · Língua Inglesa)
                 </span>
-                <h2 className="text-lg font-semibold text-[#003440]">
+                <h2 className="text-lg font-bold text-slate-900">
                   Professores Especialistas e Turmas Atendidas ({specialistsUsers.length} Especialistas)
                 </h2>
               </div>
-              <span className="text-xs font-semibold text-[#5a676b]">
+              <span className="text-xs font-bold text-slate-600">
                 Perfil PEB II: Visualização das turmas atribuídas · Sem duplicidade de cadastro
               </span>
             </div>
@@ -1618,19 +1668,19 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 return (
                   <div
                     key={spec.id}
-                    className="p-3.5 rounded-2xl bg-[#f8faf9] border border-black/[0.06] flex flex-col justify-between gap-2.5"
+                    className="p-4 rounded-2xl bg-slate-100 flex flex-col justify-between gap-3 shadow-2xs"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <StudentAvatar name={spec.name} size="sm" />
                         <div className="min-w-0">
-                          <span className="px-2 py-0.5 rounded-full bg-[#fef3c7] text-[#92400e] text-[11px] font-semibold uppercase">
+                          <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 text-[11px] font-bold uppercase">
                             {spec.subjectName || 'ESPECIALISTA PEB II'}
                           </span>
-                          <h3 className="font-semibold text-sm text-[#003440] truncate mt-0.5">
+                          <h3 className="font-bold text-sm text-slate-950 truncate mt-0.5">
                             {spec.name}
                           </h3>
-                          <p className="font-mono text-xs text-[#005035] font-bold truncate">
+                          <p className="font-mono text-xs text-emerald-900 font-bold truncate">
                             {spec.email}
                           </p>
                         </div>
@@ -1640,22 +1690,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         <button
                           type="button"
                           onClick={() => onSimulateTeacherProfile(spec)}
-                          className="px-2.5 py-1 rounded-xl bg-white hover:bg-[#003440] text-[#003440] hover:text-white border border-black/[0.08] font-semibold text-xs shrink-0 cursor-pointer transition-colors"
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-900 text-slate-900 hover:text-white font-bold text-xs shrink-0 cursor-pointer transition-colors shadow-2xs"
                         >
                           Simular
                         </button>
                       )}
                     </div>
 
-                    <div className="pt-2 border-t border-black/[0.05]">
-                      <span className="text-[11px] font-semibold uppercase text-[#5a676b] block mb-1">
+                    <div className="pt-2">
+                      <span className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
                         {specClasses.length} Turmas Vinculadas:
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {specClasses.map((c) => (
                           <span
                             key={c.id}
-                            className="px-2 py-0.5 rounded-md bg-white border border-black/[0.08] font-mono font-bold text-[11px] text-[#003440]"
+                            className="px-2 py-0.5 rounded-lg bg-white font-mono font-bold text-[11px] text-slate-900 shadow-2xs"
                           >
                             {c.turmaAbrev || c.name}
                           </span>
@@ -1677,12 +1727,12 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         <div className="space-y-5">
           {/* Formulário Prático para Cadastrar Novo E-mail */}
           {canManage && (
-            <section className="card-welcoming bg-white rounded-3xl p-5 border border-black/[0.06] space-y-3.5">
-              <div className="flex items-center gap-2 text-[#003440]">
-                <span className="material-symbols-outlined text-[22px] text-[#005035]">
+            <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 text-slate-900">
+                <span className="material-symbols-outlined text-[24px] text-emerald-800">
                   person_add
                 </span>
-                <h2 className="text-base font-semibold">
+                <h2 className="text-base font-bold">
                   Adicionar Novo E-mail Institucional ({INSTITUTIONAL_EMAIL_DOMAIN})
                 </h2>
               </div>
@@ -1692,20 +1742,20 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 items-end"
               >
                 <div className="xl:col-span-4 space-y-1">
-                  <label className="block text-xs font-semibold text-[#003440] uppercase">
+                  <label className="block text-xs font-bold text-slate-800 uppercase">
                     1. E-mail Institucional
                   </label>
-                  <div className="flex items-center rounded-xl border border-black/[0.12] bg-[#f8faf9] focus-within:bg-white focus-within:border-[#003440] overflow-hidden">
+                  <div className="flex items-center rounded-2xl bg-slate-100 focus-within:bg-white overflow-hidden shadow-2xs">
                     <input
                       type="text"
                       required
                       value={emailPrefix}
                       onChange={(e) => setEmailPrefix(e.target.value)}
                       placeholder="nome.sobrenome"
-                      className="w-full min-h-[42px] px-3 bg-transparent text-[#191c1b] font-bold text-sm focus:outline-none"
+                      className="w-full min-h-[44px] px-3.5 bg-transparent text-slate-950 font-bold text-sm focus:outline-none"
                     />
                     {!emailPrefix.includes('@') && (
-                      <span className="px-2.5 py-2 bg-[#e7ecea] text-[#003440] font-mono font-bold text-xs shrink-0">
+                      <span className="px-3 py-2 bg-slate-200 text-slate-800 font-mono font-bold text-xs shrink-0">
                         {INSTITUTIONAL_EMAIL_DOMAIN}
                       </span>
                     )}
@@ -1713,7 +1763,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 </div>
 
                 <div className="xl:col-span-3 space-y-1">
-                  <label className="block text-xs font-semibold text-[#003440] uppercase">
+                  <label className="block text-xs font-bold text-slate-800 uppercase">
                     2. Nome Completo do(a) Educador(a)
                   </label>
                   <input
@@ -1722,18 +1772,18 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: Maria Aparecida da Silva"
-                    className="w-full min-h-[42px] px-3 rounded-xl border border-black/[0.12] bg-[#f8faf9] focus:bg-white text-[#191c1b] font-semibold text-sm focus:outline-none focus:border-[#003440]"
+                    className="w-full min-h-[44px] px-3.5 rounded-2xl bg-slate-100 focus:bg-white text-slate-950 font-bold text-sm focus:outline-none shadow-2xs"
                   />
                 </div>
 
                 <div className="xl:col-span-2 space-y-1">
-                  <label className="block text-xs font-semibold text-[#003440] uppercase">
+                  <label className="block text-xs font-bold text-slate-800 uppercase">
                     3. Perfil de Acesso
                   </label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value as UserRole)}
-                    className="w-full min-h-[42px] px-3 rounded-xl border border-black/[0.12] bg-[#f8faf9] text-[#003440] font-semibold text-sm focus:outline-none"
+                    className="w-full min-h-[44px] px-3 rounded-2xl bg-slate-100 text-slate-950 font-bold text-sm focus:outline-none shadow-2xs cursor-pointer"
                   >
                     <option value="usuario">PEB I (Regente · Sua Turma)</option>
                     <option value="peb2">PEB II (Especialista · Leitura)</option>
@@ -1742,14 +1792,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 </div>
 
                 <div className="xl:col-span-2 space-y-1">
-                  <label className="block text-xs font-semibold text-[#003440] uppercase">
+                  <label className="block text-xs font-bold text-slate-800 uppercase">
                     4. Turma Vinculada
                   </label>
                   {role === 'usuario' ? (
                     <select
                       value={assignedClassId}
                       onChange={(e) => setAssignedClassId(e.target.value)}
-                      className="w-full min-h-[42px] px-2.5 rounded-xl border border-[#005035] bg-[#eaf6ef]/60 text-[#005035] font-semibold text-sm focus:outline-none"
+                      className="w-full min-h-[44px] px-3 rounded-2xl bg-emerald-100 text-emerald-950 font-bold text-sm focus:outline-none shadow-2xs cursor-pointer"
                     >
                       {classes.map((cls) => (
                         <option key={cls.id} value={cls.id}>
@@ -1759,7 +1809,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                       ))}
                     </select>
                   ) : (
-                    <div className="min-h-[42px] px-3 rounded-xl border border-black/[0.08] bg-[#f2f4f3] text-[#436370] font-bold text-xs flex items-center">
+                    <div className="min-h-[44px] px-3 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs flex items-center shadow-2xs">
                       {role === 'admin' ? `Todas as ${classes.length} Turmas` : 'Turmas de Especialista'}
                     </div>
                   )}
@@ -1768,7 +1818,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 <div className="xl:col-span-1">
                   <button
                     type="submit"
-                    className="w-full min-h-[42px] px-3 rounded-xl bg-[#005035] hover:bg-[#003d28] text-white font-semibold text-sm flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                    className="w-full min-h-[44px] px-3 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-sm flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                   >
                     <span className="material-symbols-outlined text-[18px]">add</span>
                     <span>Salvar</span>
@@ -1779,7 +1829,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           )}
 
           {/* Lista Unificada de Contas Cadastradas */}
-          <section className="card-welcoming bg-white rounded-3xl p-5 border border-black/[0.06] space-y-4">
+          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 {(
@@ -1835,14 +1885,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar por e-mail, nome ou turma..."
-                  className="w-full min-h-[40px] pl-9 pr-3 rounded-xl bg-[#f5f7f6] border border-black/[0.08] text-sm font-semibold focus:outline-none focus:bg-white"
+                  className="w-full min-h-[44px] pl-9 pr-3 rounded-2xl bg-slate-100 text-slate-950 text-sm font-bold focus:outline-none focus:bg-white shadow-2xs"
                 />
               </div>
             </div>
 
-            <div className="border border-black/[0.08] rounded-2xl overflow-x-auto">
+            <div className="rounded-2xl overflow-x-auto shadow-sm">
               <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
-                <thead className="bg-[#003440] text-white font-semibold uppercase text-[11px]">
+                <thead className="bg-[#003440] text-white font-bold uppercase text-[11px]">
                   <tr>
                     <th className="py-3 px-3">Status</th>
                     <th className="py-3 px-3">E-mail Institucional</th>
@@ -1854,7 +1904,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     <th className="py-3 px-3 text-center">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black/[0.06]">
+                <tbody className="divide-y divide-slate-100 bg-white">
                   {filteredUsers.map((u) => {
                     const effectiveRole = draftEdits[u.id]?.role || u.role;
                     const effectiveClassId =
@@ -1866,8 +1916,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     return (
                       <tr
                         key={u.id}
-                        className={`hover:bg-[#f6f9f8] transition-colors ${
-                          !u.active ? 'opacity-60 bg-[#fff8f7]' : ''
+                        className={`hover:bg-slate-50 transition-colors ${
+                          !u.active ? 'opacity-60 bg-rose-50/50' : ''
                         }`}
                       >
                         <td className="py-2.5 px-3">
@@ -1875,26 +1925,26 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                             type="button"
                             disabled={!canManage}
                             onClick={() => handleToggleActive(u.id)}
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase cursor-pointer ${
                               u.active
-                                ? 'bg-[#eaf6ef] text-[#005035]'
-                                : 'bg-[#ffdad6] text-[#ba1a1a]'
+                                ? 'bg-emerald-100 text-emerald-950'
+                                : 'bg-rose-100 text-rose-950'
                             }`}
                           >
                             {u.active ? 'Liberado' : 'Bloqueado'}
                           </button>
                         </td>
 
-                        <td className="py-2.5 px-3 font-mono font-bold text-[#003440]">
+                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
                           {u.email}
                         </td>
 
                         <td className="py-2.5 px-3">
-                          <span className="font-semibold text-[#1c1c1e] block">
+                          <span className="font-bold text-slate-950 block">
                             {u.name}
                           </span>
                           {u.subjectName && (
-                            <span className="text-[11px] font-bold text-[#b45309]">
+                            <span className="text-[11px] font-bold text-amber-800">
                               Especialista: {u.subjectName}
                             </span>
                           )}
@@ -1907,7 +1957,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               onChange={(e) =>
                                 handleChangeUserRole(u.id, e.target.value as UserRole)
                               }
-                              className="px-2.5 py-1 rounded-xl border border-black/[0.12] bg-white font-semibold text-xs text-[#003440] cursor-pointer"
+                              className="px-2.5 py-1 rounded-xl bg-slate-100 font-bold text-xs text-slate-950 cursor-pointer shadow-2xs"
                             >
                               <option value="usuario">PEB I (Regente)</option>
                               <option value="peb2">PEB II (Especialista)</option>
@@ -1931,7 +1981,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                   onChange={(e) =>
                                     handleChangeUserClass(u.id, e.target.value)
                                   }
-                                  className="px-2.5 py-1 rounded-xl border border-[#005035]/40 bg-[#eaf6ef]/70 text-[#005035] font-semibold text-xs cursor-pointer"
+                                  className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-950 font-bold text-xs cursor-pointer shadow-2xs"
                                 >
                                   {classes.map((cls) => (
                                     <option key={cls.id} value={cls.id}>
@@ -1948,13 +1998,13 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                       addingSecondClassForUserId === u.id ? null : u.id
                                     )
                                   }
-                                  className="px-2 py-1 rounded-lg bg-[#f2f4f3] hover:bg-[#003440] text-[#003440] hover:text-white font-bold text-[11px] cursor-pointer"
+                                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-900 text-slate-800 hover:text-white font-bold text-[11px] cursor-pointer shadow-2xs"
                                 >
                                   + 2ª Turma
                                 </button>
 
                                 {wasRecentlySaved && (
-                                  <span className="text-[11px] font-semibold text-[#005035]">
+                                  <span className="text-[11px] font-bold text-emerald-800">
                                     ✓ Salvo
                                   </span>
                                 )}
@@ -1968,7 +2018,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                     return (
                                       <span
                                         key={cid}
-                                        className="px-2 py-0.5 rounded bg-[#eaf6ef] text-[#005035] font-bold text-[11px] inline-flex items-center gap-1"
+                                        className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 font-bold text-[11px] inline-flex items-center gap-1 shadow-2xs"
                                       >
                                         <span>{cObj.turmaAbrev || cObj.name}</span>
                                         <button
@@ -1976,7 +2026,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                           onClick={() =>
                                             handleRemoveClassFromUser(u.id, cid)
                                           }
-                                          className="hover:text-[#ba1a1a] font-semibold cursor-pointer"
+                                          className="hover:text-rose-700 font-bold cursor-pointer"
                                         >
                                           ×
                                         </button>
@@ -1994,7 +2044,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                       handleAddExtraClassToUser(u.id, e.target.value);
                                     }
                                   }}
-                                  className="px-2 py-1 rounded-lg bg-white border border-[#005035] text-xs font-bold"
+                                  className="px-2.5 py-1 rounded-xl bg-slate-100 text-xs font-bold text-slate-950 shadow-2xs"
                                 >
                                   <option value="" disabled>
                                     Escolher 2ª turma...
@@ -2012,7 +2062,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               )}
                             </div>
                           ) : (
-                            <span className="font-semibold text-[#374346] text-xs">
+                            <span className="font-bold text-slate-800 text-xs">
                               {effectiveClassName}
                             </span>
                           )}
@@ -2020,10 +2070,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
                         <td className="py-2.5 px-2.5 text-center font-mono font-semibold">
                           <span
-                            className={`px-2 py-0.5 rounded-lg text-xs ${
+                            className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
                               (u.totalAccessCount || 0) > 0
-                                ? 'bg-[#eaf6ef] text-[#005035]'
-                                : 'bg-[#f2f4f3] text-[#8e8e93]'
+                                ? 'bg-emerald-100 text-emerald-950'
+                                : 'bg-slate-100 text-slate-500'
                             }`}
                           >
                             {u.totalAccessCount || 0}x
@@ -2031,11 +2081,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         </td>
 
                         <td className="py-2.5 px-3 font-mono text-xs">
-                          <span className="font-bold text-[#005035] block">
+                          <span className="font-bold text-emerald-900 block">
                             {formatDurationHuman(u.totalDurationSeconds)}
                           </span>
                           {u.lastLoginAt && (
-                            <span className="text-[11px] text-[#5a676b] block">
+                            <span className="text-[11px] text-slate-500 block font-sans">
                               {u.lastLoginAt}
                             </span>
                           )}
@@ -2047,7 +2097,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onSimulateTeacherProfile(u)}
-                                className="px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#005035] text-[#005035] hover:text-white font-semibold text-xs cursor-pointer transition-colors"
+                                className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-800 text-emerald-950 hover:text-white font-bold text-xs cursor-pointer transition-colors shadow-2xs"
                               >
                                 Abrir Visão
                               </button>
@@ -2056,7 +2106,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleRemoveUser(u)}
-                                className="px-2 py-1 rounded-lg bg-[#ffdad6]/60 hover:bg-[#ba1a1a] text-[#ba1a1a] hover:text-white font-bold text-xs cursor-pointer transition-colors"
+                                className="px-2 py-1 rounded-lg bg-rose-100 hover:bg-rose-800 text-rose-950 hover:text-white font-bold text-xs cursor-pointer transition-colors shadow-2xs"
                               >
                                 Remover
                               </button>
@@ -2077,13 +2127,13 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           SUB-ABA 3: MONITORAMENTO EM TEMPO REAL DE TEMPO DE TELA E SESSÕES
           ===================================================================== */}
       {activeSubTab === 'monitoramento' && (
-        <section className="card-welcoming bg-white rounded-3xl p-5 border border-black/[0.06] space-y-4">
+        <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#005035] block">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block">
                 Auditoria Real-Time (Heartbeat a cada 5 segundos)
               </span>
-              <h2 className="text-lg font-semibold text-[#003440]">
+              <h2 className="text-lg font-bold text-slate-900">
                 Histórico de Sessões, Horário de Entrada/Saída e Tempo de Permanência
               </h2>
             </div>
@@ -2094,13 +2144,13 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 value={logSearchTerm}
                 onChange={(e) => setLogSearchTerm(e.target.value)}
                 placeholder="Filtrar sessão por e-mail ou turma..."
-                className="min-h-[38px] px-3 rounded-xl bg-[#f5f7f6] border border-black/[0.08] text-xs font-semibold"
+                className="min-h-[40px] px-3.5 rounded-2xl bg-slate-100 text-xs font-bold text-slate-950 focus:bg-white focus:outline-none shadow-2xs"
               />
               {canManage && onClearAccessLogs && accessSessionLogs.length > 0 && (
                 <button
                   type="button"
                   onClick={onClearAccessLogs}
-                  className="min-h-[38px] px-3 rounded-xl bg-[#fff8f7] hover:bg-[#ffdad6] text-[#ba1a1a] font-bold text-xs border border-[#ba1a1a]/20 cursor-pointer"
+                  className="min-h-[40px] px-3.5 rounded-2xl bg-rose-100 hover:bg-rose-200 text-rose-950 font-bold text-xs cursor-pointer shadow-2xs"
                 >
                   Limpar Logs
                 </button>
@@ -2109,11 +2159,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           </div>
 
           {filteredLogs.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-[#f8faf9] text-center text-[#5a676b] font-semibold text-sm">
+            <div className="p-8 rounded-2xl bg-slate-100 text-center text-slate-700 font-bold text-sm">
               Nenhuma sessão registrada para o filtro informado. Assim que os educadores entram no aplicativo, o tempo de tela é contabilizado automaticamente.
             </div>
           ) : (
-            <div className="border border-black/[0.08] rounded-2xl overflow-x-auto max-h-[520px]">
+            <div className="rounded-2xl overflow-x-auto max-h-[520px] shadow-sm">
               <table className="w-full text-left text-xs border-collapse min-w-[960px]">
                 <thead className="bg-[#003440] text-white font-semibold uppercase text-[11px] sticky top-0">
                   <tr>
@@ -2176,6 +2226,60 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           )}
         </section>
       )}
+      </main>
+
+      {/* 3. RODAPÉ DE AÇÃO FIXO (STICKY FOOTER SHRINK-0) — SEMPRE VISÍVEL */}
+      <footer className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 text-xs text-slate-600">
+          <span className="font-mono font-bold text-slate-900 tabular-nums">
+            {classes.length} Turmas
+          </span>
+          <span className="text-slate-300">·</span>
+          <span className="font-mono font-bold text-slate-900 tabular-nums">
+            {authorizedUsers.length} Contas Institucionais
+          </span>
+          <span className="text-slate-300 hidden md:inline">·</span>
+          <span className="text-slate-500 hidden md:inline">
+            {totalActiveStudentsAll} Alunos no SED
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <button
+            type="button"
+            onClick={() => {
+              exportOfficialMatrixToXLS(classes, authorizedUsers);
+              triggerFeedback('success', 'Planilha do Quadro Oficial (.xls) baixada com sucesso!');
+            }}
+            className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[15px]">download</span>
+            <span>Baixar XLS</span>
+          </button>
+
+          {canManage && (
+            <button
+              type="button"
+              onClick={handleRestoreOfficialSchoolMatrix}
+              className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[15px]">sync_saved_locally</span>
+              <span>Sincronizar Quadro Oficial</span>
+            </button>
+          )}
+
+          {onNavigateToDatabaseEmailsTab && (
+            <button
+              type="button"
+              onClick={onNavigateToDatabaseEmailsTab}
+              className="h-8 px-3 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-950 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[15px]">table_chart</span>
+              <span>Planilha</span>
+            </button>
+          )}
+        </div>
+      </footer>
     </div>
   );
 };

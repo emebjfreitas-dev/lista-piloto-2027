@@ -471,28 +471,32 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-gentle-fade"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-gentle-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#f5f5f7] w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]"
       >
-        {/* Top Apple-Style Bar + Navegação */}
-        <div className="px-4 sm:px-6 py-3 bg-white/95 backdrop-blur-md flex flex-wrap items-center justify-between gap-2.5">
+        {/* Top Clean Header + Navegação */}
+        <div className="px-5 sm:px-6 py-3.5 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="px-3 py-1 rounded-xl bg-[#1d1d1f] text-white font-semibold text-xs tabular-nums">
+            <span className="font-mono text-xs font-semibold text-slate-900 tabular-nums">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
             </span>
-            <span className="px-3 py-1 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] font-bold text-xs truncate">
+            <span className="text-slate-300" aria-hidden="true">·</span>
+            <span className="text-xs font-medium text-slate-600 truncate">
               {className}
             </span>
             {orderedList.length > 1 && currentStudentIdx >= 0 && (
-              <span className="hidden sm:inline-block text-xs font-semibold text-[#86868b] tabular-nums">
-                ({currentStudentIdx + 1} de {orderedList.length})
-              </span>
+              <>
+                <span className="text-slate-300" aria-hidden="true">·</span>
+                <span className="text-xs text-slate-400 font-mono tabular-nums">
+                  {currentStudentIdx + 1} de {orderedList.length}
+                </span>
+              </>
             )}
             {savedBanner && (
-              <span className="px-2.5 py-1 rounded-xl bg-[#eaf6ef] text-[#005035] text-xs font-bold">
+              <span className="text-emerald-700 text-xs font-medium pl-1">
                 ✓ Atualizado
               </span>
             )}
@@ -500,7 +504,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
           <div className="flex items-center gap-2 shrink-0">
             {onSelectStudent && orderedList.length > 1 && (
-              <div className="flex items-center gap-1.5 mr-1">
+              <div className="flex items-center gap-1 mr-1">
                 <button
                   type="button"
                   disabled={!prevStudent}
@@ -510,9 +514,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       ? `Anterior: Nº ${prevStudent.number.toString().padStart(2, '0')} ${prevStudent.name}`
                       : 'Primeiro estudante da turma'
                   }
-                  className="min-h-[44px] px-3.5 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-900 font-semibold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-25 disabled:pointer-events-none tabular-nums shadow-xs"
+                  className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:pointer-events-none tabular-nums"
                 >
-                  <span className="material-symbols-outlined text-[20px]">
+                  <span className="material-symbols-outlined text-[17px]">
                     arrow_back
                   </span>
                   <span className="hidden sm:inline">
@@ -531,14 +535,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       ? `Próximo: Nº ${nextStudent.number.toString().padStart(2, '0')} ${nextStudent.name}`
                       : 'Último estudante da turma'
                   }
-                  className="min-h-[44px] px-3.5 rounded-2xl bg-slate-200 hover:bg-slate-300 text-slate-900 font-semibold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-25 disabled:pointer-events-none tabular-nums shadow-xs"
+                  className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:pointer-events-none tabular-nums"
                 >
                   <span className="hidden sm:inline">
                     {nextStudent
                       ? `Nº ${nextStudent.number.toString().padStart(2, '0')}`
                       : 'Próximo'}
                   </span>
-                  <span className="material-symbols-outlined text-[20px]">
+                  <span className="material-symbols-outlined text-[17px]">
                     arrow_forward
                   </span>
                 </button>
@@ -548,11 +552,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[44px] px-4.5 rounded-2xl bg-slate-900 hover:bg-rose-700 text-white font-semibold text-sm sm:text-base flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 shadow-sm active:scale-95"
+              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Fechar ficha do estudante"
             >
-              <span className="material-symbols-outlined text-[22px]">close</span>
-              <span>Fechar</span>
+              <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
         </div>
@@ -1240,6 +1243,39 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             </section>
           )}
         </div>
+
+        {/* Sticky Action Footer — Sempre visível sem scroll */}
+        <footer className="shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 flex items-center justify-between gap-3 z-20">
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            {savedBanner ? (
+              <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                Alterações salvas com sucesso!
+              </span>
+            ) : (
+              <span>Chamada Nº {draft.number} · RA {draft.ra || '—'} · {className}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-8 px-3 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs cursor-pointer transition-colors"
+            >
+              Fechar
+            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handleSaveAll}
+                className="h-8 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[15px] text-emerald-400">save</span>
+                <span>Salvar Alterações</span>
+              </button>
+            )}
+          </div>
+        </footer>
       </div>
 
       {/* Lightbox em Tela Cheia ao Clicar na Foto Gigante */}

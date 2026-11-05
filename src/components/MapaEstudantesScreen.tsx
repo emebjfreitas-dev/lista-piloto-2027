@@ -636,7 +636,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
   }, [selectedStudentMarker, customPointA, customPointB]);
 
   return (
-    <div className="space-y-4 pb-24 max-w-[1550px] mx-auto px-2 sm:px-4 lg:px-6 candelario-map-root font-sans">
+    <div className="w-full space-y-5 pb-16 animate-gentle-fade candelario-map-root font-sans">
       {/* Breadcrumb Limpo */}
       <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
         <div className="flex items-center gap-1.5">

@@ -46,17 +46,17 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-[#edeeec] p-6 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 p-5 sm:p-6 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#edeeec] no-print">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 no-print">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[28px] text-[#003440]">picture_as_pdf</span>
+            <span className="material-symbols-outlined text-[24px] text-blue-600">picture_as_pdf</span>
             <div>
-              <h3 className="text-lg font-semibold text-[#003440] leading-tight">
+              <h3 className="text-base font-semibold text-slate-900 leading-tight">
                 Relatórios Oficiais — Bimestral (Bolsa Família) e Mensal
               </h3>
-              <p className="text-xs font-semibold text-[#41484b]">
+              <p className="text-xs text-slate-500">
                 Alerta Legal LDB/MEC: &lt;60% Educação Infantil • &lt;75% Ensino Fundamental
               </p>
             </div>
@@ -112,7 +112,8 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             </button>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-[#f3f4f2] hover:bg-[#e7e8e6] text-[#41484b] flex items-center justify-center cursor-pointer"
+              type="button"
+              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>

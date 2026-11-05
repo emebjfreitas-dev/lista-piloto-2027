@@ -108,11 +108,11 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   };
 
   const sizeMap: Record<string, string> = {
-    xs: 'w-7 h-7 text-[11px] rounded-lg',
-    sm: 'w-9 h-9 text-xs rounded-xl',
-    md: 'w-12 h-12 text-base rounded-2xl',
-    lg: 'w-14 h-14 text-lg rounded-2xl',
-    xl: 'w-16 h-16 text-lg rounded-2xl',
+    xs: 'w-7 h-7 text-[10px] rounded-lg',
+    sm: 'w-8 h-8 text-[11px] rounded-lg',
+    md: 'w-10 h-10 text-xs rounded-xl',
+    lg: 'w-12 h-12 text-sm rounded-xl',
+    xl: 'w-14 h-14 text-base rounded-2xl',
   };
 
   const getInitials = (fullName: string) => {
@@ -132,7 +132,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden bg-slate-800 text-white font-semibold flex items-center justify-center border border-white/80 select-none ${
+      className={`relative shrink-0 overflow-hidden bg-slate-100 text-slate-700 font-medium flex items-center justify-center border border-slate-200/80 select-none ${
         sizeMap[size]
       } ${className}`}
     >
@@ -146,7 +146,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
           className="w-full h-full object-cover pointer-events-none"
         />
       ) : (
-        <span className="pointer-events-none">{getInitials(effectiveName)}</span>
+        <span className="pointer-events-none tracking-tight">{getInitials(effectiveName)}</span>
       )}
     </div>
   );

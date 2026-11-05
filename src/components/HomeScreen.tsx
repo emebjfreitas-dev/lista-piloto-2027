@@ -247,7 +247,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }, [currentClock]);
 
   return (
-    <div className="flex flex-col w-full max-w-[1560px] mx-auto space-y-6 pb-16 text-slate-950 font-sans">
+    <div className="flex flex-col w-full space-y-5 pb-16 text-slate-950 font-sans">
       {/* 1. CABEÇALHO ACOLHEDOR COM CONTRASTE DE TONS (SEM CONTORNOS) */}
       <section className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
@@ -934,7 +934,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="bg-slate-950 text-white px-4 py-3 rounded-2xl text-xs shadow-lg space-y-1 border border-slate-800">
+                      <div className="bg-slate-950 text-white px-4 py-3 rounded-2xl text-xs shadow-2xl space-y-1">
                         <div className="font-bold text-white text-sm">{data.name}</div>
                         <div className="text-slate-200 font-semibold">Turno: {data.shift}</div>
                         <div className="text-emerald-400 font-bold font-mono tabular-nums text-sm">
@@ -974,7 +974,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </ResponsiveContainer>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between text-xs sm:text-sm text-slate-800 pt-4 border-t border-slate-100 gap-2">
+        <div className="flex flex-wrap items-center justify-between text-xs sm:text-sm text-slate-800 pt-4 gap-2">
           <div className="flex items-center gap-5">
             <span className="flex items-center gap-2 font-bold text-emerald-950">
               <span className="w-3 h-3 rounded-xs bg-emerald-700" />

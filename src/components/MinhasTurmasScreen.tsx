@@ -187,7 +187,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-14 animate-gentle-fade text-[#1d1d1f]">
       {/* Header Institucional Limpo e Enxuto */}
-      <section className="bg-white rounded-3xl p-5 sm:p-6 border border-black/[0.06] shadow-xs space-y-3">
+      <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#86868b]">
@@ -296,7 +296,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
       {/* Turma Prioritária do Professor Regente */}
       {primaryTeacherClass && (
         <section className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
             <div className="flex items-center gap-4 min-w-0">
               <div className="w-12 h-12 rounded-2xl bg-slate-950 text-white flex items-center justify-center font-bold text-base shrink-0">
                 {primaryTeacherClass.turmaAbrev || primaryTeacherClass.name.slice(0, 3)}
@@ -325,7 +325,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   {primaryTeacherClass.presenceRate}%
                 </span>
               </div>
-              <div className="text-right border-l border-slate-200 pl-5">
+              <div className="text-right pl-5">
                 <span className="text-xs font-bold text-slate-700 uppercase block">Faltas no Mês</span>
                 <span className="text-2xl font-bold text-rose-800 font-mono tabular-nums">
                   {primaryTeacherClass.monthlyAbsences}
@@ -369,13 +369,13 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
       {userRole !== 'usuario' && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Segmented Filter de Turnos */}
-          <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200/60 text-xs font-medium shrink-0">
+          <div className="inline-flex items-center p-1 bg-slate-100 rounded-2xl text-xs font-bold shrink-0 shadow-2xs">
             <button
               onClick={() => setSelectedShift('Todos')}
               type="button"
-              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer ${
                 selectedShift === 'Todos'
-                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  ? 'bg-white text-slate-950 font-bold shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -384,25 +384,25 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             <button
               onClick={() => setSelectedShift('Turno Manhã')}
               type="button"
-              className={`px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
                 selectedShift === 'Turno Manhã'
-                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  ? 'bg-white text-slate-950 font-bold shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Sun className="w-3 h-3 text-slate-500" />
+              <Sun className="w-3.5 h-3.5 text-amber-500" />
               <span>Manhã ({manhaCount})</span>
             </button>
             <button
               onClick={() => setSelectedShift('Turno Tarde')}
               type="button"
-              className={`px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 ${
                 selectedShift === 'Turno Tarde'
-                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  ? 'bg-white text-slate-950 font-bold shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Sunset className="w-3 h-3 text-slate-500" />
+              <Sunset className="w-3.5 h-3.5 text-sky-500" />
               <span>Tarde ({tardeCount})</span>
             </button>
           </div>
@@ -410,48 +410,48 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           {/* Campo de Busca e Alternador de Visão */}
           <div className="flex items-center gap-2 flex-1 sm:max-w-md">
             <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar turma, regente ou código SED..."
-                className="w-full h-8 pl-8 pr-8 bg-white text-slate-900 text-xs rounded-lg border border-slate-200/90 focus:border-slate-400 focus:outline-none transition-colors placeholder:text-slate-400"
+                className="w-full h-10 pl-9 pr-8 bg-slate-100 text-slate-950 text-xs font-bold rounded-2xl focus:bg-white focus:outline-none transition-colors placeholder:text-slate-400 shadow-2xs"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 cursor-pointer"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            <div className="inline-flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200/60 shrink-0">
+            <div className="inline-flex items-center p-1 bg-slate-100 rounded-2xl shrink-0 shadow-2xs">
               <button
                 type="button"
                 onClick={() => setTurmasViewMode('grid')}
                 title="Grade de Cartões"
-                className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
                   turmasViewMode === 'grid'
-                    ? 'bg-white text-slate-900 shadow-xs'
+                    ? 'bg-white text-slate-950 shadow-xs'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
+                <LayoutGrid className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setTurmasViewMode('table')}
                 title="Tabela de Dados"
-                className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+                className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
                   turmasViewMode === 'table'
-                    ? 'bg-white text-slate-900 shadow-xs'
+                    ? 'bg-white text-slate-950 shadow-xs'
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                <TableIcon className="w-3.5 h-3.5" />
+                <TableIcon className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -460,17 +460,17 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
 
       {/* Exibição: Tabela ou Cartões */}
       {turmasViewMode === 'table' ? (
-        <div className="bg-white rounded-xl border border-slate-200/90 overflow-x-auto shadow-none">
+        <div className="bg-white rounded-3xl overflow-x-auto shadow-sm">
           <table className="w-full text-left text-xs border-collapse min-w-[850px]">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200/80 font-medium uppercase tracking-wider text-[11px]">
+            <thead className="bg-slate-100 text-slate-800 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-2.5 px-4">Turma</th>
-                <th className="py-2.5 px-3">Turno &amp; Sala</th>
-                <th className="py-2.5 px-3">Regente</th>
-                <th className="py-2.5 px-3 text-center">Estudantes</th>
-                <th className="py-2.5 px-3 text-center">Frequência</th>
-                <th className="py-2.5 px-3 text-center">Faltas no Mês</th>
-                <th className="py-2.5 px-4 text-right">Ações</th>
+                <th className="py-3 px-4">Turma</th>
+                <th className="py-3 px-3">Turno &amp; Sala</th>
+                <th className="py-3 px-3">Regente</th>
+                <th className="py-3 px-3 text-center">Estudantes</th>
+                <th className="py-3 px-3 text-center">Frequência</th>
+                <th className="py-3 px-3 text-center">Faltas no Mês</th>
+                <th className="py-3 px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -493,38 +493,38 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                     <tr
                       key={cls.id}
                       onClick={() => onSelectClassForDetails(cls)}
-                      className="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                      className="hover:bg-slate-50 cursor-pointer transition-colors"
                     >
-                      <td className="py-2.5 px-4">
+                      <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-md bg-slate-100 border border-slate-200/70 flex items-center justify-center font-medium text-xs text-slate-800 shrink-0">
+                          <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                             {shortBadge}
                           </div>
                           <div>
-                            <span className="font-semibold text-slate-900 block">
+                            <span className="font-bold text-slate-950 block">
                               {cls.name}
                             </span>
                             {cls.classeSedCode && (
-                              <span className="font-mono text-[10px] text-slate-400">
+                              <span className="font-mono text-[10px] text-slate-500 font-bold">
                                 SED: {cls.classeSedCode}
                               </span>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">
-                        <span className="font-medium text-slate-900 block">
+                      <td className="py-3 px-3 text-slate-700">
+                        <span className="font-bold text-slate-950 block">
                           {cls.shift.replace('Turno ', '')}
                         </span>
-                        <span className="text-[11px] text-slate-400">{cls.room}</span>
+                        <span className="text-[11px] text-slate-500 font-semibold">{cls.room}</span>
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-3 px-3">
                         {cls.isVaga || cls.teacherName === 'TURMA VAGA' ? (
-                          <span className="inline-flex items-center gap-1 text-amber-800 font-medium bg-amber-50 px-2 py-0.5 rounded text-xs border border-amber-200">
+                          <span className="inline-flex items-center gap-1 text-amber-950 font-bold bg-amber-100 px-2.5 py-1 rounded-xl text-xs shadow-2xs">
                             TURMA VAGA
                           </span>
                         ) : (
-                          <span className="font-medium text-slate-800 block truncate max-w-[220px]">
+                          <span className="font-bold text-slate-900 block truncate max-w-[220px]">
                             {cls.teacherName || 'Regente a atribuir'}
                           </span>
                         )}
@@ -574,13 +574,13 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         /* Modo Grade de Cartões Limpos */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 items-stretch">
           {filteredClasses.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center border border-slate-200/90 col-span-full">
-              <p className="text-xs text-slate-400 font-normal">
+            <div className="bg-white rounded-3xl p-8 text-center shadow-sm col-span-full">
+              <p className="text-xs text-slate-500 font-bold">
                 Nenhuma turma encontrada para "{searchTerm}".
               </p>
               <button
                 onClick={() => setSearchTerm('')}
-                className="mt-3 px-3 py-1.5 bg-slate-900 text-white font-medium rounded-lg text-xs cursor-pointer hover:bg-slate-800 transition-colors"
+                className="mt-3 px-4 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs cursor-pointer hover:bg-slate-800 transition-colors shadow-2xs"
               >
                 Limpar Busca
               </button>
@@ -597,7 +597,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               return (
                 <div
                   key={cls.id}
-                  className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3"
+                  className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-slate-300 transition-all flex flex-col justify-between gap-3"
                 >
                   <div
                     onClick={() => onSelectClassForDetails(cls)}
@@ -605,20 +605,20 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-800 border border-slate-200/80 flex items-center justify-center font-medium text-xs shrink-0">
                           {shortBadge}
                         </div>
                         <div className="min-w-0">
-                          <h2 className="text-base font-bold text-slate-950 group-hover:text-blue-700 transition-colors truncate">
+                          <h2 className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 transition-colors truncate">
                             {cls.name}
                           </h2>
-                          <p className="text-xs font-semibold text-slate-700 truncate">
+                          <p className="text-xs text-slate-500 font-normal truncate">
                             {cls.shift.replace('Turno ', '')} · {cls.room}
                           </p>
                         </div>
                       </div>
 
-                      <span className="font-mono font-bold text-xs text-emerald-950 bg-emerald-100 px-2.5 py-1 rounded-lg tabular-nums shrink-0">
+                      <span className="font-mono font-medium text-xs text-emerald-700 tabular-nums shrink-0">
                         {cls.presenceRate}%
                       </span>
                     </div>
@@ -646,7 +646,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   <div
                     className={`grid ${
                       userRole === 'peb2' ? 'grid-cols-1' : 'grid-cols-2'
-                    } gap-2 pt-3 border-t border-slate-100`}
+                    } gap-2 pt-3`}
                   >
                     <button
                       type="button"

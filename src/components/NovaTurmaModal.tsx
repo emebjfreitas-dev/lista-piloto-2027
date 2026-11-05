@@ -60,18 +60,19 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-[#edeeec] p-5 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between pb-3 border-b border-[#edeeec]">
-          <div className="flex items-center gap-2 text-[#003440]">
-            <span className="material-symbols-outlined text-[26px]">add_circle</span>
-            <h3 className="text-lg font-bold">Adicionar Turma (2027)</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200/90 p-5 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2 text-slate-900">
+            <span className="material-symbols-outlined text-[22px] text-blue-600">add_circle</span>
+            <h3 className="text-base font-semibold">Adicionar Turma (2027)</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-[#f3f4f2] hover:bg-[#e7e8e6] text-[#41484b] flex items-center justify-center cursor-pointer transition-colors"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
           >
-            <span className="material-symbols-outlined text-[22px]">close</span>
+            <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 

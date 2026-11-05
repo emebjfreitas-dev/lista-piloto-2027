@@ -4,6 +4,11 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import {
+  parseAndValidateSchoolDates,
+  OFFICIAL_DEFAULT_HOLIDAYS_2027,
+  generateOfficial200SchoolDays2027,
+} from './src/utils/calendarValidation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +26,9 @@ interface SharedSchoolState {
   discoveredDrivePhotos?: any[];
   adminDriveToken?: string;
   adminDriveTokenUpdatedAtMs?: number;
+  officialCalendarConfig?: any;
+  holidays?: any[];
+  calendarAuditLogs?: any[];
   cloudLinks?: {
     spreadsheetId?: string;
     spreadsheetTitle?: string;
@@ -149,13 +157,84 @@ const readSharedState = (): SharedSchoolState => {
           parsed.cloudLinks.photosFolderUrl =
             'https://drive.google.com/drive/folders/1FzKx1qghv2_WhOjw7ttvbT_rvaTGYPpn';
         }
+
+        if (!Array.isArray(parsed.holidays) || parsed.holidays.length === 0) {
+          parsed.holidays = OFFICIAL_DEFAULT_HOLIDAYS_2027;
+        }
+
+        if (
+          !parsed.officialCalendarConfig ||
+          !Array.isArray(parsed.officialCalendarConfig.schoolDays) ||
+          parsed.officialCalendarConfig.schoolDays.length !== 200
+        ) {
+          const defaultDays = generateOfficial200SchoolDays2027(parsed.holidays);
+          const validation = parseAndValidateSchoolDates(defaultDays.join('\n'), parsed.holidays);
+          parsed.officialCalendarConfig = {
+            year: 2027,
+            schoolDays: defaultDays,
+            calendarDays: validation.calendarDays,
+            monthlyDistribution: validation.monthlyDistribution,
+            holidays: parsed.holidays,
+            updatedAtMs: Date.now(),
+            updatedByEmail: 'emebjfreitas@jundiai.sp.gov.br',
+            updatedByName: 'Administrador EMEB Joaquim Candelário de Freitas',
+            version: 1,
+          };
+        }
+
+        if (!Array.isArray(parsed.calendarAuditLogs) || parsed.calendarAuditLogs.length === 0) {
+          parsed.calendarAuditLogs = [
+            {
+              id: 'audit-init-2027',
+              timestampISO: new Date().toISOString(),
+              adminEmail: 'emebjfreitas@jundiai.sp.gov.br',
+              adminName: 'Sistema SME Jundiaí',
+              action: 'RESTORE_DEFAULT',
+              previousDaysCount: 0,
+              newDaysCount: 200,
+              holidaysCount: OFFICIAL_DEFAULT_HOLIDAYS_2027.length,
+              details: 'Inicialização oficial da matriz centralizada de 200 dias letivos (2027).',
+            },
+          ];
+        }
+
         return parsed;
       }
     }
   } catch (err) {
     console.warn('Erro ao ler shared_school_state_2027.json:', err);
   }
-  return { updatedAtMs: 0 };
+  const defaultHols = OFFICIAL_DEFAULT_HOLIDAYS_2027;
+  const defaultDays = generateOfficial200SchoolDays2027(defaultHols);
+  const validation = parseAndValidateSchoolDates(defaultDays.join('\n'), defaultHols);
+  return {
+    updatedAtMs: Date.now(),
+    holidays: defaultHols,
+    officialCalendarConfig: {
+      year: 2027,
+      schoolDays: defaultDays,
+      calendarDays: validation.calendarDays,
+      monthlyDistribution: validation.monthlyDistribution,
+      holidays: defaultHols,
+      updatedAtMs: Date.now(),
+      updatedByEmail: 'emebjfreitas@jundiai.sp.gov.br',
+      updatedByName: 'Administrador EMEB Joaquim Candelário de Freitas',
+      version: 1,
+    },
+    calendarAuditLogs: [
+      {
+        id: 'audit-init-2027',
+        timestampISO: new Date().toISOString(),
+        adminEmail: 'emebjfreitas@jundiai.sp.gov.br',
+        adminName: 'Sistema SME Jundiaí',
+        action: 'RESTORE_DEFAULT',
+        previousDaysCount: 0,
+        newDaysCount: 200,
+        holidaysCount: defaultHols.length,
+        details: 'Inicialização oficial da matriz centralizada de 200 dias letivos (2027).',
+      },
+    ],
+  };
 };
 
 const writeSharedState = (patch: Partial<SharedSchoolState>): SharedSchoolState => {
@@ -658,6 +737,223 @@ async function startServer() {
       console.warn('Erro ao consultar roteamento OSRM gratuito:', err?.message || err);
       res.status(503).json({ error: 'Roteador OSRM temporariamente indisponível', fallback: true });
     }
+  });
+
+  const isUserAdminAuthorized = (req: express.Request): boolean => {
+    const role = String(req.headers['x-user-role'] || req.body?.userRole || '').trim().toLowerCase();
+    const email = String(
+      req.headers['x-user-email'] ||
+      req.body?.adminEmail ||
+      req.body?.userEmail ||
+      ''
+    ).trim().toLowerCase();
+    if (role === 'admin') return true;
+    if (
+      email.startsWith('emebjfreitas@') ||
+      email.includes('admin') ||
+      email.includes('direcao') ||
+      email.includes('coordenacao')
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  // API: Obter Calendário Escolar Oficial (200 Dias), Feriados e Auditoria
+  app.get('/api/calendar-config', (_req, res) => {
+    const state = readSharedState();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.json({
+      calendarConfig: state.officialCalendarConfig,
+      holidays: state.holidays || OFFICIAL_DEFAULT_HOLIDAYS_2027,
+      auditLogs: (state.calendarAuditLogs || []).slice(0, 100),
+      updatedAtMs: state.officialCalendarConfig?.updatedAtMs || Date.now(),
+    });
+  });
+
+  // API: Homologação e Configuração Única dos 200 Dias Letivos (Proteção Estrita de Administrador)
+  app.post('/api/calendar-config', (req, res) => {
+    if (!isUserAdminAuthorized(req)) {
+      res.status(403).json({
+        error: 'Acesso negado. Apenas administradores escolares têm permissão para configurar o calendário letivo oficial.',
+      });
+      return;
+    }
+
+    const { rawDatesText, schoolDays, adminEmail, adminName, year = 2027 } = req.body || {};
+    const current = readSharedState();
+    const currentHolidays = current.holidays || OFFICIAL_DEFAULT_HOLIDAYS_2027;
+
+    const textToValidate = typeof rawDatesText === 'string' && rawDatesText.trim().length > 0
+      ? rawDatesText
+      : Array.isArray(schoolDays)
+      ? schoolDays.join('\n')
+      : '';
+
+    const validation = parseAndValidateSchoolDates(textToValidate, currentHolidays);
+
+    if (validation.hasErrors) {
+      res.status(400).json({
+        error: 'Erros de validação encontrados no lote de datas informado.',
+        invalidEntries: validation.invalidEntries,
+        duplicateEntries: validation.duplicateEntries,
+      });
+      return;
+    }
+
+    // Regra Inegociável dos 200 Dias Letivos
+    if (validation.totalCount !== 200) {
+      res.status(400).json({
+        error: `A meta oficial exige exatamente 200 dias letivos distintos. O lote enviado possui ${validation.totalCount} datas (${validation.remainingCount > 0 ? `faltam ${validation.remainingCount} dias` : `excedente de ${validation.exceededCount} dias`}).`,
+        totalCount: validation.totalCount,
+        remainingCount: validation.remainingCount,
+        exceededCount: validation.exceededCount,
+      });
+      return;
+    }
+
+    const newCalendarConfig = {
+      year: Number(year) || 2027,
+      schoolDays: validation.validDates,
+      calendarDays: validation.calendarDays,
+      monthlyDistribution: validation.monthlyDistribution,
+      holidays: currentHolidays,
+      updatedAtMs: Date.now(),
+      updatedByEmail: adminEmail || 'emebjfreitas@jundiai.sp.gov.br',
+      updatedByName: adminName || 'Administrador Escolar',
+      version: (current.officialCalendarConfig?.version || 1) + 1,
+    };
+
+    const auditEntry = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      timestampISO: new Date().toISOString(),
+      adminEmail: adminEmail || 'emebjfreitas@jundiai.sp.gov.br',
+      adminName: adminName || 'Administrador Escolar',
+      action: 'UPDATE_200_DAYS',
+      previousDaysCount: current.officialCalendarConfig?.schoolDays?.length || 200,
+      newDaysCount: 200,
+      holidaysCount: currentHolidays.length,
+      details: `Configuração única dos 200 dias letivos de ${year || 2027} homologada com sucesso via processamento centralizado.`,
+      clientIp: req.ip,
+    };
+
+    const auditLogs = [auditEntry, ...(current.calendarAuditLogs || [])].slice(0, 150);
+
+    // Cascata imediata para as turmas escolares: atualiza classesHeld e monthlySchoolDays preservando histórico
+    let updatedClasses = current.classes;
+    if (Array.isArray(updatedClasses)) {
+      updatedClasses = updatedClasses.map((cls: any) => ({
+        ...cls,
+        classesHeld: validation.monthlyDistribution['Outubro'] || cls.classesHeld || 20,
+        monthlySchoolDays: {
+          ...(cls.monthlySchoolDays || {}),
+          ...validation.monthlyDistribution,
+        },
+        updatedAtMs: Date.now(),
+      }));
+    }
+
+    const saved = writeSharedState({
+      officialCalendarConfig: newCalendarConfig,
+      calendarAuditLogs: auditLogs,
+      ...(updatedClasses ? { classes: updatedClasses, classesUpdatedAtMs: Date.now() } : {}),
+    });
+
+    res.json({
+      ok: true,
+      calendarConfig: saved.officialCalendarConfig,
+      auditEntry,
+      monthlyDistribution: validation.monthlyDistribution,
+    });
+  });
+
+  // API: Gerenciamento Centralizado de Feriados e Recessos Escolares
+  app.post('/api/holidays', (req, res) => {
+    if (!isUserAdminAuthorized(req)) {
+      res.status(403).json({
+        error: 'Acesso negado. Apenas administradores escolares têm permissão para cadastrar ou editar feriados.',
+      });
+      return;
+    }
+
+    const { action, holiday, holidayId, adminEmail, adminName } = req.body || {};
+    const current = readSharedState();
+    let holidaysList = Array.isArray(current.holidays) ? [...current.holidays] : [...OFFICIAL_DEFAULT_HOLIDAYS_2027];
+
+    let auditDetail = '';
+
+    if (action === 'delete') {
+      if (!holidayId) {
+        res.status(400).json({ error: 'holidayId não informado para exclusão.' });
+        return;
+      }
+      const target = holidaysList.find((h) => h.id === holidayId);
+      holidaysList = holidaysList.filter((h) => h.id !== holidayId);
+      auditDetail = `Exclusão do feriado/recesso: "${target?.name || holidayId}" (${target?.date || ''}).`;
+    } else if (action === 'add') {
+      if (!holiday || !holiday.date || !holiday.name) {
+        res.status(400).json({ error: 'Dados do feriado incompletos (data e nome são obrigatórios).' });
+        return;
+      }
+      const newHol = {
+        id: `hol-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        date: String(holiday.date).trim(),
+        name: String(holiday.name).trim(),
+        type: holiday.type || 'municipal',
+        description: holiday.description || '',
+        createdAtISO: new Date().toISOString(),
+        updatedByEmail: adminEmail || 'emebjfreitas@jundiai.sp.gov.br',
+      };
+      holidaysList.push(newHol);
+      auditDetail = `Cadastro de novo feriado/recesso: "${newHol.name}" em ${newHol.date} (${newHol.type}).`;
+    } else if (action === 'edit') {
+      if (!holiday || !holiday.id) {
+        res.status(400).json({ error: 'Dados do feriado incompletos para edição.' });
+        return;
+      }
+      holidaysList = holidaysList.map((h) => (h.id === holiday.id ? { ...h, ...holiday } : h));
+      auditDetail = `Edição do feriado/recesso: "${holiday.name}" (${holiday.date}).`;
+    } else if (action === 'restore_defaults') {
+      holidaysList = [...OFFICIAL_DEFAULT_HOLIDAYS_2027];
+      auditDetail = 'Restauração da lista padrão de feriados e recessos oficiais de Jundiaí/SP.';
+    } else {
+      res.status(400).json({ error: 'Ação de feriado inválida.' });
+      return;
+    }
+
+    const auditEntry = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      timestampISO: new Date().toISOString(),
+      adminEmail: adminEmail || 'emebjfreitas@jundiai.sp.gov.br',
+      adminName: adminName || 'Administrador Escolar',
+      action: action === 'delete' ? 'DELETE_HOLIDAY' : action === 'edit' ? 'EDIT_HOLIDAY' : 'ADD_HOLIDAY',
+      previousDaysCount: current.officialCalendarConfig?.schoolDays?.length || 200,
+      newDaysCount: current.officialCalendarConfig?.schoolDays?.length || 200,
+      holidaysCount: holidaysList.length,
+      details: auditDetail,
+      clientIp: req.ip,
+    };
+
+    const auditLogs = [auditEntry, ...(current.calendarAuditLogs || [])].slice(0, 150);
+    const saved = writeSharedState({
+      holidays: holidaysList,
+      calendarAuditLogs: auditLogs,
+    });
+
+    res.json({
+      ok: true,
+      holidays: saved.holidays,
+      auditEntry,
+    });
+  });
+
+  // API: Obter Histórico de Auditoria do Calendário
+  app.get('/api/calendar-audit-log', (_req, res) => {
+    const state = readSharedState();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.json({
+      auditLogs: (state.calendarAuditLogs || []).slice(0, 150),
+    });
   });
 
   if (process.env.NODE_ENV !== 'production') {

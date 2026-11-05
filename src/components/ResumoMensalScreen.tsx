@@ -397,7 +397,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade text-slate-800">
+    <div className="flex flex-col w-full space-y-5 pb-16 animate-gentle-fade text-slate-900">
       {/* Breadcrumb Limpo */}
       <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
         <div className="flex items-center gap-1.5">

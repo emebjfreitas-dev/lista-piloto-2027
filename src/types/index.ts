@@ -342,3 +342,57 @@ export type ScreenType =
   | 'mapa_estudantes'
   | 'planilha'
   | 'usuarios_acesso';
+
+export type HolidayScopeType = 'nacional' | 'estadual' | 'municipal' | 'recesso' | 'ponto_facultativo';
+
+export interface SchoolHoliday {
+  id: string;
+  date: string; // formato DD/MM/AAAA
+  name: string;
+  type: HolidayScopeType;
+  description?: string;
+  isOfficial?: boolean;
+  createdAtISO?: string;
+  updatedByEmail?: string;
+}
+
+export interface OfficialCalendarDay {
+  id: string;
+  date: string; // DD/MM/AAAA
+  isoDate: string; // YYYY-MM-DD
+  dayOfWeek: string;
+  dayNumber: number;
+  month: string;
+  monthNumber: number;
+  year: number;
+  isSaturday: boolean;
+  isSunday: boolean;
+  holidayConflict?: string;
+  type: DayType;
+  description?: string;
+}
+
+export interface OfficialCalendarConfig {
+  year: number;
+  schoolDays: string[]; // 200 datas no formato DD/MM/AAAA
+  calendarDays: OfficialCalendarDay[];
+  monthlyDistribution: Record<string, number>;
+  holidays: SchoolHoliday[];
+  updatedAtMs: number;
+  updatedByEmail: string;
+  updatedByName: string;
+  version: number;
+}
+
+export interface CalendarAuditLogEntry {
+  id: string;
+  timestampISO: string;
+  adminEmail: string;
+  adminName: string;
+  action: 'UPDATE_200_DAYS' | 'ADD_HOLIDAY' | 'EDIT_HOLIDAY' | 'DELETE_HOLIDAY' | 'RESTORE_DEFAULT';
+  previousDaysCount: number;
+  newDaysCount: number;
+  holidaysCount: number;
+  details: string;
+  clientIp?: string;
+}

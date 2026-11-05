@@ -238,11 +238,11 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
     return (
       <div
         onClick={onClose}
-        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-gentle-fade"
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-gentle-fade"
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto"
+          className="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200/90 p-5 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto"
         >
           {/* Header */}
           <div className="flex items-start justify-between gap-3 pb-3 border-b border-black/[0.06]">
@@ -438,11 +438,11 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/65 backdrop-blur-sm animate-gentle-fade"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-gentle-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-black/[0.08] overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* CABEÇALHO SIMÉTRICO: Dados da Criança + Tipo de Vínculo + Ações */}
         <div className="bg-white px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-black/[0.06]">

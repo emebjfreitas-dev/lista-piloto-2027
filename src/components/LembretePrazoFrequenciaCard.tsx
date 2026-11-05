@@ -85,28 +85,28 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
   const isOpen = win.isAllowedToLaunch;
 
   const bgClass = isUrgent
-    ? 'bg-[#fff2f2] border-[#ff3b30]/30 shadow-xs'
+    ? 'bg-rose-50 border-rose-300 shadow-xs'
     : isOpen
-    ? 'bg-[#eaf6ef] border-[#005035]/25 shadow-xs'
+    ? 'bg-emerald-50 border-emerald-300 shadow-xs'
     : isWarning
-    ? 'bg-[#fff9eb] border-[#ff9500]/30 shadow-xs'
-    : 'bg-[#f5f5f7] border-black/[0.06]';
+    ? 'bg-amber-50 border-amber-300 shadow-xs'
+    : 'bg-slate-100 border-slate-300 shadow-xs';
 
   const badgeBg = isUrgent
-    ? 'bg-[#ff3b30] text-white'
+    ? 'bg-rose-800 text-white font-bold'
     : isOpen
-    ? 'bg-[#005035] text-white'
+    ? 'bg-emerald-800 text-white font-bold'
     : isWarning
-    ? 'bg-[#ff9500] text-white'
-    : 'bg-[#0071e3] text-white';
+    ? 'bg-amber-800 text-white font-bold'
+    : 'bg-blue-800 text-white font-bold';
 
   const titleColor = isUrgent
-    ? 'text-[#ba1a1a]'
+    ? 'text-rose-950 font-bold'
     : isOpen
-    ? 'text-[#005035]'
+    ? 'text-emerald-950 font-bold'
     : isWarning
-    ? 'text-[#b25000]'
-    : 'text-[#1d1d1f]';
+    ? 'text-amber-950 font-bold'
+    : 'text-slate-950 font-bold';
 
   return (
     <aside
@@ -119,43 +119,43 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
           <div
             className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
               isUrgent
-                ? 'bg-[#ff3b30]/15 text-[#ff3b30]'
+                ? 'bg-rose-200 text-rose-900'
                 : isOpen
-                ? 'bg-[#005035]/12 text-[#005035]'
+                ? 'bg-emerald-200 text-emerald-950'
                 : isWarning
-                ? 'bg-[#ff9500]/15 text-[#ff9500]'
-                : 'bg-[#0071e3]/10 text-[#0071e3]'
+                ? 'bg-amber-200 text-amber-950'
+                : 'bg-blue-200 text-blue-950'
             }`}
           >
             {isUrgent ? (
-              <AlertTriangle className="w-5 h-5 text-[#ff3b30]" />
+              <AlertTriangle className="w-5 h-5 text-rose-900" />
             ) : isOpen ? (
-              <LockOpen className="w-5 h-5 text-[#005035]" />
+              <LockOpen className="w-5 h-5 text-emerald-900" />
             ) : (
-              <Clock className="w-5 h-5 text-[#0071e3]" />
+              <Clock className="w-5 h-5 text-blue-900" />
             )}
           </div>
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`px-2.5 py-0.5 rounded-full font-medium text-xs uppercase tracking-wider ${badgeBg}`}
+                className={`px-2.5 py-0.5 rounded-full text-xs uppercase tracking-wider ${badgeBg}`}
               >
                 {isOpen ? 'Janela Aberta' : 'Lembrete de Prazo'}
               </span>
 
-              <span className="text-xs text-slate-500 font-medium">
+              <span className="text-xs text-slate-700 font-bold">
                 {win.currentDateFormatted} · Mês de {win.targetMonthName}
               </span>
 
               {pendingSummary.pendingCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-white text-slate-700 text-xs font-medium tabular-nums border border-slate-200">
+                <span className="px-2.5 py-0.5 rounded-full bg-white text-slate-900 text-xs font-bold tabular-nums border border-slate-300">
                   {pendingSummary.pendingCount} fechamento(s) pendente(s)
                 </span>
               )}
             </div>
 
-            <h2 className={`text-base font-semibold tracking-tight leading-snug mt-1 ${titleColor}`}>
+            <h2 className={`text-base tracking-tight leading-snug mt-1 ${titleColor}`}>
               {isOpen ? (
                 <span>
                   Prazo de Fechamento Aberto — Encerramento em {win.closingDateFormatted}
@@ -167,7 +167,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               )}
             </h2>
 
-            <p className="text-xs sm:text-sm text-slate-600 leading-normal mt-0.5">
+            <p className="text-xs sm:text-sm text-slate-800 font-medium leading-normal mt-0.5">
               {isOpen ? (
                 <span>
                   Os educadores devem concluir o lançamento de faltas e atestados antes do prazo final ({win.closingDateFormatted}, 2º dia letivo). A sincronização com a SED e Google Sheets ocorre automaticamente.
@@ -187,7 +187,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             <button
               type="button"
               onClick={() => onOpenMonthlyAttendance(pendingSummary.firstPendingClass || targetClass)}
-              className="h-8 px-3.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="h-8 px-3.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
             >
               <CalendarCheck className="w-3.5 h-3.5 text-white" />
               <span>
@@ -201,9 +201,9 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               type="button"
               onClick={onNavigateToAcessos}
               title="Configurar Janela de Lançamento e Prazos"
-              className="h-[38px] px-3 rounded-full bg-white/80 hover:bg-white text-[#1d1d1f] font-bold text-xs flex items-center gap-1.5 border border-black/[0.08] transition-all cursor-pointer shadow-2xs"
+              className="h-[38px] px-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center gap-1.5 border border-slate-300 transition-all cursor-pointer shadow-2xs"
             >
-              <Settings className="w-3.5 h-3.5 text-[#6e6e73]" />
+              <Settings className="w-3.5 h-3.5 text-slate-700" />
               <span>Ajustar Prazos</span>
             </button>
           )}
@@ -212,7 +212,8 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             type="button"
             onClick={() => setIsDismissed(true)}
             title="Dispensar lembrete temporariamente"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[#86868b] hover:text-[#1d1d1f] hover:bg-black/[0.05] transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-700 hover:text-black hover:bg-black/10 transition-colors cursor-pointer"
+            aria-label="Dispensar lembrete temporariamente"
           >
             <X className="w-4 h-4" />
           </button>

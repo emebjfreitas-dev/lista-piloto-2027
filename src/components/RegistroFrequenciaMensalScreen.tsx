@@ -419,13 +419,13 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   const minLegalPresence = isInfantilClass ? 60 : 75;
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
+    <div className="flex flex-col w-full space-y-5 pb-16 animate-gentle-fade">
       {/* Alerta de regra caso tente ultrapassar limite de dias ou atestados */}
       {ruleAlertMessage && (
         <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-200">
-          <div className="bg-[#ff3b30] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/20">
+          <div className="bg-[#ff3b30] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
             <span className="material-symbols-outlined text-[22px]">warning</span>
-            <p className="font-semibold text-sm leading-snug">{ruleAlertMessage}</p>
+            <p className="font-bold text-sm leading-snug">{ruleAlertMessage}</p>
           </div>
         </div>
       )}
@@ -446,66 +446,66 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           <span className="text-slate-400">·</span>
           <span>{selectedMonthName}/2027</span>
         </div>
-        <span className="hidden sm:inline text-slate-500 text-xs">
+        <span className="hidden sm:inline text-slate-500 text-xs font-semibold">
           {diasLetivosMes} dias letivos no mês
         </span>
       </div>
 
       {/* Painel de Faltas do Mês */}
-      <section className="bg-white rounded-xl border border-slate-200/90 p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span className="font-semibold text-slate-900">{classGroup.name}</span>
+      <section className="bg-white rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-bold text-slate-950">{classGroup.name}</span>
               {classGroup.turmaAbrev && (
                 <>
                   <span aria-hidden="true" className="text-slate-300">·</span>
-                  <span className="font-mono text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded">{classGroup.turmaAbrev}</span>
+                  <span className="font-mono font-bold text-slate-950 bg-slate-100 px-2 py-0.5 rounded-lg">{classGroup.turmaAbrev}</span>
                 </>
               )}
               <span aria-hidden="true" className="text-slate-300">·</span>
-              <span>{classGroup.shift.replace('Turno ', '')}</span>
+              <span className="font-semibold text-slate-700">{classGroup.shift.replace('Turno ', '')}</span>
               <span aria-hidden="true" className="text-slate-300">·</span>
-              <span>{classGroup.room}</span>
+              <span className="font-semibold text-slate-700">{classGroup.room}</span>
               <span aria-hidden="true" className="text-slate-300">·</span>
-              <span className="text-slate-600 font-medium text-[11px] bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
+              <span className="text-emerald-950 font-bold text-[11px] bg-emerald-100 px-2.5 py-0.5 rounded-lg">
                 {instantSyncStatus === 'syncing' ? 'Sincronizando...' : '✓ Salvo automaticamente'}
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-950 tracking-tight">
               Informar Faltas do Mês — {selectedMonthName}
             </h1>
-            <p className="text-xs text-slate-500 font-normal">
+            <p className="text-sm text-slate-700 font-medium">
               Turma {classGroup.name} · {classGroup.pronoun || 'Prof.'} {classGroup.teacherName || 'Regente'} · {detailedIndicators.ativosCount} estudantes · {diasLetivosMes} dias letivos
             </p>
           </div>
 
           {/* Seletor de Mês */}
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/90 px-3 py-1.5 rounded-lg shrink-0 self-start lg:self-auto">
+          <div className="flex items-center gap-2 bg-slate-100 px-3.5 py-2 rounded-2xl shrink-0 self-start lg:self-auto shadow-2xs">
             {previousPeriodName && (
               <button
                 type="button"
                 onClick={() => handleMonthChange(previousPeriodName)}
-                className="h-8 px-2 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80 text-xs font-medium flex items-center gap-0.5 cursor-pointer transition-colors"
+                className="h-9 px-2.5 rounded-xl bg-white hover:bg-slate-200/80 text-slate-900 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                 title={`Ir para ${previousPeriodName}`}
               >
-                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                <span className="material-symbols-outlined text-[17px]">chevron_left</span>
                 <span className="hidden sm:inline">{previousPeriodName}</span>
               </button>
             )}
 
-            <span className="material-symbols-outlined text-[20px] text-slate-500 shrink-0">
+            <span className="material-symbols-outlined text-[20px] text-slate-600 shrink-0">
               calendar_month
             </span>
             <div className="min-w-0">
-              <label className="block text-[10px] font-medium text-slate-500 leading-tight">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-tight">
                 Mês de Referência
               </label>
               <select
                 value={selectedMonthName}
                 onChange={(e) => handleMonthChange(e.target.value)}
-                className="bg-transparent text-slate-900 font-semibold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent text-slate-950 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer pr-1"
               >
                 {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
                   const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
@@ -522,37 +522,47 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               <button
                 type="button"
                 onClick={() => handleMonthChange(nextPeriodName)}
-                className="h-8 px-2 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80 text-xs font-medium flex items-center gap-0.5 cursor-pointer transition-colors"
+                className="h-9 px-2.5 rounded-xl bg-white hover:bg-slate-200/80 text-slate-900 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                 title={`Ir para ${nextPeriodName}`}
               >
                 <span className="hidden sm:inline">{nextPeriodName}</span>
-                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                <span className="material-symbols-outlined text-[17px]">chevron_right</span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={onBack}
+              className="h-9 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center gap-1 cursor-pointer transition-colors shrink-0 ml-1"
+              title="Salvo automaticamente. Concluir e voltar às turmas"
+            >
+              <span className="material-symbols-outlined text-[16px] text-emerald-400">check</span>
+              <span>Concluir</span>
+            </button>
           </div>
         </div>
 
         {/* Indicadores de Faltas do Mês */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
           {/* Indicativo 1: Taxa de Presença */}
-          <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex flex-col justify-between">
+          <div className="rounded-2xl bg-slate-100 p-3.5 flex flex-col justify-between shadow-2xs">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-medium text-slate-500 truncate">
+              <span className="text-[11px] font-bold text-slate-600 truncate">
                 Presença Mês
               </span>
-              <span className="px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono text-[10px] font-medium shrink-0">
+              <span className="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-mono text-[10px] font-bold shrink-0">
                 {diasLetivosMes}d
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-xl font-bold text-slate-900 tabular-nums">
+              <span className="text-2xl font-bold text-slate-950 tabular-nums">
                 {liveClassMetrics.presenceRate}%
               </span>
-              <span className="text-xs text-slate-500 tabular-nums truncate ml-1">
+              <span className="text-xs text-slate-600 font-medium tabular-nums truncate ml-1">
                 {liveClassMetrics.totalPresencasTurma}/{liveClassMetrics.totalDiasMatriculadosTurma}
               </span>
             </div>
-            <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mt-2">
+            <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden mt-2">
               <div
                 className="h-full bg-emerald-600 rounded-full transition-all"
                 style={{ width: `${Math.min(100, liveClassMetrics.presenceRate)}%` }}
@@ -561,92 +571,92 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           </div>
 
           {/* Indicativo 2: Total de Faltas */}
-          <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex flex-col justify-between">
+          <div className="rounded-2xl bg-slate-100 p-3.5 flex flex-col justify-between shadow-2xs">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-medium text-slate-500 truncate">
+              <span className="text-[11px] font-bold text-slate-600 truncate">
                 Faltas no Mês
               </span>
-              <span className="px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 font-mono text-[10px] font-medium shrink-0">
+              <span className="px-2 py-0.5 rounded-lg bg-rose-200 text-rose-950 font-mono text-[10px] font-bold shrink-0">
                 {detailedIndicators.pctFaltaTurma}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-xl font-bold text-rose-700 tabular-nums">
+              <span className="text-2xl font-bold text-rose-700 tabular-nums">
                 {liveClassMetrics.totalFaltasTurma}
               </span>
-              <span className="text-xs text-slate-500 tabular-nums truncate ml-1">
+              <span className="text-xs text-slate-600 font-medium tabular-nums truncate ml-1">
                 {detailedIndicators.countWithFaltas} estudantes
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-1.5 border-t border-slate-200/60">
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 mt-2 pt-1.5">
               <span>Sem atestado: {detailedIndicators.faltasSemAtestadoTurma}</span>
               <span>Com atestado: {liveClassMetrics.totalAtestadosTurma}</span>
             </div>
           </div>
 
           {/* Indicativo 3: Atestados */}
-          <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex flex-col justify-between">
+          <div className="rounded-2xl bg-slate-100 p-3.5 flex flex-col justify-between shadow-2xs">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-medium text-slate-500 truncate">
+              <span className="text-[11px] font-bold text-slate-600 truncate">
                 Atestados Médicos
               </span>
-              <span className="px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono text-[10px] font-medium shrink-0">
+              <span className="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-mono text-[10px] font-bold shrink-0">
                 {detailedIndicators.pctAtestadosSobreFaltas}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
-              <span className="text-xl font-bold text-slate-900 tabular-nums">
+              <span className="text-2xl font-bold text-slate-950 tabular-nums">
                 {liveClassMetrics.totalAtestadosTurma}
               </span>
-              <span className="text-xs text-slate-500 tabular-nums truncate ml-1">
+              <span className="text-xs text-slate-600 font-medium tabular-nums truncate ml-1">
                 {detailedIndicators.countWithAtestados} estudantes
               </span>
             </div>
-            <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden mt-2">
+            <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden mt-2">
               <div
-                className="h-full bg-slate-700 rounded-full transition-all"
+                className="h-full bg-slate-800 rounded-full transition-all"
                 style={{ width: `${Math.min(100, detailedIndicators.pctAtestadosSobreFaltas)}%` }}
               />
             </div>
           </div>
 
           {/* Indicativo 4: Assiduidade */}
-          <div className="rounded-lg bg-slate-50/80 border border-slate-200/70 p-3 flex flex-col justify-between">
+          <div className="rounded-2xl bg-slate-100 p-3.5 flex flex-col justify-between shadow-2xs">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-medium text-slate-500 truncate">
+              <span className="text-[11px] font-bold text-slate-600 truncate">
                 Assiduidade Legal
               </span>
-              <span className="px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono text-[10px] font-medium shrink-0">
+              <span className="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-mono text-[10px] font-bold shrink-0">
                 Mín. {minLegalPresence}%
               </span>
             </div>
             <div className="flex items-baseline justify-between mt-1.5">
               <div>
-                <span className="text-xl font-bold text-slate-900 tabular-nums">
+                <span className="text-2xl font-bold text-slate-950 tabular-nums">
                   {detailedIndicators.countZeroFaltas}
                 </span>
-                <span className="text-xs text-slate-500 ml-1">
+                <span className="text-xs text-slate-600 font-medium ml-1">
                   sem faltas
                 </span>
               </div>
               <span
-                className={`px-1.5 py-0.2 rounded font-mono text-[11px] font-medium ${
+                className={`px-2 py-0.5 rounded-lg font-mono text-[11px] font-bold ${
                   detailedIndicators.countBelowLegal > 0
-                    ? 'bg-rose-50 text-rose-700'
-                    : 'bg-emerald-50 text-emerald-700'
+                    ? 'bg-rose-200 text-rose-950'
+                    : 'bg-emerald-200 text-emerald-950'
                 }`}
               >
                 {detailedIndicators.countBelowLegal} &lt; {minLegalPresence}%
               </span>
             </div>
-            <div className="text-[11px] text-slate-400 mt-2 pt-1.5 border-t border-slate-200/60 truncate">
+            <div className="text-[11px] font-medium text-slate-500 mt-2 pt-1.5 truncate">
               Controles — e + por estudante
             </div>
           </div>
         </div>
 
         {/* Barra Minimalista: Busca + Filtro Rápido + 2 Modos Limpos (Lista Rápida / Cards) */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-black/[0.06]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3">
           <div className="relative flex-1">
             <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748b] text-[19px]">
               search

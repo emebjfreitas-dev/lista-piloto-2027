@@ -47,6 +47,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
   const [drivePhotosUrlInput, setDrivePhotosUrlInput] = useState<string>(
     getSavedPhotosDriveFolderUrl()
   );
+  const [isSavingFirebase, setIsSavingFirebase] = useState(false);
 
   useEffect(() => {
     setDraftClasses(classes);
@@ -181,8 +182,6 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
     );
   };
 
-  const [isSavingFirebase, setIsSavingFirebase] = useState(false);
-
   const handleSaveAll = async () => {
     const cleanId = extractSpreadsheetId(sheetUrlInput);
     if (cleanId) {
@@ -217,63 +216,64 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border-2 border-[#003440]/20 overflow-hidden flex flex-col max-h-[94vh]">
-        {/* Header */}
-        <div className="bg-[#003440] text-white p-4 sm:p-5 flex items-center justify-between gap-3">
-          <div>
-            <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#a4f3ca] text-[#003723] font-semibold text-xs mb-1">
-              PAINEL EXCLUSIVO DO ADMINISTRADOR • 200 DIAS LETIVOS
-            </span>
-            <h2 className="text-lg sm:text-xl font-semibold leading-tight">
-              Configuração dos 200 Dias Letivos & Links Oficiais
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Clean Modern Header */}
+        <div className="bg-white border-b border-slate-100 px-6 py-5 flex items-start justify-between gap-4 shrink-0">
+          <div className="space-y-0.5">
+            <p className="text-[11px] font-semibold tracking-wider uppercase text-slate-500">
+              Painel do Administrador · Ano Letivo 2027
+            </p>
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+              Configuração dos 200 Dias Letivos por Turma
             </h2>
-            <p className="text-sm text-[#c3e5f4] font-medium">
-              Alimentado pela aba específica <strong>Dias_Letivos_SME_2027</strong> da Planilha Banco de Dados
+            <p className="text-xs text-slate-500">
+              Calendário oficial sincronizado com a aba <span className="font-mono text-slate-700 font-medium">Dias_Letivos_SME_2027</span> da Planilha Oficial e Firebase Firestore.
             </p>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+            aria-label="Fechar modal"
           >
-            <span className="material-symbols-outlined text-[24px]">close</span>
+            <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto flex-1 p-4 space-y-5 bg-[#f8faf9]">
+        <div className="overflow-y-auto flex-1 p-5 sm:p-6 space-y-5 bg-slate-50/50">
           {/* 1. Direct Links Box: Planilha Manual & Pasta de Fotos Google Drive */}
-          <section className="bg-white rounded-2xl p-4 shadow-xs border-2 border-[#005035]/25 space-y-3">
-            <h3 className="text-[1rem] font-semibold text-[#003440] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[22px] text-[#005035]">
+          <section className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px] text-slate-500">
                 link
               </span>
-              <span>Links Oficiais para Acesso Manual (Planilha & Pasta de Fotos)</span>
+              <span>Links Institucionais Oficiais (Google Sheets &amp; Drive)</span>
             </h3>
 
             {/* Link 1: Planilha Google Sheets */}
-            <div className="bg-[#f3f4f2] p-3 rounded-xl border border-[#c0c8cb] space-y-2">
+            <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-[#003440] uppercase">
-                  1. Link da Planilha Banco de Dados (Aba: Dias_Letivos_SME_2027):
+                <span className="text-xs font-medium text-slate-700">
+                  Planilha Banco de Dados (Aba: <span className="font-mono">Dias_Letivos_SME_2027</span>)
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => handleCopyText('sheet', sheetUrlInput)}
-                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#e7e8e6] text-[#003440] font-bold text-xs border border-[#c0c8cb] cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-medium text-xs border border-slate-200 cursor-pointer transition-colors"
                   >
-                    {copiedKey === 'sheet' ? '✓ Link Copiado!' : 'Copiar Link'}
+                    {copiedKey === 'sheet' ? '✓ Copiado' : 'Copiar Link'}
                   </button>
                   <a
                     href={sheetUrlInput}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-2.5 py-1 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-bold text-xs flex items-center gap-1"
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1 transition-colors"
                   >
-                    <span>Abrir Planilha</span>
-                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                    <span>Abrir Planilha ↗</span>
                   </a>
                 </div>
               </div>
@@ -281,45 +281,44 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                 type="text"
                 value={sheetUrlInput}
                 onChange={(e) => setSheetUrlInput(e.target.value)}
-                className="w-full px-3 py-2 bg-white text-[#003440] font-mono text-sm rounded-lg border border-[#c0c8cb]"
+                className="w-full px-3 py-1.5 bg-white text-slate-900 font-mono text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-slate-800"
               />
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <span className="text-xs text-[#41484b]">
-                  Para fazer manualmente: baixe o arquivo <strong>.xlsx</strong> já com as 4 abas (incluindo os 200 dias letivos) e importe no Google Sheets:
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-500">
+                <span>
+                  Backup/Exportação: baixe o arquivo <strong className="text-slate-700">.xlsx</strong> completo:
                 </span>
                 <button
                   type="button"
                   onClick={() => downloadSpreadsheetXLSX(draftClasses, OFFICIAL_OCTOBER_DAYS)}
-                  className="px-3 py-1.5 rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-semibold text-xs flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-medium text-xs border border-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[16px]">download</span>
+                  <span className="material-symbols-outlined text-[15px]">download</span>
                   <span>Baixar Planilha Modelo (.xlsx)</span>
                 </button>
               </div>
             </div>
 
             {/* Link 2: Pasta de Fotos no Google Drive */}
-            <div className="bg-[#f3f4f2] p-3 rounded-xl border border-[#c0c8cb] space-y-2">
+            <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-[#003440] uppercase">
-                  2. Link da Pasta de Fotos dos Estudantes (Google Drive):
+                <span className="text-xs font-medium text-slate-700">
+                  Pasta de Fotos dos Alunos (Google Drive)
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => handleCopyText('drive', drivePhotosUrlInput)}
-                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#e7e8e6] text-[#003440] font-bold text-xs border border-[#c0c8cb] cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-medium text-xs border border-slate-200 cursor-pointer transition-colors"
                   >
-                    {copiedKey === 'drive' ? '✓ Link Copiado!' : 'Copiar Link'}
+                    {copiedKey === 'drive' ? '✓ Copiado' : 'Copiar Link'}
                   </button>
                   <a
                     href={drivePhotosUrlInput}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-2.5 py-1 rounded-lg bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-xs flex items-center gap-1"
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1 transition-colors"
                   >
-                    <span>Abrir Pasta de Fotos</span>
-                    <span className="material-symbols-outlined text-[14px]">folder_shared</span>
+                    <span>Abrir Pasta ↗</span>
                   </a>
                 </div>
               </div>
@@ -327,32 +326,32 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                 type="text"
                 value={drivePhotosUrlInput}
                 onChange={(e) => setDrivePhotosUrlInput(e.target.value)}
-                className="w-full px-3 py-2 bg-white text-[#003440] font-mono text-sm rounded-lg border border-[#c0c8cb]"
+                className="w-full px-3 py-1.5 bg-white text-slate-900 font-mono text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-slate-800"
               />
             </div>
           </section>
 
-          {/* 2. Summary of the 200 Official School Days across the 11 Months */}
-          <section className="bg-white rounded-2xl p-4 shadow-xs border border-[#e1e3e1] space-y-3">
+          {/* 2. Resumo dos 200 Dias Letivos Oficiais por Mês */}
+          <section className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="text-[1rem] font-semibold text-[#003440]">
-                  Distribuição Oficial dos {TOTAL_ANNUAL_SCHOOL_DAYS} Dias Letivos Anuais (2027)
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Distribuição Oficial dos {TOTAL_ANNUAL_SCHOOL_DAYS} Dias Letivos (Ano Letivo 2027)
                 </h3>
-                <p className="text-sm text-[#41484b]">
-                  Toque em um mês abaixo para configurar os dias letivos das 40 turmas naquele mês:
+                <p className="text-xs text-slate-500">
+                  Selecione o mês para visualizar e ajustar os dias letivos das turmas:
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleResetToOfficial200Days}
-                className="px-3 py-1.5 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#003723] font-semibold text-xs border border-[#a4f3ca] cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition-colors cursor-pointer"
               >
-                Restaurar Padrão 200 Dias Letivos
+                Restaurar Padrão Oficial (200 Dias)
               </button>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-1.5">
               {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
                 const isSelected = selectedMonth === m.month;
                 return (
@@ -360,39 +359,39 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                     key={m.month}
                     type="button"
                     onClick={() => setSelectedMonth(m.month)}
-                    className={`p-2 rounded-xl border text-center cursor-pointer transition-all ${
+                    className={`p-2 rounded-lg border text-center cursor-pointer transition-colors ${
                       isSelected
-                        ? 'bg-[#003440] text-white border-[#003440] shadow-xs'
-                        : 'bg-[#f3f4f2] text-[#003440] border-[#c0c8cb] hover:bg-[#e7e8e6]'
+                        ? 'bg-slate-900 text-white border-slate-900 font-semibold shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 font-normal'
                     }`}
                   >
-                    <span className="text-xs font-bold block truncate">{m.month}</span>
-                    <span className="text-lg font-semibold block">{m.schoolDays}d</span>
+                    <span className="text-[11px] block truncate">{m.month}</span>
+                    <span className="font-mono text-sm font-semibold block tabular-nums">{m.schoolDays}d</span>
                   </button>
                 );
               })}
-              <div className="p-2 rounded-xl bg-[#a4f3ca] text-[#003723] border border-[#005035]/30 text-center flex flex-col justify-center">
-                <span className="text-xs font-semibold uppercase block">Total Ano</span>
-                <span className="text-lg font-semibold block">200 dias</span>
+              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-center flex flex-col justify-center">
+                <span className="text-[10px] uppercase font-medium block">Total</span>
+                <span className="font-mono text-sm font-semibold block tabular-nums">200d</span>
               </div>
             </div>
           </section>
 
-          {/* 3. Per-Class Monthly Configuration for Selected Month */}
-          <section className="bg-white rounded-2xl p-4 shadow-xs border border-[#e1e3e1] space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#edeeec]">
+          {/* 3. Configuração dos Dias Letivos por Turma no Mês Selecionado */}
+          <section className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-[1rem] font-semibold text-[#003440]">
-                  Dias Letivos por Turma em <span className="underline">{selectedMonth}</span>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Dias Letivos por Turma em <span className="font-semibold text-blue-700">{selectedMonth}</span>
                 </h3>
-                <p className="text-sm text-[#41484b]">
-                  Ajuste todas as turmas de uma vez ou individualmente por sala:
+                <p className="text-xs text-slate-500">
+                  Ajuste em lote ou personalize individualmente cada turma:
                 </p>
               </div>
 
               {/* Bulk Apply Bar */}
-              <div className="flex items-center gap-2 bg-[#f3f4f2] p-2 rounded-xl border border-[#c0c8cb]">
-                <span className="text-xs font-bold text-[#003440] pl-1">
+              <div className="flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                <span className="text-xs font-medium text-slate-600 pl-1">
                   Aplicar a todas:
                 </span>
                 <input
@@ -401,33 +400,33 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                   max={31}
                   value={bulkDaysValue}
                   onChange={(e) => setBulkDaysValue(Number(e.target.value) || 20)}
-                  className="w-16 px-2 py-1 bg-white text-[#003440] font-semibold text-center rounded-lg border border-[#c0c8cb]"
+                  className="w-14 px-2 py-0.5 bg-white text-slate-900 font-mono text-xs font-semibold text-center rounded border border-slate-200 focus:outline-none focus:border-slate-800 tabular-nums"
                 />
                 <button
                   type="button"
                   onClick={handleApplyBulkForMonth}
-                  className="px-3 py-1.5 bg-[#005035] hover:bg-[#003723] text-white font-semibold text-xs rounded-lg cursor-pointer"
+                  className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded cursor-pointer transition-colors"
                 >
                   Aplicar
                 </button>
               </div>
             </div>
 
-            {/* Shift Filter */}
-            <div className="flex gap-2">
+            {/* Shift Filter (Segmented control style) */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg w-fit">
               {[
-                { id: 'all', label: 'Todas as 40 Turmas' },
-                { id: 'Turno Manhã', label: '☀️ Manhã (20)' },
-                { id: 'Turno Tarde', label: '⛅ Tarde (20)' },
+                { id: 'all', label: 'Todas as Turmas (40)' },
+                { id: 'Turno Manhã', label: 'Manhã (20)' },
+                { id: 'Turno Tarde', label: 'Tarde (20)' },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setFilterShift(tab.id as any)}
-                  className={`px-3 py-1.5 rounded-xl font-bold text-sm cursor-pointer ${
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
                     filterShift === tab.id
-                      ? 'bg-[#003440] text-white'
-                      : 'bg-[#f3f4f2] text-[#41484b]'
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {tab.label}
@@ -436,43 +435,41 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             </div>
 
             {/* Classes List */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[260px] overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1">
               {visibleDraftClasses.map((cls) => {
                 const monthDays = getMonthDaysForClass(cls, selectedMonth);
                 const annualTotal = getAnnualTotalForClass(cls);
                 return (
                   <div
                     key={cls.id}
-                    className="p-3 rounded-xl bg-[#f9faf8] border border-[#e1e3e1] flex items-center justify-between gap-2"
+                    className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-3 hover:border-slate-300 transition-colors"
                   >
-                    <div>
-                      <span className="font-semibold text-[#003440] text-base block">
+                    <div className="min-w-0">
+                      <span className="font-medium text-slate-900 text-xs block truncate">
                         {cls.name}
                       </span>
-                      <span
-                        className={`text-xs font-bold ${
-                          annualTotal === 200 ? 'text-[#005035]' : 'text-[#8c5000]'
-                        }`}
-                      >
-                        Soma no Ano: {annualTotal}/200 dias letivos
+                      <span className="text-[11px] text-slate-500 font-mono tabular-nums">
+                        Ano: {annualTotal}/200 dias
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleUpdateSingleClassDays(cls.id, monthDays - 1)}
-                        className="w-8 h-8 rounded-lg bg-white border border-[#c0c8cb] font-semibold text-[#003440] cursor-pointer"
+                        className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+                        aria-label={`Diminuir dias letivos da turma ${cls.name}`}
                       >
                         —
                       </button>
-                      <span className="w-10 text-center font-semibold text-base text-[#003440]">
+                      <span className="w-9 text-center font-mono font-semibold text-xs text-slate-900 tabular-nums">
                         {monthDays}d
                       </span>
                       <button
                         type="button"
                         onClick={() => handleUpdateSingleClassDays(cls.id, monthDays + 1)}
-                        className="w-8 h-8 rounded-lg bg-[#003440] text-white font-semibold cursor-pointer"
+                        className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center cursor-pointer transition-colors"
+                        aria-label={`Aumentar dias letivos da turma ${cls.name}`}
                       >
                         +
                       </button>
@@ -485,11 +482,11 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-white border-t border-[#edeeec] flex flex-wrap items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 bg-white border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
           {savedFeedback ? (
-            <span className="text-[#005035] font-semibold text-base flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[22px]">check_circle</span>
-              <span>Configuração salva e sincronizada no Firebase Firestore &amp; Planilha Google!</span>
+            <span className="text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px] text-emerald-700">check_circle</span>
+              <span>Configuração sincronizada com sucesso no Firebase e Planilha!</span>
             </span>
           ) : (
             <button
@@ -498,10 +495,10 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                 onClose();
                 onNavigateToSheet();
               }}
-              className="px-4 min-h-[46px] rounded-xl bg-[#f3f4f2] hover:bg-[#e7e8e6] text-[#005035] font-semibold text-sm border border-[#a4f3ca] flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[18px]">cloud_sync</span>
-              <span>Ir para Sincronização Google Sheets</span>
+              <span className="material-symbols-outlined text-[17px]">cloud_sync</span>
+              <span>Sincronização Google Sheets</span>
             </button>
           )}
 
@@ -510,7 +507,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               type="button"
               onClick={onClose}
               disabled={isSavingFirebase}
-              className="px-4 min-h-[46px] rounded-xl bg-[#edeeec] text-[#41484b] font-bold text-sm cursor-pointer"
+              className="px-4 h-9 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium text-xs cursor-pointer transition-colors"
             >
               Fechar
             </button>
@@ -518,12 +515,12 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               type="button"
               onClick={handleSaveAll}
               disabled={isSavingFirebase}
-              className="px-5 min-h-[46px] rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-semibold text-base flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+              className="px-4 h-9 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
             >
-              <span className={`material-symbols-outlined text-[20px] ${isSavingFirebase ? 'animate-spin' : ''}`}>
+              <span className={`material-symbols-outlined text-[17px] ${isSavingFirebase ? 'animate-spin' : ''}`}>
                 {isSavingFirebase ? 'sync' : 'save'}
               </span>
-              <span>{isSavingFirebase ? 'Salvando no Firebase...' : 'Salvar Dias Letivos no Firebase'}</span>
+              <span>{isSavingFirebase ? 'Salvando...' : 'Salvar no Firebase'}</span>
             </button>
           </div>
         </div>

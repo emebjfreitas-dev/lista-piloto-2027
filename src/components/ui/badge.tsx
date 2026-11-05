@@ -14,12 +14,12 @@ export const Badge: React.FC<BadgeProps> = ({
     'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-tight transition-colors tabular-nums';
 
   const variants = {
-    default: 'bg-[#1d1d1f] text-white',
-    secondary: 'bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.04]',
-    success: 'bg-[#eaf6ef] text-[#005035] border border-[#005035]/15',
-    warning: 'bg-[#fff8e6] text-[#b25e00] border border-[#b25e00]/15',
-    destructive: 'bg-[#fff2f2] text-[#ba1a1a] border border-[#ba1a1a]/15',
-    outline: 'border border-black/[0.12] text-[#1d1d1f]',
+    default: 'bg-slate-900 text-white',
+    secondary: 'bg-slate-100 text-slate-900 font-bold',
+    success: 'bg-emerald-100 text-emerald-950 font-bold',
+    warning: 'bg-amber-100 text-amber-950 font-bold',
+    destructive: 'bg-rose-100 text-rose-950 font-bold',
+    outline: 'bg-slate-100 text-slate-900 font-bold',
   };
 
   return (

@@ -1194,29 +1194,57 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 pb-12 animate-gentle-fade">
-      {/* Breadcrumb Limpo */}
-      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
-        <div className="flex items-center gap-1.5">
-          {onBack && (
-            <>
-              <button
-                type="button"
-                onClick={onBack}
-                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-                <span>Voltar</span>
-              </button>
-              <span className="text-slate-300">/</span>
-            </>
-          )}
-          <span className="font-semibold text-slate-800">Planilha Google &amp; Fotos</span>
+    <div className="flex flex-col h-[calc(100dvh-5.5rem)] lg:h-[calc(100vh-6rem)] max-w-[1600px] mx-auto w-full bg-slate-50/70 rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden animate-gentle-fade">
+      {/* 1. CABEÇALHO FIXO (SHRINK-0) — NUNCA ROLA FORA DA TELA */}
+      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 border-b border-slate-200/90 space-y-1.5 z-10">
+        {/* Breadcrumb Limpo */}
+        <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+          <div className="flex items-center gap-1.5">
+            {onBack && (
+              <>
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                  <span>Voltar</span>
+                </button>
+                <span className="text-slate-300">/</span>
+              </>
+            )}
+            <span className="font-semibold text-slate-800">Planilha Google &amp; Fotos</span>
+            <span className="text-slate-300">·</span>
+            <span className="text-slate-600 hidden sm:inline">Integração Sheets &amp; Drive</span>
+          </div>
+
+          <a
+            href={currentSheetFullUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors text-xs"
+          >
+            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+            <span className="hidden sm:inline">Abrir na Planilha ↗</span>
+            <span className="sm:hidden">Planilha ↗</span>
+          </a>
         </div>
-        <span className="text-slate-400 text-xs hidden sm:inline">
-          Integração Google Sheets e Drive Institucional
-        </span>
-      </div>
+
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+            Planilha Google Oficial &amp; Fotos do Drive
+          </h1>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block"></span>
+              <span>Conectado</span>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. ÁREA DE ROLAGEM INTERNA CONTIDA */}
+      <main className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 focus:outline-none">
 
       {/* Status Toast */}
       {statusMessage && (
@@ -1245,7 +1273,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       )}
 
       {/* Apple OS Minimalist Executive Header + Collapsible Cloud Workspace Drawer (Zero Feature Loss) */}
-      <section className="card-welcoming bg-white rounded-2xl p-4 sm:p-5 border border-[#003440]/12 space-y-3">
+      <section className="card-welcoming bg-white rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
@@ -4221,8 +4249,8 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
       {/* Diálogo de Confirmação Simples e Funcional */}
       {confirmModalAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4 animate-gentle-fade">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-xl border border-slate-200/90 space-y-4 animate-gentle-fade">
             <div className="flex items-center gap-3">
               <span className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[24px]">cloud_sync</span>
@@ -4314,6 +4342,53 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           </div>
         </div>
       )}
+      </main>
+
+      {/* 3. RODAPÉ DE AÇÃO FIXO (STICKY FOOTER SHRINK-0) — SEMPRE VISÍVEL */}
+      <footer className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 text-xs text-slate-600">
+          <span className="font-mono font-bold text-slate-900 truncate max-w-[260px] sm:max-w-none">
+            {spreadsheetInput ? `Planilha: ${extractSpreadsheetId(spreadsheetInput)?.substring(0, 16)}...` : 'Planilha Oficial Google Sheets'}
+          </span>
+          <span className="text-slate-300">·</span>
+          <span className="text-slate-500 hidden sm:inline">
+            {classesToSync.length} turmas mapeadas · {totalStudentsToSync} estudantes
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <button
+            type="button"
+            onClick={handleDownloadExcel}
+            className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[15px]">download</span>
+            <span>Baixar XLSX</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSyncAllCloudAndFoldersNow}
+            disabled={isSyncingCloud}
+            className="h-8 px-4 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+          >
+            <span className={`material-symbols-outlined text-[15px] ${isSyncingCloud ? 'animate-spin' : ''}`}>
+              sync
+            </span>
+            <span>{isSyncingCloud ? 'Sincronizando...' : 'Sincronizar Nuvem'}</span>
+          </button>
+
+          <a
+            href={currentSheetFullUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+            <span>Abrir Planilha ↗</span>
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };

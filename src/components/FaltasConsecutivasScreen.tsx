@@ -472,7 +472,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   }, [readingOccurrenceModal, scopedEntries]);
 
   return (
-    <div className="flex flex-col w-full max-w-[1250px] mx-auto space-y-4 pb-12 animate-gentle-fade">
+    <div className="flex flex-col w-full space-y-5 pb-16 animate-gentle-fade">
       {/* Breadcrumb Limpo */}
       <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
         <div className="flex items-center gap-1.5">
@@ -1172,22 +1172,24 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       {activeModalData && (
         <div
           onClick={() => setReadingOccurrenceModal(null)}
-          className="fixed inset-0 z-[85] flex items-center justify-center p-3 sm:p-5 bg-black/55 backdrop-blur-md animate-gentle-fade"
+          className="fixed inset-0 z-[85] flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-gentle-fade"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white w-full max-w-xl rounded-3xl shadow-[0_24px_64px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]"
           >
             {/* Topo do Modal */}
-            <div className="p-5 sm:p-6 pb-4 flex items-start justify-between gap-3">
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-100 flex items-start justify-between gap-3">
               <div className="flex items-center gap-3.5 min-w-0">
                 <StudentAvatar student={activeModalData.student} size="lg" />
                 <div className="min-w-0">
-                  <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-xs font-medium uppercase">
-                    Turma {activeModalData.cls.name} • Nº{' '}
-                    {activeModalData.student.number.toString().padStart(2, '0')}
-                  </span>
-                  <h2 className="text-lg sm:text-xl font-bold text-[#1d1d1f] truncate mt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-semibold text-slate-700 tabular-nums">
+                      Turma {activeModalData.cls.name} · Nº{' '}
+                      {activeModalData.student.number.toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900 truncate mt-0.5">
                     {activeModalData.student.name}
                   </h2>
                   <p className="text-xs text-[#6e6e73]">

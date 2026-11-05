@@ -51,25 +51,25 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-gentle-fade"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-gentle-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-black/[0.08] p-4 sm:p-6 overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 p-4 sm:p-6 overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header: Proporcional e Elegante */}
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-black/[0.06] shrink-0">
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[22px] text-[#0071e3]">groups</span>
-              <h3 className="text-base sm:text-lg font-bold text-[#1d1d1f] truncate leading-tight">
+              <span className="material-symbols-outlined text-[20px] text-blue-600">groups</span>
+              <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate leading-tight">
                 {className} · Relação de Estudantes
               </h3>
-              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold tabular-nums">
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-mono font-semibold tabular-nums">
                 {students.length}
               </span>
             </div>
-            <p className="text-xs text-[#86868b] mt-0.5 truncate">
+            <p className="text-xs text-slate-500 mt-0.5 truncate">
               Selecione o estudante para visualizar detalhes, fotos e Ficha Informativa.
             </p>
           </div>
@@ -77,7 +77,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors shrink-0"
             aria-label="Fechar visualização da turma"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>

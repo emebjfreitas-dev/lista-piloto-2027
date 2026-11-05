@@ -77,7 +77,6 @@ import { AnotacoesModal } from './components/AnotacoesModal';
 import { UploadFotoModal } from './components/UploadFotoModal';
 import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
-import { ConfigurarDiasLetivosTurmasModal } from './components/ConfigurarDiasLetivosTurmasModal';
 import { SpotlightCommandModal } from './components/SpotlightCommandModal';
 import { Toaster, toast } from 'sonner';
 
@@ -144,13 +143,13 @@ export default function App() {
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
     if (!initialSavedSession || (matchedInitialUser && !matchedInitialUser.active)) {
-      return 'login';
+      return 'dias_letivos';
     }
     const savedScreen = initialSavedSession.screen;
     if (savedScreen && savedScreen !== 'login') {
       return savedScreen;
     }
-    return 'home';
+    return 'dias_letivos';
   });
 
   const [navigationHistory, setNavigationHistory] = useState<ScreenType[]>([]);
@@ -260,6 +259,28 @@ export default function App() {
     selectedClass,
     simulatedTeacherEmail,
   ]);
+
+  // Modo de Visualização e Proporção de Layout Adaptativa (Fluido, Confortável ou Compacto)
+  const [densityMode, setDensityMode] = useState<'responsive' | 'comfortable' | 'compact'>(() => {
+    try {
+      const saved = localStorage.getItem('emeb_candelario_layout_density_mode');
+      if (saved === 'comfortable' || saved === 'compact' || saved === 'responsive') {
+        return saved;
+      }
+    } catch {
+      // fallback
+    }
+    return 'responsive';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('emeb_candelario_layout_density_mode', densityMode);
+      document.documentElement.setAttribute('data-density', densityMode);
+    } catch {
+      // fallback
+    }
+  }, [densityMode]);
 
   const handleUpdateAttendanceWindowConfig = (nextConfig: AttendanceWindowConfig) => {
     setAttendanceWindowConfig(nextConfig);
@@ -697,7 +718,6 @@ export default function App() {
 
   // Modal states
   const [isNewClassModalOpen, setIsNewClassModalOpen] = useState(false);
-  const [isConfigDaysModalOpen, setIsConfigDaysModalOpen] = useState(false);
   const [isStudentListModalOpen, setIsStudentListModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState(false);
@@ -1387,12 +1407,15 @@ export default function App() {
         }}
         onQuickSyncDriveNow={handleQuickSyncDriveNow}
         onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
+        densityMode={densityMode}
+        onChangeDensityMode={setDensityMode}
+        onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
         onLogout={handleLogout}
       />
 
       {/* Main Content Area: Responsive Proportions for Mobile, Tablet, Laptop & Full HD Desktop */}
       <main
-        className={`flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 ${
+        className={`flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 ${
           currentScreen === 'login' ? 'p-0 max-w-none' : 'pt-[68px] sm:pt-[76px] pb-24 lg:pb-12'
         }`}
       >
@@ -1546,7 +1569,7 @@ export default function App() {
               setIsStudentListModalOpen(true);
             }}
             onOpenNewClassModal={() => setIsNewClassModalOpen(true)}
-            onOpenConfigDaysModal={() => setIsConfigDaysModalOpen(true)}
+            onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
             onNavigateToSheet={() => setCurrentScreen('planilha')}
             onNavigateToAcessos={() => setCurrentScreen('usuarios_acesso')}
             onSelectStudentForConsecutiveScreen={(cls) => {
@@ -1694,7 +1717,19 @@ export default function App() {
         {currentScreen === 'dias_letivos' && (
           <DiasLetivosScreen
             userRole={userRole}
-            onOpenConfigDaysModal={() => setIsConfigDaysModalOpen(true)}
+            userEmail={currentUserEmail}
+            userName={currentUserName}
+            classes={classes}
+            onUpdateClasses={(updatedClasses) => {
+              setClasses(updatedClasses);
+              saveStoredClasses(updatedClasses);
+              const nowMs = Date.now();
+              saveClassesToFirestoreCloud(updatedClasses, nowMs).catch((err) => {
+                console.warn('Erro ao salvar turmas no Firebase Firestore:', err);
+              });
+              const found = updatedClasses.find((c) => c.id === selectedClass.id);
+              if (found) setSelectedClass(found);
+            }}
             onNavigateToSheet={() => setCurrentScreen('planilha')}
             onBack={handleBack}
           />
@@ -1814,7 +1849,7 @@ export default function App() {
                 });
               }
             }}
-            onOpenConfigDaysModal={() => setIsConfigDaysModalOpen(true)}
+            onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
             onNavigateToAcessos={() => setCurrentScreen('usuarios_acesso')}
             onBack={handleBack}
           />
@@ -1889,20 +1924,22 @@ export default function App() {
         onSaveNotes={handleSaveNotes}
       />
 
-      <UploadFotoModal
-        isOpen={photoModalStudent !== null}
-        onClose={() => setPhotoModalStudent(null)}
-        student={photoModalStudent}
-        className={selectedClass.name}
-        onSavePhoto={handleSaveStudentPhoto}
-        onSyncDrivePhotos={async () => {
-          const photoSync = await syncPhotosFromDriveFolder(getStoredClasses());
-          if (photoSync.matchedPhotosCount > 0) {
-            setClasses(photoSync.updatedClasses);
-            saveStoredClasses(photoSync.updatedClasses);
-          }
-        }}
-      />
+      {photoModalStudent && (
+        <UploadFotoModal
+          isOpen={photoModalStudent !== null}
+          onClose={() => setPhotoModalStudent(null)}
+          student={photoModalStudent}
+          className={selectedClass.name}
+          onSavePhoto={handleSaveStudentPhoto}
+          onSyncDrivePhotos={async () => {
+            const photoSync = await syncPhotosFromDriveFolder(getStoredClasses());
+            if (photoSync.matchedPhotosCount > 0) {
+              setClasses(photoSync.updatedClasses);
+              saveStoredClasses(photoSync.updatedClasses);
+            }
+          }}
+        />
+      )}
 
       {/* Grade de Dados Interativa de Cada Criança (Com Navegação Anterior / Próximo) */}
       <GradeDadosCriancaModal
@@ -2076,23 +2113,6 @@ export default function App() {
               : prev
           );
         }}
-      />
-      {/* Modal do Administrador: Configurar 200 Dias Letivos Mensais por Turma & Links */}
-      <ConfigurarDiasLetivosTurmasModal
-        isOpen={isConfigDaysModalOpen}
-        onClose={() => setIsConfigDaysModalOpen(false)}
-        classes={classes}
-        onSaveClassesConfig={(updatedClasses) => {
-          setClasses(updatedClasses);
-          saveStoredClasses(updatedClasses);
-          const nowMs = Date.now();
-          saveClassesToFirestoreCloud(updatedClasses, nowMs).catch((err) => {
-            console.warn('Erro ao salvar turmas no Firebase Firestore:', err);
-          });
-          const found = updatedClasses.find((c) => c.id === selectedClass.id);
-          if (found) setSelectedClass(found);
-        }}
-        onNavigateToSheet={() => setCurrentScreen('planilha')}
       />
 
       {/* Global Notifications with Sonner (Open-source, light & accessible) */}

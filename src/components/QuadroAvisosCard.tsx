@@ -187,26 +187,26 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
   const getPriorityVisuals = (p: NoticePriority) => {
     if (p === 'urgente') {
       return {
-        dotColor: 'bg-[#ff3b30]',
-        textColor: 'text-[#d70015]',
-        bgTint: 'bg-[#fff2f2]/85',
+        dotColor: 'bg-rose-700',
+        textColor: 'text-rose-950 font-bold',
+        bgTint: 'bg-rose-50 border border-rose-300',
         icon: 'campaign',
         label: 'Urgente',
       };
     }
     if (p === 'importante') {
       return {
-        dotColor: 'bg-[#ff9500]',
-        textColor: 'text-[#b25000]',
-        bgTint: 'bg-[#fff9eb]/90',
+        dotColor: 'bg-amber-600',
+        textColor: 'text-amber-950 font-bold',
+        bgTint: 'bg-amber-50 border border-amber-300',
         icon: 'notifications_active',
         label: 'Importante',
       };
     }
     return {
-      dotColor: 'bg-[#0071e3]',
-      textColor: 'text-[#0066cc]',
-      bgTint: 'bg-[#f5f5f7]',
+      dotColor: 'bg-blue-700',
+      textColor: 'text-blue-950 font-bold',
+      bgTint: 'bg-blue-50 border border-blue-200',
       icon: 'info',
       label: 'Informativo',
     };
@@ -472,57 +472,57 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                 className={`p-3.5 sm:p-4 rounded-2xl ${vis.bgTint} flex flex-col justify-between gap-2.5 transition-all`}
               >
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2 text-xs text-[#6e6e73]">
+                  <div className="flex items-center justify-between gap-2 text-xs text-slate-700 font-semibold">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full ${vis.dotColor}`} />
-                      <span className={`font-bold ${vis.textColor}`}>{vis.label}</span>
+                      <span className={`w-2.5 h-2.5 rounded-full ${vis.dotColor}`} />
+                      <span className={vis.textColor}>{vis.label}</span>
                       {notice.pinned && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span className="font-semibold text-[#1d1d1f]">Fixado</span>
+                          <span className="font-bold text-slate-950">Fixado</span>
                         </>
                       )}
                       {notice.targetAudience && notice.targetAudience !== 'all' && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span>
+                          <span className="font-semibold text-slate-800">
                             {notice.targetAudience === 'peb1' ? 'PEB I' : 'PEB II'}
                           </span>
                         </>
                       )}
                       <span aria-hidden="true">·</span>
-                      <span>{notice.authorName}</span>
+                      <span className="text-slate-800">{notice.authorName}</span>
                     </div>
 
-                    <span className="tabular-nums shrink-0">
+                    <span className="tabular-nums font-bold text-slate-800 shrink-0">
                       {formatNoticeDate(notice.createdAtISO)}
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-[#1d1d1f] leading-snug">
+                  <h3 className="text-sm font-bold text-slate-950 leading-snug">
                     {notice.title}
                   </h3>
 
-                  <p className="text-sm text-[#1d1d1f]/85 leading-relaxed whitespace-pre-line">
+                  <p className="text-sm text-slate-900 leading-relaxed whitespace-pre-line font-medium">
                     {notice.content}
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between gap-2">
+                <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2">
                   {!isRead ? (
                     <button
                       type="button"
                       onClick={() => handleMarkRead(notice.id)}
-                      className="text-xs font-semibold text-[#0066cc] hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-bold text-blue-900 hover:text-black hover:underline flex items-center gap-1 cursor-pointer transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[15px]">
+                      <span className="material-symbols-outlined text-[16px] text-blue-800">
                         check_circle
                       </span>
                       <span>Confirmar leitura</span>
                     </button>
                   ) : (
-                    <span className="text-xs text-[#1d8338] font-medium flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">
+                    <span className="text-xs text-emerald-950 font-bold flex items-center gap-1 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                      <span className="material-symbols-outlined text-[15px] text-emerald-800">
                         verified
                       </span>
                       <span>Ciente</span>
