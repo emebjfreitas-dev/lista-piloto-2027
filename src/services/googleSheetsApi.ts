@@ -3652,6 +3652,28 @@ export const saveSedExternalImportConfig = (
   }
 };
 
+export type GoogleSheetsSyncFrequency = 30 | 60 | 120;
+export const GOOGLE_SHEETS_SYNC_INTERVAL_KEY = 'emeb_candelario_sheets_sync_interval_minutes_2027';
+
+export const getGoogleSheetsSyncFrequency = (): GoogleSheetsSyncFrequency => {
+  try {
+    const val = localStorage.getItem(GOOGLE_SHEETS_SYNC_INTERVAL_KEY);
+    if (val === '30' || val === '60' || val === '120') {
+      return Number(val) as GoogleSheetsSyncFrequency;
+    }
+  } catch {}
+  return 60; // 60 minutos como padrão recomendado
+};
+
+export const saveGoogleSheetsSyncFrequency = (frequency: GoogleSheetsSyncFrequency): void => {
+  try {
+    localStorage.setItem(GOOGLE_SHEETS_SYNC_INTERVAL_KEY, frequency.toString());
+    window.dispatchEvent(
+      new CustomEvent('emeb_sheets_sync_interval_changed', { detail: frequency })
+    );
+  } catch {}
+};
+
 export const detectSedHasExternalFormula = async (
   spreadsheetId: string,
   token: string

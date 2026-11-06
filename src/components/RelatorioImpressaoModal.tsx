@@ -47,9 +47,9 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 p-5 sm:p-6 overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 no-print">
+        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 no-print shrink-0">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[24px] text-blue-600">picture_as_pdf</span>
             <div>
@@ -121,7 +121,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
         </div>
 
         {/* Printable Document Sheet */}
-        <div className="overflow-y-auto py-6 px-4 bg-white text-[#191c1b] space-y-5 print:p-0">
+        <div className="overflow-y-auto overscroll-contain flex-1 py-6 px-4 sm:px-6 bg-white text-[#191c1b] space-y-5 print:p-0">
           {/* Official Letterhead */}
           <div className="border-b-2 border-[#003440] pb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -366,14 +366,26 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="pt-3 border-t border-[#edeeec] flex justify-end no-print">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-[#edeeec] hover:bg-[#e7e8e6] text-[#003440] font-bold text-base cursor-pointer"
-          >
-            Fechar Visualização
-          </button>
+        {/* Footer Sticky */}
+        <div className="p-4 sm:p-5 sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10 no-print">
+          <span className="text-xs text-slate-500 font-medium">
+            Turma {classGroup.name} · {classGroup.shift} · {classGroup.students.length} estudantes
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+            >
+              Fechar Visualização
+            </button>
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer transition-colors inline-flex items-center gap-1.5 shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">print</span>
+              <span>Imprimir Relatório</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

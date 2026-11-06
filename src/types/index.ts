@@ -396,3 +396,54 @@ export interface CalendarAuditLogEntry {
   details: string;
   clientIp?: string;
 }
+
+export type SecurityEventType =
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILURE'
+  | 'MFA_CHALLENGE_VERIFIED'
+  | 'UNAUTHORIZED_ACCESS_BLOCKED'
+  | 'ROLE_PERMISSION_CHANGED'
+  | 'DATA_MASKING_TOGGLED'
+  | 'STUDENT_DATA_EXPORTED'
+  | 'ATTENDANCE_WINDOW_OVERRIDE'
+  | 'OFFICIAL_CALENDAR_HOMOLOGATED'
+  | 'SESSION_TIMEOUT_REVOKED';
+
+export interface SecurityAuditLogEntry {
+  id: string;
+  timestampISO: string;
+  userEmail: string;
+  userName: string;
+  userRole: UserRole;
+  eventType: SecurityEventType;
+  actionTitle: string;
+  details: string;
+  targetResource?: string;
+  severity: 'info' | 'warning' | 'security_alert' | 'critical';
+  clientIp?: string;
+}
+
+export interface RbacRoleDefinition {
+  roleKey: UserRole | 'coordenacao';
+  name: string;
+  badgeLabel: string;
+  description: string;
+  color: string;
+  canViewStudents: boolean;
+  canEditAttendance: boolean;
+  canAccessReports: boolean;
+  canViewSensitiveData: boolean; // LGPD restrição
+  canManageCalendar: boolean;
+  canManageAccess: boolean;
+  canSyncGoogleSheets: boolean;
+}
+
+export interface LgpdProtectionConfig {
+  maskSensitiveDataByDefault: boolean;
+  requireMfaForAdmin: boolean;
+  dataRetentionDays: number;
+  lastAuditedAtISO: string;
+  complianceOfficer: string;
+  anonymizeExportedSpreadsheets: boolean;
+}
+

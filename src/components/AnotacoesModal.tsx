@@ -30,9 +30,9 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200/90 p-5 overflow-hidden flex flex-col">
+      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between p-5 pb-3 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2 text-slate-900">
             <span className="material-symbols-outlined text-[22px] text-blue-600">rate_review</span>
             <h3 className="text-base font-semibold">
@@ -49,7 +49,7 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="py-4 space-y-3">
+        <div className="overflow-y-auto overscroll-contain p-5 py-4 space-y-3">
           <p className="text-sm text-[#41484b]">
             Registre ocorrências da turma, recados da coordenação ou observações para as reuniões pedagógicas:
           </p>
@@ -70,21 +70,22 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
           )}
         </div>
 
-        {/* Actions */}
-        <div className="pt-3 border-t border-[#edeeec] flex gap-3">
+        {/* Actions Sticky */}
+        <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90 p-4 flex gap-3 shrink-0 z-10">
           <button
             onClick={onClose}
             type="button"
-            className="flex-1 min-h-[50px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-bold text-base rounded-xl transition-colors cursor-pointer"
+            className="flex-1 min-h-[46px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             type="button"
-            className="flex-1 min-h-[50px] bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-base rounded-xl shadow-sm transition-all cursor-pointer"
+            className="flex-1 min-h-[46px] bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
-            Salvar Anotações
+            <span className="material-symbols-outlined text-[18px]">save</span>
+            <span>Salvar Anotações</span>
           </button>
         </div>
       </div>

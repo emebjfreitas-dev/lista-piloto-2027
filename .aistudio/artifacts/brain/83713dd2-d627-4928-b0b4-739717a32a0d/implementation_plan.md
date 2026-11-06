@@ -201,3 +201,23 @@ Implementação padronizada nas principais telas de configuração e formulário
   - `PlanilhaGoogleScreen.tsx`: Integração Google Sheets/Drive com rodapé de exportação e sincronização em 1 clique.
   - `GradeDadosCriancaModal.tsx`: Ficha cadastral com 48 campos SED e rodapé fixo para salvar alterações.
   - `RegistroFrequenciaMensalScreen.tsx`: Botão de conclusão rápida inserido na barra superior fixa.
+  - `ConfigurarDiasLetivosTurmasModal.tsx`, `NovaTurmaModal.tsx`, `UploadFotoModal.tsx`, `RelatorioImpressaoModal.tsx`, `AnotacoesModal.tsx`: Rodapé com `sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90`.
+
+---
+
+## 14. Seletor de Frequência de Sincronização Google Sheets (30, 60, 120 min) & Correção de Deploy
+
+- **Seletor Visual na Tela '4. 200 Dias' (`DiasLetivosScreen.tsx`)**:
+  - Implementação dupla com seletor **dropdown** (`<select>`) no cabeçalho e **botões de rádio semânticos** (`<input type="radio">`) incorporados aos cartões visuais.
+  - Intervalos disponíveis:
+    - **30 minutos**: Alta frequência para períodos de fechamento bimestral e lançamento intenso de faltas.
+    - **60 minutos**: Recomendado (Padrão SME) com equilíbrio ideal entre dados recentes e estabilidade.
+    - **120 minutos**: Econômico para preservar ao máximo cota de API e consumo de dados.
+  - Persistência imediata no `localStorage` sob a chave `emeb_candelario_sheets_sync_interval_minutes_2027`.
+  - Disparo de evento customizado `emeb_sheets_sync_interval_changed` para notificar outras partes do aplicativo.
+- **Reatividade dos `useEffect` com Reinício de `setInterval`**:
+  - `DiasLetivosScreen.tsx`: Possui `useEffect` com dependência explícita em `[syncFrequency]`, que limpa (`clearInterval`) o timer anterior e agenda o novo `setInterval` correspondente ao valor selecionado.
+  - `App.tsx`: Possui estado `sheetsSyncFrequency` com listener de alteração e `useEffect` com `[sheetsSyncFrequency]`, garantindo que o ciclo mestre de sincronização em segundo plano seja reiniciado automaticamente.
+- **Resolução do Erro de Deploy no Cloud Run**:
+  - Corrigido o erro `ERR_MODULE_NOT_FOUND` em `server.ts` ao eliminar a dependência externa de extensão `.js`, embutindo os métodos de validação diretamente no servidor de produção.
+  - `npm run build` e `node server.ts` validados com sucesso total.

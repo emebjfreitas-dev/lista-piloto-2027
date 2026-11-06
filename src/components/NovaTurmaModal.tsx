@@ -61,8 +61,8 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200/90 p-5 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-5 pb-3 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2 text-slate-900">
             <span className="material-symbols-outlined text-[22px] text-blue-600">add_circle</span>
             <h3 className="text-base font-semibold">Adicionar Turma (2027)</h3>
@@ -76,7 +76,8 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="overflow-y-auto p-5 space-y-4 flex-1">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-bold text-[#191c1b] mb-1">
@@ -169,24 +170,25 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
               className="w-full accent-[#003440] cursor-pointer"
             />
           </div>
+        </div>
 
-          <div className="pt-2 border-t border-[#edeeec] flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 min-h-[50px] bg-[#edeeec] hover:bg-[#e7e8e6] text-[#41484b] font-bold text-base rounded-xl transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="flex-1 min-h-[50px] bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-base rounded-xl shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-[20px]">save</span>
-              <span>Cadastrar Turma</span>
-            </button>
-          </div>
-        </form>
+        <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90 p-4 flex gap-2 shrink-0 z-10">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 min-h-[46px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="flex-1 min-h-[46px] bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-[18px]">save</span>
+            <span>Cadastrar Turma</span>
+          </button>
+        </div>
+      </form>
       </div>
     </div>
   );

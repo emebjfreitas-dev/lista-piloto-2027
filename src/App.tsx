@@ -28,6 +28,8 @@ import {
   pullSharedSchoolStateFromServer,
   mergeClassesWithConcurrencyControl,
   getLocalClassesUpdatedAtMs,
+  addSecurityAuditLog,
+  getStoredLgpdConfig,
 } from './services/db';
 import {
   subscribeToFirestoreRealtimeState,
@@ -55,6 +57,7 @@ import {
   attachPhotosFromDiscoveredCache,
   attachNominalPdfsFromDiscoveredCache,
   logoutGoogle,
+  getGoogleSheetsSyncFrequency,
 } from './services/googleSheetsApi';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -154,13 +157,6 @@ export default function App() {
 
   const [navigationHistory, setNavigationHistory] = useState<ScreenType[]>([]);
 
-  const navigateToScreen = (nextScreen: ScreenType) => {
-    if (nextScreen === currentScreen) return;
-    setNavigationHistory((prev) => [...prev, currentScreen]);
-    setCurrentScreen(nextScreen);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const [classes, setClasses] = useState<ClassGroup[]>(() => initialClasses);
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(() => {
     const targetId =
@@ -204,6 +200,45 @@ export default function App() {
   const [simulatedTeacherEmail, setSimulatedTeacherEmail] = useState<string | null>(
     initialSavedSession?.simulatedTeacherEmail || null
   );
+
+  // Notificação de Menor Privilégio / Bloqueio Preventivo
+  const [securityBlockNotice, setSecurityBlockNotice] = useState<{
+    targetScreen: ScreenType;
+    requiredRole: string;
+    message: string;
+  } | null>(null);
+
+  const navigateToScreen = (nextScreen: ScreenType) => {
+    if (nextScreen === currentScreen) return;
+
+    // Princípio do Menor Privilégio (PoLP): Telas de gestão e infraestrutura restritas a Admin
+    const adminOnlyScreens: ScreenType[] = ['dias_letivos', 'usuarios_acesso', 'planilha'];
+    if (userRole !== 'admin' && adminOnlyScreens.includes(nextScreen)) {
+      addSecurityAuditLog({
+        userEmail: currentUserEmail,
+        userName: currentUserName,
+        userRole: userRole,
+        eventType: 'UNAUTHORIZED_ACCESS_BLOCKED',
+        actionTitle: 'Tentativa de Acesso Bloqueada (Menor Privilégio)',
+        details: `Servidor com credencial "${userRole.toUpperCase()}" tentou navegar para o módulo restrito "${nextScreen}". Bloqueio preventivo automático conforme política RBAC/LGPD.`,
+        targetResource: nextScreen,
+        severity: 'security_alert',
+      });
+      setSecurityBlockNotice({
+        targetScreen: nextScreen,
+        requiredRole: 'ADMINISTRADOR / GESTÃO ESCOLAR',
+        message: `O módulo "${nextScreen.toUpperCase().replace('_', ' ')}" é restrito à Direção e Secretaria Escolar. Seu perfil atual é "${
+          userRole === 'usuario' ? 'PEB I (Professor Regente)' : 'PEB II (Professor Especialista)'
+        }".`,
+      });
+      return;
+    }
+
+    setNavigationHistory((prev) => [...prev, currentScreen]);
+    setCurrentScreen(nextScreen);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
   const [schoolNotices, setSchoolNotices] = useState<SchoolNotice[]>(() =>
@@ -553,6 +588,22 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [classes]);
 
+  // Frequency preference for background Google Sheets polling (30, 60 or 120 min)
+  const [sheetsSyncFrequency, setSheetsSyncFrequency] = useState<number>(() =>
+    getGoogleSheetsSyncFrequency()
+  );
+
+  useEffect(() => {
+    const handleFrequencyChange = (e: any) => {
+      const newFreq = (e?.detail as number) || getGoogleSheetsSyncFrequency();
+      setSheetsSyncFrequency(newFreq);
+    };
+    window.addEventListener('emeb_sheets_sync_interval_changed', handleFrequencyChange);
+    return () => {
+      window.removeEventListener('emeb_sheets_sync_interval_changed', handleFrequencyChange);
+    };
+  }, []);
+
   // Automatic & Super-Fluid Pull from Master Google Sheet (student edits, 200 days) + Drive Folders (photos + scanned PDFs)
   useEffect(() => {
     let isMounted = true;
@@ -688,8 +739,9 @@ export default function App() {
 
     window.addEventListener('focus', handleWindowFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    // Relaxed polling with randomized jitter (90s to 150s) so 100 concurrent users never hit Google Sheets simultaneously
-    const pollIntervalMs = 90000 + Math.floor(Math.random() * 60000);
+
+    // Polling periódico configurável (30, 60 ou 120 minutos) que reage a sheetsSyncFrequency
+    const pollIntervalMs = sheetsSyncFrequency * 60 * 1000 + Math.floor(Math.random() * 20000);
     const intervalId = window.setInterval(safePullMasterData, pollIntervalMs);
 
     return () => {
@@ -698,7 +750,7 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.clearInterval(intervalId);
     };
-  }, [currentScreen, currentUserEmail]);
+  }, [sheetsSyncFrequency, currentScreen, currentUserEmail]);
 
   // Keep selectedClass restricted when userRole is 'usuario'
   useEffect(() => {
@@ -1419,6 +1471,37 @@ export default function App() {
           currentScreen === 'login' ? 'p-0 max-w-none' : 'pt-[68px] sm:pt-[76px] pb-24 lg:pb-12'
         }`}
       >
+        {/* Banner de Aviso de Menor Privilégio e Segurança LGPD */}
+        {securityBlockNotice && (
+          <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
+            <div className="flex items-start gap-3">
+              <span className="material-symbols-outlined text-amber-700 text-[24px] shrink-0 mt-0.5">
+                security
+              </span>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xs uppercase tracking-wide text-amber-900">
+                    Acesso Restrito · Princípio do Menor Privilégio
+                  </span>
+                  <span className="px-2 py-0.2 rounded-full bg-amber-200/80 text-[10px] font-mono font-bold">
+                    LGPD Art. 14 / RBAC
+                  </span>
+                </div>
+                <p className="text-xs text-amber-900 font-medium leading-relaxed">
+                  {securityBlockNotice.message}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSecurityBlockNotice(null)}
+              className="px-3 py-1.5 rounded-xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 text-xs font-bold shrink-0 cursor-pointer transition-colors"
+            >
+              Compreendi
+            </button>
+          </div>
+        )}
+
         {currentScreen === 'login' && (
           <LoginScreen
             authorizedUsers={authorizedUsers}

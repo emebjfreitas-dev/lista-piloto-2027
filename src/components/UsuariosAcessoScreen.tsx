@@ -5,6 +5,9 @@ import {
   UserRole,
   AttendanceWindowConfig,
   UserAccessSessionLog,
+  SecurityAuditLogEntry,
+  RbacRoleDefinition,
+  LgpdProtectionConfig,
 } from '../types';
 import { INSTITUTIONAL_EMAIL_DOMAIN, INITIAL_AUTHORIZED_USERS } from '../data/mockData';
 import {
@@ -12,6 +15,14 @@ import {
   evaluateAttendanceLaunchWindow,
   formatDurationHuman,
   exportOfficialMatrixToXLS,
+  getStoredSecurityAuditLogs,
+  addSecurityAuditLog,
+  clearStoredSecurityAuditLogs,
+  getStoredLgpdConfig,
+  saveStoredLgpdConfig,
+  exportSecurityAuditLogsCSV,
+  RBAC_ROLE_DEFINITIONS,
+  maskSensitiveText,
 } from '../services/db';
 import { StudentAvatar } from './StudentAvatar';
 
@@ -32,7 +43,8 @@ interface UsuariosAcessoScreenProps {
   onBack: () => void;
 }
 
-type SubTabId = 'quadro_turmas' | 'contas_acesso' | 'monitoramento';
+type SubTabId = 'quadro_turmas' | 'contas_acesso' | 'rbac_matriz' | 'seguranca_lgpd' | 'monitoramento';
+
 
 export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   authorizedUsers,
@@ -91,7 +103,64 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   >({});
   const [recentlySavedUserIds, setRecentlySavedUserIds] = useState<Record<string, boolean>>({});
 
+  // Estados de Segurança Máxima, LGPD e Matriz RBAC
+  const [securityLogs, setSecurityLogs] = useState<SecurityAuditLogEntry[]>(() => getStoredSecurityAuditLogs());
+  const [lgpdConfig, setLgpdConfig] = useState<LgpdProtectionConfig>(() => getStoredLgpdConfig());
+  const [securitySearchTerm, setSecuritySearchTerm] = useState('');
+  const [securitySeverityFilter, setSecuritySeverityFilter] = useState<'all' | 'info' | 'warning' | 'security_alert'>('all');
+  const [securityEventTypeFilter, setSecurityEventTypeFilter] = useState<string>('all');
+  const [selectedRbacRoleKey, setSelectedRbacRoleKey] = useState<string>('admin');
+
   const canManage = userRole === 'admin';
+
+  const handleToggleMasking = () => {
+    if (!canManage) return;
+    const nextVal = !lgpdConfig.maskSensitiveDataByDefault;
+    const updated = saveStoredLgpdConfig({ maskSensitiveDataByDefault: nextVal });
+    setLgpdConfig(updated);
+    const newEntry = addSecurityAuditLog({
+      userEmail: currentUserEmail,
+      userName: 'Administrador Escolar Candelário',
+      userRole: 'admin',
+      eventType: 'DATA_MASKING_TOGGLED',
+      actionTitle: nextVal ? 'Mascaramento LGPD Ativado' : 'Mascaramento LGPD Desativado (Modo Auditoria)',
+      details: nextVal
+        ? 'Dados sensíveis de menores (CPF, NIS, Endereço, Laudos) ocultados automaticamente.'
+        : 'Mascaramento desativado temporariamente para conferência administrativa.',
+      targetResource: 'Cadastro de Estudantes SED',
+      severity: nextVal ? 'info' : 'warning',
+    });
+    setSecurityLogs((prev) => [newEntry, ...prev]);
+    triggerFeedback(
+      'success',
+      nextVal
+        ? 'Política LGPD: Mascaramento de dados de menores ATIVADO.'
+        : 'Aviso: Mascaramento temporariamente desativado para conferência.'
+    );
+  };
+
+  const handleExportSecurityAudit = () => {
+    exportSecurityAuditLogsCSV();
+    const newEntry = addSecurityAuditLog({
+      userEmail: currentUserEmail,
+      userName: 'Administrador Escolar Candelário',
+      userRole: 'admin',
+      eventType: 'STUDENT_DATA_EXPORTED',
+      actionTitle: 'Relatório de Auditoria LGPD Exportado',
+      details: 'Download completo do log de acessos e eventos de segurança em formato CSV auditável.',
+      targetResource: 'Auditoria de Segurança',
+      severity: 'info',
+    });
+    setSecurityLogs((prev) => [newEntry, ...prev]);
+    triggerFeedback('success', 'Relatório de Auditoria LGPD exportado com sucesso (.CSV)!');
+  };
+
+  const handleClearSecurityLogs = () => {
+    if (!canManage) return;
+    clearStoredSecurityAuditLogs();
+    setSecurityLogs([]);
+    triggerFeedback('success', 'Logs de auditoria de segurança limpos.');
+  };
 
   const getUserEffectiveClassIds = (u: AuthorizedUser): string[] => {
     const d = draftEdits[u.id];
@@ -769,7 +838,27 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-[15px]">manage_accounts</span>
-              <span>2. Contas &amp; Perfis ({authorizedUsers.length})</span>
+              <span>2. Usuários &amp; Perfis ({authorizedUsers.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('rbac_matriz')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+                activeSubTab === 'rbac_matriz' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">shield_person</span>
+              <span>3. Matriz RBAC</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('seguranca_lgpd')}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
+                activeSubTab === 'seguranca_lgpd' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">security</span>
+              <span>4. Segurança &amp; LGPD</span>
             </button>
             <button
               type="button"
@@ -779,7 +868,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-[15px]">monitoring</span>
-              <span>3. Tempo de Tela ({accessSessionLogs.length})</span>
+              <span>5. Tempo de Tela ({accessSessionLogs.length})</span>
             </button>
           </div>
         </div>
@@ -1174,38 +1263,60 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         </div>
 
         {/* Sub-Abas iOS Segmented Control */}
-        <div className="ios-segmented w-full flex overflow-x-auto">
+        <div className="ios-segmented w-full flex overflow-x-auto gap-1">
           <button
             type="button"
             onClick={() => setActiveSubTab('quadro_turmas')}
-            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 whitespace-nowrap ${
+            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
               activeSubTab === 'quadro_turmas' ? 'ios-segmented-item-active' : ''
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">school</span>
-            <span>1. Quadro Oficial de Turmas &amp; Professores ({classes.length})</span>
+            <span className="material-symbols-outlined text-[17px]">school</span>
+            <span>1. Quadro Docente ({classes.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubTab('contas_acesso')}
-            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 whitespace-nowrap ${
+            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
               activeSubTab === 'contas_acesso' ? 'ios-segmented-item-active' : ''
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-            <span>2. E-mails &amp; Permissões de Acesso ({authorizedUsers.length})</span>
+            <span className="material-symbols-outlined text-[17px]">manage_accounts</span>
+            <span>2. Usuários &amp; Perfis ({authorizedUsers.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('rbac_matriz')}
+            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
+              activeSubTab === 'rbac_matriz' ? 'ios-segmented-item-active' : ''
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">shield_person</span>
+            <span>3. Matriz RBAC</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('seguranca_lgpd')}
+            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
+              activeSubTab === 'seguranca_lgpd' ? 'ios-segmented-item-active' : ''
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">security</span>
+            <span>4. Segurança &amp; LGPD</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubTab('monitoramento')}
-            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 whitespace-nowrap ${
+            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
               activeSubTab === 'monitoramento' ? 'ios-segmented-item-active' : ''
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">monitoring</span>
-            <span>3. Tempo de Tela &amp; Sessões ({accessSessionLogs.length})</span>
+            <span className="material-symbols-outlined text-[17px]">monitoring</span>
+            <span>5. Tempo de Tela ({accessSessionLogs.length})</span>
           </button>
         </div>
       </section>
@@ -2124,7 +2235,528 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* =====================================================================
-          SUB-ABA 3: MONITORAMENTO EM TEMPO REAL DE TEMPO DE TELA E SESSÕES
+          SUB-ABA 3: MATRIZ RBAC & NÍVEIS DE ACESSO (LEAST PRIVILEGE)
+          ===================================================================== */}
+      {activeSubTab === 'rbac_matriz' && (
+        <div className="space-y-5 animate-in fade-in duration-150">
+          {/* Card Conceitual de Segurança e Menor Privilégio */}
+          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider">
+                    Controle de Acesso Baseado em Funções (RBAC)
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-bold">
+                    Princípio do Menor Privilégio Ativo
+                  </span>
+                </div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Matriz Institucional de Níveis e Permissões de Acesso
+                </h2>
+                <p className="text-xs text-slate-600 max-w-3xl leading-relaxed">
+                  Cada servidor visualiza e opera exclusivamente os recursos autorizados para sua função pedagógica ou administrativa. Tentativas de acesso a telas ou ações não autorizadas são bloqueadas no cliente e no servidor, gerando alerta imediato na trilha de auditoria.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab('seguranca_lgpd')}
+                  className="min-h-[42px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold inline-flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                  <span>Ver Logs de Auditoria LGPD</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Grid dos 4 Perfis de Acesso com Detalhes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+              {RBAC_ROLE_DEFINITIONS.map((r) => {
+                const isSelected = selectedRbacRoleKey === r.roleKey;
+                return (
+                  <div
+                    key={r.roleKey}
+                    onClick={() => setSelectedRbacRoleKey(r.roleKey)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                      isSelected
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                        : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200'
+                    }`}
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            isSelected
+                              ? 'bg-white/20 text-white'
+                              : 'bg-slate-200 text-slate-800'
+                          }`}
+                        >
+                          {r.badgeLabel}
+                        </span>
+                        {isSelected && (
+                          <span className="material-symbols-outlined text-[16px] text-emerald-400">
+                            check_circle
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-sm">{r.name}</h3>
+                      <p
+                        className={`text-xs leading-relaxed ${
+                          isSelected ? 'text-slate-300' : 'text-slate-600'
+                        }`}
+                      >
+                        {r.description}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-black/10 text-[11px] font-mono flex items-center justify-between">
+                      <span className={isSelected ? 'text-slate-300' : 'text-slate-500'}>
+                        {r.roleKey === 'admin'
+                          ? 'Acesso Pleno'
+                          : r.roleKey === 'usuario'
+                          ? 'Turma(s) Atribuída(s)'
+                          : r.roleKey === 'peb2'
+                          ? '40 Turmas (Visualização)'
+                          : 'Acompanhamento'}
+                      </span>
+                      <span className="font-bold">
+                        {r.canEditAttendance ? 'Edita Chamada' : 'Sem Edição de Faltas'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Tabela Interativa da Matriz de Permissões */}
+          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Segregação de Funções &amp; Menor Privilégio
+                </span>
+                <h3 className="text-base font-bold text-slate-900">
+                  Permissões Detalhadas por Módulo e Função
+                </h3>
+              </div>
+              <span className="text-xs text-slate-500 font-mono">
+                Conforme Instrução Normativa SME / Jundiaí
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[760px]">
+                <thead className="bg-slate-900 text-white text-[11px] font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Recurso / Módulo do Sistema</th>
+                    <th className="py-3 px-4 text-center">Admin (Gestão)</th>
+                    <th className="py-3 px-4 text-center">PEB I (Regente)</th>
+                    <th className="py-3 px-4 text-center">PEB II (Especialista)</th>
+                    <th className="py-3 px-4 text-center">Coordenação / Apoio</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                  <tr className="hover:bg-slate-50/80">
+                    <td className="py-3 px-4">
+                      <span className="font-bold block text-slate-900">Visualizar Turmas e Estudantes</span>
+                      <span className="text-[11px] text-slate-500">Acesso aos dados de identificação e fotos oficiais</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[14px]">check</span>
+                        Sua Turma
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[14px]">check</span>
+                        40 Turmas
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/80">
+                    <td className="py-3 px-4">
+                      <span className="font-bold block text-slate-900">Lançamento de Faltas do Mês</span>
+                      <span className="text-[11px] text-slate-500">Registro de ausências e atestados conforme janela de chamada</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[14px]">check</span>
+                        Sua Turma
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/80">
+                    <td className="py-3 px-4">
+                      <span className="font-bold block text-slate-900">Registro de Busca Ativa &amp; Devolutivas</span>
+                      <span className="text-[11px] text-slate-500">Alertas de 3, 5 e 10 dias consecutivos de faltas</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[14px]">check</span>
+                        Registra / Lê
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/80">
+                    <td className="py-3 px-4">
+                      <span className="font-bold block text-slate-900">Dados Pessoais Sensíveis (LGPD Art. 14)</span>
+                      <span className="text-[11px] text-slate-500">CPF, NIS, Endereço residencial e CID/Laudos médicos</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[14px]">visibility</span>
+                        Auditado
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-amber-700 font-bold">
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[14px]">lock</span>
+                        Mascarado
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-amber-700 font-bold">
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[14px]">lock</span>
+                        Mascarado
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <span className="material-symbols-outlined text-[14px]">visibility</span>
+                        Auditado
+                      </span>
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/80">
+                    <td className="py-3 px-4">
+                      <span className="font-bold block text-slate-900">Homologação Oficial de 200 Dias Letivos</span>
+                      <span className="text-[11px] text-slate-500">Configuração de datas letivas e feriados municipais</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/80">
+                    <td className="py-3 px-4">
+                      <span className="font-bold block text-slate-900">Gerenciamento de Acessos &amp; Auditoria</span>
+                      <span className="text-[11px] text-slate-500">Concessão, revogação, histórico e relatórios de segurança</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[18px]">block</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUB-ABA 4: SEGURANÇA MÁXIMA & LGPD (LEI Nº 13.709/2018)
+          ===================================================================== */}
+      {activeSubTab === 'seguranca_lgpd' && (
+        <div className="space-y-5 animate-in fade-in duration-150">
+          {/* Card de Indicadores de Conformidade LGPD & Segurança */}
+          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-800 text-white text-[11px] font-bold uppercase tracking-wider">
+                    LGPD Ativa · Lei nº 13.709/2018
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
+                    Art. 14 · Proteção de Dados de Menores
+                  </span>
+                </div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Painel de Segurança Máxima, Privacidade e Auditoria
+                </h2>
+                <p className="text-xs text-slate-600 max-w-3xl leading-relaxed">
+                  Arquitetura de proteção contínua com criptografia em trânsito e repouso, mascaramento automatizado de dados pessoais e sensíveis, tokens de sessão verificados e rastreabilidade total de acessos e tentativas bloqueadas.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleExportSecurityAudit}
+                  className="min-h-[42px] px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  <span>Exportar Auditoria (.CSV)</span>
+                </button>
+
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={handleToggleMasking}
+                    className={`min-h-[42px] px-4 rounded-2xl font-bold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer ${
+                      lgpdConfig.maskSensitiveDataByDefault
+                        ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-950'
+                        : 'bg-amber-100 hover:bg-amber-200 text-amber-950'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {lgpdConfig.maskSensitiveDataByDefault ? 'lock' : 'lock_open'}
+                    </span>
+                    <span>
+                      {lgpdConfig.maskSensitiveDataByDefault
+                        ? 'Mascaramento: ATIVADO'
+                        : 'Mascaramento: DESATIVADO'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 4 Indicadores Rápidos de Segurança */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <div className="flex items-center gap-1.5 text-emerald-800">
+                  <span className="material-symbols-outlined text-[18px]">lock</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Criptografia</span>
+                </div>
+                <div className="text-base font-bold text-slate-900">TLS 1.3 / HTTPS</div>
+                <p className="text-[11px] text-slate-500">
+                  Comunicação criptografada em trânsito e armazenamento seguro em repouso.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <div className="flex items-center gap-1.5 text-blue-700">
+                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Autenticação</span>
+                </div>
+                <div className="text-base font-bold text-slate-900">MFA &amp; Token Ativos</div>
+                <p className="text-[11px] text-slate-500">
+                  Validação de e-mail institucional @educacao.jundiai.sp.gov.br e tokens Google.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <div className="flex items-center gap-1.5 text-purple-700">
+                  <span className="material-symbols-outlined text-[18px]">visibility_off</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Proteção LGPD</span>
+                </div>
+                <div className="text-base font-bold text-slate-900">
+                  {lgpdConfig.maskSensitiveDataByDefault ? 'Dados Mascarados' : 'Modo Auditoria'}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  CPF, NIS, endereços e laudos de crianças protegidos contra exposição.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-800">
+                  <span className="material-symbols-outlined text-[18px]">history</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Retenção Legal</span>
+                </div>
+                <div className="text-base font-bold text-slate-900 font-mono tabular-nums">
+                  5 Anos Letivos
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Política de guarda legal (1.825 dias) para atendimento a auditorias oficiais.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* Tabela de Trilha de Auditoria em Tempo Real */}
+          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Trilha Auditável Contínua
+                </span>
+                <h3 className="text-base font-bold text-slate-900">
+                  Registro de Acessos, Modificações e Tentativas Bloqueadas ({securityLogs.length})
+                </h3>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={securitySearchTerm}
+                  onChange={(e) => setSecuritySearchTerm(e.target.value)}
+                  placeholder="Buscar por usuário, ação ou detalhe..."
+                  className="min-h-[38px] px-3.5 rounded-xl bg-slate-100 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none border border-slate-200"
+                />
+
+                <select
+                  value={securitySeverityFilter}
+                  onChange={(e) => setSecuritySeverityFilter(e.target.value as any)}
+                  className="min-h-[38px] px-3 rounded-xl bg-slate-100 text-xs font-semibold text-slate-800 border border-slate-200 cursor-pointer"
+                >
+                  <option value="all">Todas as Severidades</option>
+                  <option value="info">Informativo</option>
+                  <option value="warning">Avisos</option>
+                  <option value="security_alert">Bloqueios &amp; Alertas</option>
+                </select>
+
+                {canManage && securityLogs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearSecurityLogs}
+                    className="min-h-[38px] px-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Listagem de Logs */}
+            {(() => {
+              const q = securitySearchTerm.toLowerCase().trim();
+              const filtered = securityLogs.filter((entry) => {
+                if (securitySeverityFilter !== 'all' && entry.severity !== securitySeverityFilter) {
+                  return false;
+                }
+                if (!q) return true;
+                return (
+                  entry.userEmail.toLowerCase().includes(q) ||
+                  entry.actionTitle.toLowerCase().includes(q) ||
+                  entry.details.toLowerCase().includes(q) ||
+                  entry.eventType.toLowerCase().includes(q) ||
+                  (entry.userName || '').toLowerCase().includes(q)
+                );
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center text-slate-600 text-xs font-medium">
+                    Nenhum evento registrado para o filtro informado. Todas as operações críticas são gravadas automaticamente.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="rounded-2xl border border-slate-200 overflow-x-auto max-h-[500px]">
+                  <table className="w-full text-left text-xs border-collapse min-w-[900px]">
+                    <thead className="bg-slate-900 text-white text-[11px] font-semibold uppercase tracking-wider sticky top-0 z-10">
+                      <tr>
+                        <th className="py-2.5 px-3">Severidade</th>
+                        <th className="py-2.5 px-3">Data/Hora (ISO)</th>
+                        <th className="py-2.5 px-3">Usuário &amp; Perfil</th>
+                        <th className="py-2.5 px-3">Evento / Ação</th>
+                        <th className="py-2.5 px-3">Detalhes do Evento</th>
+                        <th className="py-2.5 px-3">IP do Cliente</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filtered.map((log) => {
+                        const isAlert = log.severity === 'security_alert' || log.severity === 'critical';
+                        const isWarning = log.severity === 'warning';
+                        return (
+                          <tr key={log.id} className="hover:bg-slate-50">
+                            <td className="py-2.5 px-3">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
+                                  isAlert
+                                    ? 'bg-rose-100 text-rose-900 border border-rose-200'
+                                    : isWarning
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                                    : 'bg-emerald-100 text-emerald-950 border border-emerald-200'
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-[13px]">
+                                  {isAlert ? 'security_update_warning' : isWarning ? 'warning' : 'info'}
+                                </span>
+                                {isAlert ? 'Bloqueio' : isWarning ? 'Aviso' : 'Registro'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 tabular-nums whitespace-nowrap">
+                              {new Date(log.timestampISO).toLocaleString('pt-BR')}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className="font-bold text-slate-900 block truncate max-w-[200px]">
+                                {log.userName || log.userEmail.split('@')[0]}
+                              </span>
+                              <span className="font-mono text-[11px] text-slate-500 block truncate max-w-[200px]">
+                                {log.userEmail} · <strong className="uppercase">{log.userRole}</strong>
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span className="font-bold text-slate-900 block">
+                                {log.actionTitle}
+                              </span>
+                              <span className="font-mono text-[10px] text-slate-500 uppercase">
+                                {log.eventType}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-700 text-xs max-w-sm">
+                              {log.details}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                              {log.clientIp || '127.0.0.1'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </section>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUB-ABA 5: MONITORAMENTO EM TEMPO REAL DE TEMPO DE TELA E SESSÕES
           ===================================================================== */}
       {activeSubTab === 'monitoramento' && (
         <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
@@ -2229,7 +2861,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       </main>
 
       {/* 3. RODAPÉ DE AÇÃO FIXO (STICKY FOOTER SHRINK-0) — SEMPRE VISÍVEL */}
-      <footer className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+      <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 text-xs text-slate-600">
           <span className="font-mono font-bold text-slate-900 tabular-nums">
             {classes.length} Turmas

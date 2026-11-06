@@ -481,8 +481,8 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
           </section>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 sm:p-5 bg-white border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        {/* Footer Sticky */}
+        <div className="p-4 sm:p-5 sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10">
           {savedFeedback ? (
             <span className="text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[18px] text-emerald-700">check_circle</span>

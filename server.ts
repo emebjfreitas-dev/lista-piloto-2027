@@ -4,11 +4,235 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
-import {
-  parseAndValidateSchoolDates,
-  OFFICIAL_DEFAULT_HOLIDAYS_2027,
-  generateOfficial200SchoolDays2027,
-} from './src/utils/calendarValidation.js';
+const MONTH_NAMES_PT = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+const DAYS_OF_WEEK_PT = [
+  'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+  'Quinta-feira', 'Sexta-feira', 'Sábado',
+];
+
+const OFFICIAL_DEFAULT_HOLIDAYS_2027 = [
+  { id: 'hol-01', date: '01/01/2027', name: 'Confraternização Universal', type: 'nacional', isOfficial: true },
+  { id: 'hol-02', date: '08/02/2027', name: 'Carnaval (Recesso Escolar)', type: 'recesso', isOfficial: true },
+  { id: 'hol-03', date: '09/02/2027', name: 'Terça-feira de Carnaval', type: 'ponto_facultativo', isOfficial: true },
+  { id: 'hol-04', date: '10/02/2027', name: 'Quarta-feira de Cinzas', type: 'ponto_facultativo', isOfficial: true },
+  { id: 'hol-05', date: '26/03/2027', name: 'Sexta-feira Santa (Paixão de Cristo)', type: 'nacional', isOfficial: true },
+  { id: 'hol-06', date: '21/04/2027', name: 'Tiradentes', type: 'nacional', isOfficial: true },
+  { id: 'hol-07', date: '01/05/2027', name: 'Dia Mundial do Trabalho', type: 'nacional', isOfficial: true },
+  { id: 'hol-08', date: '27/05/2027', name: 'Corpus Christi', type: 'municipal', isOfficial: true },
+  { id: 'hol-09', date: '28/05/2027', name: 'Emenda Corpus Christi (Ponto Facultativo)', type: 'ponto_facultativo', isOfficial: true },
+  { id: 'hol-10', date: '09/07/2027', name: 'Revolução Constitucionalista de 1932', type: 'estadual', isOfficial: true },
+  { id: 'hol-11', date: '15/08/2027', name: 'Nossa Senhora do Desterro (Padroeira de Jundiaí)', type: 'municipal', isOfficial: true },
+  { id: 'hol-12', date: '07/09/2027', name: 'Independência do Brasil', type: 'nacional', isOfficial: true },
+  { id: 'hol-13', date: '12/10/2027', name: 'Nossa Senhora Aparecida / Dia das Crianças', type: 'nacional', isOfficial: true },
+  { id: 'hol-14', date: '15/10/2027', name: 'Dia do Professor (Recesso Escolar SME)', type: 'recesso', isOfficial: true },
+  { id: 'hol-15', date: '28/10/2027', name: 'Dia do Servidor Público', type: 'ponto_facultativo', isOfficial: true },
+  { id: 'hol-16', date: '02/11/2027', name: 'Finados', type: 'nacional', isOfficial: true },
+  { id: 'hol-17', date: '15/11/2027', name: 'Proclamação da República', type: 'nacional', isOfficial: true },
+  { id: 'hol-18', date: '20/11/2027', name: 'Dia da Consciência Negra', type: 'nacional', isOfficial: true },
+  { id: 'hol-19', date: '14/12/2027', name: 'Aniversário de Jundiaí (371 anos)', type: 'municipal', isOfficial: true },
+  { id: 'hol-20', date: '25/12/2027', name: 'Natal', type: 'nacional', isOfficial: true },
+];
+
+const generateOfficial200SchoolDays2027 = (holidays: any[] = OFFICIAL_DEFAULT_HOLIDAYS_2027): string[] => {
+  const holidayDateSet = new Set(holidays.map((h) => (h && h.date ? h.date.trim() : '')));
+  const schoolDays: string[] = [];
+  const targets: Record<number, number> = {
+    2: 16, 3: 22, 4: 20, 5: 20, 6: 20, 7: 10,
+    8: 22, 9: 20, 10: 20, 11: 18, 12: 12,
+  };
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  for (let month = 2; month <= 12; month++) {
+    const targetCount = targets[month] || 20;
+    let addedForMonth = 0;
+    const daysInMonth = new Date(2027, month, 0).getDate();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      if (addedForMonth >= targetCount) break;
+      if (month === 7 && day < 19) continue;
+      const dateObj = new Date(2027, month - 1, day);
+      const dayOfWeek = dateObj.getDay();
+      const dateStr = `${pad(day)}/${pad(month)}/2027`;
+      if (dayOfWeek >= 1 && dayOfWeek <= 5 && !holidayDateSet.has(dateStr)) {
+        schoolDays.push(dateStr);
+        addedForMonth++;
+      }
+    }
+
+    if (addedForMonth < targetCount) {
+      for (let day = 1; day <= daysInMonth; day++) {
+        if (addedForMonth >= targetCount) break;
+        const dateObj = new Date(2027, month - 1, day);
+        const dayOfWeek = dateObj.getDay();
+        const dateStr = `${pad(day)}/${pad(month)}/2027`;
+        if (dayOfWeek === 6 && !holidayDateSet.has(dateStr) && !schoolDays.includes(dateStr)) {
+          schoolDays.push(dateStr);
+          addedForMonth++;
+        }
+      }
+    }
+  }
+
+  return schoolDays.sort((a, b) => {
+    const [da, ma, ya] = a.split('/').map(Number);
+    const [db, mb, yb] = b.split('/').map(Number);
+    return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
+  });
+};
+
+const parseAndValidateSchoolDates = (rawText: string, holidays: any[] = OFFICIAL_DEFAULT_HOLIDAYS_2027) => {
+  if (!rawText || !rawText.trim()) {
+    return {
+      validDates: [] as string[],
+      calendarDays: [] as any[],
+      monthlyDistribution: {} as Record<string, number>,
+      totalCount: 0,
+      remainingCount: 200,
+      exceededCount: 0,
+      isExactly200: false,
+      hasErrors: true,
+      duplicateEntries: [] as any[],
+      invalidEntries: [{ line: 1, raw: '', reason: 'Nenhuma data informada. Cole as datas uma por linha.' }],
+      holidayConflicts: [] as any[],
+      weekendDays: [] as any[],
+    };
+  }
+
+  const holidayMap = new Map<string, any>();
+  holidays.forEach((h) => {
+    const cleanDate = h && h.date ? h.date.trim() : '';
+    if (cleanDate) holidayMap.set(cleanDate, h);
+  });
+
+  const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+  const seenOccurrences = new Map<string, number>();
+  const validDatesSet = new Set<string>();
+  const invalidEntries: Array<{ line: number; raw: string; reason: string }> = [];
+  const weekendDays: Array<{ date: string; dayOfWeek: string; isSaturday: boolean }> = [];
+  const holidayConflicts: Array<{ date: string; holidayName: string; holidayType: string }> = [];
+  const dateRegex = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/;
+
+  let lineCounter = 1;
+  for (const rawLine of lines) {
+    const tokens = rawLine.split(/[\s,;]+/).filter((t) => t.trim().length > 0);
+    for (const token of tokens) {
+      const match = token.match(dateRegex);
+      if (!match) {
+        invalidEntries.push({ line: lineCounter, raw: token, reason: 'Formato inválido. Use DD/MM/AAAA.' });
+        continue;
+      }
+      const day = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10);
+      const year = parseInt(match[3], 10);
+      if (month < 1 || month > 12) {
+        invalidEntries.push({ line: lineCounter, raw: token, reason: `Mês inválido (${month}).` });
+        continue;
+      }
+      if (year < 2020 || year > 2035) {
+        invalidEntries.push({ line: lineCounter, raw: token, reason: `Ano fora da faixa permitida (${year}).` });
+        continue;
+      }
+      const daysInTargetMonth = new Date(year, month, 0).getDate();
+      if (day < 1 || day > daysInTargetMonth) {
+        invalidEntries.push({ line: lineCounter, raw: token, reason: `Dia inválido para o mês ${month}/${year}.` });
+        continue;
+      }
+
+      const normalizedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+      const count = (seenOccurrences.get(normalizedDate) || 0) + 1;
+      seenOccurrences.set(normalizedDate, count);
+
+      if (count === 1) {
+        validDatesSet.add(normalizedDate);
+        const dateObj = new Date(year, month - 1, day);
+        const dayOfWeekIndex = dateObj.getDay();
+        const dayOfWeekName = DAYS_OF_WEEK_PT[dayOfWeekIndex];
+
+        if (dayOfWeekIndex === 0 || dayOfWeekIndex === 6) {
+          weekendDays.push({
+            date: normalizedDate,
+            dayOfWeek: dayOfWeekName,
+            isSaturday: dayOfWeekIndex === 6,
+          });
+        }
+
+        if (holidayMap.has(normalizedDate)) {
+          const hol = holidayMap.get(normalizedDate);
+          holidayConflicts.push({
+            date: normalizedDate,
+            holidayName: hol.name,
+            holidayType: hol.type,
+          });
+        }
+      }
+    }
+    lineCounter++;
+  }
+
+  const duplicateEntries: Array<{ date: string; occurrences: number }> = [];
+  seenOccurrences.forEach((count, date) => {
+    if (count > 1) duplicateEntries.push({ date, occurrences: count });
+  });
+
+  const sortedDates = Array.from(validDatesSet).sort((a, b) => {
+    const [da, ma, ya] = a.split('/').map(Number);
+    const [db, mb, yb] = b.split('/').map(Number);
+    return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
+  });
+
+  const monthlyDistribution: Record<string, number> = {};
+  MONTH_NAMES_PT.forEach((m) => { monthlyDistribution[m] = 0; });
+
+  const calendarDays = sortedDates.map((dateStr, idx) => {
+    const [d, m, y] = dateStr.split('/').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const dayOfWeekIndex = dateObj.getDay();
+    const monthName = MONTH_NAMES_PT[m - 1] || 'Outro';
+    monthlyDistribution[monthName] = (monthlyDistribution[monthName] || 0) + 1;
+    const isSat = dayOfWeekIndex === 6;
+    const isSun = dayOfWeekIndex === 0;
+    const conflict = holidayMap.get(dateStr);
+    let type = 'dia_letivo';
+    if (isSat) type = 'sabado_letivo';
+    else if (conflict) type = conflict.type === 'recesso' ? 'recesso' : 'feriado';
+
+    return {
+      id: `cal-day-${idx + 1}`,
+      date: dateStr,
+      isoDate: `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`,
+      dayOfWeek: DAYS_OF_WEEK_PT[dayOfWeekIndex],
+      dayNumber: d,
+      month: monthName,
+      monthNumber: m,
+      year: y,
+      isSaturday: isSat,
+      isSunday: isSun,
+      holidayConflict: conflict ? `${conflict.name} (${conflict.type})` : undefined,
+      type,
+      description: conflict ? conflict.name : isSat ? 'Sábado Letivo Temático' : 'Dia Letivo Regular',
+    };
+  });
+
+  const totalCount = sortedDates.length;
+  return {
+    validDates: sortedDates,
+    calendarDays,
+    monthlyDistribution,
+    totalCount,
+    remainingCount: Math.max(0, 200 - totalCount),
+    exceededCount: Math.max(0, totalCount - 200),
+    isExactly200: totalCount === 200,
+    hasErrors: invalidEntries.length > 0 || duplicateEntries.length > 0,
+    duplicateEntries,
+    invalidEntries,
+    holidayConflicts,
+    weekendDays,
+  };
+};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +253,8 @@ interface SharedSchoolState {
   officialCalendarConfig?: any;
   holidays?: any[];
   calendarAuditLogs?: any[];
+  securityAuditLogs?: any[];
+  lgpdConfig?: any;
   cloudLinks?: {
     spreadsheetId?: string;
     spreadsheetTitle?: string;
@@ -955,6 +1181,41 @@ async function startServer() {
       auditLogs: (state.calendarAuditLogs || []).slice(0, 150),
     });
   });
+
+  // API: Obter Logs de Auditoria de Segurança & LGPD
+  app.get('/api/security-logs', (_req, res) => {
+    const state = readSharedState();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.json({
+      securityLogs: (state.securityAuditLogs || []).slice(0, 300),
+      lgpdConfig: state.lgpdConfig || null,
+    });
+  });
+
+  // API: Registrar Evento de Segurança / Auditoria LGPD
+  app.post('/api/security-logs', (req, res) => {
+    const entry = req.body;
+    if (!entry || !entry.eventType) {
+      return res.status(400).json({ error: 'Dados do evento de segurança inválidos.' });
+    }
+
+    const state = readSharedState();
+    const existingLogs = Array.isArray(state.securityAuditLogs) ? state.securityAuditLogs : [];
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || '127.0.0.1';
+
+    const enrichedEntry = {
+      ...entry,
+      id: entry.id || `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      timestampISO: entry.timestampISO || new Date().toISOString(),
+      clientIp: entry.clientIp || clientIp,
+    };
+
+    const nextLogs = [enrichedEntry, ...existingLogs].slice(0, 300);
+    writeSharedState({ securityAuditLogs: nextLogs });
+
+    res.json({ ok: true, entry: enrichedEntry });
+  });
+
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

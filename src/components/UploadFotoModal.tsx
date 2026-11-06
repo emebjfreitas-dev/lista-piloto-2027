@@ -218,10 +218,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200/90 p-4 sm:p-6 overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[92vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
+        <div className="flex items-center justify-between p-4 sm:p-5 pb-3 border-b border-black/[0.06] shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-[#eaf6ef] text-[#005035] flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[22px]">photo_camera</span>
@@ -245,8 +245,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           </button>
         </div>
 
-        {/* Student Preview & Current Association Status */}
-        <div className="flex items-center justify-between gap-3 p-3 mt-3 bg-slate-50 rounded-xl border border-slate-200/80">
+        {/* Scrollable Body */}
+        <div className="overflow-y-auto overscroll-contain flex-1 p-4 sm:p-5 space-y-3">
+          {/* Student Preview & Current Association Status */}
+          <div className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
               <StudentAvatar
@@ -436,12 +438,14 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           )}
         </div>
 
-        {/* Modal Actions */}
-        <div className="pt-3 border-t border-slate-200 flex gap-2">
+        </div>
+
+        {/* Modal Actions Sticky */}
+        <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90 p-4 flex gap-2 shrink-0 z-10">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors cursor-pointer"
+            className="flex-1 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
           >
             Cancelar
           </button>
@@ -450,7 +454,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={isProcessing || !previewUrl}
-            className="flex-1 h-9 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="flex-1 h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-xs"
           >
             <span className="material-symbols-outlined text-[16px]">verified</span>
             <span>Confirmar Foto</span>

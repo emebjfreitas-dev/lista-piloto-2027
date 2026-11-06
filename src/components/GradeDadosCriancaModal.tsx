@@ -18,6 +18,11 @@ import {
   uploadStudentPhotoToDrive,
 } from '../services/googleSheetsApi';
 import { isBackendApiAvailable } from '../services/apiEnvironment';
+import {
+  maskSensitiveText,
+  getStoredLgpdConfig,
+  addSecurityAuditLog,
+} from '../services/db';
 
 interface GradeDadosCriancaModalProps {
   isOpen: boolean;
@@ -146,6 +151,39 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   const [portraitFallbackIdx, setPortraitFallbackIdx] = useState(0);
   const [portraitImgError, setPortraitImgError] = useState(false);
   const internalPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [isLgpdRevealed, setIsLgpdRevealed] = useState(false);
+
+  const handleToggleLgpdReveal = () => {
+    if (userRole !== 'admin') {
+      addSecurityAuditLog({
+        userEmail: 'educador@educacao.jundiai.sp.gov.br',
+        userName: 'Educador(a) Institucional',
+        userRole: userRole,
+        eventType: 'UNAUTHORIZED_ACCESS_BLOCKED',
+        actionTitle: 'Tentativa de Revelar Dados Sensíveis (LGPD Art. 14)',
+        details: `Usuário com perfil "${userRole.toUpperCase()}" tentou revelar dados sensíveis da criança "${draft?.name || ''}". Acesso bloqueado por menor privilégio.`,
+        targetResource: draft?.name,
+        severity: 'warning',
+      });
+      return;
+    }
+
+    const next = !isLgpdRevealed;
+    setIsLgpdRevealed(next);
+    if (next && draft) {
+      addSecurityAuditLog({
+        userEmail: 'emebjfreitas@jundiai.sp.gov.br',
+        userName: 'Administrador Escolar Candelário',
+        userRole: 'admin',
+        eventType: 'DATA_MASKING_TOGGLED',
+        actionTitle: 'Visualização de Dados Sensíveis da Criança (Ação Auditada)',
+        details: `Administrador solicitou exibição temporária de CPF/NIS/telefones da criança "${draft.name}" (RA ${draft.ra || 'N/A'}). Ação rastreada.`,
+        targetResource: `Estudante: ${draft.name}`,
+        severity: 'info',
+      });
+    }
+  };
+
 
   const handleInternalPhotoSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1178,13 +1216,59 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 ))}
               </div>
 
+              {/* Barra de Status e Controle LGPD (Art. 14 Proteção a Menores) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-100/90 border border-slate-200/80">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="material-symbols-outlined text-[17px] text-emerald-800">
+                    security
+                  </span>
+                  <span className="font-bold text-slate-800">
+                    LGPD (Art. 14):
+                  </span>
+                  <span className="text-slate-600">
+                    {isLgpdRevealed
+                      ? 'Dados sensíveis exibidos (Modo de Auditoria Ativo)'
+                      : 'CPF, NIS, RG, endereço e contatos sob mascaramento preventivo'}
+                  </span>
+                </div>
+
+                {userRole === 'admin' ? (
+                  <button
+                    type="button"
+                    onClick={handleToggleLgpdReveal}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 shadow-2xs inline-flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">
+                      {isLgpdRevealed ? 'visibility_off' : 'visibility'}
+                    </span>
+                    <span>{isLgpdRevealed ? 'Ocultar Dados Sensíveis' : 'Revelar (Ação Auditada)'}</span>
+                  </button>
+                ) : (
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
+                    Acesso Restrito ao Gestor
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[340px] overflow-y-auto pr-1 pt-1">
                 {filteredFields.map((field) => {
                   const rawVal = draft[field.key];
-                  const displayVal =
+                  let displayVal =
                     rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== ''
                       ? String(rawVal)
                       : '—';
+
+                  // Mascaramento Automático LGPD para campos sensíveis quando não revelado
+                  const isSensitiveField = ['cpf', 'nis', 'rg', 'cartaoSus', 'telefones', 'logradouro'].includes(String(field.key));
+                  if (isSensitiveField && !isLgpdRevealed && rawVal) {
+                    if (field.key === 'cpf') displayVal = maskSensitiveText(String(rawVal), 'cpf');
+                    else if (field.key === 'nis') displayVal = maskSensitiveText(String(rawVal), 'nis');
+                    else if (field.key === 'telefones') displayVal = maskSensitiveText(String(rawVal), 'phone');
+                    else if (field.key === 'rg') displayVal = maskSensitiveText(String(rawVal), 'rg');
+                    else if (field.key === 'logradouro') displayVal = maskSensitiveText(String(rawVal), 'address');
+                    else displayVal = maskSensitiveText(String(rawVal), 'cpf');
+                  }
+
                   const isEditingThis = editingKey === field.key && canEdit;
 
                   return (
@@ -1204,8 +1288,13 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tight">
-                          {field.label}
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-1">
+                          {isSensitiveField && (
+                            <span className="material-symbols-outlined text-[13px] text-amber-700" title="Dado Pessoal Sensível (LGPD Art. 14)">
+                              lock
+                            </span>
+                          )}
+                          <span>{field.label}</span>
                         </span>
                         {canEdit && (
                           <span className="material-symbols-outlined text-[13px] text-slate-500">
@@ -1231,7 +1320,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         <p
                           className={`text-sm font-bold tabular-nums mt-0.5 break-words ${
                             displayVal === '—' ? 'text-slate-400 font-normal' : 'text-slate-950'
-                          }`}
+                          } ${isSensitiveField && !isLgpdRevealed ? 'font-mono tracking-wider' : ''}`}
                         >
                           {displayVal}
                         </p>
@@ -1245,7 +1334,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         </div>
 
         {/* Sticky Action Footer — Sempre visível sem scroll */}
-        <footer className="shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 bg-white/95 backdrop-blur-md border-t border-slate-200/90 flex items-center justify-between gap-3 z-20">
+        <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 flex items-center justify-between gap-3 z-20">
           <div className="flex items-center gap-2 text-xs text-slate-600">
             {savedBanner ? (
               <span className="text-emerald-700 font-semibold flex items-center gap-1">

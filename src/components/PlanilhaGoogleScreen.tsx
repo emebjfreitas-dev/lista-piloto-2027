@@ -4345,7 +4345,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       </main>
 
       {/* 3. RODAPÉ DE AÇÃO FIXO (STICKY FOOTER SHRINK-0) — SEMPRE VISÍVEL */}
-      <footer className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+      <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 text-xs text-slate-600">
           <span className="font-mono font-bold text-slate-900 truncate max-w-[260px] sm:max-w-none">
             {spreadsheetInput ? `Planilha: ${extractSpreadsheetId(spreadsheetInput)?.substring(0, 16)}...` : 'Planilha Oficial Google Sheets'}

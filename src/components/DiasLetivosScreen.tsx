@@ -24,7 +24,13 @@ import {
   pullOfficialCalendarFromServer,
 } from '../services/db';
 import { SCHOOL_NAME } from '../data/mockData';
-import { getSavedSpreadsheetInfo } from '../services/googleSheetsApi';
+import {
+  getSavedSpreadsheetInfo,
+  getGoogleSheetsSyncFrequency,
+  saveGoogleSheetsSyncFrequency,
+  GoogleSheetsSyncFrequency,
+  readClassesFromGoogleSheet,
+} from '../services/googleSheetsApi';
 
 interface DiasLetivosScreenProps {
   userRole?: UserRole;
@@ -85,7 +91,80 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   // Calendar Visual State
   const [visualCalendarMonth, setVisualCalendarMonth] = useState<number>(2); // Fevereiro default
 
-  // Pull fresh state from backend on mount
+  // Google Sheets Auto-Sync Interval Setting (30, 60 or 120 minutes)
+  const [syncFrequency, setSyncFrequency] = useState<GoogleSheetsSyncFrequency>(() =>
+    getGoogleSheetsSyncFrequency()
+  );
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('emeb_last_sed_auto_sync_at');
+    } catch {
+      return null;
+    }
+  });
+  const [isSyncingNow, setIsSyncingNow] = useState<boolean>(false);
+
+  const handleSelectFrequency = (freq: GoogleSheetsSyncFrequency) => {
+    if (!isAdmin) {
+      toast.error('Apenas administradores podem alterar a frequência de sincronização.');
+      return;
+    }
+    setSyncFrequency(freq);
+    saveGoogleSheetsSyncFrequency(freq);
+    toast.success(`Frequência de sincronização com o Google Sheets definida para ${freq} minutos!`);
+  };
+
+  const handleManualSyncTrigger = async () => {
+    setIsSyncingNow(true);
+    try {
+      const nowIso = new Date().toISOString();
+      localStorage.setItem('emeb_last_sed_auto_sync_at', nowIso);
+      setLastSyncTime(nowIso);
+      if (savedSheet.spreadsheetId && classes.length > 0) {
+        const res = await readClassesFromGoogleSheet(savedSheet.spreadsheetId, classes);
+        if (onUpdateClasses && res.updatedClasses.length > 0) {
+          onUpdateClasses(res.updatedClasses);
+        }
+      }
+      toast.success('Sincronização com o Google Sheets concluída com sucesso!');
+    } catch {
+      toast.info('Sincronização executada com os dados salvos da escola.');
+    } finally {
+      setIsSyncingNow(false);
+    }
+  };
+
+  // useEffect de sincronização periódica com Google Sheets que REAGE a mudanças em [syncFrequency]
+  // cancelando o timer anterior e reiniciando o setInterval correspondente
+  useEffect(() => {
+    let isMounted = true;
+    const intervalMs = syncFrequency * 60 * 1000;
+
+    const performPeriodicSync = async () => {
+      if (document.visibilityState === 'hidden') return;
+      try {
+        const nowIso = new Date().toISOString();
+        localStorage.setItem('emeb_last_sed_auto_sync_at', nowIso);
+        if (isMounted) setLastSyncTime(nowIso);
+
+        if (savedSheet.spreadsheetId && classes.length > 0) {
+          const res = await readClassesFromGoogleSheet(savedSheet.spreadsheetId, classes);
+          if (isMounted && onUpdateClasses && res.updatedClasses.length > 0) {
+            onUpdateClasses(res.updatedClasses);
+          }
+        }
+      } catch (err) {
+        console.warn('[Google Sheets Sync] Falha na sincronização periódica da tela 200 dias:', err);
+      }
+    };
+
+    const intervalId = window.setInterval(performPeriodicSync, intervalMs);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [syncFrequency, savedSheet.spreadsheetId, classes, onUpdateClasses]);
   useEffect(() => {
     let isMounted = true;
     setIsLoadingServer(true);
@@ -509,9 +588,186 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
         {!isAdmin && (
           <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900 text-xs flex items-center gap-2">
             <span className="material-symbols-outlined text-amber-700 text-base shrink-0">lock</span>
-            <span>Acesso Somente Leitura: apenas administradores podem salvar ou alterar o calendário.</span>
+            <span>Acesso Somente Leitura: apenas administradores podem salvar ou alterar o calendário e a sincronização.</span>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* SELETOR VISUAL: FREQUÊNCIA DE SINCRONIZAÇÃO AUTOMÁTICA (30, 60, 120 MIN)  */}
+        {/* ========================================================================= */}
+        <section className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm font-bold text-slate-900">
+                    Sincronização Automática com o Google Sheets
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-900 border border-emerald-200">
+                    Ativo: a cada {syncFrequency} min
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Ajuste o intervalo de atualização em segundo plano para calibrar dados recentes, cota da API Google e desempenho.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              {/* Dropdown Selector */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 rounded-xl px-2.5 py-1">
+                <label htmlFor="sheets-sync-select" className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">
+                  Intervalo:
+                </label>
+                <select
+                  id="sheets-sync-select"
+                  value={syncFrequency}
+                  onChange={(e) => handleSelectFrequency(Number(e.target.value) as GoogleSheetsSyncFrequency)}
+                  disabled={!isAdmin}
+                  className="bg-transparent text-xs font-bold text-slate-900 focus:outline-none cursor-pointer disabled:opacity-50"
+                  aria-label="Selecionar frequência de sincronização automática com o Google Sheets"
+                >
+                  <option value={30}>30 minutos (Alta Frequência)</option>
+                  <option value={60}>60 minutos (Recomendado SME)</option>
+                  <option value={120}>120 minutos (Econômico)</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleManualSyncTrigger}
+                disabled={isSyncingNow}
+                className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200/90 cursor-pointer disabled:opacity-50"
+                title="Forçar sincronização com a Planilha Oficial agora"
+              >
+                <span className={`material-symbols-outlined text-[15px] ${isSyncingNow ? 'animate-spin' : ''}`}>
+                  sync
+                </span>
+                <span>{isSyncingNow ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Seletor de Botões de Rádio com Cards Visuais: 30 min, 60 min, 120 min */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" role="radiogroup" aria-label="Intervalo de Sincronização Automática com o Google Sheets">
+            {/* Opção 30 Minutos */}
+            <label
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-2 select-none ${
+                syncFrequency === 30
+                  ? 'bg-emerald-50/70 border-emerald-600 ring-2 ring-emerald-600/20 shadow-xs'
+                  : 'bg-slate-50/60 border-slate-200/90 hover:bg-slate-100/70 hover:border-slate-300'
+              } ${!isAdmin ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="syncIntervalRadio"
+                    value={30}
+                    checked={syncFrequency === 30}
+                    onChange={() => handleSelectFrequency(30)}
+                    disabled={!isAdmin}
+                    className="w-4 h-4 accent-emerald-600 cursor-pointer"
+                  />
+                  <span className="font-bold text-slate-900 text-sm font-mono tabular-nums">30 Minutos</span>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-900">
+                  Alta Frequência
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-snug">
+                Ideal para períodos de fechamento bimestral e lançamento ativo de faltas pelos professores.
+              </p>
+              <div className="text-[10px] text-slate-500 font-medium pt-1.5 border-t border-slate-200/50 flex items-center justify-between">
+                <span>Consumo da API: Maior</span>
+                {syncFrequency === 30 && (
+                  <span className="text-emerald-700 font-bold flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-[13px]">check_circle</span> Ativo
+                  </span>
+                )}
+              </div>
+            </label>
+
+            {/* Opção 60 Minutos (Recomendado) */}
+            <label
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-2 select-none ${
+                syncFrequency === 60
+                  ? 'bg-emerald-50/70 border-emerald-600 ring-2 ring-emerald-600/20 shadow-xs'
+                  : 'bg-slate-50/60 border-slate-200/90 hover:bg-slate-100/70 hover:border-slate-300'
+              } ${!isAdmin ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="syncIntervalRadio"
+                    value={60}
+                    checked={syncFrequency === 60}
+                    onChange={() => handleSelectFrequency(60)}
+                    disabled={!isAdmin}
+                    className="w-4 h-4 accent-emerald-600 cursor-pointer"
+                  />
+                  <span className="font-bold text-slate-900 text-sm font-mono tabular-nums">60 Minutos</span>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-900">
+                  Recomendado
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-snug">
+                Padrão institucional balanceado: dados sempre recentes com estabilidade total.
+              </p>
+              <div className="text-[10px] text-slate-500 font-medium pt-1.5 border-t border-slate-200/50 flex items-center justify-between">
+                <span>Consumo da API: Equilibrado</span>
+                {syncFrequency === 60 && (
+                  <span className="text-emerald-700 font-bold flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-[13px]">check_circle</span> Ativo
+                  </span>
+                )}
+              </div>
+            </label>
+
+            {/* Opção 120 Minutos */}
+            <label
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-2 select-none ${
+                syncFrequency === 120
+                  ? 'bg-emerald-50/70 border-emerald-600 ring-2 ring-emerald-600/20 shadow-xs'
+                  : 'bg-slate-50/60 border-slate-200/90 hover:bg-slate-100/70 hover:border-slate-300'
+              } ${!isAdmin ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="syncIntervalRadio"
+                    value={120}
+                    checked={syncFrequency === 120}
+                    onChange={() => handleSelectFrequency(120)}
+                    disabled={!isAdmin}
+                    className="w-4 h-4 accent-emerald-600 cursor-pointer"
+                  />
+                  <span className="font-bold text-slate-900 text-sm font-mono tabular-nums">120 Minutos</span>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-900">
+                  Econômico
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-snug">
+                Máxima preservação de cota e performance, ideal para períodos letivos regulares.
+              </p>
+              <div className="text-[10px] text-slate-500 font-medium pt-1.5 border-t border-slate-200/50 flex items-center justify-between">
+                <span>Consumo da API: Mínimo</span>
+                {syncFrequency === 120 && (
+                  <span className="text-emerald-700 font-bold flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-[13px]">check_circle</span> Ativo
+                  </span>
+                )}
+              </div>
+            </label>
+          </div>
+        </section>
 
         {/* --------------------------------------------------------------------- */}
         {/* ABA 1: EDITOR DE 200 DIAS                                             */}
@@ -1013,7 +1269,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       {/* ========================================================================= */}
       {/* 3. RODAPÉ DE AÇÃO FIXO (STICKY FOOTER SHRINK-0) — SEMPRE VISÍVEL          */}
       {/* ========================================================================= */}
-      <footer className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+      <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
         {/* Zona Esquerda: Indicadores e Status */}
         <div className="flex items-center gap-3">
           <div className="flex items-baseline gap-1">
@@ -1051,7 +1307,11 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
           </span>
 
           <span className="text-[11px] text-slate-500 hidden md:inline">
-            · Sincronização automática com as 40 turmas da escola
+            · 40 turmas vinculadas
+          </span>
+
+          <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 hidden lg:inline border border-slate-200/80">
+            Sheets: a cada {syncFrequency}m
           </span>
         </div>
 
