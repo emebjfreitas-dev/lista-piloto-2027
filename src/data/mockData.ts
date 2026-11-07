@@ -1,5 +1,6 @@
 import { ClassGroup, Student, GoogleSheetConfig, SheetRowData, SchoolDay, AuthorizedUser } from '../types';
 import { getStudentAttendanceMetrics, getClassAttendanceMetrics, getStudentConsecutiveAlertInfo } from '../utils/attendanceRules';
+import { OFFICIAL_SED_STUDENTS_MAP } from './officialSedStudents';
 
 export const CITY_NAME = 'Prefeitura do Município de Jundiaí';
 export const SECRETARY_NAME = 'Secretaria de Educação do Município de Jundiaí';
@@ -1299,13 +1300,16 @@ export const OFFICIAL_2027_CLASSES_CONFIG = OFFICIAL_SCHOOL_MATRIX_2027.map((row
 }));
 
 export const INITIAL_CLASSES: ClassGroup[] = OFFICIAL_SCHOOL_MATRIX_2027.map((cfg) => {
-  const students = generateSedStudentsForClass(
-    cfg.id,
-    cfg.name,
-    cfg.grade,
-    cfg.shift,
-    cfg.sedExpectedStudents
-  );
+  const realSedStudents = OFFICIAL_SED_STUDENTS_MAP[cfg.id];
+  const students = (realSedStudents && realSedStudents.length > 0)
+    ? realSedStudents
+    : generateSedStudentsForClass(
+        cfg.id,
+        cfg.name,
+        cfg.grade,
+        cfg.shift,
+        cfg.sedExpectedStudents
+      );
   const tempClass: ClassGroup = {
     id: cfg.id,
     name: cfg.name,

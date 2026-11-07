@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
+import { motion } from 'motion/react';
 import { ClassGroup, Student, UserRole } from '../types';
 import { SCHOOL_NAME } from '../data/mockData';
 import {
@@ -788,8 +789,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 {filteredRows.map((row, idx) => {
                   const { student, cls, rep, hasAtestado, isBelowTarget } = row;
                   return (
-                    <tr
+                    <motion.tr
                       key={`${cls.id}-${student.id}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.16, delay: Math.min(idx * 0.015, 0.3) }}
                       onClick={() =>
                         onOpenStudentGrid(
                           student,
@@ -936,7 +940,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                           </div>
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
                 })}
               </tbody>

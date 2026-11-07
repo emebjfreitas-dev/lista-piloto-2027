@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
 import { ClassGroup, Student, UserRole, SchoolNotice } from '../types';
 import {
   CLASS_EXPORT_COLUMNS,
@@ -1109,7 +1110,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       {/* MODO 1: CARDS EM ORDEM NUMÉRICA DA TURMA (Padrão iOS Apple) */}
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 items-stretch">
-          {filteredStudents.map((student) => {
+          {filteredStudents.map((student, idx) => {
             const m = getStudentAttendanceMetrics(
               student,
               diasLetivosMes,
@@ -1174,8 +1175,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               expandedStudentId === '__ALL__' || expandedStudentId === student.id;
 
             return (
-              <div
+              <motion.div
                 key={student.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.18, delay: Math.min(idx * 0.02, 0.35) }}
                 onClick={() => {
                   setExpandedStudentId((prev) => (prev === student.id ? null : student.id));
                 }}
@@ -1475,7 +1479,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     </button>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -1484,7 +1488,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       {/* MODO 2: LISTA COMPACTA ESTILO iOS CONTACTS (Ordem Numérica + Expansão Fluida Inline) */}
       {viewMode === 'compact' && (
         <div className="bg-white rounded-3xl border border-black/[0.06] divide-y divide-black/[0.05] overflow-hidden shadow-2xs">
-          {filteredStudents.map((student) => {
+          {filteredStudents.map((student, idx) => {
             const m = getStudentAttendanceMetrics(
               student,
               diasLetivosMes,
@@ -1510,8 +1514,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               expandedStudentId === '__ALL__' || expandedStudentId === student.id;
 
             return (
-              <div
+              <motion.div
                 key={student.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.16, delay: Math.min(idx * 0.015, 0.25) }}
                 onClick={() =>
                   setExpandedStudentId((prev) => (prev === student.id ? null : student.id))
                 }
@@ -1666,7 +1673,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     guardian2Info,
                     studentGenderInfo
                   )}
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -1715,7 +1722,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-black/[0.05]">
-              {filteredStudents.map((student) => {
+              {filteredStudents.map((student, idx) => {
                 const m = getStudentAttendanceMetrics(
                   student,
                   diasLetivosMes,
@@ -1765,7 +1772,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
                 return (
                   <React.Fragment key={student.id}>
-                    <tr
+                    <motion.tr
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.15, delay: Math.min(idx * 0.015, 0.25) }}
                       onClick={() =>
                         setExpandedStudentId((prev) => (prev === student.id ? null : student.id))
                       }
@@ -1921,7 +1931,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                             : studentGenderInfo.ativoTerm.toUpperCase()}
                         </span>
                       </td>
-                    </tr>
+                    </motion.tr>
                     {isExpanded && (
                       <tr className="bg-[#f8faf9] border-b border-black/[0.08] animate-gentle-fade">
                         <td colSpan={10} className="p-3 sm:p-4">

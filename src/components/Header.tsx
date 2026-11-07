@@ -384,20 +384,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <span>Professores &amp; Acessos</span>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => navigateTo('planilha')}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 transition-colors cursor-pointer ${
-                          currentScreen === 'planilha'
-                            ? 'bg-slate-100 text-slate-900 font-medium'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-slate-500">
-                          table_chart
-                        </span>
-                        <span>Planilha Google &amp; Fotos</span>
-                      </button>
+
                     </div>
                   )}
                 </div>
@@ -677,21 +664,7 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
                     )}
 
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowProfileMenu(false);
-                          onNavigatePlanilha();
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-xl text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[17px] text-slate-500">
-                          table_chart
-                        </span>
-                        <span>Planilha Google &amp; Drive</span>
-                      </button>
-                    )}
+
 
                     <div className="my-1.5 h-px bg-slate-100" />
 
@@ -942,18 +915,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>Professores &amp; Acessos</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('planilha')}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2.5 transition-colors ${
-                      currentScreen === 'planilha'
-                        ? 'bg-blue-50 text-blue-900 font-semibold'
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">table_chart</span>
-                    <span>Planilha Google &amp; Fotos</span>
-                  </button>
+
                 </div>
               )}
             {/* Proporção da Tela no Celular / Tablet */}

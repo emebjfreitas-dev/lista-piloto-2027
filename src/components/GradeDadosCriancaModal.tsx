@@ -1345,11 +1345,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <span>Chamada Nº {draft.number} · RA {draft.ra || '—'} · {className}</span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="h-8 px-3 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs cursor-pointer transition-colors"
+              className="h-10 sm:h-11 px-4 text-xs sm:text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
             >
               Fechar
             </button>
@@ -1357,9 +1357,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <button
                 type="button"
                 onClick={handleSaveAll}
-                className="h-8 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                className="h-10 sm:h-11 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors shadow-xs whitespace-nowrap"
               >
-                <span className="material-symbols-outlined text-[15px] text-emerald-400">save</span>
+                <span className="material-symbols-outlined text-[17px] text-emerald-400">save</span>
                 <span>Salvar Alterações</span>
               </button>
             )}

@@ -484,30 +484,22 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
         {/* Footer Sticky */}
         <div className="p-4 sm:p-5 sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10">
           {savedFeedback ? (
-            <span className="text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-lg font-medium text-xs flex items-center gap-1.5">
+            <span className="text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[18px] text-emerald-700">check_circle</span>
-              <span>Configuração sincronizada com sucesso no Firebase e Planilha!</span>
+              <span>Configuração do calendário gravada com sucesso!</span>
             </span>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                onNavigateToSheet();
-              }}
-              className="px-3.5 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
-            >
-              <span className="material-symbols-outlined text-[17px]">cloud_sync</span>
-              <span>Sincronização Google Sheets</span>
-            </button>
+            <span className="text-xs text-slate-500 font-medium">
+              40 turmas ativas · Meta oficial: 200 dias
+            </span>
           )}
 
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2.5 ml-auto">
             <button
               type="button"
               onClick={onClose}
               disabled={isSavingFirebase}
-              className="px-4 h-9 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-medium text-xs cursor-pointer transition-colors"
+              className="px-4 h-10 sm:h-11 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-semibold text-xs sm:text-sm cursor-pointer transition-colors"
             >
               Fechar
             </button>
@@ -515,12 +507,12 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               type="button"
               onClick={handleSaveAll}
               disabled={isSavingFirebase}
-              className="px-4 h-9 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+              className="px-5 h-10 sm:h-11 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-colors shadow-xs whitespace-nowrap"
             >
               <span className={`material-symbols-outlined text-[17px] ${isSavingFirebase ? 'animate-spin' : ''}`}>
                 {isSavingFirebase ? 'sync' : 'save'}
               </span>
-              <span>{isSavingFirebase ? 'Salvando...' : 'Salvar no Firebase'}</span>
+              <span>{isSavingFirebase ? 'Salvando...' : 'Salvar Calendário'}</span>
             </button>
           </div>
         </div>

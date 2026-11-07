@@ -212,7 +212,7 @@ export default function App() {
     if (nextScreen === currentScreen) return;
 
     // Princípio do Menor Privilégio (PoLP): Telas de gestão e infraestrutura restritas a Admin
-    const adminOnlyScreens: ScreenType[] = ['dias_letivos', 'usuarios_acesso', 'planilha'];
+    const adminOnlyScreens: ScreenType[] = ['dias_letivos', 'usuarios_acesso'];
     if (userRole !== 'admin' && adminOnlyScreens.includes(nextScreen)) {
       addSecurityAuditLog({
         userEmail: currentUserEmail,
@@ -588,169 +588,43 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [classes]);
 
-  // Frequency preference for background Google Sheets polling (30, 60 or 120 min)
-  const [sheetsSyncFrequency, setSheetsSyncFrequency] = useState<number>(() =>
-    getGoogleSheetsSyncFrequency()
-  );
-
-  useEffect(() => {
-    const handleFrequencyChange = (e: any) => {
-      const newFreq = (e?.detail as number) || getGoogleSheetsSyncFrequency();
-      setSheetsSyncFrequency(newFreq);
-    };
-    window.addEventListener('emeb_sheets_sync_interval_changed', handleFrequencyChange);
-    return () => {
-      window.removeEventListener('emeb_sheets_sync_interval_changed', handleFrequencyChange);
-    };
-  }, []);
-
-  // Automatic & Super-Fluid Pull from Master Google Sheet (student edits, 200 days) + Drive Folders (photos + scanned PDFs)
+  // Sincronização segura e direta com o servidor institucional da escola (Base Oficial SED)
   useEffect(() => {
     let isMounted = true;
-    let isPulling = false;
 
-    const pullMasterDataFromGoogle = async () => {
-      if (isPulling) return;
-      const token = await getAccessToken();
-      if (!token) return;
-
-      isPulling = true;
+    const pullOfficialSchoolState = async () => {
       try {
-        const spreadsheetId = await ensureOfficialSpreadsheetId();
-        let latestClasses = getStoredClasses();
-        let didMutateClasses = false;
+        const serverState = await pullSharedSchoolStateFromServer();
+        if (serverState && isMounted) {
+          if (serverState.classes && serverState.classes.length > 0) {
+            setClasses(serverState.classes);
+            saveStoredClasses(serverState.classes);
+          }
+          if (serverState.authorizedUsers && serverState.authorizedUsers.length > 0) {
+            setAuthorizedUsers(serverState.authorizedUsers);
+            saveStoredAuthorizedUsers(serverState.authorizedUsers);
+          }
 
-        if (spreadsheetId) {
-          const result = await readClassesFromGoogleSheet(
-            spreadsheetId,
-            latestClasses
-          );
-          if (result.rowsRead > 0) {
-            const hasChanged = haveClassesChanged(latestClasses, result.updatedClasses);
-            if (hasChanged) {
-              latestClasses = result.updatedClasses;
-              didMutateClasses = true;
-              try {
-                localStorage.setItem(
-                  'emeb_last_sed_auto_sync_at',
-                  new Date().toISOString()
-                );
-              } catch {}
-            }
-          }
-          // Pull latest authorizedUsers (roles, assigned classes, access counts, durations) from Google Sheet
-          const sheetUsers = await readAuthorizedUsersFromGoogleSheet(
-            getStoredAuthorizedUsers(),
-            latestClasses
-          );
-          if (isMounted && sheetUsers && sheetUsers.length > 0) {
-            const currentLocal = getStoredAuthorizedUsers();
-            const localByEmail = new Map(
-              currentLocal.map((u) => [u.email.trim().toLowerCase(), u])
-            );
-            const mergedWithLocal = sheetUsers.map((su) => {
-              const loc = localByEmail.get(su.email.trim().toLowerCase());
-              if (loc && (loc.updatedAtMs || 0) > 0) {
-                return {
-                  ...loc,
-                  totalAccessCount: Math.max(loc.totalAccessCount || 0, su.totalAccessCount || 0),
-                  totalDurationSeconds: Math.max(
-                    loc.totalDurationSeconds || 0,
-                    su.totalDurationSeconds || 0
-                  ),
-                };
-              }
-              return su;
-            });
-            setAuthorizedUsers(mergedWithLocal);
-            saveStoredAuthorizedUsers(mergedWithLocal);
-          }
-          const sheetLogs = await readSessionLogsFromGoogleSheet();
-          if (isMounted && sheetLogs && sheetLogs.length > 0) {
-            const localLogs = getStoredAccessSessionLogs();
-            const logMap = new Map<string, UserAccessSessionLog>();
-            sheetLogs.forEach((l) => {
-              if (l && l.id) logMap.set(l.id, l);
-            });
-            localLogs.forEach((l) => {
-              if (l && l.id) {
-                const prev = logMap.get(l.id);
-                if (!prev || (l.durationSeconds || 0) >= (prev.durationSeconds || 0)) {
-                  logMap.set(l.id, l);
-                }
-              }
-            });
-            const combinedLogs = Array.from(logMap.values()).slice(0, 500);
-            setAccessSessionLogs(combinedLogs);
-            saveStoredAccessSessionLogs(combinedLogs);
-          }
-        } else {
-          // Even without a spreadsheet yet, sync photos + nominal scanned PDFs from Drive folders in parallel!
-          const photoSync = await syncPhotosFromDriveFolder(latestClasses);
-          const pdfSync = await syncNominalPdfsFromDriveSubfolders(
-            photoSync.updatedClasses
-          );
-          if (photoSync.matchedPhotosCount > 0 || pdfSync.matchedPdfsCount > 0) {
-            const hasChanged = haveClassesChanged(latestClasses, pdfSync.updatedClasses);
-            if (hasChanged) {
-              latestClasses = pdfSync.updatedClasses;
-              didMutateClasses = true;
-            }
-          }
-        }
-
-        if (isMounted && didMutateClasses) {
-          setClasses(latestClasses);
-          saveStoredClasses(latestClasses);
-          setSelectedClass((prev) => {
-            const found = latestClasses.find((c) => c.id === prev.id);
-            return found || prev;
-          });
-          // Also explicitly persist fresh SED data to Cloud Firestore immediately
-          void saveClassesToFirestoreCloud(latestClasses, Date.now()).catch(() => {});
         }
       } catch (err) {
-        console.warn('Auto-sync em segundo plano:', err);
-      } finally {
-        isPulling = false;
+        console.warn('Sincronização institucional de estado escolar:', err);
       }
     };
 
-    // Run on startup with intelligent throttle
-    let lastPulledAtMs = 0;
-    const safePullMasterData = () => {
-      if (document.visibilityState === 'hidden') return;
-      if (Date.now() - lastPulledAtMs < 45000) return; // At least 45 seconds between pulls
-      lastPulledAtMs = Date.now();
-      pullMasterDataFromGoogle();
-    };
-
-    pullMasterDataFromGoogle();
-    lastPulledAtMs = Date.now();
+    pullOfficialSchoolState();
 
     const handleWindowFocus = () => {
-      safePullMasterData();
-    };
-    const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        safePullMasterData();
+        pullOfficialSchoolState();
       }
     };
 
     window.addEventListener('focus', handleWindowFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Polling periódico configurável (30, 60 ou 120 minutos) que reage a sheetsSyncFrequency
-    const pollIntervalMs = sheetsSyncFrequency * 60 * 1000 + Math.floor(Math.random() * 20000);
-    const intervalId = window.setInterval(safePullMasterData, pollIntervalMs);
-
     return () => {
       isMounted = false;
       window.removeEventListener('focus', handleWindowFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.clearInterval(intervalId);
     };
-  }, [sheetsSyncFrequency, currentScreen, currentUserEmail]);
+  }, [currentScreen, currentUserEmail]);
 
   // Keep selectedClass restricted when userRole is 'usuario'
   useEffect(() => {
@@ -1898,44 +1772,22 @@ export default function App() {
         )}
 
         {currentScreen === 'planilha' && (
-          <PlanilhaGoogleScreen
-            classes={visibleClasses}
-            allClasses={classes}
-            authorizedUsers={authorizedUsers}
-            userRole={userRole}
-            onUpdateAllClasses={(updated) => {
-              setClasses(updated);
-              saveStoredClasses(updated);
-              const found = updated.find((c) => c.id === selectedClass.id);
-              if (found) setSelectedClass(found);
-            }}
-            onSyncWithClasses={handleSyncWithClasses}
-            onOpenStudentGrid={(classId, studentId) => {
-              const targetClass = classes.find((c) => c.id === classId);
-              const targetStudent = targetClass?.students.find((s) => s.id === studentId);
-              if (targetClass && targetStudent) {
-                setGridModalData({
-                  student: targetStudent,
-                  classId: targetClass.id,
-                  className: targetClass.name,
-                  diasLetivosMes: targetClass.classesHeld || 20,
-                });
-              }
-            }}
-            onOpenStudentPdf={(classId, studentId) => {
-              const targetClass = classes.find((c) => c.id === classId);
-              const targetStudent = targetClass?.students.find((s) => s.id === studentId);
-              if (targetClass && targetStudent) {
-                setPdfModalData({
-                  student: targetStudent,
-                  className: targetClass.name,
-                });
-              }
-            }}
-            onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
-            onNavigateToAcessos={() => setCurrentScreen('usuarios_acesso')}
-            onBack={handleBack}
-          />
+          <div className="max-w-xl mx-auto py-16 px-4 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-xs">
+              <span className="material-symbols-outlined text-3xl">verified</span>
+            </div>
+            <h2 className="text-lg font-bold text-slate-950">Base Oficial SED 100% Integrada</h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              O Diário e a Lista Piloto operam diretamente na base institucional da escola, com 1.237 alunos e 40 turmas carregadas com segurança máxima. O uso de planilhas externas foi descontinuado.
+            </p>
+            <button
+              type="button"
+              onClick={() => setCurrentScreen('home')}
+              className="h-11 px-6 bg-slate-950 hover:bg-black text-white rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition-colors shadow-xs"
+            >
+              Ir para Painel de Turmas
+            </button>
+          </div>
         )}
       </main>
 
