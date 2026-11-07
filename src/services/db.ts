@@ -50,7 +50,7 @@ import {
 } from '../utils/genderDictionary';
 import { isBackendApiAvailable } from './apiEnvironment';
 
-const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v7';
+const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v8';
 const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v4';
 const ATTENDANCE_WINDOW_STORAGE_KEY = 'emeb_candelario_attendance_window_2027_v1';
 const ACCESS_LOGS_STORAGE_KEY = 'emeb_candelario_access_session_logs_2027_v1';
@@ -1110,7 +1110,8 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
     const loaded = loadedMap.get(off.id.toLowerCase()) || (off.turmaAbrev ? loadedMap.get(off.turmaAbrev.toLowerCase()) : undefined);
     if (!loaded) return off;
 
-    const baseStudents = loaded.students && loaded.students.length > 0 ? loaded.students : off.students;
+    const hasSedStudents = loaded.students && loaded.students.some((s: any) => s.id && s.id.startsWith('sed-'));
+    const baseStudents = (hasSedStudents && loaded.students.length > 0) ? loaded.students : off.students;
     const seenStudentKeysInClass = new Set<string>();
     const deduplicatedBaseStudents: Student[] = [];
     baseStudents.forEach((st) => {
@@ -1187,7 +1188,7 @@ export const getStoredClasses = (): ClassGroup[] => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.name?.startsWith('GRUPO')) {
+      if (Array.isArray(parsed) && parsed.length === 40) {
         const enriched = enrichClassesWithOfficialMatrix(parsed);
         memoryCachedClasses = enriched;
         return enriched;
