@@ -328,12 +328,13 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
           )}
         </div>
 
-        <div className="pt-3 border-t-2 border-[#edeeec] mt-2 flex justify-end">
+        <div className="pt-3 border-t border-slate-100 mt-2 flex justify-end shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="w-full sm:w-auto min-w-[200px] min-h-[48px] px-6 bg-[#003440] hover:bg-[#1e4b58] text-white font-semibold text-base rounded-xl flex items-center justify-center transition-colors cursor-pointer"
+            className="w-full sm:w-auto min-w-[160px] h-10 px-5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center justify-center transition-colors cursor-pointer shadow-xs"
           >
-            Fechar Visualização da Turma
+            Fechar Relação
           </button>
         </div>
       </div>

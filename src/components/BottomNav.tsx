@@ -106,10 +106,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       icon: HeartHandshake,
     },
     {
-      id: 'planilha',
-      label: 'Planilha & Google Drive',
-      description: 'Sincronização em nuvem e exportação de dados',
-      icon: Cloud,
+      id: 'dias_letivos',
+      label: '200 Dias Letivos',
+      description: 'Calendário escolar oficial e feriados municipais',
+      icon: CalendarCheck,
     },
     {
       id: 'usuarios_acesso',
@@ -128,7 +128,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   const isMoreActive =
     isAdmin &&
-    ['mapa_estudantes', 'resumo', 'bolsa_familia', 'planilha', 'usuarios_acesso'].includes(
+    ['mapa_estudantes', 'resumo', 'bolsa_familia', 'dias_letivos', 'usuarios_acesso'].includes(
       currentScreen
     );
 

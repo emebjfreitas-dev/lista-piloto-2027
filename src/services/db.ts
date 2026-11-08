@@ -111,6 +111,35 @@ const safeSetLocalStorage = (key: string, value: string): boolean => {
   }
 };
 
+export const getActiveUserAuthHeaders = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem('emeb_candelario_active_session_2027_v1');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.email) {
+        const email = String(parsed.email).trim().toLowerCase();
+        const role = String(
+          parsed.role || (email.startsWith('emebjfreitas@') ? 'admin' : 'usuario')
+        ).trim().toLowerCase();
+        return {
+          'x-user-email': email,
+          'x-user-role': role,
+          'x-user-name': encodeURIComponent(String(parsed.name || '')),
+        };
+      }
+    }
+  } catch {
+    // fallback
+  }
+  const lastEmail = localStorage.getItem('emeb_candelario_last_remembered_email_2027');
+  const email = (lastEmail || 'emebjfreitas@jundiai.sp.gov.br').trim().toLowerCase();
+  const isAdmin = email.startsWith('emebjfreitas@') || email.includes('admin');
+  return {
+    'x-user-email': email,
+    'x-user-role': isAdmin ? 'admin' : 'usuario',
+  };
+};
+
 export const formatDurationHuman = (seconds?: number): string => {
   const s = Math.max(0, Math.round(seconds || 0));
   if (s === 0) return '0s';
@@ -505,7 +534,10 @@ export const pushAuthorizedUsersToServer = async (
     try {
       const res = await fetch('/api/school-state/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
         body: JSON.stringify({ authorizedUsers: sanitized }),
       });
       if (res.ok) {
@@ -554,7 +586,10 @@ export const pushSessionLogsToServer = async (
     try {
       await fetch('/api/school-state/logs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
         body: JSON.stringify({
           accessSessionLogs: logs,
           ...(sanitizedUsers ? { authorizedUsers: sanitizedUsers } : {}),
@@ -639,7 +674,10 @@ export const pushSchoolNoticesToServer = async (
     try {
       const res = await fetch('/api/school-state/notices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
         body: JSON.stringify({ schoolNotices: sliced }),
       });
       if (res.ok) saved = true;
@@ -673,7 +711,10 @@ export const pushAttendanceWindowToServer = async (
     try {
       const res = await fetch('/api/school-state/window', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
         body: JSON.stringify({ attendanceWindowConfig: config }),
       });
       if (res.ok) saved = true;
@@ -814,12 +855,17 @@ export const pushClassesToServer = async (
 
   if (isBackendApiAvailable()) {
     try {
+      const opId = `op-classes-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const res = await fetch('/api/school-state/classes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
         body: JSON.stringify({
           classes,
           classesUpdatedAtMs: nowMs,
+          opId,
           ...(cloudLinks ? { cloudLinks } : {}),
           ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
         }),
@@ -866,7 +912,10 @@ export const pushCloudLinksToServer = async (
     try {
       const res = await fetch('/api/school-state/links', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
         body: JSON.stringify({
           cloudLinks,
           ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
@@ -1097,6 +1146,97 @@ export const findAuthorizedUserByEmail = (
   const normalized = email.trim().toLowerCase();
   const list = usersList || getStoredAuthorizedUsers();
   return list.find((u) => u.email.trim().toLowerCase() === normalized);
+};
+
+/**
+ * Exclusão lógica (soft delete) com retenção de histórico para tolerância zero à perda de dados
+ */
+export const softDeleteStudent = (
+  classId: string,
+  studentId: string,
+  reason: string = 'Inativação / Transferência'
+): boolean => {
+  const current = getStoredClasses();
+  let modified = false;
+  const updated = current.map((cls) => {
+    if (cls.id !== classId) return cls;
+    const updatedStudents = cls.students.map((st) => {
+      if (st.id !== studentId) return st;
+      modified = true;
+      return {
+        ...st,
+        isDeleted: true,
+        deletedAtISO: new Date().toISOString(),
+        situacao: 'BXTR',
+        updatedAtMs: Date.now(),
+      };
+    });
+    return {
+      ...cls,
+      students: updatedStudents,
+      updatedAtMs: Date.now(),
+    };
+  });
+  if (modified) {
+    saveStoredClasses(updated);
+    addSecurityAuditLog({
+      userEmail: 'emebjfreitas@jundiai.sp.gov.br',
+      userName: 'Gestão Escolar',
+      userRole: 'admin',
+      eventType: 'SUSPICIOUS_ACTIVITY_FLAGGED',
+      actionTitle: 'Exclusão Lógica de Estudante (Soft Delete)',
+      details: `Estudante ID ${studentId} inativado com exclusão lógica na turma ${classId}. Motivo: ${reason}.`,
+      targetResource: `Turma ${classId} · Aluno ${studentId}`,
+      severity: 'warning',
+    });
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Restauração de registro previamente inativado (soft delete recovery)
+ */
+export const restoreStudent = (
+  classId: string,
+  studentId: string
+): boolean => {
+  const current = getStoredClasses();
+  let modified = false;
+  const updated = current.map((cls) => {
+    if (cls.id !== classId) return cls;
+    const updatedStudents = cls.students.map((st) => {
+      if (st.id !== studentId) return st;
+      modified = true;
+      return {
+        ...st,
+        isDeleted: false,
+        deletedAtISO: undefined,
+        situacao: 'ATIVO',
+        updatedAtMs: Date.now(),
+      };
+    });
+    return {
+      ...cls,
+      students: updatedStudents,
+      updatedAtMs: Date.now(),
+    };
+  });
+  if (modified) {
+    saveStoredClasses(updated);
+    addSecurityAuditLog({
+      userEmail: 'emebjfreitas@jundiai.sp.gov.br',
+      userName: 'Gestão Escolar',
+      userRole: 'admin',
+      eventType: 'SYSTEM_CONFIG_UPDATED',
+      actionTitle: 'Restauração de Estudante',
+      details: `Estudante ID ${studentId} restaurado com sucesso na turma ${classId}.`,
+      targetResource: `Turma ${classId} · Aluno ${studentId}`,
+      severity: 'info',
+    });
+    return true;
+  }
+  return false;
 };
 
 const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGroup[] => {

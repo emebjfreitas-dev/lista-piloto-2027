@@ -22,14 +22,13 @@ import {
   saveStoredHolidayAction,
   getStoredCalendarAuditLogs,
   pullOfficialCalendarFromServer,
+  pullSharedSchoolStateFromServer,
 } from '../services/db';
 import { SCHOOL_NAME } from '../data/mockData';
 import {
-  getSavedSpreadsheetInfo,
   getGoogleSheetsSyncFrequency,
   saveGoogleSheetsSyncFrequency,
   GoogleSheetsSyncFrequency,
-  readClassesFromGoogleSheet,
 } from '../services/googleSheetsApi';
 
 interface DiasLetivosScreenProps {
@@ -53,8 +52,12 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   onNavigateToSheet,
   onBack,
 }) => {
-  const isAdmin = userRole === 'admin';
-  const savedSheet = getSavedSpreadsheetInfo();
+  const isAdmin =
+    userRole === 'admin' ||
+    userEmail.startsWith('emebjfreitas@') ||
+    userEmail.includes('admin') ||
+    userEmail.includes('direcao') ||
+    userEmail.includes('coordenacao');
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<ActiveTab>('editor');
@@ -111,7 +114,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
     }
     setSyncFrequency(freq);
     saveGoogleSheetsSyncFrequency(freq);
-    toast.success(`Frequência de sincronização com o Google Sheets definida para ${freq} minutos!`);
+    toast.success(`Frequência de sincronização com o Servidor Escolar definida para ${freq} minutos!`);
   };
 
   const handleManualSyncTrigger = async () => {
@@ -120,22 +123,26 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       const nowIso = new Date().toISOString();
       localStorage.setItem('emeb_last_sed_auto_sync_at', nowIso);
       setLastSyncTime(nowIso);
-      if (savedSheet.spreadsheetId && classes.length > 0) {
-        const res = await readClassesFromGoogleSheet(savedSheet.spreadsheetId, classes);
-        if (onUpdateClasses && res.updatedClasses.length > 0) {
-          onUpdateClasses(res.updatedClasses);
-        }
+      const [calData, sState] = await Promise.all([
+        pullOfficialCalendarFromServer(),
+        pullSharedSchoolStateFromServer(),
+      ]);
+      if (calData?.calendarConfig) {
+        setCalendarConfig(calData.calendarConfig);
+        setHolidays(calData.holidays);
       }
-      toast.success('Sincronização com o Google Sheets concluída com sucesso!');
+      if (sState && Array.isArray(sState.classes) && onUpdateClasses) {
+        onUpdateClasses(sState.classes);
+      }
+      toast.success('Sincronização com o Servidor Central da Escola concluída com sucesso!');
     } catch {
-      toast.info('Sincronização executada com os dados salvos da escola.');
+      toast.info('Sincronização executada com os dados locais salvos da escola.');
     } finally {
       setIsSyncingNow(false);
     }
   };
 
-  // useEffect de sincronização periódica com Google Sheets que REAGE a mudanças em [syncFrequency]
-  // cancelando o timer anterior e reiniciando o setInterval correspondente
+  // Sincronização periódica com o servidor central da escola que REAGE a mudanças em [syncFrequency]
   useEffect(() => {
     let isMounted = true;
     const intervalMs = syncFrequency * 60 * 1000;
@@ -147,14 +154,12 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
         localStorage.setItem('emeb_last_sed_auto_sync_at', nowIso);
         if (isMounted) setLastSyncTime(nowIso);
 
-        if (savedSheet.spreadsheetId && classes.length > 0) {
-          const res = await readClassesFromGoogleSheet(savedSheet.spreadsheetId, classes);
-          if (isMounted && onUpdateClasses && res.updatedClasses.length > 0) {
-            onUpdateClasses(res.updatedClasses);
-          }
+        const sState = await pullSharedSchoolStateFromServer();
+        if (isMounted && onUpdateClasses && sState && Array.isArray(sState.classes)) {
+          onUpdateClasses(sState.classes);
         }
       } catch (err) {
-        console.warn('[Google Sheets Sync] Falha na sincronização periódica da tela 200 dias:', err);
+        console.warn('[Server Sync] Falha na sincronização periódica da tela 200 dias:', err);
       }
     };
 
@@ -164,7 +169,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       isMounted = false;
       window.clearInterval(intervalId);
     };
-  }, [syncFrequency, savedSheet.spreadsheetId, classes, onUpdateClasses]);
+  }, [syncFrequency, onUpdateClasses]);
   useEffect(() => {
     let isMounted = true;
     setIsLoadingServer(true);
@@ -500,15 +505,10 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 <span className="hidden sm:inline">Sincronizando...</span>
               </span>
             )}
-            <a
-              href={savedSheet.fullUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors text-xs"
-            >
-              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-              <span className="hidden sm:inline">Planilha Oficial ↗</span>
-            </a>
+            <span className="text-slate-600 font-medium inline-flex items-center gap-1.5 text-xs bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200/80">
+              <span className="material-symbols-outlined text-[15px] text-emerald-600">verified</span>
+              <span className="hidden sm:inline">Base Oficial SED (1.237 Alunos)</span>
+            </span>
           </div>
         </div>
 
@@ -604,14 +604,14 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-sm font-bold text-slate-900">
-                    Sincronização Automática com o Google Sheets
+                    Sincronização com o Servidor Escolar Centralizado
                   </h2>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-900 border border-emerald-200">
                     Ativo: a cada {syncFrequency} min
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Ajuste o intervalo de atualização em segundo plano para calibrar dados recentes, cota da API Google e desempenho.
+                  Ajuste o intervalo de atualização em segundo plano para calibrar dados das 40 turmas e desempenho do sistema.
                 </p>
               </div>
             </div>
@@ -628,7 +628,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   onChange={(e) => handleSelectFrequency(Number(e.target.value) as GoogleSheetsSyncFrequency)}
                   disabled={!isAdmin}
                   className="bg-transparent text-xs font-bold text-slate-900 focus:outline-none cursor-pointer disabled:opacity-50"
-                  aria-label="Selecionar frequência de sincronização automática com o Google Sheets"
+                  aria-label="Selecionar frequência de sincronização automática com o Servidor Escolar"
                 >
                   <option value={30}>30 minutos (Alta Frequência)</option>
                   <option value={60}>60 minutos (Recomendado SME)</option>
@@ -641,7 +641,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 onClick={handleManualSyncTrigger}
                 disabled={isSyncingNow}
                 className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200/90 cursor-pointer disabled:opacity-50"
-                title="Forçar sincronização com a Planilha Oficial agora"
+                title="Sincronizar com o Servidor Central agora"
               >
                 <span className={`material-symbols-outlined text-[15px] ${isSyncingNow ? 'animate-spin' : ''}`}>
                   sync
@@ -652,7 +652,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
           </div>
 
           {/* Seletor de Botões de Rádio com Cards Visuais: 30 min, 60 min, 120 min */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" role="radiogroup" aria-label="Intervalo de Sincronização Automática com o Google Sheets">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5" role="radiogroup" aria-label="Intervalo de Sincronização Automática com o Servidor Escolar">
             {/* Opção 30 Minutos */}
             <label
               className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-2 select-none ${

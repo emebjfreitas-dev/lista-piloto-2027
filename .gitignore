@@ -9,3 +9,19 @@ coverage/
 shared_school_state*.json
 shared_school_state*.tmp
 bun.lock
+
+# Security & Secrets Protection (LGPD / GitHub Secret Scanning)
+*.pem
+*.key
+*.p12
+*.cer
+*.crt
+credentials*.json
+service-account*.json
+firebase-adminsdk*.json
+*token*.json
+*.secret
+.secrets/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

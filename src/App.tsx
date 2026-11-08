@@ -1341,9 +1341,11 @@ export default function App() {
 
       {/* Main Content Area: Responsive Proportions for Mobile, Tablet, Laptop & Full HD Desktop */}
       <main
-        className={`flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 ${
-          currentScreen === 'login' ? 'p-0 max-w-none' : 'pt-[68px] sm:pt-[76px] pb-24 lg:pb-12'
-        }`}
+        className={
+          currentScreen === 'login'
+            ? 'w-full min-h-screen p-0 m-0'
+            : 'flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 pt-[64px] sm:pt-[72px] pb-24 lg:pb-12'
+        }
       >
         {/* Banner de Aviso de Menor Privilégio e Segurança LGPD */}
         {securityBlockNotice && (

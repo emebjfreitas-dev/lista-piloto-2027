@@ -285,7 +285,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </section>
 
       {/* 2. O GRANDE PAINEL DE SELEÇÃO TÁTIL (CONTRASTE DE SUPERFÍCIES — SEM CONTORNOS) */}
-      <section className="bg-slate-200/70 rounded-3xl p-6 sm:p-8 space-y-5">
+      <section className="bg-slate-100/80 border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-950 flex items-center gap-2.5">
             <span className="w-3.5 h-3.5 rounded-full bg-slate-950" />
@@ -436,70 +436,37 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           </button>
 
-          {/* Opção 5: Planilha Google ou Resumo Mensal */}
-          {userRole === 'admin' ? (
-            <button
-              type="button"
-              onClick={() => onNavigateToScreen('planilha')}
-              className="w-full text-left bg-white hover:bg-slate-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
-            >
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="w-14 h-14 rounded-2xl bg-slate-950 text-white flex items-center justify-center shrink-0">
-                  <FileSpreadsheet className="w-7 h-7" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                    Gestão Oficial SED
-                  </span>
-                  <h3 className="text-lg font-bold text-slate-950 truncate">
-                    Planilha Google &amp; Fotos
-                  </h3>
-                  <p className="text-xs font-semibold text-slate-700 truncate mt-1">
-                    Conexão ao Drive oficial e fichas escaneadas
-                  </p>
-                </div>
+          {/* Opção 5: Resumo Mensal & Indicadores SED */}
+          <button
+            type="button"
+            onClick={() => onNavigateToScreen('resumo')}
+            className="w-full text-left bg-white hover:bg-slate-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
+          >
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-14 h-14 rounded-2xl bg-slate-950 text-white flex items-center justify-center shrink-0">
+                <BarChart3 className="w-7 h-7" />
               </div>
-              <div className="flex flex-col items-end shrink-0">
-                <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
-                  Google Drive
+              <div className="min-w-0">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                  Indicadores Gerais
                 </span>
-                <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
-                  Acessar <ArrowRight className="w-4 h-4" />
-                </span>
+                <h3 className="text-lg font-bold text-slate-950 truncate">
+                  Resumo Mensal MEC
+                </h3>
+                <p className="text-xs font-semibold text-slate-700 truncate mt-1">
+                  Percentuais consolidados das 40 turmas
+                </p>
               </div>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onNavigateToScreen('resumo')}
-              className="w-full text-left bg-white hover:bg-slate-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
-            >
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="w-14 h-14 rounded-2xl bg-slate-950 text-white flex items-center justify-center shrink-0">
-                  <BarChart3 className="w-7 h-7" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                    Indicadores Gerais
-                  </span>
-                  <h3 className="text-lg font-bold text-slate-950 truncate">
-                    Resumo Mensal MEC
-                  </h3>
-                  <p className="text-xs font-semibold text-slate-700 truncate mt-1">
-                    Percentuais consolidados da escola
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end shrink-0">
-                <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
-                  Relatório
-                </span>
-                <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
-                  Ver <ArrowRight className="w-4 h-4" />
-                </span>
-              </div>
-            </button>
-          )}
+            </div>
+            <div className="flex flex-col items-end shrink-0">
+              <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
+                Relatório
+              </span>
+              <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
+                Ver <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </button>
 
           {/* Opção 6: Quadro de Avisos e Recados da Escola */}
           <button

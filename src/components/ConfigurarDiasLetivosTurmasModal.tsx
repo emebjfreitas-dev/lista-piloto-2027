@@ -248,54 +248,29 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
           <section className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[18px] text-slate-500">
-                link
+                inventory_2
               </span>
-              <span>Links Institucionais Oficiais (Google Sheets &amp; Drive)</span>
+              <span>Exportação Oficial &amp; Armazenamento de Fotos (Drive)</span>
             </h3>
 
-            {/* Link 1: Planilha Google Sheets */}
-            <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-medium text-slate-700">
-                  Planilha Banco de Dados (Aba: <span className="font-mono">Dias_Letivos_SME_2027</span>)
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleCopyText('sheet', sheetUrlInput)}
-                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-medium text-xs border border-slate-200 cursor-pointer transition-colors"
-                  >
-                    {copiedKey === 'sheet' ? '✓ Copiado' : 'Copiar Link'}
-                  </button>
-                  <a
-                    href={sheetUrlInput}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1 transition-colors"
-                  >
-                    <span>Abrir Planilha ↗</span>
-                  </a>
-                </div>
+            {/* Exportação Excel (.xlsx) das 40 Turmas e 1.237 Alunos */}
+            <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-900">
+                  Backup Completo da Base Oficial SED Jundiaí
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Exporta todas as 40 turmas e 1.237 estudantes em planilha estruturada (.xlsx).
+                </p>
               </div>
-              <input
-                type="text"
-                value={sheetUrlInput}
-                onChange={(e) => setSheetUrlInput(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white text-slate-900 font-mono text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-slate-800"
-              />
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-slate-500">
-                <span>
-                  Backup/Exportação: baixe o arquivo <strong className="text-slate-700">.xlsx</strong> completo:
-                </span>
-                <button
-                  type="button"
-                  onClick={() => downloadSpreadsheetXLSX(draftClasses, OFFICIAL_OCTOBER_DAYS)}
-                  className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-medium text-xs border border-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[15px]">download</span>
-                  <span>Baixar Planilha Modelo (.xlsx)</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => downloadSpreadsheetXLSX(draftClasses, OFFICIAL_OCTOBER_DAYS)}
+                className="h-9 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[16px]">download</span>
+                <span>Exportar Planilha SED (.xlsx)</span>
+              </button>
             </div>
 
             {/* Link 2: Pasta de Fotos no Google Drive */}

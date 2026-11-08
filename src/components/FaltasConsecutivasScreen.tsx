@@ -641,7 +641,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               Faltas Consecutivas, Acúmulo &amp; Feedback da Família
             </h1>
             <p className="text-sm text-[#6e6e73]">
-              O(A) mesmo(a) estudante pode registrar inúmeras sequências de 3+ faltas seguidas ao longo do ano. Cada sequência cai na planilha da secretaria e pode ser clicada a qualquer momento para leitura completa do feedback da família.
+              O(A) mesmo(a) estudante pode registrar inúmeras sequências de 3+ faltas seguidas ao longo do ano. Cada sequência é salva na base oficial da Busca Ativa e pode ser consultada a qualquer momento com o feedback da família.
             </p>
           </div>
 

@@ -353,11 +353,11 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
 
               {/* Results list */}
               {filteredDrivePhotos.length === 0 ? (
-                <div className="p-5 text-center bg-[#f5f5f7]/70 rounded-2xl border border-black/[0.05] space-y-1">
-                  <p className="text-sm font-bold text-[#1d1d1f]">
+                <div className="p-5 text-center bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-900">
                     Nenhum arquivo de foto localizado com esse filtro.
                   </p>
-                  <p className="text-xs text-[#6e6e73]">
+                  <p className="text-xs text-slate-500 font-medium">
                     Você pode refinar o termo de busca ou enviar a foto do dispositivo.
                   </p>
                 </div>
@@ -373,22 +373,22 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                         onClick={() => handleSelectDrivePhoto(item)}
                         className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
                           isSelected
-                            ? 'bg-[#0071e3]/10 border-[#0071e3] ring-1 ring-[#0071e3]/30'
-                            : 'bg-white hover:bg-[#f5f5f7] border-black/[0.07]'
+                            ? 'bg-blue-50 border-blue-600 ring-1 ring-blue-600/30'
+                            : 'bg-white hover:bg-slate-50 border-slate-200'
                         }`}
                       >
                         <img
                           src={item.photoUrl}
                           alt={item.name}
                           referrerPolicy="no-referrer"
-                          className="w-10 h-10 rounded-lg object-cover bg-[#e8e8ed] shrink-0"
+                          className="w-10 h-10 rounded-lg object-cover bg-slate-100 shrink-0"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-[#1d1d1f] truncate">
+                          <p className="text-xs font-semibold text-slate-900 truncate">
                             {item.name}
                           </p>
-                          <p className="text-[11px] text-[#6e6e73] truncate">
-                            {item.subfolderName || 'Pasta Fotos Estudantes'} • ID:{' '}
+                          <p className="text-[11px] text-slate-500 font-mono tabular-nums truncate">
+                            {item.subfolderName || 'Pasta Fotos Estudantes'} · ID:{' '}
                             {item.id.slice(0, 7)}
                           </p>
                         </div>

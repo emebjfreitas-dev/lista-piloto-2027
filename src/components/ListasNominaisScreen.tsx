@@ -409,7 +409,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             </p>
           </div>
 
-          {/* Ações de Exportação Direta: .XLS ou Nova Google Sheet */}
+          {/* Ações de Exportação Direta: .XLS ou Imprimir/PDF */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
@@ -417,27 +417,16 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               className="min-h-[40px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-sm flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
             >
               <span className="material-symbols-outlined text-[18px]">download</span>
-              <span>Exportar .XLS</span>
+              <span>Exportar Excel (.xlsx)</span>
             </button>
 
             <button
               type="button"
-              onClick={handleExportNewGoogleSheet}
-              disabled={isExportingGoogleSheet}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#006644] hover:bg-[#005035] text-white font-semibold text-sm flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95 disabled:opacity-60"
+              onClick={() => window.print()}
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95 border border-slate-200"
             >
-              <span
-                className={`material-symbols-outlined text-[18px] ${
-                  isExportingGoogleSheet ? 'animate-spin' : ''
-                }`}
-              >
-                {isExportingGoogleSheet ? 'sync' : 'add_to_drive'}
-              </span>
-              <span>
-                {isExportingGoogleSheet
-                  ? 'Criando Google Sheet...'
-                  : 'Exportar Nova Google Sheet'}
-              </span>
+              <span className="material-symbols-outlined text-[18px]">print</span>
+              <span>Imprimir / PDF</span>
             </button>
           </div>
         </div>

@@ -347,7 +347,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                 <button
                   type="button"
                   onClick={() => setPdfSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">cancel</span>
                 </button>
@@ -355,7 +355,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             </div>
 
             {filteredPdfs.length === 0 ? (
-              <div className="p-4 text-center bg-white rounded-xl border border-black/[0.05] text-xs text-[#6e6e73]">
+              <div className="p-4 text-center bg-white rounded-xl border border-slate-200 text-xs text-slate-500 font-medium">
                 Nenhum PDF encontrado na lista com esse termo. Refine a busca ou clique em "Recarregar Drive".
               </div>
             ) : (
@@ -367,16 +367,16 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                       key={pdf.id}
                       className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
                         isCurrent
-                          ? 'bg-[#0071e3]/10 border-[#0071e3]'
-                          : 'bg-white hover:bg-[#f8fafc] border-black/[0.06]'
+                          ? 'bg-blue-50 border-blue-600'
+                          : 'bg-white hover:bg-slate-50 border-slate-200'
                       }`}
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-[#1d1d1f] truncate">
+                        <p className="text-xs font-semibold text-slate-900 truncate">
                           {pdf.name}
                         </p>
-                        <p className="text-[11px] text-[#6e6e73] truncate">
-                          Pasta: <strong>{pdf.subfolderName || 'Fichas Informativas'}</strong> • ID: {pdf.id.slice(0, 8)}...
+                        <p className="text-[11px] text-slate-500 font-mono tabular-nums truncate">
+                          Pasta: <strong className="font-semibold text-slate-700">{pdf.subfolderName || 'Fichas Informativas'}</strong> · ID: {pdf.id.slice(0, 8)}...
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -384,7 +384,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                           href={pdf.webViewLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2.5 py-1 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold"
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors"
                           title="Pré-visualizar PDF em nova guia"
                         >
                           Ver
@@ -392,7 +392,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                         <button
                           type="button"
                           onClick={() => handleConfirmManualPdf(pdf)}
-                          className="px-3 py-1 rounded-lg bg-[#0071e3] hover:bg-[#005bb5] text-white text-xs font-bold cursor-pointer"
+                          className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer transition-colors shadow-xs"
                         >
                           {isCurrent ? 'Selecionado' : 'Selecionar'}
                         </button>
@@ -406,7 +406,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
           </div>
 
           {statusFeedback && (
-            <div className="p-3 rounded-xl bg-[#eaf6ef] text-[#005035] text-xs font-bold border border-[#005035]/20">
+            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200">
               {statusFeedback}
             </div>
           )}
@@ -416,7 +416,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               <button
                 type="button"
                 onClick={() => setShowManualLinker(false)}
-                className="min-h-[42px] px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-bold text-sm cursor-pointer"
+                className="h-10 sm:h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm cursor-pointer transition-colors"
               >
                 Voltar para o PDF
               </button>
@@ -424,7 +424,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[42px] px-5 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-bold text-sm cursor-pointer"
+              className="h-10 sm:h-11 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm cursor-pointer transition-colors shadow-xs"
             >
               Fechar
             </button>
@@ -445,7 +445,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
         className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* CABEÇALHO SIMÉTRICO: Dados da Criança + Tipo de Vínculo + Ações */}
-        <div className="bg-white px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-black/[0.06]">
+        <div className="bg-white px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-slate-200/80">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <StudentAvatar
               student={student}
@@ -454,20 +454,20 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-[#6e6e73] uppercase tracking-wider">
-                  {className} • Nº {student.number.toString().padStart(2, '0')}
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-mono tabular-nums">
+                  {className} · Nº {student.number.toString().padStart(2, '0')}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-[#eaf6ef] text-[#005035]">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
                   Ficha Digitalizada
                 </span>
                 {student.fichaPdfSubfolder && (
-                  <span className="text-xs text-[#86868b] truncate hidden md:inline">
-                    • {student.fichaPdfSubfolder}
+                  <span className="text-xs text-slate-400 truncate hidden md:inline font-mono">
+                    · {student.fichaPdfSubfolder}
                   </span>
                 )}
               </div>
 
-              <h3 className="text-[1rem] sm:text-lg font-bold text-[#1d1d1f] truncate leading-tight mt-0.5">
+              <h3 className="text-sm sm:text-base font-semibold text-slate-900 truncate leading-tight mt-0.5">
                 {student.name}
               </h3>
             </div>
@@ -483,7 +483,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="min-h-[44px] px-3.5 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                className="h-10 sm:h-11 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 title="Abrir arquivo original da Ficha Informativa no Google Drive em nova aba"
               >
                 <span className="material-symbols-outlined text-[18px]">open_in_new</span>
@@ -494,10 +494,10 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             <button
               type="button"
               onClick={() => setShowManualLinker(true)}
-              className="min-h-[44px] px-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors"
+              className="h-10 sm:h-11 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm flex items-center gap-1 cursor-pointer transition-colors"
               title="Trocar ou corrigir o arquivo PDF vinculado"
             >
-              <span className="material-symbols-outlined text-[18px] text-blue-700">swap_horiz</span>
+              <span className="material-symbols-outlined text-[18px] text-blue-600">swap_horiz</span>
               <span className="hidden sm:inline">Trocar</span>
             </button>
 
@@ -505,17 +505,17 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               type="button"
               onClick={onClose}
               aria-label="Fechar visualização da ficha escaneada"
-              className="min-h-[44px] px-4.5 rounded-2xl bg-slate-900 hover:bg-rose-700 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-95 transition-all shrink-0"
+              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all shrink-0"
             >
-              <span className="material-symbols-outlined text-[20px]">close</span>
+              <span className="material-symbols-outlined text-[18px]">close</span>
               <span>Fechar</span>
             </button>
           </div>
         </div>
 
         {/* ÁREA PRINCIPAL: Visualização Direta e Limpa do PDF Escaneado */}
-        <div className="flex-1 overflow-hidden bg-[#f5f5f7] p-2 sm:p-3 flex flex-col">
-          <div className="w-full h-[60vh] sm:h-[66vh] bg-white rounded-2xl overflow-hidden flex flex-col border border-black/[0.04]">
+        <div className="flex-1 overflow-hidden bg-slate-50 p-2 sm:p-3 flex flex-col">
+          <div className="w-full h-[60vh] sm:h-[66vh] bg-white rounded-2xl overflow-hidden flex flex-col border border-slate-200">
             <iframe
               src={embedUrl}
               title={`Ficha Informativa Escaneada de ${student.name}`}
@@ -523,7 +523,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               allow="autoplay"
             />
           </div>
-          <div className="pt-2 px-1 flex items-center justify-between text-xs text-[#86868b]">
+          <div className="pt-2 px-1 flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Ficha Informativa Oficial Digitalizada · SME Jundiaí</span>
             {driveFileId && (
               <a
@@ -533,7 +533,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#0071e3] hover:underline font-semibold flex items-center gap-0.5"
+                className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-0.5"
               >
                 <span>Visualizar tela cheia</span>
                 <span className="material-symbols-outlined text-[13px]">arrow_outward</span>

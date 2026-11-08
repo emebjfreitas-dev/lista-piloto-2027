@@ -80,7 +80,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
           <div className="overflow-y-auto p-5 space-y-4 flex-1">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-bold text-[#191c1b] mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Etapa / Ano
               </label>
               <select
@@ -94,7 +94,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
                     setGradeLevel(`Ensino Fundamental I (${val})`);
                   }
                 }}
-                className="w-full h-[50px] px-3 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] font-semibold text-[#003440] focus:bg-white focus:outline-none"
+                className="w-full h-11 px-3 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none transition-colors"
               >
                 <option value="G4">G4 (Infantil 4 anos)</option>
                 <option value="G5">G5 (Infantil 5 anos)</option>
@@ -107,7 +107,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-[#191c1b] mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Turma (Letra)
               </label>
               <input
@@ -116,7 +116,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
                 value={classLetter}
                 onChange={(e) => setClassLetter(e.target.value.toUpperCase())}
                 placeholder="Ex: A, B, C, D..."
-                className="w-full h-[50px] px-3 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] font-bold text-[#003440] focus:bg-white focus:outline-none uppercase text-center"
+                className="w-full h-11 px-3 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none uppercase text-center transition-colors"
                 required
               />
             </div>
@@ -124,13 +124,13 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-bold text-[#191c1b] mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Turno
               </label>
               <select
                 value={shift}
                 onChange={(e) => setShift(e.target.value as 'Turno Manhã' | 'Turno Tarde')}
-                className="w-full h-[50px] px-3 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] font-semibold text-[#003440] focus:bg-white focus:outline-none"
+                className="w-full h-11 px-3 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none transition-colors"
               >
                 <option value="Turno Manhã">☀️ Turno Manhã</option>
                 <option value="Turno Tarde">⛅ Turno Tarde</option>
@@ -138,7 +138,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-[#191c1b] mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Sala
               </label>
               <input
@@ -146,18 +146,18 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
                 value={room}
                 onChange={(e) => setRoom(e.target.value)}
                 placeholder="Ex: Sala 04, Sala Infantil 01"
-                className="w-full h-[50px] px-3 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] font-semibold text-[#003440] focus:bg-white focus:outline-none"
+                className="w-full h-11 px-3 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none transition-colors"
                 required
               />
             </div>
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-bold text-[#191c1b]">
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="text-xs font-semibold text-slate-700">
                 Total de Estudantes Matriculados
               </label>
-              <span className="font-semibold text-slate-900 text-lg font-mono tabular-nums">
+              <span className="font-semibold text-slate-900 text-sm font-mono tabular-nums">
                 {studentCount} estudantes
               </span>
             </div>
@@ -167,7 +167,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
               max="35"
               value={studentCount}
               onChange={(e) => setStudentCount(Number(e.target.value))}
-              className="w-full accent-[#003440] cursor-pointer"
+              className="w-full accent-slate-900 cursor-pointer"
             />
           </div>
         </div>

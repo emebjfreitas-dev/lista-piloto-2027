@@ -1,12 +1,31 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAuthenticated() {
+
+    // Global Safety Net — Default-deny all unexpected paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Security Primitives & Institutional Verification
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
       return request.auth != null;
     }
 
     function isInstitutionalUser() {
-      return isAuthenticated() &&
+      return isSignedIn() &&
         request.auth.token.email != null &&
         (
           request.auth.token.email.matches('.*@educacao\\.jundiai\\.sp\\.gov\\.br$') ||
@@ -14,21 +33,49 @@ service cloud.firestore {
         );
     }
 
-    // Classes collection (1 document per class, <1MB each)
+    function isAdmin() {
+      return isInstitutionalUser() && (
+        request.auth.token.email == 'emebjfreitas@jundiai.sp.gov.br' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidClass(data) {
+      return data.id is string &&
+        data.id.size() <= 128 &&
+        data.name is string &&
+        data.name.size() <= 100 &&
+        data.shift is string &&
+        data.shift.size() <= 50 &&
+        data.students is list &&
+        data.students.size() <= 60;
+    }
+
+    function isValidMeta(data) {
+      return data.updatedAtMs is number;
+    }
+
+    // Classes collection (1 document per class, max 60 students per class, <1MB each)
     match /school_classes_2027/{classId} {
-      allow read: if true;
-      allow create, update: if request.resource.data.id == classId &&
-        request.resource.data.students is list &&
-        request.resource.data.students.size() <= 100;
-      allow delete: if isInstitutionalUser();
+      allow get, list: if isInstitutionalUser();
+      allow create: if isInstitutionalUser() &&
+        isValidId(classId) &&
+        incoming().id == classId &&
+        isValidClass(incoming());
+      allow update: if isInstitutionalUser() &&
+        isValidId(classId) &&
+        incoming().id == existing().id &&
+        isValidClass(incoming());
+      allow delete: if isAdmin() && isValidId(classId);
     }
 
     // School metadata & configuration (users, attendance window, cloud links, discovered caches)
     match /school_meta_2027/{docId} {
-      allow read: if true;
-      allow create, update: if docId in ['state', 'config'] &&
-        request.resource.data.keys().size() <= 20;
-      allow delete: if isInstitutionalUser();
+      allow get, list: if isInstitutionalUser();
+      allow create, update: if isInstitutionalUser() &&
+        docId in ['state', 'config'] &&
+        isValidMeta(incoming());
+      allow delete: if isAdmin();
     }
   }
 }

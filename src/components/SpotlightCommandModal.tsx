@@ -404,10 +404,10 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                             onOpenStudentPdf(item.student, item.cls.name);
                             onClose();
                           }}
-                          className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer ${
+                          className={`h-8 px-3 rounded-lg font-semibold text-xs flex items-center gap-1 cursor-pointer transition-colors ${
                             item.hasPdf
-                              ? 'bg-[#0071e3] text-white hover:bg-[#005bb5]'
-                              : 'bg-[#fff2f2] text-[#ff3b30] border border-[#ff3b30]/25'
+                              ? 'bg-blue-600 text-white hover:bg-blue-700'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
                           }`}
                         >
                           <span className="material-symbols-outlined text-[15px]">
@@ -418,12 +418,24 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                           </span>
                         </button>
 
-                        <span className="px-2.5 py-1.5 rounded-xl bg-white border border-black/[0.08] text-[#1d1d1f] font-bold text-xs flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onOpenStudentGrid(
+                              item.student,
+                              item.cls.id,
+                              item.cls.name,
+                              item.cls.classesHeld || 20
+                            );
+                            onClose();
+                          }}
+                          className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                        >
                           <span>Ficha Completa</span>
                           <span className="material-symbols-outlined text-[14px]">
                             open_in_full
                           </span>
-                        </span>
+                        </button>
                       </div>
                     </div>
                   );

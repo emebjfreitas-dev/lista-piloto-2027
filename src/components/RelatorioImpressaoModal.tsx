@@ -63,14 +63,14 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center bg-[#f3f4f2] p-1 rounded-xl border border-[#c0c8cb]">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
                 type="button"
                 onClick={() => setReportMode('bimestral')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                   reportMode === 'bimestral'
-                    ? 'bg-[#003440] text-white shadow-2xs'
-                    : 'text-[#41484b] hover:text-[#003440]'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Bimestral / Bolsa Família
@@ -80,8 +80,8 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                 onClick={() => setReportMode('mensal')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                   reportMode === 'mensal'
-                    ? 'bg-[#003440] text-white shadow-2xs'
-                    : 'text-[#41484b] hover:text-[#003440]'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Fechamento Mensal
@@ -92,7 +92,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               <select
                 value={selectedBimesterId}
                 onChange={(e) => setSelectedBimesterId(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-[#eaf6ef] text-[#005035] border border-[#a4f3ca] font-semibold text-xs cursor-pointer"
+                className="h-9 px-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-xs cursor-pointer focus:outline-none"
               >
                 {OFFICIAL_BIMESTERS_2027.map((bim) => (
                   <option key={bim.id} value={bim.id}>
@@ -105,15 +105,15 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <button
               onClick={handlePrint}
               type="button"
-              className="px-4 py-2 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-sm rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="h-9 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[19px]">print</span>
+              <span className="material-symbols-outlined text-[18px]">print</span>
               <span>Imprimir / PDF</span>
             </button>
             <button
               onClick={onClose}
               type="button"
-              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+              className="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
@@ -348,20 +348,20 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           </div>
 
           {/* Signatures Area */}
-          <div className="pt-8 grid grid-cols-2 gap-8 text-center text-sm print:pt-10 break-inside-avoid">
+          <div className="pt-8 grid grid-cols-2 gap-8 text-center text-xs sm:text-sm print:pt-10 break-inside-avoid">
             <div>
-              <div className="border-t border-[#191c1b] mx-4 mb-1"></div>
-              <span className="font-semibold text-[#003440] block">
+              <div className="border-t border-slate-300 mx-4 mb-1.5"></div>
+              <span className="font-semibold text-slate-900 block">
                 {classGroup.isVaga || classGroup.teacherName === 'TURMA VAGA'
                   ? 'Docente Regente (Aguardando Atribuição)'
                   : classGroup.teacherName || 'Docente Regente Responsável'}
               </span>
-              <span className="text-[#71787b] text-xs">Docente Regente • Turma {classGroup.name} ({classGroup.shift})</span>
+              <span className="text-slate-500 text-xs">Docente Regente · Turma {classGroup.name} ({classGroup.shift})</span>
             </div>
             <div>
-              <div className="border-t border-[#191c1b] mx-4 mb-1"></div>
-              <span className="font-semibold text-[#003440] block">Direção / Coordenação Pedagógica</span>
-              <span className="text-[#71787b] text-xs">{SCHOOL_NAME}</span>
+              <div className="border-t border-slate-300 mx-4 mb-1.5"></div>
+              <span className="font-semibold text-slate-900 block">Direção / Coordenação Pedagógica</span>
+              <span className="text-slate-500 text-xs">{SCHOOL_NAME}</span>
             </div>
           </div>
         </div>

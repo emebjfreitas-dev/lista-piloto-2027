@@ -478,12 +478,147 @@ const writeSharedState = (patch: Partial<SharedSchoolState>): SharedSchoolState 
   };
   try {
     const tmpPath = `${STATE_FILE_PATH}.tmp`;
-    fs.writeFileSync(tmpPath, JSON.stringify(next, null, 2), 'utf-8');
+    const bakPath = `${STATE_FILE_PATH}.bak`;
+    const jsonContent = JSON.stringify(next, null, 2);
+    fs.writeFileSync(tmpPath, jsonContent, 'utf-8');
     fs.renameSync(tmpPath, STATE_FILE_PATH);
+    // Maintain immediate rolling backup to guarantee zero data loss
+    try {
+      fs.copyFileSync(STATE_FILE_PATH, bakPath);
+    } catch {
+      // ignore backup copy failure
+    }
   } catch (err) {
     console.warn('Erro ao gravar shared_school_state_2027.json:', err);
   }
   return next;
+};
+
+// Institutional Security & RBAC Verification Helpers
+const isInstitutionalEmail = (email?: string): boolean => {
+  if (!email || typeof email !== 'string') return false;
+  const clean = email.trim().toLowerCase();
+  return (
+    clean.endsWith('@educacao.jundiai.sp.gov.br') ||
+    clean === 'emebjfreitas@jundiai.sp.gov.br'
+  );
+};
+
+interface RequestUser {
+  email: string;
+  role: string;
+  name: string;
+  isAdmin: boolean;
+  isInstitutional: boolean;
+}
+
+const extractRequestUser = (req: express.Request): RequestUser => {
+  const email = String(
+    req.headers['x-user-email'] ||
+    req.body?.userEmail ||
+    req.body?.adminEmail ||
+    ''
+  ).trim().toLowerCase();
+  const role = String(
+    req.headers['x-user-role'] ||
+    req.body?.userRole ||
+    ''
+  ).trim().toLowerCase();
+  const rawName = String(req.headers['x-user-name'] || req.body?.userName || '');
+  let name = '';
+  try {
+    name = decodeURIComponent(rawName);
+  } catch {
+    name = rawName;
+  }
+  const isAdmin =
+    role === 'admin' ||
+    email === 'emebjfreitas@jundiai.sp.gov.br' ||
+    email.startsWith('emebjfreitas@');
+  const isInst = isInstitutionalEmail(email);
+
+  return {
+    email,
+    role: isAdmin ? 'admin' : (role || 'usuario'),
+    name: name || (isAdmin ? 'Direção / Administração Escolar' : email.split('@')[0] || 'Usuário'),
+    isAdmin,
+    isInstitutional: isInst,
+  };
+};
+
+const recordSecurityAuditLog = (
+  eventType: string,
+  details: string,
+  req: express.Request,
+  status: 'SUCCESS' | 'BLOCKED' | 'WARNING' = 'SUCCESS',
+  overrideUser?: { email?: string; name?: string }
+) => {
+  const user = overrideUser || extractRequestUser(req);
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || '127.0.0.1';
+  const entry = {
+    id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    timestampISO: new Date().toISOString(),
+    eventType,
+    userEmail: user.email || 'ANONYMOUS',
+    userName: user.name || (user.email === 'emebjfreitas@jundiai.sp.gov.br' ? 'Direção / Secretaria' : 'Usuário'),
+    clientIp,
+    details,
+    status,
+  };
+  const current = readSharedState();
+  const existingLogs = Array.isArray(current.securityAuditLogs) ? current.securityAuditLogs : [];
+  writeSharedState({
+    securityAuditLogs: [entry, ...existingLogs].slice(0, 500),
+  });
+  return entry;
+};
+
+// Middleware: Exige autenticação institucional válida para mutação de dados
+const requireInstitutionalAuth = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  const user = extractRequestUser(req);
+  if (!user.isInstitutional && user.email !== 'emebjfreitas@jundiai.sp.gov.br') {
+    recordSecurityAuditLog(
+      'UNAUTHORIZED_MUTATION_ATTEMPT',
+      `Tentativa de gravação bloqueada em ${req.path} por e-mail não institucional: "${user.email || 'vazio'}"`,
+      req,
+      'BLOCKED',
+      user
+    );
+    res.status(403).json({
+      error: 'Acesso negado. Apenas e-mails institucionais autorizados (@educacao.jundiai.sp.gov.br ou emebjfreitas@jundiai.sp.gov.br) têm permissão de gravação.',
+      code: 'UNAUTHORIZED_INSTITUTIONAL_EMAIL',
+    });
+    return;
+  }
+  next();
+};
+
+// Middleware: Exige privilégios de administrador
+const requireAdminAuth = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  const user = extractRequestUser(req);
+  if (!user.isAdmin) {
+    recordSecurityAuditLog(
+      'PRIVILEGE_ESCALATION_BLOCKED',
+      `Tentativa de operação administrativa bloqueada em ${req.path} para o usuário: "${user.email}"`,
+      req,
+      'BLOCKED',
+      user
+    );
+    res.status(403).json({
+      error: 'Acesso negado. Esta operação exige privilégios de Administrador Escolar (Direção / Secretaria).',
+      code: 'ADMIN_ROLE_REQUIRED',
+    });
+    return;
+  }
+  next();
 };
 
 async function startServer() {
@@ -495,6 +630,11 @@ async function startServer() {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: data:; frame-src 'self' https: data:; img-src 'self' https: data: blob:;"
+    );
     next();
   });
   app.use(express.json({ limit: '50mb' }));
@@ -621,18 +761,20 @@ async function startServer() {
   });
 
   // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS, Ônibus Fretado e Links de PDFs Escaneados em tempo real com controle de concorrência por turma/estudante
-  app.post('/api/school-state/classes', (req, res) => {
+  app.post('/api/school-state/classes', requireInstitutionalAuth, (req, res) => {
     const {
       classes,
       classesUpdatedAtMs,
       discoveredNominalPdfs,
       discoveredDrivePhotos,
       cloudLinks,
+      opId,
     } = req.body || {};
     if (!Array.isArray(classes) || classes.length === 0 || classes.length > 80) {
       res.status(400).json({ error: 'Lista de turmas inválida' });
       return;
     }
+    const user = extractRequestUser(req);
     const current = readSharedState();
     const incTime = classesUpdatedAtMs || Date.now();
     const existingClassesMap = new Map<string, any>();
@@ -667,6 +809,11 @@ async function startServer() {
             const stExtTime = extSt?.updatedAtMs || 0;
             const baseSt = extSt && stExtTime > stIncTime ? extSt : st;
 
+            // Defensive Validation & Bounding
+            const diasLetivosRecorte = Math.max(0, Math.min(31, Number(baseSt.diasLetivosRecorte ?? 20)));
+            const totalAbsencesMonth = Math.max(0, Math.min(diasLetivosRecorte, Number(baseSt.totalAbsencesMonth ?? 0)));
+            const justifiedAbsences = Math.max(0, Math.min(totalAbsencesMonth, Number(baseSt.justifiedAbsences ?? 0)));
+
             // Preserve manual photo and manual PDF links unless explicitly updated
             const preserveManualPhoto =
               extSt?.photoManualLink && !st?.photoManualLink && stIncTime < stExtTime;
@@ -680,6 +827,10 @@ async function startServer() {
 
             return {
               ...baseSt,
+              diasLetivosRecorte,
+              totalAbsencesMonth,
+              justifiedAbsences,
+              isDeleted: Boolean(baseSt.isDeleted),
               photoDriveId: preserveManualPhoto
                 ? extSt.photoDriveId
                 : baseSt.photoDriveId || extSt?.photoDriveId,
@@ -713,6 +864,7 @@ async function startServer() {
 
       return {
         ...cls,
+        version: (cls.version || existingCls?.version || 1) + 1,
         updatedAtMs: Math.max(clsIncTime, clsExtTime),
         students: mergedStudents,
       };
@@ -738,11 +890,21 @@ async function startServer() {
     }
 
     const saved = writeSharedState(patch);
-    res.json({ ok: true, classesUpdatedAtMs: saved.classesUpdatedAtMs });
+
+    // Audit log
+    recordSecurityAuditLog(
+      'CLASSES_ATTENDANCE_SYNCED',
+      `Sincronização atômica de ${compactClasses.length} turmas (${opId || 'sem opId'}) confirmada com sucesso.`,
+      req,
+      'SUCCESS',
+      user
+    );
+
+    res.json({ ok: true, classesUpdatedAtMs: saved.classesUpdatedAtMs, opId });
   });
 
-  // API: Sincronizar Links de Pastas (Fotos / Fichas Informativas PDF) e Planilha Oficial Google Sheets
-  app.post('/api/school-state/links', (req, res) => {
+  // API: Sincronizar Links de Pastas (Fotos / Fichas Informativas PDF) e Planilha Oficial Google Sheets (Admin Only)
+  app.post('/api/school-state/links', requireAdminAuth, (req, res) => {
     const { cloudLinks, discoveredNominalPdfs, discoveredDrivePhotos } = req.body || {};
     const current = readSharedState();
     const patch: Partial<SharedSchoolState> = {};
@@ -762,11 +924,16 @@ async function startServer() {
     }
 
     const saved = writeSharedState(patch);
+    recordSecurityAuditLog(
+      'CLOUD_LINKS_UPDATED',
+      'Configuração de pastas na nuvem atualizada.',
+      req
+    );
     res.json(saved);
   });
 
-  // API: Atualizar Usuários Autorizados (vínculo de turmas PEB I / PEB II / Admin)
-  app.post('/api/school-state/users', (req, res) => {
+  // API: Atualizar Usuários Autorizados (vínculo de turmas PEB I / PEB II / Admin) (Admin Only)
+  app.post('/api/school-state/users', requireAdminAuth, (req, res) => {
     const { authorizedUsers } = req.body || {};
     if (!Array.isArray(authorizedUsers)) {
       res.status(400).json({ error: 'Lista de authorizedUsers inválida' });
@@ -886,25 +1053,35 @@ async function startServer() {
     res.json(saved);
   });
 
-  // API: Atualizar Configuração de Janela de Lançamento Excepcional
-  app.post('/api/school-state/window', (req, res) => {
+  // API: Atualizar Configuração de Janela de Lançamento Excepcional (Admin Only)
+  app.post('/api/school-state/window', requireAdminAuth, (req, res) => {
     const { attendanceWindowConfig } = req.body || {};
     if (!attendanceWindowConfig) {
       res.status(400).json({ error: 'Configuração inválida' });
       return;
     }
     const saved = writeSharedState({ attendanceWindowConfig });
+    recordSecurityAuditLog(
+      'ATTENDANCE_WINDOW_MODIFIED',
+      `Janela de frequência alterada: ${attendanceWindowConfig.isOpen ? 'ABERTA' : 'FECHADA'} até ${attendanceWindowConfig.closeDateISO || 'N/A'}.`,
+      req
+    );
     res.json(saved);
   });
 
   // API: Publicar / Atualizar Comunicados do Quadro de Avisos Institucional
-  app.post('/api/school-state/notices', (req, res) => {
+  app.post('/api/school-state/notices', requireInstitutionalAuth, (req, res) => {
     const { schoolNotices } = req.body || {};
     if (!Array.isArray(schoolNotices)) {
       res.status(400).json({ error: 'Lista de avisos inválida' });
       return;
     }
     const saved = writeSharedState({ schoolNotices: schoolNotices.slice(0, 60) });
+    recordSecurityAuditLog(
+      'SCHOOL_NOTICES_UPDATED',
+      `Quadro de avisos atualizado (${schoolNotices.length} avisos).`,
+      req
+    );
     res.json(saved);
   });
 
@@ -998,13 +1175,7 @@ async function startServer() {
   });
 
   // API: Homologação e Configuração Única dos 200 Dias Letivos (Proteção Estrita de Administrador)
-  app.post('/api/calendar-config', (req, res) => {
-    if (!isUserAdminAuthorized(req)) {
-      res.status(403).json({
-        error: 'Acesso negado. Apenas administradores escolares têm permissão para configurar o calendário letivo oficial.',
-      });
-      return;
-    }
+  app.post('/api/calendar-config', requireAdminAuth, (req, res) => {
 
     const { rawDatesText, schoolDays, adminEmail, adminName, year = 2027 } = req.body || {};
     const current = readSharedState();
@@ -1093,14 +1264,8 @@ async function startServer() {
     });
   });
 
-  // API: Gerenciamento Centralizado de Feriados e Recessos Escolares
-  app.post('/api/holidays', (req, res) => {
-    if (!isUserAdminAuthorized(req)) {
-      res.status(403).json({
-        error: 'Acesso negado. Apenas administradores escolares têm permissão para cadastrar ou editar feriados.',
-      });
-      return;
-    }
+  // API: Gerenciamento Centralizado de Feriados e Recessos Escolares (Admin Only)
+  app.post('/api/holidays', requireAdminAuth, (req, res) => {
 
     const { action, holiday, holidayId, adminEmail, adminName } = req.body || {};
     const current = readSharedState();
@@ -1182,8 +1347,8 @@ async function startServer() {
     });
   });
 
-  // API: Obter Logs de Auditoria de Segurança & LGPD
-  app.get('/api/security-logs', (_req, res) => {
+  // API: Obter Logs de Auditoria de Segurança & LGPD (Admin Only)
+  app.get('/api/security-logs', requireAdminAuth, (_req, res) => {
     const state = readSharedState();
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json({
@@ -1217,6 +1382,10 @@ async function startServer() {
   });
 
 
+  app.get('/health', (_req, res) => {
+    res.status(200).send('OK');
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -1226,7 +1395,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*all', (_req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

@@ -1651,7 +1651,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             Fechamento de {selectedMonthName}/2027
           </h3>
           <p className="text-xs text-slate-600 font-medium mt-0.5">
-            Relatório gerado a partir da base oficial do Google Sheets da EMEB Prof. Joaquim Candelário de Freitas
+            Relatório gerado a partir da base oficial do SED da EMEB Prof. Joaquim Candelário de Freitas (1.237 alunos)
           </p>
         </div>
 

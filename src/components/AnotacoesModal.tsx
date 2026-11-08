@@ -50,7 +50,7 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
 
         {/* Content */}
         <div className="overflow-y-auto overscroll-contain p-5 py-4 space-y-3">
-          <p className="text-sm text-[#41484b]">
+          <p className="text-xs text-slate-500 font-medium">
             Registre ocorrências da turma, recados da coordenação ou observações para as reuniões pedagógicas:
           </p>
 
@@ -59,12 +59,12 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Digite os comentários e recados sobre a turma aqui..."
-            className="w-full p-3.5 bg-[#f3f4f2] rounded-xl border border-[#c0c8cb] text-[#191c1b] text-base focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#003440]/20 resize-none leading-relaxed"
+            className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400/20 resize-none leading-relaxed transition-colors"
           />
 
           {savedSuccess && (
-            <div className="p-3 bg-[#a4f3ca]/40 text-[#003723] rounded-xl font-bold text-sm flex items-center gap-2">
-              <span className="material-symbols-outlined text-[20px]">check_circle</span>
+            <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-emerald-700">check_circle</span>
               <span>Anotações salvas com sucesso no diário!</span>
             </div>
           )}

@@ -30,13 +30,60 @@ export const firestoreDb = rawFirebaseConfig.firestoreDatabaseId
   ? getFirestore(app, rawFirebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): FirestoreErrorInfo {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: null,
+      email: null,
+      emailVerified: null,
+      isAnonymous: null,
+      tenantId: null,
+      providerInfo: [],
+    },
+    operationType,
+    path,
+  };
+  console.warn('Firestore Error Audit:', JSON.stringify(errInfo));
+  return errInfo;
+}
+
 // Validate connection to Firestore on boot per Firebase architecture best practices
 async function validateFirestoreConnectionOnBoot(): Promise<void> {
+  const testPath = 'school_meta_2027/state';
   try {
     await getDocFromServer(doc(firestoreDb, 'school_meta_2027', 'state'));
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.warn('Firestore operando em modo cache/offline temporário.');
+    } else {
+      handleFirestoreError(error, OperationType.GET, testPath);
     }
   }
 }
@@ -217,7 +264,8 @@ export const saveClassesToFirestoreCloud = async (
     );
     await batch.commit();
     return true;
-  } catch {
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'school_classes_2027');
     return false;
   }
 };
@@ -259,7 +307,8 @@ export const saveConfigMetaToFirestoreCloud = async (payload: {
     }
     await setDoc(ref, cleanPayload, { merge: true });
     return true;
-  } catch {
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'school_meta_2027/config');
     return false;
   }
 };
@@ -326,7 +375,8 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
       discoveredDrivePhotos: configData.discoveredDrivePhotos,
       genderDictionary: configData.genderDictionary,
     };
-  } catch {
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'school_classes_2027');
     return null;
   }
 };
@@ -366,8 +416,8 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
           callbacks.onClassesUpdate(classes, maxUpdatedAt || Date.now());
         }
       },
-      () => {
-        // Ignore transient listener errors; HTTP/Firestore fallback handles recovery
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'school_classes_2027');
       }
     );
     unsubs.push(unsubClasses);
@@ -393,13 +443,13 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
           });
         }
       },
-      () => {
-        // Ignore transient listener errors
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, 'school_meta_2027/config');
       }
     );
     unsubs.push(unsubConfig);
-  } catch {
-    // Ignore initialization errors if offline
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'school_classes_2027');
   }
 
   return () => {

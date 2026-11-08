@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Official student enrollment and attendance record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "ra": { "type": "string", "maxLength": 30 },
+        "digRa": { "type": "string", "maxLength": 10 },
+        "number": { "type": "number" },
+        "situation": { "type": "string", "maxLength": 50 },
+        "totalAbsencesMonth": { "type": "number" },
+        "justifiedAbsences": { "type": "number" },
+        "diasLetivosRecorte": { "type": "number" },
+        "updatedAtMs": { "type": "number" },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["id", "name"]
+    },
+    "ClassGroup": {
+      "title": "ClassGroup",
+      "description": "Class group entity containing students and class metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "grade": { "type": "string", "maxLength": 100 },
+        "shift": { "type": "string", "maxLength": 50 },
+        "room": { "type": "string", "maxLength": 50 },
+        "totalStudents": { "type": "number" },
+        "classesHeld": { "type": "number" },
+        "classesPlanned": { "type": "number" },
+        "updatedAtMs": { "type": "number" },
+        "version": { "type": "number" },
+        "isDeleted": { "type": "boolean" }
+      },
+      "required": ["id", "name", "shift"]
+    },
+    "SchoolMeta": {
+      "title": "SchoolMeta",
+      "description": "Central metadata configuration, authorization lists, and calendar settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "updatedAtMs": { "type": "number" },
+        "version": { "type": "number" },
+        "authorizedUsers": { "type": "array" },
+        "attendanceWindowConfig": { "type": "object" },
+        "schoolNotices": { "type": "array" }
+      },
+      "required": ["updatedAtMs"]
+    }
+  },
+  "firestore": {
+    "/school_classes_2027/{classId}": {
+      "schema": "ClassGroup",
+      "description": "Classes collection partitioned by class identifier (40 classes, <1MB each)"
+    },
+    "/school_meta_2027/{docId}": {
+      "schema": "SchoolMeta",
+      "description": "School operational metadata, calendar config, users, and audit state"
+    }
+  }
+}
