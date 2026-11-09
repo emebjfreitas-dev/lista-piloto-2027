@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ClassGroup } from '../types';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface AnotacoesModalProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
   classGroup,
   onSaveNotes,
 }) => {
+  useModalScrollLock(isOpen);
+
   const [notes, setNotes] = useState(classGroup.pedagogicalNotes);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -29,8 +32,8 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))]">
         {/* Header */}
         <div className="flex items-center justify-between p-5 pb-3 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2 text-slate-900">
@@ -49,7 +52,7 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto overscroll-contain p-5 py-4 space-y-3">
+        <div className="modal-scroll-body flex-1 p-5 py-4 space-y-3">
           <p className="text-xs text-slate-500 font-medium">
             Registre ocorrências da turma, recados da coordenação ou observações para as reuniões pedagógicas:
           </p>

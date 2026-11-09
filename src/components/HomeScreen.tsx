@@ -32,6 +32,8 @@ import {
   FileSpreadsheet,
   Eye,
   Edit3,
+  HeartHandshake,
+  CalendarDays,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -404,63 +406,63 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           </button>
 
-          {/* Opção 4: Ônibus Escolar e Rotas Fretadas */}
+          {/* Opção 4: Bolsa Família e Ônibus Fretado */}
           <button
             type="button"
-            onClick={() => onNavigateToScreen('mapa_estudantes')}
+            onClick={() => onNavigateToScreen('bolsa_familia')}
             className="w-full text-left bg-white hover:bg-slate-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
           >
             <div className="flex items-center gap-4 min-w-0">
               <div className="w-14 h-14 rounded-2xl bg-slate-950 text-white flex items-center justify-center shrink-0">
-                <MapPin className="w-7 h-7" />
+                <HeartHandshake className="w-7 h-7" />
               </div>
               <div className="min-w-0">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                  Transporte &amp; Geografia
+                  Programas Sociais
                 </span>
                 <h3 className="text-lg font-bold text-slate-950 truncate">
-                  Rotas de Ônibus &amp; Mapa
+                  Bolsa Família &amp; Fretado
                 </h3>
                 <p className="text-xs font-semibold text-slate-700 truncate mt-1">
-                  Rotas 01 e 02 e endereços dos estudantes
+                  Listas nominais, NIS e rotas oficiais
                 </p>
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0">
               <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
-                Rotas 01 / 02
+                Programas
               </span>
               <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
-                Ver Mapa <ArrowRight className="w-4 h-4" />
+                Abrir <ArrowRight className="w-4 h-4" />
               </span>
             </div>
           </button>
 
-          {/* Opção 5: Resumo Mensal & Indicadores SED */}
+          {/* Opção 5: Calendário Escolar e 200 Dias Letivos */}
           <button
             type="button"
-            onClick={() => onNavigateToScreen('resumo')}
+            onClick={() => onNavigateToScreen('dias_letivos')}
             className="w-full text-left bg-white hover:bg-slate-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
           >
             <div className="flex items-center gap-4 min-w-0">
               <div className="w-14 h-14 rounded-2xl bg-slate-950 text-white flex items-center justify-center shrink-0">
-                <BarChart3 className="w-7 h-7" />
+                <CalendarDays className="w-7 h-7" />
               </div>
               <div className="min-w-0">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                  Indicadores Gerais
+                  Calendário Oficial
                 </span>
                 <h3 className="text-lg font-bold text-slate-950 truncate">
-                  Resumo Mensal MEC
+                  200 Dias Letivos
                 </h3>
                 <p className="text-xs font-semibold text-slate-700 truncate mt-1">
-                  Percentuais consolidados das 40 turmas
+                  Dias de aula, feriados e recesso escolar
                 </p>
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0">
               <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
-                Relatório
+                2027
               </span>
               <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
                 Ver <ArrowRight className="w-4 h-4" />

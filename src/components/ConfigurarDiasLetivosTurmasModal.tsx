@@ -16,6 +16,7 @@ import {
   extractSpreadsheetId,
 } from '../services/googleSheetsApi';
 import { saveClassesToFirestoreCloud } from '../services/firebaseSync';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface ConfigurarDiasLetivosTurmasModalProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
   onSaveClassesConfig,
   onNavigateToSheet,
 }) => {
+  useModalScrollLock(isOpen);
+
   const [selectedMonth, setSelectedMonth] = useState<string>('Outubro');
   const [draftClasses, setDraftClasses] = useState<ClassGroup[]>(classes);
   const [bulkDaysValue, setBulkDaysValue] = useState<number>(20);
@@ -216,8 +219,8 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]">
         {/* Clean Modern Header */}
         <div className="bg-white border-b border-slate-100 px-6 py-5 flex items-start justify-between gap-4 shrink-0">
           <div className="space-y-0.5">
@@ -243,7 +246,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto flex-1 p-5 sm:p-6 space-y-5 bg-slate-50/50">
+        <div className="modal-scroll-body flex-1 p-5 sm:p-6 space-y-5 bg-slate-50/50">
           {/* 1. Direct Links Box: Planilha Manual & Pasta de Fotos Google Drive */}
           <section className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -410,7 +413,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             </div>
 
             {/* Classes List */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pr-0.5">
               {visibleDraftClasses.map((cls) => {
                 const monthDays = getMonthDaysForClass(cls, selectedMonth);
                 const annualTotal = getAnnualTotalForClass(cls);

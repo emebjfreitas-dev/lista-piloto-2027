@@ -30,8 +30,6 @@ interface HeaderProps {
   onSelectClassById?: (classId: string) => void;
   onOpenSpotlightSearch?: () => void;
   onQuickSyncDriveNow?: () => Promise<void>;
-  densityMode?: 'responsive' | 'comfortable' | 'compact';
-  onChangeDensityMode?: (mode: 'responsive' | 'comfortable' | 'compact') => void;
   onOpenConfigDaysModal?: () => void;
   onNavigatePlanilha: () => void;
   onLogout: () => void;
@@ -51,14 +49,11 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectClassById,
   onOpenSpotlightSearch,
   onQuickSyncDriveNow,
-  densityMode = 'responsive',
-  onChangeDensityMode,
   onOpenConfigDaysModal,
   onNavigatePlanilha,
   onLogout,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showDensityDropdown, setShowDensityDropdown] = useState(false);
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [hasDriveToken, setHasDriveToken] = useState(false);
@@ -267,20 +262,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Busca Ativa</span>
               </button>
 
-              {/* Rotas */}
-              <button
-                type="button"
-                onClick={() => navigateTo('mapa_estudantes')}
-                className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  currentScreen === 'mapa_estudantes'
-                    ? 'bg-slate-950 text-white font-bold'
-                    : 'text-slate-950 hover:bg-slate-100 font-bold'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[17px]">map</span>
-                <span>Rotas</span>
-              </button>
-
               {/* Gestão (Admin) */}
               {isAdmin && (
                 <div className="relative">
@@ -289,9 +270,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => setShowAdminNavDropdown((prev) => !prev)}
                     className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 ${
                       [
-                        'resumo',
                         'bolsa_familia',
-                        'planilha',
                         'usuarios_acesso',
                         'dias_letivos',
                       ].includes(currentScreen) || showAdminNavDropdown
@@ -308,21 +287,6 @@ export const Header: React.FC<HeaderProps> = ({
                       className="absolute right-0 mt-1.5 w-56 bg-white rounded-2xl shadow-xl p-1.5 space-y-0.5 z-50 animate-in fade-in duration-100"
                       onMouseLeave={() => setShowAdminNavDropdown(false)}
                     >
-                      <button
-                        type="button"
-                        onClick={() => navigateTo('resumo')}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 transition-colors cursor-pointer ${
-                          currentScreen === 'resumo'
-                            ? 'bg-slate-100 text-slate-900 font-medium'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-slate-500">
-                          bar_chart
-                        </span>
-                        <span>Resumo Mensal MEC</span>
-                      </button>
-
                       <button
                         type="button"
                         onClick={() => navigateTo('bolsa_familia')}
@@ -451,106 +415,7 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
 
-            {/* Seletor de Modo de Visualização do Layout (Perfeito para qualquer dispositivo) */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowDensityDropdown(!showDensityDropdown)}
-                title="Ajustar modo de visualização e proporção do layout"
-                className="h-8 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-              >
-                <span className="material-symbols-outlined text-[17px] text-slate-950">
-                  {densityMode === 'comfortable'
-                    ? 'visibility'
-                    : densityMode === 'compact'
-                    ? 'density_medium'
-                    : 'devices'}
-                </span>
-                <span className="hidden md:inline">
-                  {densityMode === 'comfortable'
-                    ? 'Confortável'
-                    : densityMode === 'compact'
-                    ? 'Compacto'
-                    : 'Tela'}
-                </span>
-                <span className="material-symbols-outlined text-[14px] text-slate-700">expand_more</span>
-              </button>
 
-              {showDensityDropdown && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowDensityDropdown(false)} />
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-3xl shadow-xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-left border border-slate-200">
-                    <p className="px-3 pt-2 pb-1 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                      Proporção da Tela &amp; Layout
-                    </p>
-                    <div className="space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onChangeDensityMode?.('responsive');
-                          setShowDensityDropdown(false);
-                        }}
-                        className={`w-full p-2.5 rounded-2xl text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
-                          densityMode === 'responsive'
-                            ? 'bg-slate-950 text-white font-bold'
-                            : 'hover:bg-slate-100 text-slate-950 font-semibold'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[19px] shrink-0 mt-0.5">devices</span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold leading-tight">📱 Auto / Fluido (Padrão)</p>
-                          <p className={`text-[11px] mt-0.5 leading-snug ${densityMode === 'responsive' ? 'text-slate-300' : 'text-slate-700'}`}>
-                            Auto-ajuste perfeito para celulares, tablets e computadores.
-                          </p>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onChangeDensityMode?.('comfortable');
-                          setShowDensityDropdown(false);
-                        }}
-                        className={`w-full p-2.5 rounded-2xl text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
-                          densityMode === 'comfortable'
-                            ? 'bg-slate-950 text-white font-bold'
-                            : 'hover:bg-slate-100 text-slate-950 font-semibold'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[19px] shrink-0 mt-0.5">visibility</span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold leading-tight">👓 Confortável (Amplo / Touch)</p>
-                          <p className={`text-[11px] mt-0.5 leading-snug ${densityMode === 'comfortable' ? 'text-slate-300' : 'text-slate-700'}`}>
-                            Letras maiores e botões espaçosos. Ideal para idosos e celulares.
-                          </p>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onChangeDensityMode?.('compact');
-                          setShowDensityDropdown(false);
-                        }}
-                        className={`w-full p-2.5 rounded-2xl text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
-                          densityMode === 'compact'
-                            ? 'bg-slate-950 text-white font-bold'
-                            : 'hover:bg-slate-100 text-slate-950 font-semibold'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[19px] shrink-0 mt-0.5">density_medium</span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold leading-tight">📊 Compacto (Planilhas / PC)</p>
-                          <p className={`text-[11px] mt-0.5 leading-snug ${densityMode === 'compact' ? 'text-slate-300' : 'text-slate-700'}`}>
-                            Máxima densidade na tela. Ideal para secretarias e telas de laptop.
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
 
             {/* Notificações Push */}
             <PushNotificationCenter
@@ -668,55 +533,7 @@ export const Header: React.FC<HeaderProps> = ({
 
                     <div className="my-1.5 h-px bg-slate-100" />
 
-                    {/* Proporção de Tela / Densidade */}
-                    <div className="px-2 py-1">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                          Proporção da Tela
-                        </span>
-                        <span className="text-[10px] font-semibold text-slate-400">
-                          {densityMode === 'comfortable' ? 'Amplo' : densityMode === 'compact' ? 'Compacto' : 'Fluido'}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1 bg-slate-100 p-0.5 rounded-xl">
-                        <button
-                          type="button"
-                          onClick={() => onChangeDensityMode?.('responsive')}
-                          className={`px-1.5 py-1 rounded-lg text-[11px] font-bold text-center transition-all cursor-pointer ${
-                            densityMode === 'responsive'
-                              ? 'bg-white text-slate-950 shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                          title="Ajuste automático para qualquer tela"
-                        >
-                          Fluido
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onChangeDensityMode?.('comfortable')}
-                          className={`px-1.5 py-1 rounded-lg text-[11px] font-bold text-center transition-all cursor-pointer ${
-                            densityMode === 'comfortable'
-                              ? 'bg-white text-slate-950 shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                          title="Letras maiores e botões amplos para toque"
-                        >
-                          Amplo
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onChangeDensityMode?.('compact')}
-                          className={`px-1.5 py-1 rounded-lg text-[11px] font-bold text-center transition-all cursor-pointer ${
-                            densityMode === 'compact'
-                              ? 'bg-white text-slate-950 shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                          title="Mais linhas visíveis para secretária e PC"
-                        >
-                          Compacto
-                        </button>
-                      </div>
-                    </div>
+
 
                     <div className="my-1.5 h-px bg-slate-100" />
 
@@ -841,19 +658,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="material-symbols-outlined text-[20px]">warning</span>
                   <span>Busca Ativa (Alertas)</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => navigateTo('mapa_estudantes')}
-                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-semibold flex items-center gap-3 transition-colors ${
-                    currentScreen === 'mapa_estudantes'
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[20px]">map</span>
-                  <span>Mapa &amp; Rotas dos Ônibus</span>
-                </button>
               </div>
 
               {/* Seção de Gestão (Admin) */}
@@ -862,19 +666,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block px-2 py-1">
                     Gestão Escolar
                   </span>
-
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('resumo')}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2.5 transition-colors ${
-                      currentScreen === 'resumo'
-                        ? 'bg-blue-50 text-blue-900 font-semibold'
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">bar_chart</span>
-                    <span>Resumo Mensal MEC</span>
-                  </button>
 
                   <button
                     type="button"
@@ -914,58 +705,12 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="material-symbols-outlined text-[18px]">group_add</span>
                     <span>Professores &amp; Acessos</span>
                   </button>
-
-
                 </div>
               )}
-            {/* Proporção da Tela no Celular / Tablet */}
-            <div className="pt-3 pb-1 border-t border-slate-100 mt-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block px-2 mb-2">
-                Proporção da Tela
-              </span>
-              <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => onChangeDensityMode?.('responsive')}
-                  className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                    densityMode === 'responsive'
-                      ? 'bg-white text-slate-950 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">devices</span>
-                  <span className="text-[11px] leading-tight">Fluido</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChangeDensityMode?.('comfortable')}
-                  className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                    densityMode === 'comfortable'
-                      ? 'bg-white text-slate-950 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">touch_app</span>
-                  <span className="text-[11px] leading-tight">Amplo</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChangeDensityMode?.('compact')}
-                  className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
-                    densityMode === 'compact'
-                      ? 'bg-white text-slate-950 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px]">density_small</span>
-                  <span className="text-[11px] leading-tight">Compacto</span>
-                </button>
-              </div>
             </div>
-          </div>
 
-          {/* Rodapé do Drawer */}
-          <div className="pt-4 space-y-2">
+            {/* Rodapé do Drawer */}
+            <div className="pt-4 space-y-2">
               <div className="px-2 py-1 flex items-center justify-between text-xs text-slate-500">
                 <span>{userName}</span>
                 <span className="font-semibold text-slate-800">

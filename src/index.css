@@ -33,16 +33,9 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Modos de Densidade e Proporção Visual Adaptativa para Qualquer Dispositivo */
-  html[data-density="comfortable"] {
-    font-size: 17.5px;
-  }
-  html[data-density="compact"] {
-    font-size: 14.5px;
-  }
-  html[data-density="responsive"],
-  html:not([data-density]) {
-    font-size: clamp(14.5px, 0.4vw + 13.5px, 16px);
+  /* Padronização Única e Confortável para Todos os Dispositivos (Mobile e Desktop) */
+  html {
+    font-size: clamp(15.5px, 0.35vw + 14.5px, 16.5px);
   }
 
   html {
@@ -115,6 +108,39 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(100, 116, 139, 0.6);
+  }
+
+  /* Otimização de Scroll e Contenção de Overflow para Modais e Painéis */
+  .modal-scroll-body {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain !important;
+    overscroll-behavior-x: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+  }
+
+  .modal-scroll-body::-webkit-scrollbar {
+    width: 6px;
+  }
+  .modal-scroll-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .modal-scroll-body::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+  }
+  .modal-scroll-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(15, 23, 42, 0.7);
+  }
+
+  /* Bloqueio de scroll de fundo com modal ativo */
+  body.modal-open {
+    overflow: hidden !important;
+    touch-action: none;
   }
 
   /* WCAG 2.1 AA Focused States (2.4.7 Focus Visible & 2.4.11 Focus Appearance) */

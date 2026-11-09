@@ -982,6 +982,29 @@ async function startServer() {
     res.json(saved);
   });
 
+  // API: Redefinir Banco de Dados Escolar para a Base Limpa SED (Admin Only)
+  app.post('/api/school-state/reset', requireAdminAuth, (req, res) => {
+    const { freshClasses } = req.body || {};
+    if (!Array.isArray(freshClasses) || freshClasses.length === 0) {
+      res.status(400).json({ error: 'Lista de classes limpa obrigatória' });
+      return;
+    }
+    const user = extractRequestUser(req);
+    const nowMs = Date.now();
+    const saved = writeSharedState({
+      classes: freshClasses,
+      classesUpdatedAtMs: nowMs,
+    });
+    recordSecurityAuditLog(
+      'DATABASE_FACTORY_RESET',
+      `Base escolar de 40 turmas e 1.237 estudantes redefinida para a base limpa da SED por ${user.email}`,
+      req,
+      'SUCCESS',
+      user
+    );
+    res.json({ ok: true, classesUpdatedAtMs: nowMs, totalClasses: freshClasses.length });
+  });
+
   // API: Atualizar Logs de Sessão e Tempo Conectado
   app.post('/api/school-state/logs', (req, res) => {
     const { accessSessionLogs, authorizedUsers } = req.body || {};

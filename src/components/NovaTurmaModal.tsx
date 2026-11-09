@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ClassGroup, Student } from '../types';
 import { generateSedStudentsForClass } from '../data/mockData';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface NovaTurmaModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
   onClose,
   onAddClass,
 }) => {
+  useModalScrollLock(isOpen);
+
   const [gradeNumber, setGradeNumber] = useState('1º Ano');
   const [classLetter, setClassLetter] = useState('G');
   const [gradeLevel, setGradeLevel] = useState('Ensino Fundamental I');
@@ -60,8 +63,8 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-md rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))]">
         <div className="flex items-center justify-between p-5 pb-3 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2 text-slate-900">
             <span className="material-symbols-outlined text-[22px] text-blue-600">add_circle</span>
@@ -77,7 +80,7 @@ export const NovaTurmaModal: React.FC<NovaTurmaModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="overflow-y-auto p-5 space-y-4 flex-1">
+          <div className="modal-scroll-body p-5 space-y-4 flex-1">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">

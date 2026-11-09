@@ -8,6 +8,7 @@ import {
   OFFICIAL_BIMESTERS_2027,
   getDefaultReferencePeriod,
 } from '../utils/attendanceRules';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface RelatorioImpressaoModalProps {
   isOpen: boolean;
@@ -20,6 +21,8 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
   onClose,
   classGroup,
 }) => {
+  useModalScrollLock(isOpen);
+
   const [reportMode, setReportMode] = useState<'mensal' | 'bimestral'>('bimestral');
   const [selectedBimesterId, setSelectedBimesterId] = useState<string>('5bim');
 
@@ -46,8 +49,8 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]">
         {/* Modal Controls */}
         <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 no-print shrink-0">
           <div className="flex items-center gap-2">
@@ -121,7 +124,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
         </div>
 
         {/* Printable Document Sheet */}
-        <div className="overflow-y-auto overscroll-contain flex-1 py-6 px-4 sm:px-6 bg-white text-[#191c1b] space-y-5 print:p-0">
+        <div className="modal-scroll-body flex-1 py-6 px-4 sm:px-6 bg-white text-[#191c1b] space-y-5 print:p-0">
           {/* Official Letterhead */}
           <div className="border-b-2 border-[#003440] pb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">

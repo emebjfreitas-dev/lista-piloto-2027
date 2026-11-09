@@ -23,6 +23,8 @@ import {
   exportSecurityAuditLogsCSV,
   RBAC_ROLE_DEFINITIONS,
   maskSensitiveText,
+  resetDatabase,
+  pushClassesToServer,
 } from '../services/db';
 import { StudentAvatar } from './StudentAvatar';
 
@@ -623,6 +625,44 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       'success',
       `Quadro Oficial sincronizado: ${classes.length} Turmas (37 Professores Regentes + 3 Turmas Vagas) + Especialistas + Gestão!`
     );
+  };
+
+  const handleResetAllSchoolData = async () => {
+    if (!canManage) return;
+    const confirmed = window.confirm(
+      'ATENÇÃO: Deseja redefinir todo o banco de dados escolar para a base limpa oficial da SED?\n\n' +
+      '• 1.237 estudantes e 40 turmas da base oficial SED serão restaurados.\n' +
+      '• Todas as fotos vinculadas permanecem preservadas.\n' +
+      '• A sincronização com Google Sheets foi completamente descontinuada.\n\n' +
+      'Confirma o reset institucional?'
+    );
+    if (!confirmed) return;
+
+    try {
+      const freshClasses = resetDatabase();
+      if (onUpdateClasses) {
+        onUpdateClasses(freshClasses);
+      }
+      await pushClassesToServer(freshClasses);
+      addSecurityAuditLog({
+        userEmail: currentUserEmail,
+        userName: 'Administrador Escolar',
+        userRole: 'admin',
+        eventType: 'DATABASE_FACTORY_RESET',
+        actionTitle: 'Redefinição de Fábrica SED',
+        details: 'Redefinição completa do banco escolar para a base limpa da SED (1.237 alunos e 40 turmas)',
+        severity: 'warning',
+      });
+      triggerFeedback(
+        'success',
+        '✓ Banco escolar redefinido com sucesso! 1.237 estudantes e 40 turmas restaurados na base oficial.'
+      );
+    } catch (err: any) {
+      triggerFeedback(
+        'error',
+        `Falha ao redefinir banco escolar: ${err?.message || 'Erro desconhecido'}`
+      );
+    }
   };
 
   // Filtered classes for Quadro de Turmas e Professores
@@ -2900,14 +2940,15 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             </button>
           )}
 
-          {onNavigateToDatabaseEmailsTab && (
+          {canManage && (
             <button
               type="button"
-              onClick={onNavigateToDatabaseEmailsTab}
-              className="h-8 px-3 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-950 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              onClick={handleResetAllSchoolData}
+              title="Redefinir banco escolar para a base limpa da SED (1.237 estudantes e 40 turmas)"
+              className="h-8 px-3 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-bold inline-flex items-center gap-1.5 transition-colors border border-rose-200 cursor-pointer shadow-2xs"
             >
-              <span className="material-symbols-outlined text-[15px]">table_chart</span>
-              <span>Planilha</span>
+              <span className="material-symbols-outlined text-[15px] text-rose-700">restart_alt</span>
+              <span>Resetar Dados (Base SED)</span>
             </button>
           )}
         </div>

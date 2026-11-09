@@ -70,15 +70,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       label: 'Busca Ativa',
       icon: AlertCircle,
     },
-    ...(isAdmin
-      ? []
-      : [
-          {
-            id: 'mapa_estudantes' as ScreenType,
-            label: 'Mapa e Rotas',
-            icon: MapPin,
-          },
-        ]),
   ];
 
   const adminMoreItems: Array<{
@@ -87,18 +78,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     description: string;
     icon: LucideIcon;
   }> = [
-    {
-      id: 'mapa_estudantes',
-      label: 'Mapa e Rotas dos Alunos',
-      description: 'Caminho pelas ruas, distâncias e tempo até a escola',
-      icon: MapPin,
-    },
-    {
-      id: 'resumo',
-      label: 'Resumo Mensal MEC',
-      description: 'Scorecard executivo e metas institucionais',
-      icon: BarChart2,
-    },
     {
       id: 'bolsa_familia',
       label: 'Bolsa Família & Fretado',
@@ -128,7 +107,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   const isMoreActive =
     isAdmin &&
-    ['mapa_estudantes', 'resumo', 'bolsa_familia', 'dias_letivos', 'usuarios_acesso'].includes(
+    ['bolsa_familia', 'dias_letivos', 'usuarios_acesso'].includes(
       currentScreen
     );
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Student } from '../types';
 import { StudentAvatar } from './StudentAvatar';
 import {
@@ -7,12 +7,15 @@ import {
   getStoredDiscoveredDrivePhotos,
   DiscoveredDrivePhotoFile,
 } from '../services/googleSheetsApi';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface UploadFotoModalProps {
   isOpen: boolean;
   onClose: () => void;
   student: Student | null;
   className: string;
+  classStudents?: Student[];
+  onSelectStudent?: (student: Student) => void;
   onSavePhoto: (
     studentId: string,
     newPhotoUrl: string,
@@ -28,6 +31,8 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   onClose,
   student,
   className,
+  classStudents = [],
+  onSelectStudent,
   onSavePhoto,
   onSyncDrivePhotos,
 }) => {
@@ -41,6 +46,90 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [catalogTick, setCatalogTick] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const carouselContainerRef = useRef<HTMLDivElement>(null);
+
+  // Bloqueio de rolagem da página de fundo enquanto o modal estiver aberto
+  useModalScrollLock(isOpen);
+
+  // Sync state whenever active student changes (e.g. via carousel navigation)
+  useEffect(() => {
+    if (student) {
+      setPreviewUrl(student.photo || '');
+      setSelectedDriveFile(null);
+      setStatusMsg(null);
+      setUploadSuccess(false);
+      setSearchQuery('');
+    }
+  }, [student?.id, student?.photo]);
+
+  // Order students in class numerically
+  const sortedStudents = useMemo(() => {
+    if (!classStudents || classStudents.length === 0) {
+      return student ? [student] : [];
+    }
+    return [...classStudents].sort((a, b) => (a.number || 0) - (b.number || 0));
+  }, [classStudents, student]);
+
+  const currentIndex = useMemo(() => {
+    if (!student) return -1;
+    return sortedStudents.findIndex((s) => s.id === student.id);
+  }, [sortedStudents, student?.id]);
+
+  const totalStudents = sortedStudents.length;
+  const canGoPrev = currentIndex > 0;
+  const canGoNext = currentIndex >= 0 && currentIndex < totalStudents - 1;
+
+  const handlePrevStudent = () => {
+    if (canGoPrev && onSelectStudent) {
+      onSelectStudent(sortedStudents[currentIndex - 1]);
+    }
+  };
+
+  const handleNextStudent = () => {
+    if (canGoNext && onSelectStudent) {
+      onSelectStudent(sortedStudents[currentIndex + 1]);
+    }
+  };
+
+  // Auto-scroll active student in carousel strip into view
+  useEffect(() => {
+    if (!student || !carouselContainerRef.current) return;
+    const activeBtn = carouselContainerRef.current.querySelector<HTMLButtonElement>(
+      `[data-student-id="${student.id}"]`
+    );
+    if (activeBtn) {
+      activeBtn.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [student?.id]);
+
+  // Keyboard navigation with Left and Right arrow keys when not typing
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrevStudent();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNextStudent();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, canGoPrev, canGoNext, currentIndex, sortedStudents]);
 
   const discoveredPhotos = useMemo(() => {
     void catalogTick;
@@ -55,7 +144,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
       .trim();
 
     if (!q) {
-      // Prioritize files matching the student's first name or class
+      // Prioritize files matching the student's first name
       const firstToken = (student?.name || '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -119,7 +208,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
               return;
             }
           } catch {
-            // fallback to original dataUrl
+            // fallback
           }
           resolve(rawDataUrl);
         };
@@ -147,21 +236,17 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
 
     setPreviewUrl(dataUrl);
     onSavePhoto(student.id, dataUrl, undefined, undefined, true);
-    setStatusMsg('✓ Foto do dispositivo aplicada e vinculada manualmente ao estudante!');
+    setStatusMsg('✓ Foto do dispositivo aplicada e vinculada ao estudante!');
     setUploadSuccess(true);
 
     try {
       const token = await getAccessToken();
       if (token) {
-        const uploaded = await uploadStudentPhotoToDrive(
-          student,
-          className,
-          dataUrl
-        );
+        const uploaded = await uploadStudentPhotoToDrive(student, className, dataUrl);
         onSavePhoto(student.id, dataUrl, uploaded.webViewLink, uploaded.fileId, true);
       }
     } catch {
-      // Mantém a foto salva localmente e no servidor
+      // foto permanece vinculada localmente e no servidor
     } finally {
       setIsProcessing(false);
     }
@@ -170,18 +255,17 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   const handleSelectDrivePhoto = (item: DiscoveredDrivePhotoFile) => {
     setSelectedDriveFile(item);
     setPreviewUrl(item.photoUrl);
-    setStatusMsg(`Arquivo selecionado: "${item.name}" (ID: ${item.id.slice(0, 10)}...)`);
+    setStatusMsg(`Foto selecionada: "${item.name}"`);
   };
-
 
   const handleRefreshCatalog = async () => {
     if (!onSyncDrivePhotos || isSyncingCatalog) return;
     setIsSyncingCatalog(true);
-    setStatusMsg('Atualizando lista de fotos da pasta do Google Drive...');
+    setStatusMsg('Atualizando lista de fotos da pasta oficial do Drive...');
     try {
       await onSyncDrivePhotos();
       setCatalogTick((t) => t + 1);
-      setStatusMsg('✓ Lista de fotos do Google Drive atualizada.');
+      setStatusMsg('✓ Lista de fotos atualizada.');
     } catch {
       setStatusMsg('Não foi possível atualizar a pasta agora. Verifique a conexão Drive.');
     } finally {
@@ -205,8 +289,13 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     setUploadSuccess(true);
     setTimeout(() => {
       setUploadSuccess(false);
-      onClose();
-    }, 500);
+      // Se houver próximo aluno na turma, avança direto para agilizar a conferência!
+      if (canGoNext && onSelectStudent) {
+        handleNextStudent();
+      } else {
+        onClose();
+      }
+    }, 450);
   };
 
   if (!isOpen || !student) return null;
@@ -214,249 +303,366 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[60] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 pb-3 border-b border-black/[0.06] shrink-0">
+        {/* Header Modal com Título e Fechar */}
+        <div className="flex items-center justify-between p-4 sm:p-5 pb-3 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-[#eaf6ef] text-[#005035] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[22px]">photo_camera</span>
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-slate-900 truncate">
+              <h3 className="text-base font-bold text-slate-950 truncate">
                 Foto do Estudante
               </h3>
-              <p className="text-xs text-slate-500 truncate">
-                Nº {student.number.toString().padStart(2, '0')} • {student.name} ({className})
+              <p className="text-xs text-slate-700 truncate font-semibold">
+                {className} · EMEB Prof. Joaquim Candelário de Freitas
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors shrink-0"
             aria-label="Fechar"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        {/* Scrollable Body */}
-        <div className="overflow-y-auto overscroll-contain flex-1 p-4 sm:p-5 space-y-3">
-          {/* Student Preview & Current Association Status */}
-          <div className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative shrink-0">
-              <StudentAvatar
-                student={{ ...student, photo: previewUrl }}
-                size="lg"
-                className="w-14 h-14 rounded-xl border border-slate-200"
-              />
-              {previewUrl && (
-                <span className="absolute -bottom-1 -right-1 p-1 bg-emerald-600 text-white rounded-full">
-                  <span className="material-symbols-outlined text-[12px] block">check</span>
+        {/* CARROSSEL DE ALUNOS DA TURMA (Navegação Rápida sem fechar o Modal) */}
+        {totalStudents > 1 && (
+          <div className="bg-slate-50 border-b border-slate-200/80 px-4 py-2.5 shrink-0 space-y-2">
+            {/* Controles Anterior / Próximo e Contador */}
+            <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={handlePrevStudent}
+                disabled={!canGoPrev}
+                className="h-7 px-2.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-900 font-bold flex items-center gap-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+                title="Aluno anterior (ou use a seta ← no teclado)"
+              >
+                <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                <span>Anterior</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900">
+                  Estudante {currentIndex + 1} de {totalStudents}
                 </span>
-              )}
+                <span className="hidden sm:inline text-[11px] text-slate-500 font-mono">
+                  (Dica: use setas ← e →)
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNextStudent}
+                disabled={!canGoNext}
+                className="h-7 px-2.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-900 font-bold flex items-center gap-1 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+                title="Próximo aluno (ou use a seta → no teclado)"
+              >
+                <span>Próximo</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </button>
             </div>
 
-            <div className="min-w-0">
-              <span className="text-sm font-semibold text-slate-900 block truncate">
-                {student.name}
-              </span>
-              <span className="text-xs text-slate-500 block truncate">
-                RA: {student.ra || '—'}-{student.digRa || ''} •{' '}
-                {previewUrl ? 'Foto anexada' : 'Sem foto cadastrada'}
-              </span>
+            {/* Fita Horizontal com Miniaturas de Todos os Alunos */}
+            <div
+              ref={carouselContainerRef}
+              className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar scroll-smooth touch-pan-x overscroll-x-contain"
+            >
+              {sortedStudents.map((st) => {
+                const isCurrent = st.id === student.id;
+                const hasPhoto = Boolean(st.photo);
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    data-student-id={st.id}
+                    onClick={() => onSelectStudent?.(st)}
+                    className={`shrink-0 flex items-center gap-2 px-2 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'bg-slate-950 text-white border-slate-950 shadow-xs'
+                        : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800'
+                    }`}
+                    title={`Nº ${st.number} - ${st.name} (${hasPhoto ? 'Com foto' : 'Sem foto'})`}
+                  >
+                    <div className="relative shrink-0">
+                      <StudentAvatar
+                        student={st}
+                        size="sm"
+                        className="w-6 h-6 rounded-lg object-cover"
+                      />
+                      {hasPhoto && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-1 ring-white" />
+                      )}
+                    </div>
+                    <span className="text-[11px] font-mono font-bold">
+                      Nº {st.number.toString().padStart(2, '0')}
+                    </span>
+                    <span className="text-xs font-semibold truncate max-w-[85px]">
+                      {st.name.split(' ')[0]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Mode Selector Tabs */}
-        <div className="grid grid-cols-2 gap-2 mt-3 bg-[#f5f5f7] p-1 rounded-xl border border-black/[0.05]">
-          <button
-            type="button"
-            onClick={() => setActiveTab('drive_catalog')}
-            className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-              activeTab === 'drive_catalog'
-                ? 'bg-white text-[#1d1d1f] shadow-2xs'
-                : 'text-[#6e6e73] hover:text-[#1d1d1f]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[17px] text-[#0071e3]">cloud_search</span>
-            <span>Fotos do Google Drive ({discoveredPhotos.length})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('device_upload')}
-            className={`py-2 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-              activeTab === 'device_upload'
-                ? 'bg-white text-[#1d1d1f] shadow-2xs'
-                : 'text-[#6e6e73] hover:text-[#1d1d1f]'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[17px] text-[#005035]">upload_file</span>
-            <span>Enviar do Dispositivo</span>
-          </button>
-        </div>
-
-        {/* Body Content */}
-        <div className="overflow-y-auto py-3 space-y-3 flex-1 min-h-[240px]">
-          {activeTab === 'drive_catalog' ? (
-            <div className="space-y-3">
-              {/* Search bar in Drive Catalog */}
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b] text-[18px]">
-                    search
+        {/* Scrollable Body */}
+        <div className="modal-scroll-body flex-1 p-4 sm:p-5 space-y-4">
+          {/* Card do Estudante Atual */}
+          <div className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative shrink-0">
+                <StudentAvatar
+                  student={{ ...student, photo: previewUrl }}
+                  size="lg"
+                  className="w-16 h-16 rounded-2xl border-2 border-white shadow-sm object-cover"
+                />
+                {previewUrl && (
+                  <span className="absolute -bottom-1 -right-1 p-1 bg-emerald-600 text-white rounded-full shadow-xs">
+                    <span className="material-symbols-outlined text-[13px] block">check</span>
                   </span>
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Pesquisar foto por nome, abreviação, turma ou extensão (.jpg, .png)..."
-                    className="w-full h-10 pl-9 pr-8 bg-[#f5f5f7] border border-black/[0.08] rounded-xl text-sm font-medium text-[#1d1d1f] focus:bg-white focus:border-[#0071e3] focus:outline-none"
-                  />
-                  {searchQuery && (
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-900 font-mono">
+                    Nº {student.number.toString().padStart(2, '0')}
+                  </span>
+                  <span className="text-sm font-bold text-slate-950 truncate">
+                    {student.name}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-600 font-medium block truncate mt-0.5">
+                  RA: {student.ra || '—'}-{student.digRa || ''} ·{' '}
+                  <strong className={previewUrl ? 'text-emerald-700' : 'text-amber-700'}>
+                    {previewUrl ? 'Foto Vinculada' : 'Sem foto cadastrada'}
+                  </strong>
+                </span>
+              </div>
+            </div>
+
+            {previewUrl && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewUrl('');
+                  setSelectedDriveFile(null);
+                  setStatusMsg('Foto removida da visualização. Clique em Confirmar Foto para salvar.');
+                }}
+                className="h-8 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-rose-200"
+                title="Desvincular foto deste estudante"
+              >
+                <span className="material-symbols-outlined text-[16px]">delete</span>
+                <span className="hidden sm:inline">Desvincular</span>
+              </button>
+            )}
+          </div>
+
+          {/* Mode Selector Tabs */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+            <button
+              type="button"
+              onClick={() => setActiveTab('drive_catalog')}
+              className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                activeTab === 'drive_catalog'
+                  ? 'bg-white text-slate-950 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[17px] text-blue-600">cloud_search</span>
+              <span>Pasta Google Drive ({discoveredPhotos.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('device_upload')}
+              className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                activeTab === 'device_upload'
+                  ? 'bg-white text-slate-950 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[17px] text-emerald-700">upload_file</span>
+              <span>Enviar do Dispositivo</span>
+            </button>
+          </div>
+
+          {/* Body Content */}
+          <div className="py-2 space-y-3 min-h-[220px]">
+            {activeTab === 'drive_catalog' ? (
+              <div className="space-y-3">
+                {/* Search bar in Drive Catalog */}
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar foto por nome, sobrenome ou turma..."
+                      className="w-full h-10 pl-9 pr-8 bg-slate-100 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:bg-white focus:border-slate-950 focus:outline-none"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">cancel</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {onSyncDrivePhotos && (
                     <button
                       type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
+                      onClick={handleRefreshCatalog}
+                      disabled={isSyncingCatalog}
+                      className="h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 border border-slate-200 font-bold text-xs flex items-center gap-1 cursor-pointer shrink-0"
+                      title="Recarregar fotos da pasta oficial do Google Drive"
                     >
-                      <span className="material-symbols-outlined text-[16px]">cancel</span>
+                      <span
+                        className={`material-symbols-outlined text-[16px] text-blue-600 ${
+                          isSyncingCatalog ? 'animate-spin' : ''
+                        }`}
+                      >
+                        sync
+                      </span>
+                      <span className="hidden sm:inline">Atualizar</span>
                     </button>
                   )}
                 </div>
 
-                {onSyncDrivePhotos && (
-                  <button
-                    type="button"
-                    onClick={handleRefreshCatalog}
-                    disabled={isSyncingCatalog}
-                    className="h-10 px-3 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border border-black/[0.08] font-bold text-xs flex items-center gap-1 cursor-pointer shrink-0"
-                    title="Recarregar arquivos da pasta Fotos Estudantes no Google Drive"
-                  >
-                    <span
-                      className={`material-symbols-outlined text-[16px] text-[#0071e3] ${
-                        isSyncingCatalog ? 'animate-spin' : ''
-                      }`}
-                    >
-                      sync
-                    </span>
-                    <span className="hidden sm:inline">Atualizar Lista</span>
-                  </button>
+                {/* Results list */}
+                {filteredDrivePhotos.length === 0 ? (
+                  <div className="p-6 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <p className="text-xs sm:text-sm font-bold text-slate-900">
+                      Nenhuma foto localizada com esse nome.
+                    </p>
+                    <p className="text-xs text-slate-600 font-medium">
+                      Você pode limpar a busca ou enviar a foto diretamente do computador/celular na aba ao lado.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pr-0.5">
+                    {filteredDrivePhotos.map((item) => {
+                      const isSelected =
+                        selectedDriveFile?.id === item.id ||
+                        student.photoDriveId === item.id ||
+                        previewUrl === item.photoUrl;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleSelectDrivePhoto(item)}
+                          className={`p-2.5 rounded-2xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
+                            isSelected
+                              ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600/20'
+                              : 'bg-white hover:bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <img
+                            src={item.photoUrl}
+                            alt={item.name}
+                            referrerPolicy="no-referrer"
+                            className="w-11 h-11 rounded-xl object-cover bg-slate-100 shrink-0 border border-slate-200"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-900 truncate">
+                              {item.name}
+                            </p>
+                            <p className="text-[11px] text-slate-600 font-mono tabular-nums truncate">
+                              {item.subfolderName || 'Fotos Estudantes'}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <span className="material-symbols-outlined text-blue-600 text-[20px] shrink-0">
+                              check_circle
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
+            ) : (
+              <div className="space-y-3 py-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
 
-              {/* Results list */}
-              {filteredDrivePhotos.length === 0 ? (
-                <div className="p-5 text-center bg-slate-50 rounded-2xl border border-slate-200/80 space-y-1">
-                  <p className="text-xs sm:text-sm font-semibold text-slate-900">
-                    Nenhum arquivo de foto localizado com esse filtro.
-                  </p>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Você pode refinar o termo de busca ou enviar a foto do dispositivo.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[210px] overflow-y-auto pr-1">
-                  {filteredDrivePhotos.map((item) => {
-                    const isSelected =
-                      selectedDriveFile?.id === item.id || student.photoDriveId === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => handleSelectDrivePhoto(item)}
-                        className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
-                          isSelected
-                            ? 'bg-blue-50 border-blue-600 ring-1 ring-blue-600/30'
-                            : 'bg-white hover:bg-slate-50 border-slate-200'
-                        }`}
-                      >
-                        <img
-                          src={item.photoUrl}
-                          alt={item.name}
-                          referrerPolicy="no-referrer"
-                          className="w-10 h-10 rounded-lg object-cover bg-slate-100 shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-slate-900 truncate">
-                            {item.name}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-mono tabular-nums truncate">
-                            {item.subfolderName || 'Pasta Fotos Estudantes'} · ID:{' '}
-                            {item.id.slice(0, 7)}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3 py-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-14 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-950 font-bold text-sm rounded-2xl flex items-center justify-center gap-2.5 border-2 border-dashed border-emerald-300 cursor-pointer active:scale-98 transition-all disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[24px] text-emerald-700">
+                    add_photo_alternate
+                  </span>
+                  <span>
+                    {isProcessing
+                      ? 'Otimizando e comprimindo foto...'
+                      : 'Escolher Foto do Computador ou Celular'}
+                  </span>
+                </button>
+                <p className="text-[11px] text-center text-slate-500">
+                  Formatos aceitos: JPG, PNG, WEBP. A imagem é otimizada e salva automaticamente.
+                </p>
+              </div>
+            )}
 
-              <button
-                type="button"
-                disabled={isProcessing}
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-12 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium text-sm rounded-xl flex items-center justify-center gap-2 border border-dashed border-emerald-300 cursor-pointer active:scale-98 transition-colors disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-[20px]">folder_open</span>
-                <span>
-                  {isProcessing
-                    ? 'Processando e otimizando foto...'
-                    : 'Escolher Foto do Computador ou Celular'}
+            {statusMsg && (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px] text-slate-600">info</span>
+                <span>{statusMsg}</span>
+              </div>
+            )}
+
+            {uploadSuccess && (
+              <div className="p-3 bg-emerald-50 text-emerald-900 rounded-xl font-bold text-xs flex items-center gap-2 border border-emerald-200">
+                <span className="material-symbols-outlined text-[18px] text-emerald-700">
+                  check_circle
                 </span>
-              </button>
-            </div>
-          )}
-
-          {statusMsg && (
-            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700">
-              {statusMsg}
-            </div>
-          )}
-
-          {uploadSuccess && (
-            <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-lg font-medium text-xs flex items-center gap-2 border border-emerald-200">
-              <span className="material-symbols-outlined text-[16px]">check_circle</span>
-              <span>Foto confirmada e salva com sucesso!</span>
-            </div>
-          )}
-        </div>
-
+                <span>Foto confirmada e associada com sucesso!</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Modal Actions Sticky */}
-        <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90 p-4 flex gap-2 shrink-0 z-10">
+        <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200 p-4 flex gap-2 shrink-0 z-10">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+            className="flex-1 h-11 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm rounded-2xl transition-colors cursor-pointer"
           >
-            Cancelar
+            Fechar
           </button>
 
           <button
             type="button"
             onClick={handleSave}
             disabled={isProcessing || !previewUrl}
-            className="flex-1 h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-xs"
+            className="flex-1 h-11 bg-slate-950 hover:bg-black text-white font-bold text-xs sm:text-sm rounded-2xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-40 shadow-xs"
           >
-            <span className="material-symbols-outlined text-[16px]">verified</span>
+            <span className="material-symbols-outlined text-[18px]">verified</span>
             <span>Confirmar Foto</span>
           </button>
         </div>

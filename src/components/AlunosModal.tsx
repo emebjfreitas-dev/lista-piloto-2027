@@ -6,6 +6,7 @@ import {
   resolveGuardianRelationshipInfo,
 } from '../utils/genderDictionary';
 import { getSavedPhotosDriveFolderInfo, OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface AlunosModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
   onOpenStudentGrid,
   onOpenStudentPdf,
 }) => {
+  useModalScrollLock(isOpen);
+
   const [search, setSearch] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     students[0]?.id || null
@@ -51,11 +54,11 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-gentle-fade"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 p-4 sm:p-6 overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 p-4 sm:p-6 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
       >
         {/* Header: Proporcional e Elegante */}
         <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 shrink-0">
@@ -112,7 +115,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
         {/* Main Content: 1-Col on Mobile, 12-Col Master-Detail Split on Widescreen Desktop */}
         <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-12 lg:gap-5 overflow-hidden">
           {/* Left Column (7 cols on Widescreen): Responsive Grid of Students */}
-          <div className="lg:col-span-7 overflow-y-auto pr-1 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2.5 content-start flex-1">
+          <div className="lg:col-span-7 modal-scroll-body pr-1 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2.5 content-start flex-1">
             {filtered.map((student) => {
               const isSelected = selectedStudent?.id === student.id;
               const hasAlert = student.totalAbsencesMonth >= 4;
@@ -179,7 +182,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
           {/* Right Column (5 cols on Widescreen, Bottom Card on Mobile): Selected Student Detail Ficha */}
           {selectedStudent && (
-            <div className="mt-3 lg:mt-0 lg:col-span-5 p-4 sm:p-5 bg-[#f4f7f5] rounded-2xl border-2 border-[#003440]/25 flex flex-col justify-between gap-3 max-h-[42vh] lg:max-h-full overflow-y-auto">
+            <div className="mt-3 lg:mt-0 lg:col-span-5 p-4 sm:p-5 bg-[#f4f7f5] rounded-2xl border-2 border-[#003440]/25 flex flex-col justify-between gap-3 max-h-[42vh] lg:max-h-full modal-scroll-body">
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b-2 border-[#b4c0c4]/70">
                   <span className="text-sm font-semibold text-[#003440] uppercase tracking-wide">

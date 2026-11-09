@@ -23,6 +23,7 @@ import {
   getStoredLgpdConfig,
   addSecurityAuditLog,
 } from '../services/db';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface GradeDadosCriancaModalProps {
   isOpen: boolean;
@@ -152,6 +153,8 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   const [portraitImgError, setPortraitImgError] = useState(false);
   const internalPhotoInputRef = useRef<HTMLInputElement>(null);
   const [isLgpdRevealed, setIsLgpdRevealed] = useState(false);
+
+  useModalScrollLock(isOpen);
 
   const handleToggleLgpdReveal = () => {
     if (userRole !== 'admin') {
@@ -509,14 +512,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-gentle-fade"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
       >
         {/* Top Clean Header + Navegação */}
-        <div className="px-5 sm:px-6 py-3.5 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+        <div className="px-5 sm:px-6 py-3.5 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <span className="font-mono text-xs font-semibold text-slate-900 tabular-nums">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
@@ -599,7 +602,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         </div>
 
         {/* Main Organic & Visual Profile Layout */}
-        <div className="overflow-y-auto flex-1 p-5 sm:p-7 space-y-6">
+        <div className="modal-scroll-body flex-1 p-4 sm:p-7 space-y-6">
           {/* BANNER DE ALERTA NO TOPO DA GRADE DE DADOS — EXCEDEU 3 FALTAS CONSECUTIVAS */}
           {exceedsThreeConsecutive && (
             <div className="rounded-3xl p-5 bg-gradient-to-r from-orange-100 via-rose-100 to-amber-100 shadow-sm flex flex-col gap-3.5 animate-gentle-fade">
@@ -1250,7 +1253,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[340px] overflow-y-auto pr-1 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 pt-1">
                 {filteredFields.map((field) => {
                   const rawVal = draft[field.key];
                   let displayVal =

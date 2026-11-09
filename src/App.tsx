@@ -295,27 +295,15 @@ export default function App() {
     simulatedTeacherEmail,
   ]);
 
-  // Modo de Visualização e Proporção de Layout Adaptativa (Fluido, Confortável ou Compacto)
-  const [densityMode, setDensityMode] = useState<'responsive' | 'comfortable' | 'compact'>(() => {
-    try {
-      const saved = localStorage.getItem('emeb_candelario_layout_density_mode');
-      if (saved === 'comfortable' || saved === 'compact' || saved === 'responsive') {
-        return saved;
-      }
-    } catch {
-      // fallback
-    }
-    return 'responsive';
-  });
-
+  // Padronização Única e Confortável em toda a aplicação (sem alternadores)
   useEffect(() => {
     try {
-      localStorage.setItem('emeb_candelario_layout_density_mode', densityMode);
-      document.documentElement.setAttribute('data-density', densityMode);
+      document.documentElement.removeAttribute('data-density');
+      localStorage.removeItem('emeb_candelario_layout_density_mode');
     } catch {
       // fallback
     }
-  }, [densityMode]);
+  }, []);
 
   const handleUpdateAttendanceWindowConfig = (nextConfig: AttendanceWindowConfig) => {
     setAttendanceWindowConfig(nextConfig);
@@ -1333,8 +1321,6 @@ export default function App() {
         }}
         onQuickSyncDriveNow={handleQuickSyncDriveNow}
         onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
-        densityMode={densityMode}
-        onChangeDensityMode={setDensityMode}
         onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
         onLogout={handleLogout}
       />
@@ -1867,6 +1853,8 @@ export default function App() {
           onClose={() => setPhotoModalStudent(null)}
           student={photoModalStudent}
           className={selectedClass.name}
+          classStudents={selectedClass.students}
+          onSelectStudent={(st) => setPhotoModalStudent(st)}
           onSavePhoto={handleSaveStudentPhoto}
           onSyncDrivePhotos={async () => {
             const photoSync = await syncPhotosFromDriveFolder(getStoredClasses());
