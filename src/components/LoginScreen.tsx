@@ -123,7 +123,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* Título Institucional */}
         <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-1">
-          Prefeitura de Jundiaí · UGE
+          Prefeitura de Jundiaí · SME
         </p>
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950">
           EMEB Prof. Joaquim Candelário de Freitas

@@ -733,34 +733,34 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         {/* Quadro Docente Oficial da Turma */}
         {(classGroup.teacherName || classGroup.artTeacher || classGroup.peTeacher || classGroup.englishTeacher) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4 items-stretch">
-            <div className="rounded-2xl bg-slate-100 p-3.5 flex items-start gap-3 h-full shadow-2xs">
+            <div className="rounded-2xl bg-white border border-slate-200/80 p-3.5 flex items-start gap-3 h-full min-h-[82px] shadow-2xs hover:border-slate-300 transition-colors">
               <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0 mt-0.5">
                 <span className="material-symbols-outlined text-[17px]">school</span>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     {classGroup.pronoun || 'PROFESSORA'} REGENTE
                   </span>
                   {classGroup.teacherFirstName && (
-                    <span className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] font-bold">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-bold">
                       {classGroup.teacherFirstName}
                     </span>
                   )}
                 </div>
                 {classGroup.isVaga || classGroup.teacherName === 'TURMA VAGA' ? (
                   <div className="mt-1">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-200 text-amber-950 text-xs font-bold">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-950 text-xs font-bold">
                       <span className="w-2 h-2 rounded-full bg-amber-600" />
                       Turma Vaga
                     </span>
                   </div>
                 ) : (
                   <>
-                    <p className="text-xs font-bold text-slate-950 truncate mt-0.5">
+                    <p className="text-xs font-bold text-slate-950 truncate mt-0.5" title={classGroup.teacherName || undefined}>
                       {classGroup.teacherName || 'Não atribuído'}
                     </p>
-                    <p className="text-[11px] font-mono text-slate-600 font-medium truncate">
+                    <p className="text-[11px] font-mono text-slate-500 font-medium truncate mt-0.5" title={classGroup.teacherEmail || undefined}>
                       {classGroup.teacherEmail || 'Docente Regente'}
                     </p>
                   </>
@@ -768,7 +768,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-100 p-3.5 flex items-start gap-3 h-full shadow-2xs">
+            <div className="rounded-2xl bg-white border border-slate-200/80 p-3.5 flex items-start gap-3 h-full min-h-[82px] shadow-2xs hover:border-slate-300 transition-colors">
               <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0 mt-0.5">
                 <span className="material-symbols-outlined text-[17px]">palette</span>
               </div>
@@ -776,16 +776,16 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
                   Arte (PEB II)
                 </span>
-                <p className="text-xs font-bold text-slate-950 truncate mt-0.5">
+                <p className="text-xs font-bold text-slate-950 truncate mt-0.5" title={classGroup.artTeacher || undefined}>
                   {classGroup.artTeacher || '—'}
                 </p>
-                <p className="text-[11px] font-mono text-slate-600 font-medium truncate">
+                <p className="text-[11px] font-mono text-slate-500 font-medium truncate mt-0.5" title={classGroup.artTeacherEmail || undefined}>
                   {classGroup.artTeacherEmail || 'Especialista'}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-100 p-3.5 flex items-start gap-3 h-full shadow-2xs">
+            <div className="rounded-2xl bg-white border border-slate-200/80 p-3.5 flex items-start gap-3 h-full min-h-[82px] shadow-2xs hover:border-slate-300 transition-colors">
               <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0 mt-0.5">
                 <span className="material-symbols-outlined text-[17px]">sports_soccer</span>
               </div>
@@ -793,16 +793,16 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
                   Ed. Física (PEB II)
                 </span>
-                <p className="text-xs font-bold text-slate-950 truncate mt-0.5">
+                <p className="text-xs font-bold text-slate-950 truncate mt-0.5" title={classGroup.peTeacher || undefined}>
                   {classGroup.peTeacher || '—'}
                 </p>
-                <p className="text-[11px] font-mono text-slate-600 font-medium truncate">
+                <p className="text-[11px] font-mono text-slate-500 font-medium truncate mt-0.5" title={classGroup.peTeacherEmail || undefined}>
                   {classGroup.peTeacherEmail || 'Especialista'}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-100 p-3.5 flex items-start gap-3 h-full shadow-2xs">
+            <div className="rounded-2xl bg-white border border-slate-200/80 p-3.5 flex items-start gap-3 h-full min-h-[82px] shadow-2xs hover:border-slate-300 transition-colors">
               <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0 mt-0.5">
                 <span className="material-symbols-outlined text-[17px]">translate</span>
               </div>
@@ -810,10 +810,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
                   Inglês (PEB II)
                 </span>
-                <p className="text-xs font-bold text-slate-950 truncate mt-0.5">
+                <p className="text-xs font-bold text-slate-950 truncate mt-0.5" title={classGroup.englishTeacher || undefined}>
                   {classGroup.englishTeacher || '—'}
                 </p>
-                <p className="text-[11px] font-mono text-slate-600 font-medium truncate">
+                <p className="text-[11px] font-mono text-slate-500 font-medium truncate mt-0.5" title={classGroup.englishTeacherEmail || undefined}>
                   {classGroup.englishTeacherEmail || 'Especialista'}
                 </p>
               </div>
@@ -826,7 +826,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           {/* 1. Estudantes Ativos */}
           <div
             onClick={() => setStatusFilter(statusFilter === 'ativos' ? 'all' : 'ativos')}
-            className="bg-slate-100/90 hover:bg-slate-200/80 rounded-2xl p-3.5 cursor-pointer transition-colors flex flex-col justify-between h-full shadow-2xs"
+            className={`rounded-2xl p-3.5 cursor-pointer transition-all flex flex-col justify-between h-full min-h-[82px] shadow-2xs border ${
+              statusFilter === 'ativos'
+                ? 'bg-slate-100 border-slate-400'
+                : 'bg-white border-slate-200/80 hover:bg-slate-50'
+            }`}
           >
             <span className="text-[11px] font-bold text-slate-600 block">
               Estudantes Ativos
@@ -842,7 +846,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
 
           {/* 2. Composição por Gênero */}
-          <div className="bg-slate-100/90 rounded-2xl p-3.5 flex flex-col justify-between h-full shadow-2xs">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 flex flex-col justify-between h-full min-h-[82px] shadow-2xs">
             <span className="text-[11px] font-bold text-slate-600 block">
               Gênero
             </span>
@@ -863,10 +867,12 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               classSummary.transferidos + classSummary.remanejados > 0 &&
               setStatusFilter(statusFilter === 'movimentados' ? 'all' : 'movimentados')
             }
-            className={`bg-slate-100/90 rounded-2xl p-3.5 transition-colors flex flex-col justify-between h-full shadow-2xs ${
-              classSummary.transferidos + classSummary.remanejados > 0
-                ? 'cursor-pointer hover:bg-slate-200/80'
-                : ''
+            className={`rounded-2xl p-3.5 transition-all flex flex-col justify-between h-full min-h-[82px] shadow-2xs border ${
+              statusFilter === 'movimentados'
+                ? 'bg-slate-100 border-slate-400'
+                : classSummary.transferidos + classSummary.remanejados > 0
+                ? 'bg-white border-slate-200/80 cursor-pointer hover:bg-slate-50'
+                : 'bg-white border-slate-200/80'
             }`}
           >
             <span className="text-[11px] font-bold text-slate-600 block">
@@ -888,10 +894,12 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               classSummary.semFichaEscaneadaCount > 0 &&
               setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')
             }
-            className={`rounded-2xl p-3.5 transition-colors flex flex-col justify-between h-full shadow-2xs ${
+            className={`rounded-2xl p-3.5 transition-all flex flex-col justify-between h-full min-h-[82px] shadow-2xs border ${
               classSummary.semFichaEscaneadaCount > 0
-                ? 'bg-rose-100/90 cursor-pointer hover:bg-rose-200/80'
-                : 'bg-slate-100/90'
+                ? statusFilter === 'sem_ficha_pdf'
+                  ? 'bg-rose-100 border-rose-400 cursor-pointer'
+                  : 'bg-rose-50/80 border-rose-200 hover:bg-rose-100/70 cursor-pointer'
+                : 'bg-white border-slate-200/80'
             }`}
           >
             <div className="flex items-center justify-between gap-1">
@@ -905,7 +913,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   : 'Fichas em Dia'}
               </span>
               {classSummary.semFichaEscaneadaCount > 0 && (
-                <span className="text-[10px] font-bold text-rose-800 underline">
+                <span className="px-2 py-0.5 rounded-md bg-rose-200/80 text-[10px] font-bold text-rose-950 shadow-2xs">
                   {statusFilter === 'sem_ficha_pdf' ? 'Ver todos' : 'Filtrar'}
                 </span>
               )}
@@ -1233,26 +1241,26 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   />
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-normal truncate">
-                        <span className={`font-mono text-xs font-semibold tabular-nums ${numberBadgeClasses}`}>
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-normal truncate min-w-0">
+                        <span className={`font-mono text-xs font-semibold tabular-nums shrink-0 ${numberBadgeClasses}`}>
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         <span className="text-slate-300" aria-hidden="true">·</span>
                         {student.ra && (
                           <>
-                            <span className="font-mono text-xs text-slate-500 tabular-nums">
-                              RA {student.ra}-{student.digRa}
+                            <span className="font-mono text-xs text-slate-600 tabular-nums font-medium truncate">
+                              RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}
                             </span>
                             <span className="text-slate-300" aria-hidden="true">·</span>
                           </>
                         )}
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 shrink-0">
                           {studentGenderInfo.code === 'F' ? 'Menina' : 'Menino'}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center shrink-0">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1266,12 +1274,12 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                               ? 'Recolher detalhes'
                               : 'Expandir dados completos'
                           }
-                          className="text-xs text-slate-400 hover:text-slate-700 font-normal inline-flex items-center gap-0.5 transition-colors cursor-pointer"
+                          aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
+                          className="w-6 h-6 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
                         >
-                          <span>{isExpanded ? 'Recolher' : 'Expandir'}</span>
                           <span
-                            className={`material-symbols-outlined text-[16px] transition-transform duration-200 ${
-                              isExpanded ? 'rotate-180' : ''
+                            className={`material-symbols-outlined text-[18px] transition-transform duration-200 ${
+                              isExpanded ? 'rotate-180 text-slate-900' : ''
                             }`}
                           >
                             expand_more

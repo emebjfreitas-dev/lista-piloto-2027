@@ -147,7 +147,6 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   const [editingKey, setEditingKey] = useState<keyof Student | null>(null);
   const [savedBanner, setSavedBanner] = useState(false);
   const [pushAlertSent, setPushAlertSent] = useState(false);
-  const [showAllSedFields, setShowAllSedFields] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [portraitFallbackIdx, setPortraitFallbackIdx] = useState(0);
   const [portraitImgError, setPortraitImgError] = useState(false);
@@ -282,7 +281,6 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     setDraft(student);
     setEditingKey(null);
     setSavedBanner(false);
-    setShowAllSedFields(false);
     setIsLightboxOpen(false);
     setPortraitFallbackIdx(0);
     setPortraitImgError(false);
@@ -1143,58 +1141,65 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     )}
                   </div>
                 )}
-              </div>
 
-              {/* Ação Discreta para Expandir os 48 Campos SED */}
-              <div className="flex items-center justify-between pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setShowAllSedFields((prev) => !prev)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {showAllSedFields ? 'expand_less' : 'expand_more'}
-                  </span>
-                  <span>
-                    {showAllSedFields
-                      ? 'Ocultar Ficha Cadastral Completa (48 campos SED)'
-                      : 'Expandir Ficha Cadastral Completa (48 campos SED)'}
-                  </span>
-                </button>
-
-                {canEdit && showAllSedFields && (
-                  <button
-                    type="button"
-                    onClick={handleSaveAll}
-                    className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-bold text-sm flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <span className="material-symbols-outlined text-[17px]">save</span>
-                    <span>Salvar Alterações</span>
-                  </button>
+                {canEdit && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={handleSaveAll}
+                      className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">save</span>
+                      <span>Salvar Informações Rápidas</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* SEÇÃO EXPANSÍVEL OPCIONAL: GRADE DE 48 CAMPOS SED */}
-          {showAllSedFields && (
-            <section className="bg-white rounded-[24px] p-5 shadow-sm space-y-3.5 animate-gentle-fade">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-slate-950 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[19px] text-[#0071e3]">
-                    grid_on
-                  </span>
-                  <span>Todos os 48 Campos Cadastrais SED</span>
-                </h3>
+          {/* FICHA CADASTRAL COMPLETA (48 CAMPOS OFICIAIS SED / SME JUNDIAÍ) */}
+          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[18px]">badge</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-950">
+                      Ficha Cadastral Completa Oficial (48 Dados SED / SME)
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 text-[10px] font-bold">
+                      SED · SME Jundiaí
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Todos os 48 campos cadastrais oficiais com conformidade LGPD (Art. 14)
+                  </p>
+                </div>
+              </div>
 
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={searchField}
                   onChange={(e) => setSearchField(e.target.value)}
                   placeholder="Filtrar campo (ex: CPF, SUS, CEP)..."
-                  className="px-3.5 py-1.5 bg-slate-100 rounded-xl text-sm font-medium focus:bg-white focus:outline-none"
+                  className="h-9 px-3.5 bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-slate-300 rounded-xl text-xs font-medium focus:outline-none transition-colors w-full sm:w-56"
                 />
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={handleSaveAll}
+                    className="h-9 px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">save</span>
+                    <span>Salvar</span>
+                  </button>
+                )}
               </div>
+            </div>
 
               <div className="flex flex-wrap gap-1.5">
                 {[
@@ -1333,7 +1338,6 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 })}
               </div>
             </section>
-          )}
         </div>
 
         {/* Sticky Action Footer — Sempre visível sem scroll */}

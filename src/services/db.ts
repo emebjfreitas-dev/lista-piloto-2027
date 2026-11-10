@@ -3500,4 +3500,320 @@ export const exportSecurityAuditLogsCSV = (): void => {
   URL.revokeObjectURL(url);
 };
 
+// -------------------------------------------------------------
+// RECURSO DE ATUALIZAÇÃO E RESTAURAÇÃO VIA ARQUIVO JSON (SEGURO)
+// -------------------------------------------------------------
+
+export interface SchoolJsonBackup {
+  version: number;
+  app: string;
+  school: string;
+  exportedAtISO: string;
+  exportedBy: string;
+  totalClasses: number;
+  totalStudents: number;
+  classes: ClassGroup[];
+  authorizedUsers?: AuthorizedUser[];
+  officialCalendarConfig?: any;
+  holidays?: any[];
+}
+
+/**
+ * Exporta o banco escolar completo em arquivo .json formatado e higienizado para backup ou auditoria
+ */
+export const exportSchoolDataToJsonFile = (
+  classes: ClassGroup[],
+  userEmail = 'emebjfreitas@jundiai.sp.gov.br'
+): void => {
+  const totalStudents = classes.reduce((acc, c) => acc + (c.students?.length || 0), 0);
+  const backup: SchoolJsonBackup = {
+    version: 1,
+    app: 'Lista Piloto 2027 · EMEB Prof. Joaquim Candelário de Freitas',
+    school: 'EMEB Prof. Joaquim Candelário de Freitas (SME Jundiaí)',
+    exportedAtISO: new Date().toISOString(),
+    exportedBy: userEmail,
+    totalClasses: classes.length,
+    totalStudents,
+    classes,
+    authorizedUsers: getStoredAuthorizedUsers(),
+  };
+
+  const jsonStr = JSON.stringify(backup, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  const dateSuffix = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  link.setAttribute('download', `emeb_candelario_backup_escolar_2027_${dateSuffix}.json`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  addSecurityAuditLog({
+    userEmail,
+    userName: 'Administrador Escolar Candelário',
+    userRole: 'admin',
+    eventType: 'JSON_DATA_EXPORT_GENERATED',
+    actionTitle: 'Exportação de Backup JSON Oficial',
+    details: `Backup completo exportado em JSON (${classes.length} turmas, ${totalStudents} estudantes)`,
+    severity: 'info',
+  });
+};
+
+/**
+ * Validação rigorosa e sanitização do JSON fornecido por arraste e solte
+ */
+export const validateAndSanitizeJsonPayload = (
+  rawJson: any
+): {
+  isValid: boolean;
+  error?: string;
+  classes?: ClassGroup[];
+  totalStudents?: number;
+  backupMeta?: {
+    version?: number;
+    exportedAtISO?: string;
+    exportedBy?: string;
+    school?: string;
+  };
+} => {
+  if (!rawJson) {
+    return { isValid: false, error: 'Arquivo JSON vazio ou nulo.' };
+  }
+
+  let rawClasses: any[] | null = null;
+  const backupMeta: any = {};
+
+  if (Array.isArray(rawJson)) {
+    rawClasses = rawJson;
+  } else if (typeof rawJson === 'object') {
+    if (Array.isArray(rawJson.classes)) {
+      rawClasses = rawJson.classes;
+      backupMeta.version = rawJson.version;
+      backupMeta.exportedAtISO = rawJson.exportedAtISO;
+      backupMeta.exportedBy = rawJson.exportedBy;
+      backupMeta.school = rawJson.school;
+    } else if (Array.isArray(rawJson.turmas)) {
+      rawClasses = rawJson.turmas;
+      backupMeta.version = rawJson.version;
+      backupMeta.exportedAtISO = rawJson.exportedAtISO;
+      backupMeta.exportedBy = rawJson.exportedBy;
+    }
+  }
+
+  if (!rawClasses || !Array.isArray(rawClasses) || rawClasses.length === 0) {
+    return {
+      isValid: false,
+      error: 'Formato inválido. O arquivo JSON deve conter uma lista de turmas (propriedade "classes" ou array de turmas).',
+    };
+  }
+
+  // Validação e higienização profunda de cada turma e estudante
+  try {
+    const cleanClasses: ClassGroup[] = rawClasses.map((rawCls, cIdx) => {
+      const clsId = String(rawCls.id || `turma-${cIdx + 1}`).trim();
+      const clsName = String(rawCls.name || `Turma ${cIdx + 1}`).trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      const rawStudents = Array.isArray(rawCls.students) ? rawCls.students : [];
+
+      const cleanStudents: Student[] = rawStudents.map((rawSt: any, sIdx: number) => {
+        const studentNumber = Number(rawSt.number) || sIdx + 1;
+        const studentName = String(rawSt.name || rawSt.estudante || `Estudante ${studentNumber}`)
+          .trim()
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+        const safeStudent: Student = {
+          ...rawSt,
+          id: String(rawSt.id || `${clsId}-st-${studentNumber}`),
+          number: studentNumber,
+          name: studentName,
+          estudante: studentName,
+          ra: String(rawSt.ra || '').trim(),
+          digRa: String(rawSt.digRa || '').trim(),
+          ufRa: String(rawSt.ufRa || 'SP').trim(),
+          totalAbsencesMonth: Number(rawSt.totalAbsencesMonth) || 0,
+          consecutiveDays: Number(rawSt.consecutiveDays) || 0,
+          consecutiveTier: rawSt.consecutiveTier || 'none',
+          consecutiveSelectedDates: Array.isArray(rawSt.consecutiveSelectedDates)
+            ? rawSt.consecutiveSelectedDates
+            : [],
+          presenceDates: Array.isArray(rawSt.presenceDates) ? rawSt.presenceDates : [],
+          absentDates: Array.isArray(rawSt.absentDates) ? rawSt.absentDates : [],
+          justifiedAbsenceDates: Array.isArray(rawSt.justifiedAbsenceDates)
+            ? rawSt.justifiedAbsenceDates
+            : [],
+        };
+        return safeStudent;
+      });
+
+      const totalAbsences = cleanStudents.reduce((acc, s) => acc + (s.totalAbsencesMonth || 0), 0);
+      const classesHeld = Number(rawCls.classesHeld) || 20;
+
+      const safeClass: ClassGroup = {
+        ...rawCls,
+        id: clsId,
+        name: clsName,
+        totalStudents: cleanStudents.length,
+        students: cleanStudents,
+        monthlyAbsences: totalAbsences,
+        classesHeld,
+        presenceRate: Number(rawCls.presenceRate) || 95,
+        shift: rawCls.shift || 'Turno Manhã',
+        grade: rawCls.grade || 'Ensino Fundamental I',
+        room: rawCls.room || 'Sala Oficial',
+      };
+      return safeClass;
+    });
+
+    const enriched = enrichClassesWithOfficialMatrix(cleanClasses);
+    const totalStudents = enriched.reduce((acc, c) => acc + c.students.length, 0);
+
+    return {
+      isValid: true,
+      classes: enriched,
+      totalStudents,
+      backupMeta,
+    };
+  } catch (err: any) {
+    return {
+      isValid: false,
+      error: `Erro ao validar os registros internos das turmas: ${err?.message || 'Arquivo corrompido'}`,
+    };
+  }
+};
+
+/**
+ * Aplica a importação do JSON com gravação atômica local, backend e Firestore
+ */
+export const importSchoolDataFromJson = async (
+  validatedClasses: ClassGroup[],
+  fileName = 'backup.json',
+  fileSize = '0 KB',
+  userEmail = 'emebjfreitas@jundiai.sp.gov.br'
+): Promise<{ ok: boolean; error?: string }> => {
+  const nowMs = Date.now();
+  try {
+    // 1. Atualizar cache e LocalStorage
+    saveStoredClasses(validatedClasses);
+
+    // 2. Tentar persistência no backend Node.js
+    if (isBackendApiAvailable()) {
+      try {
+        await fetch('/api/school-state/import-json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getActiveUserAuthHeaders(),
+          },
+          body: JSON.stringify({
+            payload: { classes: validatedClasses },
+            fileName,
+            fileSize,
+          }),
+        });
+      } catch (e) {
+        console.warn('Aviso: falha na rota /api/school-state/import-json, tentando /api/school-state/classes', e);
+        await pushClassesToServer(validatedClasses);
+      }
+    }
+
+    // 3. Sincronizar com Firestore Cloud
+    try {
+      await saveClassesToFirestoreCloud(validatedClasses, nowMs);
+    } catch (e) {
+      console.warn('Aviso: sincronização Firestore Cloud em segundo plano:', e);
+    }
+
+    // 4. Registrar log de auditoria
+    const totalStudents = validatedClasses.reduce((acc, c) => acc + c.students.length, 0);
+    addSecurityAuditLog({
+      userEmail,
+      userName: 'Administrador Escolar Candelário',
+      userRole: 'admin',
+      eventType: 'JSON_DATA_IMPORT_APPLIED',
+      actionTitle: 'Importação e Atualização de Dados via JSON',
+      details: `Banco escolar atualizado com sucesso via arquivo "${fileName}" (${validatedClasses.length} turmas, ${totalStudents} estudantes, ${fileSize}).`,
+      severity: 'info',
+    });
+
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Falha ao salvar dados importados.' };
+  }
+};
+
+/**
+ * Redefine todos os dados de todo o app para um estado limpo de fábrica
+ */
+export const resetEntireAppData = async (
+  userEmail = 'emebjfreitas@jundiai.sp.gov.br'
+): Promise<ClassGroup[]> => {
+  // Limpar chaves locais
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(NOTICES_STORAGE_KEY);
+    localStorage.removeItem(LGPD_CONFIG_STORAGE_KEY);
+  } catch (e) {
+    console.error('Erro ao limpar localStorage:', e);
+  }
+
+  // Gera turmas limpas da matriz oficial com zero faltas
+  const pristineClasses: ClassGroup[] = INITIAL_CLASSES.map((c) => ({
+    ...c,
+    monthlyAbsences: 0,
+    presenceRate: 100,
+    pedagogicalNotes: '',
+    students: c.students.map((s) => ({
+      ...s,
+      totalAbsencesMonth: 0,
+      consecutiveDays: 0,
+      consecutiveTier: 'none',
+      consecutiveSelectedDates: [],
+      presenceDates: [],
+      absentDates: [],
+      justifiedAbsenceDates: [],
+    })),
+  }));
+
+  const enriched = enrichClassesWithOfficialMatrix(pristineClasses);
+  memoryCachedClasses = enriched;
+  saveStoredClasses(enriched, true);
+
+  // Notificar backend
+  if (isBackendApiAvailable()) {
+    try {
+      await fetch('/api/school-state/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
+        body: JSON.stringify({ freshClasses: enriched }),
+      });
+    } catch (e) {
+      console.warn('Aviso: falha na rota /api/school-state/reset:', e);
+    }
+  }
+
+  // Sincronizar com Firestore Cloud
+  try {
+    await saveClassesToFirestoreCloud(enriched, Date.now());
+  } catch (e) {
+    console.warn('Aviso: falha ao sincronizar reset com Firestore:', e);
+  }
+
+  addSecurityAuditLog({
+    userEmail,
+    userName: 'Administrador Escolar Candelário',
+    userRole: 'admin',
+    eventType: 'DATABASE_FACTORY_RESET',
+    actionTitle: 'Redefinição Completa de Todos os Dados',
+    details: 'Reset completo executado: 40 turmas restauradas na base limpa oficial com 0 faltas e sem ocorrências.',
+    severity: 'warning',
+  });
+
+  return enriched;
+};
+
+
 

@@ -81,6 +81,7 @@ import { UploadFotoModal } from './components/UploadFotoModal';
 import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
 import { SpotlightCommandModal } from './components/SpotlightCommandModal';
+import { AtualizarDadosJsonModal } from './components/AtualizarDadosJsonModal';
 import { Toaster, toast } from 'sonner';
 
 const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
@@ -635,6 +636,7 @@ export default function App() {
   const [isStudentListModalOpen, setIsStudentListModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState(false);
+  const [isJsonImportModalOpen, setIsJsonImportModalOpen] = useState(false);
   const [photoModalStudent, setPhotoModalStudent] = useState<Student | null>(null);
   const [pdfModalData, setPdfModalData] = useState<{
     student: Student;
@@ -1322,6 +1324,7 @@ export default function App() {
         onQuickSyncDriveNow={handleQuickSyncDriveNow}
         onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
         onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
+        onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -1474,6 +1477,7 @@ export default function App() {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             onNavigateToDatabaseEmailsTab={() => setCurrentScreen('planilha')}
+            onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
             onBack={handleBack}
           />
         )}
@@ -2038,6 +2042,20 @@ export default function App() {
               : prev
           );
         }}
+      />
+
+      {/* Modal de Atualização e Restauração via Arquivo JSON (Arraste & Solte) */}
+      <AtualizarDadosJsonModal
+        isOpen={isJsonImportModalOpen}
+        onClose={() => setIsJsonImportModalOpen(false)}
+        classes={classes}
+        onUpdateClasses={(updatedClasses) => {
+          setClasses(updatedClasses);
+          const found = updatedClasses.find((c) => c.id === selectedClass.id);
+          if (found) setSelectedClass(found);
+          else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
+        }}
+        currentUserEmail={currentUserEmail}
       />
 
       {/* Global Notifications with Sonner (Open-source, light & accessible) */}

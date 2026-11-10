@@ -31,6 +31,7 @@ interface HeaderProps {
   onOpenSpotlightSearch?: () => void;
   onQuickSyncDriveNow?: () => Promise<void>;
   onOpenConfigDaysModal?: () => void;
+  onOpenJsonImportModal?: () => void;
   onNavigatePlanilha: () => void;
   onLogout: () => void;
 }
@@ -50,6 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSpotlightSearch,
   onQuickSyncDriveNow,
   onOpenConfigDaysModal,
+  onOpenJsonImportModal,
   onNavigatePlanilha,
   onLogout,
 }) => {
@@ -347,6 +349,22 @@ export const Header: React.FC<HeaderProps> = ({
                         </span>
                         <span>Professores &amp; Acessos</span>
                       </button>
+
+                      {onOpenJsonImportModal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAdminNavDropdown(false);
+                            onOpenJsonImportModal();
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 transition-colors cursor-pointer text-blue-700 hover:bg-blue-50 font-bold border-t border-slate-100 pt-2"
+                        >
+                          <span className="material-symbols-outlined text-[16px] text-blue-600">
+                            upload_file
+                          </span>
+                          <span>Atualizar via JSON</span>
+                        </button>
+                      )}
 
 
                     </div>
@@ -705,6 +723,20 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="material-symbols-outlined text-[18px]">group_add</span>
                     <span>Professores &amp; Acessos</span>
                   </button>
+
+                  {onOpenJsonImportModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileDrawerOpen(false);
+                        onOpenJsonImportModal();
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-blue-700 hover:bg-blue-50 flex items-center gap-2.5 transition-colors border border-blue-200/60 bg-blue-50/50 mt-1"
+                    >
+                      <span className="material-symbols-outlined text-[18px] text-blue-600">upload_file</span>
+                      <span>Atualizar Dados via JSON</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>

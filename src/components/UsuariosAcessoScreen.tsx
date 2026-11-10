@@ -25,6 +25,7 @@ import {
   maskSensitiveText,
   resetDatabase,
   pushClassesToServer,
+  exportSchoolDataToJsonFile,
 } from '../services/db';
 import { StudentAvatar } from './StudentAvatar';
 
@@ -42,6 +43,7 @@ interface UsuariosAcessoScreenProps {
   onSelectPreviewClassId?: (classId: string) => void;
   onSimulateTeacherProfile?: (teacher: AuthorizedUser) => void;
   onNavigateToDatabaseEmailsTab?: () => void;
+  onOpenJsonImportModal?: () => void;
   onBack: () => void;
 }
 
@@ -62,6 +64,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   onSelectPreviewClassId,
   onSimulateTeacherProfile,
   onNavigateToDatabaseEmailsTab,
+  onOpenJsonImportModal,
   onBack,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabId>('quadro_turmas');
@@ -2937,6 +2940,30 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             >
               <span className="material-symbols-outlined text-[15px]">sync_saved_locally</span>
               <span>Sincronizar Quadro Oficial</span>
+            </button>
+          )}
+
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => exportSchoolDataToJsonFile(classes, currentUserEmail)}
+              title="Baixar arquivo JSON completo com todas as 40 turmas para backup"
+              className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[15px] text-blue-600">file_download</span>
+              <span>Exportar JSON</span>
+            </button>
+          )}
+
+          {canManage && onOpenJsonImportModal && (
+            <button
+              type="button"
+              onClick={onOpenJsonImportModal}
+              title="Arraste e solte o arquivo JSON para atualizar turmas e estudantes com validação"
+              className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">upload_file</span>
+              <span>Atualizar via JSON (Arraste &amp; Solte)</span>
             </button>
           )}
 

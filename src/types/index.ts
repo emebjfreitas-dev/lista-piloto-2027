@@ -410,7 +410,9 @@ export type SecurityEventType =
   | 'SESSION_TIMEOUT_REVOKED'
   | 'SUSPICIOUS_ACTIVITY_FLAGGED'
   | 'SYSTEM_CONFIG_UPDATED'
-  | 'DATABASE_FACTORY_RESET';
+  | 'DATABASE_FACTORY_RESET'
+  | 'JSON_DATA_EXPORT_GENERATED'
+  | 'JSON_DATA_IMPORT_APPLIED';
 
 export interface SecurityAuditLogEntry {
   id: string;

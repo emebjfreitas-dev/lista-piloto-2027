@@ -982,18 +982,58 @@ async function startServer() {
     res.json(saved);
   });
 
+  // Helper: Higienização Recursiva contra XSS / Injection
+  const sanitizeTextSafe = (val: any): any => {
+    if (typeof val === 'string') {
+      return val
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/javascript\s*:/gi, '')
+        .replace(/on\w+\s*=/gi, '');
+    }
+    if (Array.isArray(val)) {
+      return val.map(sanitizeTextSafe);
+    }
+    if (val && typeof val === 'object') {
+      const cleaned: Record<string, any> = {};
+      for (const [k, v] of Object.entries(val)) {
+        cleaned[k] = sanitizeTextSafe(v);
+      }
+      return cleaned;
+    }
+    return val;
+  };
+
   // API: Redefinir Banco de Dados Escolar para a Base Limpa SED (Admin Only)
   app.post('/api/school-state/reset', requireAdminAuth, (req, res) => {
     const { freshClasses } = req.body || {};
-    if (!Array.isArray(freshClasses) || freshClasses.length === 0) {
-      res.status(400).json({ error: 'Lista de classes limpa obrigatória' });
-      return;
-    }
     const user = extractRequestUser(req);
     const nowMs = Date.now();
+
+    let targetClasses = freshClasses;
+    if (!Array.isArray(targetClasses) || targetClasses.length === 0) {
+      const current = readSharedState();
+      targetClasses = (current.classes || []).map((c: any) => ({
+        ...c,
+        monthlyAbsences: 0,
+        presenceRate: 100,
+        pedagogicalNotes: '',
+        students: (c.students || []).map((s: any) => ({
+          ...s,
+          totalAbsencesMonth: 0,
+          consecutiveDays: 0,
+          consecutiveTier: 'none',
+          consecutiveSelectedDates: [],
+          presenceDates: [],
+          absentDates: [],
+          justifiedAbsenceDates: [],
+        })),
+      }));
+    }
+
     const saved = writeSharedState({
-      classes: freshClasses,
+      classes: targetClasses,
       classesUpdatedAtMs: nowMs,
+      schoolNotices: [],
     });
     recordSecurityAuditLog(
       'DATABASE_FACTORY_RESET',
@@ -1002,7 +1042,70 @@ async function startServer() {
       'SUCCESS',
       user
     );
-    res.json({ ok: true, classesUpdatedAtMs: nowMs, totalClasses: freshClasses.length });
+    res.json({ ok: true, classesUpdatedAtMs: nowMs, totalClasses: targetClasses.length });
+  });
+
+  // API: Importar e Atualizar Base Escolar via Arquivo JSON (Admin Only, Validação Estrita & Auditoria)
+  app.post('/api/school-state/import-json', requireAdminAuth, (req, res) => {
+    const { payload, fileName, fileSize } = req.body || {};
+    if (!payload) {
+      res.status(400).json({ error: 'Conteúdo JSON não fornecido ou vazio.' });
+      return;
+    }
+
+    let rawClasses: any[] | null = null;
+    if (Array.isArray(payload)) {
+      rawClasses = payload;
+    } else if (payload && typeof payload === 'object') {
+      if (Array.isArray(payload.classes)) {
+        rawClasses = payload.classes;
+      } else if (Array.isArray(payload.turmas)) {
+        rawClasses = payload.turmas;
+      }
+    }
+
+    if (!rawClasses || !Array.isArray(rawClasses) || rawClasses.length === 0) {
+      res.status(400).json({
+        error: 'Estrutura JSON inválida. O arquivo precisa conter uma lista de turmas (classes ou turmas com estudantes).',
+      });
+      return;
+    }
+
+    const cleanedPayload = sanitizeTextSafe(rawClasses);
+    const sanitizedClasses = sanitizeAndDeduplicateClasses(cleanedPayload) || [];
+    const totalStudents = sanitizedClasses.reduce((acc, c) => acc + (c.students?.length || 0), 0);
+    const nowMs = Date.now();
+    const user = extractRequestUser(req);
+
+    const patch: Partial<SharedSchoolState> = {
+      classes: sanitizedClasses,
+      classesUpdatedAtMs: nowMs,
+    };
+
+    if (payload.officialCalendarConfig && typeof payload.officialCalendarConfig === 'object') {
+      patch.officialCalendarConfig = sanitizeTextSafe(payload.officialCalendarConfig);
+    }
+    if (Array.isArray(payload.holidays) && payload.holidays.length > 0) {
+      patch.holidays = sanitizeTextSafe(payload.holidays);
+    }
+
+    writeSharedState(patch);
+
+    recordSecurityAuditLog(
+      'JSON_DATA_IMPORT_APPLIED',
+      `Base escolar atualizada com sucesso via arquivo JSON "${fileName || 'upload.json'}" (${sanitizedClasses.length} turmas, ${totalStudents} estudantes, ${fileSize || 'N/A'}) por ${user.email}`,
+      req,
+      'SUCCESS',
+      user
+    );
+
+    res.json({
+      ok: true,
+      classesUpdatedAtMs: nowMs,
+      totalClasses: sanitizedClasses.length,
+      totalStudents,
+      classes: sanitizedClasses,
+    });
   });
 
   // API: Atualizar Logs de Sessão e Tempo Conectado

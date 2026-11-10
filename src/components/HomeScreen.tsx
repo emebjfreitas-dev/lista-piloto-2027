@@ -248,38 +248,61 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }
   }, [currentClock]);
 
+  // Formatação harmoniosa do nome para evitar quebras deselegantes na saudação
+  const formattedGreetingName = useMemo(() => {
+    if (!userName) return 'Educador(a)';
+    const trimmed = userName.trim();
+    if (
+      trimmed.includes('EMEB Professor Joaquim Candelário') ||
+      trimmed.includes('Direção / Admin') ||
+      trimmed.includes('Direção') ||
+      trimmed.startsWith('EMEB')
+    ) {
+      return 'Equipe Gestora';
+    }
+    // Remove parênteses adicionais se houver (ex: "Nome (Admin)")
+    const clean = trimmed.replace(/\s*\(.*?\)\s*/g, '').trim();
+    return clean || 'Educador(a)';
+  }, [userName]);
+
   return (
     <div className="flex flex-col w-full space-y-5 pb-16 text-slate-950 font-sans">
-      {/* 1. CABEÇALHO ACOLHEDOR COM CONTRASTE DE TONS (SEM CONTORNOS) */}
-      <section className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm">
+      {/* 1. CABEÇALHO ACOLHEDOR COM PROPORÇÕES HARMONIOSAS */}
+      <section className="bg-white rounded-3xl p-6 sm:p-7 shadow-xs border border-slate-200/60">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-950 text-xs font-bold mb-1">
-              <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0" />
-              <span>SISTEMA CONECTADO · Suas ações são salvas automaticamente na escola</span>
+          <div className="space-y-1.5 min-w-0">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-900 text-xs font-bold mb-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+              <span>SISTEMA CONECTADO · Ações salvas automaticamente</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-950">
-              Olá, {userName}!
-            </h1>
-            <p className="text-sm sm:text-base font-semibold text-slate-800">
-              EMEB Prof. Joaquim Candelário de Freitas · Ano Letivo 2027 · Secretaria de Educação de Jundiaí
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
+                Olá, {formattedGreetingName}!
+              </h1>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/80">
+                <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                {userRole === 'admin' ? 'Direção / Administração' : 'Educador(a)'}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm font-medium text-slate-600">
+              EMEB Prof. Joaquim Candelário de Freitas · Ano Letivo 2027 · SME Jundiaí (Secretaria Municipal de Educação)
             </p>
           </div>
 
-          {/* Marcadores de Data, Hora e Turno em Superfícies Sólidas */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <div className="px-4 py-2.5 bg-slate-100 rounded-2xl flex items-center gap-2.5 text-sm text-slate-950 font-bold">
-              <Calendar className="w-4 h-4 text-slate-800 shrink-0" />
+          {/* Marcadores de Data, Hora e Turno em Superfícies Sólidas com Proporções Equilibradas */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-800 font-semibold shadow-2xs">
+              <Calendar className="w-4 h-4 text-slate-600 shrink-0" />
               <span>{todayFormatted}</span>
             </div>
 
-            <div className="px-4 py-2.5 bg-slate-100 rounded-2xl flex items-center gap-2.5 text-sm text-slate-950 font-bold font-mono tabular-nums">
-              <Clock className="w-4 h-4 text-slate-800 shrink-0" />
+            <div className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-800 font-semibold font-mono tabular-nums shadow-2xs">
+              <Clock className="w-4 h-4 text-slate-600 shrink-0" />
               <span>{timeFormatted}</span>
             </div>
 
-            <div className="px-4 py-2.5 bg-slate-100 rounded-2xl flex items-center gap-2.5 text-sm text-slate-950 font-bold">
-              <span className={`w-3 h-3 rounded-full ${shiftInfo.dotColor}`} />
+            <div className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-800 font-semibold shadow-2xs">
+              <span className={`w-2.5 h-2.5 rounded-full ${shiftInfo.dotColor}`} />
               <span>{shiftInfo.label}</span>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { getStudentAttendanceMetrics, getClassAttendanceMetrics, getStudentConse
 import { OFFICIAL_SED_STUDENTS_MAP } from './officialSedStudents';
 
 export const CITY_NAME = 'Prefeitura do Município de Jundiaí';
-export const SECRETARY_NAME = 'Secretaria de Educação do Município de Jundiaí';
+export const SECRETARY_NAME = 'SME · Secretaria Municipal de Educação de Jundiaí';
 export const SCHOOL_NAME = 'EMEB Professor Joaquim Candelário de Freitas';
 export const INSTITUTIONAL_EMAIL_DOMAIN = '@educacao.jundiai.sp.gov.br';
 
