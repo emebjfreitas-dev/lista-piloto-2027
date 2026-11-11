@@ -692,7 +692,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             <span className="text-xs font-bold uppercase tracking-wider text-rose-950 block">
               Sequências no Ano
             </span>
-            <span className="text-2xl font-bold text-rose-950 font-mono tabular-nums mt-1">
+            <span className="text-2xl font-bold text-rose-950 tabular-nums tracking-tight mt-1">
               {summaryStats.totalOccurrencesCount}
             </span>
           </div>
@@ -700,7 +700,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
               Estudantes
             </span>
-            <span className="text-2xl font-bold text-slate-950 font-mono tabular-nums mt-1">
+            <span className="text-2xl font-bold text-slate-950 tabular-nums tracking-tight mt-1">
               {summaryStats.studentsWithAnyOccurrence}
             </span>
           </div>
@@ -708,7 +708,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-950 block">
               Feedbacks Recebidos
             </span>
-            <span className="text-2xl font-bold text-emerald-950 font-mono tabular-nums mt-1">
+            <span className="text-2xl font-bold text-emerald-950 tabular-nums tracking-tight mt-1">
               {summaryStats.totalWithFeedback}
             </span>
           </div>
@@ -716,7 +716,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             <span className="text-xs font-bold uppercase tracking-wider text-amber-950 block">
               Aguardando
             </span>
-            <span className="text-2xl font-bold text-amber-950 font-mono tabular-nums mt-1">
+            <span className="text-2xl font-bold text-amber-950 tabular-nums tracking-tight mt-1">
               {summaryStats.totalWaitingFeedback}
             </span>
           </div>
@@ -789,7 +789,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 >
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
                     <span
-                      className={`w-8 h-8 rounded-xl font-mono font-bold text-xs flex items-center justify-center shrink-0 tabular-nums mt-0.5 sm:mt-0 ${
+                      className={`w-8 h-8 rounded-xl font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums mt-0.5 sm:mt-0 ${
                         hasOccurrences
                           ? 'bg-[#ff3b30] text-white'
                           : 'bg-[#f5f5f7] text-[#1d1d1f]'

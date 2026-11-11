@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "SF Pro Text", "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
+}
+
 @layer base {
   :root {
     /* Modern Architectural High-Contrast Palette (WCAG 2.1 AA Compliant) */
@@ -14,11 +20,12 @@
     --accent-navy: #002244;         /* 13.5:1 */
     --accent-blue: #1d4ed8;         /* 6.0:1 */
 
-    /* Padronização Tipográfica: Plus Jakarta Sans + JetBrains Mono com Numerais Tabulares Sofisticados */
-    --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-    --font-mono: "JetBrains Mono", "Geist Mono", -apple-system-ui-serif, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    /* Tipografia Oficial Apple: SF Pro + SF Mono com Numerais Tabulares e Suporte Completo a Caracteres Especiais */
+    --font-sans: "SF Pro Text", "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    --font-display: "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-    /* Escala Tipográfica Padronizada */
+    /* Escala Tipográfica Padronizada Apple */
     --font-size-display: 1.5rem;      /* 24px - Títulos de Página */
     --font-size-title: 1.25rem;       /* 20px - Seções Principais */
     --font-size-subtitle: 1.0rem;     /* 16px - Subtítulos e Cards */
@@ -42,13 +49,14 @@
     font-family: var(--font-sans) !important;
     background-color: var(--canvas-bg);
     color: var(--text-primary);
-    line-height: 1.5;
+    line-height: 1.47059;
     font-weight: 400;
     letter-spacing: -0.011em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "kern" 1, "liga" 1, "calt" 1;
+    font-kerning: normal;
     scroll-behavior: smooth;
   }
 
@@ -57,32 +65,44 @@
     background-color: var(--canvas-bg);
     color: var(--text-primary);
     overflow-x: hidden;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    font-kerning: normal;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-sans) !important;
+    font-family: var(--font-display) !important;
     color: var(--text-primary);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.022em;
     font-weight: 600;
     text-wrap: balance;
+    font-feature-settings: "kern" 1, "liga" 1;
   }
 
   p, span, div, li, label, input, select, textarea, button, td, th, a {
     font-family: var(--font-sans);
+    font-feature-settings: "kern" 1, "liga" 1;
   }
 
-  .font-mono,
-  code,
-  pre {
-    font-family: var(--font-mono) !important;
+  /* Padrão Oficial Apple SF Pro para Numerais e Dados em Todo o App (Tabular Lining Figures) */
+  .tabular-nums,
+  .font-tabular,
+  .font-numeric,
+  .font-mono:not(code):not(pre):not(.font-code) {
+    font-family: var(--font-sans) !important;
     font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: "tnum" 1, "lnum" 1, "zero" 1, "cv05" 1;
+    font-feature-settings: "tnum" 1, "lnum" 1, "cv05" 1;
     letter-spacing: -0.015em;
   }
 
-  .tabular-nums {
+  /* SF Mono reservado estritamente para blocos de código (<pre>, <code>, .font-code) */
+  code,
+  pre,
+  .font-code {
+    font-family: var(--font-mono) !important;
     font-variant-numeric: tabular-nums lining-nums;
-    font-feature-settings: "tnum" 1, "lnum" 1, "cv05" 1;
+    font-feature-settings: "tnum" 1, "lnum" 1, "zero" 1;
     letter-spacing: -0.015em;
   }
 
@@ -184,18 +204,44 @@
   color: #334155 !important; /* Slate 700: 7.5:1 ratio on white, passes WCAG 2.1 AA */
 }
 
-.material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 20;
+/* Ícones Apple: Padrão SF Symbols (Geometria Arredondada Contínua e Óptica Refinada) */
+.material-symbols-outlined,
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded', 'Material Symbols Outlined' !important;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
   user-select: none;
   line-height: 1;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .material-symbols-filled {
+  font-family: 'Material Symbols Rounded', 'Material Symbols Outlined' !important;
   font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
   user-select: none;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ícones Lucide com Traço e Curvatura dos SF Symbols da Apple */
+svg.lucide {
+  stroke-width: 1.85px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   display: inline-block;
+  vertical-align: middle;
+  shape-rendering: geometricPrecision;
 }
 
 /* Modern Minimalist Card Surface */

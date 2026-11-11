@@ -32,6 +32,7 @@ interface HeaderProps {
   onQuickSyncDriveNow?: () => Promise<void>;
   onOpenConfigDaysModal?: () => void;
   onOpenJsonImportModal?: () => void;
+  onOpenAdminPhotosModal?: () => void;
   onNavigatePlanilha: () => void;
   onLogout: () => void;
 }
@@ -52,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   onQuickSyncDriveNow,
   onOpenConfigDaysModal,
   onOpenJsonImportModal,
+  onOpenAdminPhotosModal,
   onNavigatePlanilha,
   onLogout,
 }) => {
@@ -199,23 +201,23 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Zona 2: Navegação Horizontal Limpa (Desktop) */}
+          {/* Zona 2: Navegação Horizontal Minimalista Apple (Desktop) */}
           {onChangeScreen && (
             <nav
               aria-label="Navegação Principal"
-              className="hidden xl:flex items-center gap-1.5 shrink-0"
+              className="hidden xl:flex items-center gap-1 p-1 bg-slate-100/80 rounded-2xl border border-slate-200/60 shrink-0"
             >
               {/* Início */}
               <button
                 type="button"
                 onClick={() => navigateTo('home')}
-                className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                   currentScreen === 'home'
-                    ? 'bg-slate-950 text-white font-bold'
-                    : 'text-slate-950 hover:bg-slate-100 font-bold'
+                    ? 'bg-white text-slate-950 font-semibold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
                 }`}
               >
-                <span className="material-symbols-outlined text-[17px]">home</span>
+                <span className="material-symbols-outlined text-[16px]">grid_view</span>
                 <span>Início</span>
               </button>
 
@@ -223,13 +225,13 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => navigateTo('turmas')}
-                className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                   currentScreen === 'turmas' || currentScreen === 'detalhes'
-                    ? 'bg-slate-950 text-white font-bold'
-                    : 'text-slate-950 hover:bg-slate-100 font-bold'
+                    ? 'bg-white text-slate-950 font-semibold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
                 }`}
               >
-                <span className="material-symbols-outlined text-[17px]">groups</span>
+                <span className="material-symbols-outlined text-[16px]">groups</span>
                 <span>Turmas</span>
               </button>
 
@@ -239,13 +241,13 @@ export const Header: React.FC<HeaderProps> = ({
                   type="button"
                   onClick={() => navigateTo('frequencia_mensal')}
                   title="Informar faltas do mês de referência"
-                  className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                     currentScreen === 'frequencia_mensal'
-                      ? 'bg-slate-950 text-white font-bold'
-                      : 'text-slate-950 hover:bg-slate-100 font-bold'
+                      ? 'bg-white text-slate-950 font-semibold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[17px]">checklist</span>
+                  <span className="material-symbols-outlined text-[16px]">event_available</span>
                   <span>Faltas do Mês</span>
                 </button>
               )}
@@ -254,13 +256,13 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => navigateTo('faltas_consecutivas')}
-                className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+                className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                   currentScreen === 'faltas_consecutivas'
-                    ? 'bg-slate-950 text-white font-bold'
-                    : 'text-slate-950 hover:bg-slate-100 font-bold'
+                    ? 'bg-white text-slate-950 font-semibold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
                 }`}
               >
-                <span className="material-symbols-outlined text-[17px]">warning</span>
+                <span className="material-symbols-outlined text-[16px]">notifications</span>
                 <span>Busca Ativa</span>
               </button>
 
@@ -270,35 +272,36 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowAdminNavDropdown((prev) => !prev)}
-                    className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1 ${
+                    className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1 ${
                       [
                         'bolsa_familia',
                         'usuarios_acesso',
                         'dias_letivos',
                       ].includes(currentScreen) || showAdminNavDropdown
-                        ? 'bg-slate-950 text-white font-bold'
-                        : 'text-slate-950 hover:bg-slate-100 font-bold'
+                        ? 'bg-white text-slate-950 font-semibold shadow-xs'
+                        : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
                     }`}
                   >
+                    <span className="material-symbols-outlined text-[16px]">tune</span>
                     <span>Gestão</span>
-                    <span className="material-symbols-outlined text-[15px]">expand_more</span>
+                    <span className="material-symbols-outlined text-[14px] opacity-60">expand_more</span>
                   </button>
 
                   {showAdminNavDropdown && (
                     <div
-                      className="absolute right-0 mt-1.5 w-56 bg-white rounded-2xl shadow-xl p-1.5 space-y-0.5 z-50 animate-in fade-in duration-100"
+                      className="absolute right-0 mt-2 w-60 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 p-1.5 space-y-0.5 z-50 animate-in fade-in duration-100"
                       onMouseLeave={() => setShowAdminNavDropdown(false)}
                     >
                       <button
                         type="button"
                         onClick={() => navigateTo('bolsa_familia')}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 transition-colors cursor-pointer ${
+                        className={`w-full px-2.5 py-1.5 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
                           currentScreen === 'bolsa_familia'
-                            ? 'bg-slate-100 text-slate-900 font-medium'
-                            : 'text-slate-700 hover:bg-slate-50'
+                            ? 'bg-slate-100 text-slate-950 font-semibold'
+                            : 'text-slate-700 hover:bg-slate-50 font-medium'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[16px] text-slate-500">
+                        <span className="material-symbols-outlined text-[16px] text-slate-400">
                           volunteer_activism
                         </span>
                         <span>Bolsa Família &amp; Fretado</span>
@@ -307,13 +310,13 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         type="button"
                         onClick={() => navigateTo('dias_letivos')}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 transition-colors cursor-pointer ${
+                        className={`w-full px-2.5 py-1.5 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
                           currentScreen === 'dias_letivos'
-                            ? 'bg-slate-100 text-slate-900 font-medium'
-                            : 'text-slate-700 hover:bg-slate-50'
+                            ? 'bg-slate-100 text-slate-950 font-semibold'
+                            : 'text-slate-700 hover:bg-slate-50 font-medium'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[16px] text-slate-500">
+                        <span className="material-symbols-outlined text-[16px] text-slate-400">
                           calendar_month
                         </span>
                         <span>200 Dias Letivos</span>
@@ -326,9 +329,9 @@ export const Header: React.FC<HeaderProps> = ({
                             setShowAdminNavDropdown(false);
                             onOpenConfigDaysModal();
                           }}
-                          className="w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 transition-colors cursor-pointer text-slate-900 hover:bg-slate-100 font-bold"
+                          className="w-full px-2.5 py-1.5 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer text-slate-700 hover:bg-slate-100 font-medium"
                         >
-                          <span className="material-symbols-outlined text-[16px] text-slate-800">
+                          <span className="material-symbols-outlined text-[16px] text-slate-400">
                             tune
                           </span>
                           <span>Configurar Calendário das Turmas</span>
@@ -338,13 +341,13 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         type="button"
                         onClick={() => navigateTo('usuarios_acesso')}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 transition-colors cursor-pointer ${
+                        className={`w-full px-2.5 py-1.5 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
                           currentScreen === 'usuarios_acesso'
-                            ? 'bg-slate-100 text-slate-900 font-medium'
-                            : 'text-slate-700 hover:bg-slate-50'
+                            ? 'bg-slate-100 text-slate-950 font-semibold'
+                            : 'text-slate-700 hover:bg-slate-50 font-medium'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[16px] text-slate-500">
+                        <span className="material-symbols-outlined text-[16px] text-slate-400">
                           group_add
                         </span>
                         <span>Professores &amp; Acessos</span>
@@ -357,7 +360,7 @@ export const Header: React.FC<HeaderProps> = ({
                             setShowAdminNavDropdown(false);
                             onOpenJsonImportModal();
                           }}
-                          className="w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center gap-2 transition-colors cursor-pointer text-blue-700 hover:bg-blue-50 font-bold border-t border-slate-100 pt-2"
+                          className="w-full px-2.5 py-1.5 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer text-blue-700 hover:bg-blue-50/70 font-semibold border-t border-slate-100 pt-1.5 mt-1"
                         >
                           <span className="material-symbols-outlined text-[16px] text-blue-600">
                             upload_file
@@ -366,7 +369,21 @@ export const Header: React.FC<HeaderProps> = ({
                         </button>
                       )}
 
-
+                      {onOpenAdminPhotosModal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAdminNavDropdown(false);
+                            onOpenAdminPhotosModal();
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer text-emerald-800 hover:bg-emerald-50/70 font-semibold border-t border-slate-100 pt-1.5 mt-1"
+                        >
+                          <span className="material-symbols-outlined text-[16px] text-emerald-700">
+                            add_photo_alternate
+                          </span>
+                          <span>Arraste de Fotos Nomeadas</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -376,16 +393,17 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Zona 3: Ações Rápidas & Perfil */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Busca Rápida */}
+            {/* Busca Rápida (Estilo Apple Spotlight) */}
             {onOpenSpotlightSearch && (
               <button
                 type="button"
                 onClick={onOpenSpotlightSearch}
                 aria-label="Buscar Aluno ou Turma"
-                className="h-8 w-8 sm:w-auto sm:px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="h-8 px-2.5 rounded-xl bg-slate-100/90 hover:bg-slate-200/80 text-slate-700 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-transparent"
               >
-                <span className="material-symbols-outlined text-[17px]">search</span>
-                <span className="hidden sm:inline">Buscar</span>
+                <span className="material-symbols-outlined text-[16px] text-slate-500">search</span>
+                <span className="hidden sm:inline text-xs text-slate-700">Buscar</span>
+                <kbd className="hidden md:inline-flex px-1.5 py-0.5 text-[10px] font-sans text-slate-400 bg-white border border-slate-200/80 rounded shadow-2xs">⌘K</kbd>
               </button>
             )}
 
@@ -401,17 +419,21 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'Nuvem conectada e sincronizada. Clique para atualizar fotos e planilha.'
                   : 'Conectar ao Google Drive institucional'
               }
-              className={`relative h-8 w-8 sm:w-auto sm:px-2.5 rounded-lg flex items-center justify-center gap-1.5 text-xs font-medium transition-colors cursor-pointer ${
+              className={`relative h-8 px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-xs font-medium transition-colors cursor-pointer ${
                 syncSnapshot.pendingCount > 0
                   ? 'bg-amber-50 text-amber-900 hover:bg-amber-100'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  : 'bg-slate-100/90 text-slate-700 hover:bg-slate-200/80'
               }`}
             >
               <span
-                className={`material-symbols-outlined text-[17px] ${
+                className={`material-symbols-outlined text-[16px] ${
                   isSyncingDrive || syncSnapshot.status === 'syncing'
                     ? 'animate-spin text-blue-600'
-                    : ''
+                    : syncSnapshot.pendingCount > 0
+                    ? 'text-amber-600'
+                    : hasDriveToken
+                    ? 'text-emerald-600'
+                    : 'text-slate-500'
                 }`}
               >
                 {syncSnapshot.pendingCount > 0
@@ -422,8 +444,8 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               {syncSnapshot.pendingCount > 0 && (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-amber-500 absolute -top-0.5 -right-0.5 sm:static sm:w-1.5 sm:h-1.5" />
-                  <span className="hidden sm:inline font-mono text-[11px] tabular-nums font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span className="hidden sm:inline font-sans text-[11px] tabular-nums font-semibold">
                     {syncSnapshot.pendingCount} pendente(s)
                   </span>
                 </>
@@ -432,8 +454,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden lg:inline text-[11px] text-slate-600">Drive</span>
               )}
             </button>
-
-
 
             {/* Notificações Push */}
             <PushNotificationCenter
@@ -455,17 +475,17 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 aria-label="Menu do perfil e sair"
-                className="h-9 pl-1 pr-2 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                className="h-8 pl-1 pr-2 rounded-xl bg-slate-100/90 hover:bg-slate-200/80 flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 <StudentAvatar
                   name={userName || userEmail || 'Educador'}
                   size="sm"
-                  className="w-7 h-7 text-xs"
+                  className="w-6 h-6 text-[10px]"
                 />
-                <span className="hidden sm:inline text-xs font-bold text-slate-950 max-w-[90px] truncate">
+                <span className="hidden sm:inline text-xs font-semibold text-slate-800 max-w-[90px] truncate">
                   {userRole === 'admin' ? 'Admin' : userRole === 'usuario' ? 'PEB I' : 'PEB II'}
                 </span>
-                <span className="material-symbols-outlined text-[16px] text-slate-700">
+                <span className="material-symbols-outlined text-[15px] text-slate-500">
                   expand_more
                 </span>
               </button>
@@ -626,26 +646,30 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => navigateTo('home')}
-                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-semibold flex items-center gap-3 transition-colors ${
+                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm flex items-center gap-3 transition-colors ${
                     currentScreen === 'home'
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-700 hover:bg-slate-100'
+                      ? 'bg-slate-900 text-white font-semibold'
+                      : 'text-slate-700 hover:bg-slate-100 font-medium'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[20px]">home</span>
+                  <span className={`material-symbols-outlined text-[18px] ${currentScreen === 'home' ? 'text-white' : 'text-slate-500'}`}>
+                    grid_view
+                  </span>
                   <span>Início (Painel Geral)</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => navigateTo('turmas')}
-                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-semibold flex items-center gap-3 transition-colors ${
+                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm flex items-center gap-3 transition-colors ${
                     currentScreen === 'turmas' || currentScreen === 'detalhes'
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-700 hover:bg-slate-100'
+                      ? 'bg-slate-900 text-white font-semibold'
+                      : 'text-slate-700 hover:bg-slate-100 font-medium'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[20px]">groups</span>
+                  <span className={`material-symbols-outlined text-[18px] ${currentScreen === 'turmas' || currentScreen === 'detalhes' ? 'text-white' : 'text-slate-500'}`}>
+                    groups
+                  </span>
                   <span>Turmas &amp; Alunos</span>
                 </button>
 
@@ -653,13 +677,15 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={() => navigateTo('frequencia_mensal')}
-                    className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-semibold flex items-center gap-3 transition-colors ${
+                    className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm flex items-center gap-3 transition-colors ${
                       currentScreen === 'frequencia_mensal'
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-700 hover:bg-slate-100'
+                        ? 'bg-slate-900 text-white font-semibold'
+                        : 'text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[20px]">checklist</span>
+                    <span className={`material-symbols-outlined text-[18px] ${currentScreen === 'frequencia_mensal' ? 'text-white' : 'text-slate-500'}`}>
+                      event_available
+                    </span>
                     <span>Informar Faltas do Mês</span>
                   </button>
                 )}
@@ -667,13 +693,15 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => navigateTo('faltas_consecutivas')}
-                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm font-semibold flex items-center gap-3 transition-colors ${
+                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm flex items-center gap-3 transition-colors ${
                     currentScreen === 'faltas_consecutivas'
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-700 hover:bg-slate-100'
+                      ? 'bg-slate-900 text-white font-semibold'
+                      : 'text-slate-700 hover:bg-slate-100 font-medium'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[20px]">warning</span>
+                  <span className={`material-symbols-outlined text-[18px] ${currentScreen === 'faltas_consecutivas' ? 'text-white' : 'text-slate-500'}`}>
+                    notifications
+                  </span>
                   <span>Busca Ativa (Alertas)</span>
                 </button>
               </div>
@@ -688,39 +716,39 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={() => navigateTo('bolsa_familia')}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2.5 transition-colors ${
+                    className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors ${
                       currentScreen === 'bolsa_familia'
-                        ? 'bg-blue-50 text-blue-900 font-semibold'
-                        : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-slate-100 text-slate-950 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50 font-medium'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[18px]">volunteer_activism</span>
+                    <span className="material-symbols-outlined text-[17px] text-slate-400">volunteer_activism</span>
                     <span>Bolsa Família &amp; Fretado</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => navigateTo('dias_letivos')}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2.5 transition-colors ${
+                    className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors ${
                       currentScreen === 'dias_letivos'
-                        ? 'bg-blue-50 text-blue-900 font-semibold'
-                        : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-slate-100 text-slate-950 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50 font-medium'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                    <span className="material-symbols-outlined text-[17px] text-slate-400">calendar_month</span>
                     <span>200 Dias Letivos</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => navigateTo('usuarios_acesso')}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs font-medium flex items-center gap-2.5 transition-colors ${
+                    className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors ${
                       currentScreen === 'usuarios_acesso'
-                        ? 'bg-blue-50 text-blue-900 font-semibold'
-                        : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-slate-100 text-slate-950 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50 font-medium'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[18px]">group_add</span>
+                    <span className="material-symbols-outlined text-[17px] text-slate-400">group_add</span>
                     <span>Professores &amp; Acessos</span>
                   </button>
 
@@ -731,10 +759,24 @@ export const Header: React.FC<HeaderProps> = ({
                         setIsMobileDrawerOpen(false);
                         onOpenJsonImportModal();
                       }}
-                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-blue-700 hover:bg-blue-50 flex items-center gap-2.5 transition-colors border border-blue-200/60 bg-blue-50/50 mt-1"
+                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-blue-700 hover:bg-blue-50/70 flex items-center gap-2.5 transition-colors border border-blue-200/60 bg-blue-50/40 mt-1"
                     >
-                      <span className="material-symbols-outlined text-[18px] text-blue-600">upload_file</span>
+                      <span className="material-symbols-outlined text-[17px] text-blue-600">upload_file</span>
                       <span>Atualizar Dados via JSON</span>
+                    </button>
+                  )}
+
+                  {onOpenAdminPhotosModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileDrawerOpen(false);
+                        onOpenAdminPhotosModal();
+                      }}
+                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-emerald-800 hover:bg-emerald-50/70 flex items-center gap-2.5 transition-colors border border-emerald-200/60 bg-emerald-50/40 mt-1"
+                    >
+                      <span className="material-symbols-outlined text-[17px] text-emerald-700">add_photo_alternate</span>
+                      <span>Arraste de Fotos Nomeadas</span>
                     </button>
                   )}
                 </div>

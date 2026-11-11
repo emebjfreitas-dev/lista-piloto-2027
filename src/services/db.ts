@@ -3815,5 +3815,106 @@ export const resetEntireAppData = async (
   return enriched;
 };
 
+/**
+ * Upload individual de foto pelo PEB I ou Admin para o servidor central
+ */
+export const uploadStudentPhotoViaApi = async (
+  studentId: string,
+  photoDataUrl: string
+): Promise<{ ok: boolean; photoUrl?: string }> => {
+  if (!isBackendApiAvailable()) {
+    return { ok: true, photoUrl: photoDataUrl };
+  }
+  try {
+    const res = await fetch('/api/photos/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getActiveUserAuthHeaders(),
+      },
+      body: JSON.stringify({ studentId, photoDataUrl }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, photoUrl: data.photoUrl };
+    }
+  } catch (e) {
+    console.warn('Aviso: falha ao enviar foto para /api/photos/upload:', e);
+  }
+  return { ok: true, photoUrl: photoDataUrl };
+};
+
+/**
+ * Upload em lote de fotos nomeadas arrastadas pelo Admin
+ */
+export const uploadBatchStudentPhotosViaApi = async (
+  photos: { studentId: string; photoDataUrl: string }[]
+): Promise<{ ok: boolean; updatedCount: number }> => {
+  if (!isBackendApiAvailable()) {
+    return { ok: true, updatedCount: photos.length };
+  }
+  try {
+    const res = await fetch('/api/photos/batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getActiveUserAuthHeaders(),
+      },
+      body: JSON.stringify({ photos }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, updatedCount: data.updatedCount ?? photos.length };
+    }
+  } catch (e) {
+    console.warn('Aviso: falha ao enviar lote de fotos para /api/photos/batch:', e);
+  }
+  return { ok: true, updatedCount: photos.length };
+};
+
+/**
+ * Limpar todas as fotos de todos os estudantes (Reset de fotos)
+ */
+export const clearAllStudentPhotosViaApi = async (): Promise<{ ok: boolean; clearedCount: number }> => {
+  // Limpar localmente
+  const current = getStoredClasses();
+  let count = 0;
+  const cleared = current.map((cls) => ({
+    ...cls,
+    updatedAtMs: Date.now(),
+    students: cls.students.map((s) => {
+      if (s.photo || s.photoDriveId || s.photoDriveUrl) count++;
+      return {
+        ...s,
+        photo: '',
+        photoDriveId: '',
+        photoDriveUrl: '',
+        photoManualLink: false,
+        updatedAtMs: Date.now(),
+      };
+    }),
+  }));
+  saveStoredClasses(cleared, true);
+
+  if (isBackendApiAvailable()) {
+    try {
+      const res = await fetch('/api/photos/clear-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { ok: true, clearedCount: data.clearedCount ?? count };
+      }
+    } catch (e) {
+      console.warn('Aviso: falha ao chamar /api/photos/clear-all:', e);
+    }
+  }
+  return { ok: true, clearedCount: count };
+};
+
 
 

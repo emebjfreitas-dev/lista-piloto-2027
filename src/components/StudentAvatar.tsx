@@ -86,7 +86,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
         `https://drive.google.com/uc?export=view&id=${driveFileId}`,
       ];
     }
-    if (rawPhoto.startsWith('http://') || rawPhoto.startsWith('https://')) {
+    if (rawPhoto.startsWith('/') || rawPhoto.startsWith('http://') || rawPhoto.startsWith('https://')) {
       return [rawPhoto];
     }
     return [];

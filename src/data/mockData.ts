@@ -391,7 +391,6 @@ export const REAL_G4A_STUDENTS: Student[] = [
     totalAbsencesMonth: 0,
     justifiedAbsences: 0,
     initials: 'AP',
-    photo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9bWCaKripRY7wriLngM1kXfZZiTAynh0nSvGf8hylwKsG0RYAZi71nzmBQQaSg72TVAh3x1LvOeVQ5SH88SQyZh7wLnPGhfVVuJik_59ndG5HmtCSgU-atFfesYKHP140m7iZJiHYo8O7HBuaoXDlyCz1blKjHzoLxDCeI1tAJbJVosc04Qss70EGTHJ4wbjOR3p1wfk-T3wijT1BOrhfu2yOGtpoiK9mXXMSchd-rU1RmH1kzsWd',
   },
   {
     id: 'g4a-s2',
@@ -473,7 +472,6 @@ export const REAL_G4A_STUDENTS: Student[] = [
     totalAbsencesMonth: 0,
     justifiedAbsences: 0,
     initials: 'AB',
-    photo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAVF1MBI_4k-d7SlD2-VOwp6HgACD-6V9W1CqMUJgEvz1lYZ3mjgWkwalpp0K5yhh70yEaP5GGgTcNOXTnhOhLTP6MuVCmaTaXdRVQitqvomrPIgo3C_0yPwnvaloNTWcR49E3DJDJcje_9BoK2xFtgEPeHpVZrW6yBPMcWh9nseqvLnIkyTOXljo0MA88Ei_dJb8IkcAYr6nM-yPolJhLuLHDMv5DNt7IO8mwv5dkzoPE-7xID6K2r',
   },
   {
     id: 'g4a-s4',
@@ -570,7 +568,6 @@ export const REAL_G4A_STUDENTS: Student[] = [
     totalAbsencesMonth: 0,
     justifiedAbsences: 0,
     initials: 'DK',
-    photo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBDZkDBoQn1YRxzrVh9YH18f4wKc48ZzSxr_qYwC5KL3en9Kxq4A8EO_Czuw35cs6GIMLDUAleYyMvyK52xQniwnE86ePTaJiT22sot3OGdhy0ub7_-qZhE8gaRYG7tB65390gr4yZtpTOVYqOz1GcK6-T-DSJeV420UIS9XiLBRcH_7IOFiI7XjelDHnw2AYReN4e53wkVt4c5EWxYaZGjCR-kaczHn9ER0WdO78dTWmjQYwa68vdW',
   },
   {
     id: 'g4a-s6',
@@ -711,7 +708,6 @@ export const REAL_G4A_STUDENTS: Student[] = [
     totalAbsencesMonth: 0,
     justifiedAbsences: 0,
     initials: 'HF',
-    photo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB05Ur1lwaGH8KH6OU3K1j3yCnJo92ysxNOB1nKF2hteYKdm9_Lyi8Mj0rMAkZL8_WclzGAwUSNmZUtuhllN6TenxyaFtV9ZFlE_gsLwmidRaxGdpyZGMZoG_xKEM6nbB5QvmgU6crxdkn4aNJdsetLERokSzfE2tT6MwD9LLYobQMZztZAmqKv5Dw9L02WeqxuYsjFPKPe7KndtsEa1z5QK_NRVrI4mP9OFyjOW24prPUyGkaGTYq3',
   },
   {
     id: 'g4a-s9',
@@ -853,7 +849,6 @@ export const REAL_G4A_STUDENTS: Student[] = [
     },
     alert: 'Crítico: 10 faltas consecutivas',
     initials: 'JL',
-    photo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuChI-WCTuXhihbOKmxS9OSpP7M7I0ecPrQ8j2lYay1k2s9FuYt11psyipgv-Ltd68S5uZVrx5SJ0ogqi4dJwJx_aRT_gj_rhNS8F7qi_L2Xf4jbL3hnFp681loHuobGm-xm3FRjqC378eqSumRuK6QFop2LR2mUfLLF8vWlhdBT7n0Qt8tgBgABXnG4nc-tpMAb5GWvMdMJy-Cri_G7_CJL7uZqaCVNMR_b4BxbPoLqX6mZEmHgeCeI',
   },
   {
     id: 'g4a-s12',
@@ -975,7 +970,6 @@ export const REAL_G4A_STUDENTS: Student[] = [
     totalAbsencesMonth: 0,
     justifiedAbsences: 0,
     initials: 'ML',
-    photo: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDaul1AIZgVD-1zQ9DXkSZEWp3UWG4i7USXn6fAOUHX3Vcd1jJ2G_0hn1I2w3JiTMdpbjnwqrIKsvOTkfk3t_NeEshIWTKLE4gZli9_KaiGPV8Rvgwtz0nS5G71GGxMIY2csETVOhoFkb37O1aHPOg111Zsc8SnNzLNsDFTjwMUjqaKdvEi2l05rnYnodiOWWdEEl6K4jlO0qbJQ70DIg82A-ez_X7ZR7l7JHxShfWgrwiWT7BCfSYX',
   },
   {
     id: 'g4a-s15',

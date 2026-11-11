@@ -519,7 +519,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         {/* Top Clean Header + Navegação */}
         <div className="px-5 sm:px-6 py-3.5 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-xs font-semibold text-slate-900 tabular-nums">
+            <span className="text-xs font-semibold text-slate-900 tabular-nums">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
             </span>
             <span className="text-slate-300" aria-hidden="true">·</span>
@@ -529,7 +529,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             {orderedList.length > 1 && currentStudentIdx >= 0 && (
               <>
                 <span className="text-slate-300" aria-hidden="true">·</span>
-                <span className="text-xs text-slate-400 font-mono tabular-nums">
+                <span className="text-xs text-slate-400 tabular-nums">
                   {currentStudentIdx + 1} de {orderedList.length}
                 </span>
               </>
@@ -614,7 +614,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       <span className="px-3 py-1 rounded-full bg-orange-600 text-white text-[11px] font-bold uppercase tracking-wider">
                         ⚠️ ALERTA DE FREQUÊNCIA · EXCEDEU 3 FALTAS CONSECUTIVAS
                       </span>
-                      <span className="px-3 py-1 rounded-full bg-white font-mono font-bold text-xs text-orange-950 tabular-nums shadow-2xs">
+                      <span className="px-3 py-1 rounded-full bg-white font-bold text-xs text-orange-950 tabular-nums shadow-2xs">
                         {effectiveConsecutiveDays} DIAS SEGUIDOS
                       </span>
                     </div>
@@ -632,7 +632,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
                 <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
                   <span className="text-[11px] font-bold uppercase text-slate-600 block">Datas de Ausência</span>
-                  <span className="font-mono font-bold text-slate-950 block mt-0.5 truncate" title={datesList}>
+                  <span className="font-semibold text-slate-950 block mt-0.5 truncate tabular-nums" title={datesList}>
                     {datesList}
                   </span>
                 </div>

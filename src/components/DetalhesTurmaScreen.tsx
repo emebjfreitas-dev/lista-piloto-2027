@@ -332,7 +332,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         {/* Cabeçalho da Expansão: Aluno, Matrícula, Idade e Ficha */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-2.5">
           <div className="flex items-center gap-3">
-            <span className="w-9 h-9 rounded-xl bg-slate-950 text-white font-mono font-bold text-sm flex items-center justify-center shrink-0 tabular-nums shadow-xs">
+            <span className="w-9 h-9 rounded-xl bg-slate-950 text-white font-semibold text-sm flex items-center justify-center shrink-0 tabular-nums shadow-xs">
               {student.number.toString().padStart(2, '0')}
             </span>
             <div>
@@ -344,7 +344,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   {studentGenderInfo.estudanteTitle}
                 </span>
                 {student.ra && (
-                  <span className="font-mono text-xs font-bold text-slate-900 bg-white px-2 py-0.5 rounded-md shadow-xs tabular-nums">
+                  <span className="text-xs font-semibold text-slate-900 bg-white px-2 py-0.5 rounded-md shadow-xs tabular-nums">
                     RA {student.ra}-{student.digRa}
                   </span>
                 )}
@@ -415,7 +415,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <div>
               <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-2xl font-bold font-mono tracking-tight tabular-nums ${
+                  className={`text-2xl font-bold tracking-tight tabular-nums ${
                     isCompliant ? 'text-emerald-900' : 'text-rose-900'
                   }`}
                 >
@@ -665,7 +665,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           <span className="text-slate-400">·</span>
           <span>{classGroup.shift}</span>
         </div>
-        <span className="hidden sm:inline text-slate-400 font-mono text-[11px]">
+        <span className="hidden sm:inline text-slate-500 font-medium text-[11px] tabular-nums">
           {classGroup.room}
         </span>
       </div>
@@ -676,7 +676,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               {classGroup.turmaAbrev && (
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-950 bg-slate-100 px-2.5 py-1 rounded-lg font-mono">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-950 bg-slate-100 px-2.5 py-1 rounded-lg tabular-nums">
                   {classGroup.turmaAbrev}
                 </span>
               )}
@@ -684,7 +684,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 {classGroup.shift} · {classGroup.room}
               </span>
               {classGroup.classeSedCode && (
-                <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
+                <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg tabular-nums">
                   SED: {classGroup.classeSedCode}
                 </span>
               )}
@@ -1243,13 +1243,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1.5">
                       <div className="flex items-center gap-1.5 text-xs text-slate-500 font-normal truncate min-w-0">
-                        <span className={`font-mono text-xs font-semibold tabular-nums shrink-0 ${numberBadgeClasses}`}>
+                        <span className={`text-xs font-semibold tabular-nums shrink-0 ${numberBadgeClasses}`}>
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         <span className="text-slate-300" aria-hidden="true">·</span>
                         {student.ra && (
                           <>
-                            <span className="font-mono text-xs text-slate-600 tabular-nums font-medium truncate">
+                            <span className="text-xs text-slate-600 tabular-nums font-medium truncate">
                               RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}
                             </span>
                             <span className="text-slate-300" aria-hidden="true">·</span>
@@ -1387,7 +1387,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       );
                       if (waList.length === 0) {
                         return (
-                          <span className="font-mono text-xs text-slate-400">
+                          <span className="text-xs text-slate-400">
                             Sem telefone
                           </span>
                         );
@@ -1398,7 +1398,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           target="_blank"
                           rel="noopener noreferrer"
                           title={`WhatsApp: ${waList[0].display}`}
-                          className="inline-flex items-center gap-1 font-mono text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline tabular-nums cursor-pointer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline tabular-nums cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[14px]">chat</span>
                           <span className="truncate">{waList[0].display}</span>
@@ -1406,7 +1406,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       );
                     })()}
                     {student.dataNascimento && (
-                      <span className="font-mono text-xs tabular-nums text-slate-400 shrink-0">
+                      <span className="text-xs tabular-nums text-slate-400 shrink-0 font-medium">
                         {student.dataNascimento}
                       </span>
                     )}
@@ -1546,7 +1546,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <span
-                      className={`w-8 h-8 rounded-xl text-white font-mono font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums ${
+                      className={`w-8 h-8 rounded-xl text-white font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums ${
                         isTransferred
                           ? 'bg-[#b45309]'
                           : isRemanejado
@@ -1582,7 +1582,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         >
                           {studentGenderInfo.estudanteTitle}
                         </span>
-                        <span className="font-mono text-xs text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5">
+                        <span className="text-xs text-[#436370] bg-white/80 px-1.5 py-0.5 rounded border border-black/5 tabular-nums font-medium">
                           RA {student.ra}-{student.digRa}
                         </span>
                         {isTransferred && (
@@ -1599,7 +1599,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       <div className="text-xs text-[#5a676b] truncate mt-0.5">
                         <strong>{guardian1Info.shortRoleLabel}:</strong> {guardian1Info.cleanName} ·{' '}
                         <strong>{guardian2Info.shortRoleLabel}:</strong> {guardian2Info.cleanName} ·{' '}
-                        <span className="font-mono text-[#005035]">
+                        <span className="text-[#005035] tabular-nums font-medium">
                           {student.telefones || '—'}
                         </span>
                       </div>
@@ -1891,7 +1891,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 px-2.5 font-mono text-[#436370]">
+                      <td className="py-2.5 px-2.5 tabular-nums text-slate-700 font-medium">
                         {student.ra}-{student.digRa}
                       </td>
                       <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
@@ -1906,18 +1906,18 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         </span>
                         <span>{guardian2Info.cleanName}</span>
                       </td>
-                      <td className="py-2.5 px-2.5 font-mono text-xs">
-                        <div className="text-[#005035] font-semibold">
+                      <td className="py-2.5 px-2.5 text-xs">
+                        <div className="text-[#005035] font-semibold tabular-nums">
                           {student.telefones || '—'}
                         </div>
                         <div className="text-[#5a676b] truncate max-w-[180px]">
                           {student.emailMunicipal || '—'}
                         </div>
                       </td>
-                      <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#005035]">
+                      <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#005035]">
                         {m.presencas}/{m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
                       </td>
-                      <td className="py-2.5 px-2.5 text-center font-mono font-bold text-[#ba1a1a]">
+                      <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#ba1a1a]">
                         {m.faltas} ({pctFalta}%)
                       </td>
                       <td className="py-2.5 px-2.5 text-center">

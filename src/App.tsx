@@ -82,6 +82,7 @@ import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
 import { SpotlightCommandModal } from './components/SpotlightCommandModal';
 import { AtualizarDadosJsonModal } from './components/AtualizarDadosJsonModal';
+import { AdminArrasteFotosModal } from './components/AdminArrasteFotosModal';
 import { Toaster, toast } from 'sonner';
 
 const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';

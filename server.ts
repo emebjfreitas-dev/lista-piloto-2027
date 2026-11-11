@@ -659,6 +659,183 @@ async function startServer() {
     res.json({ ok: true });
   });
 
+  // Diretório persistente local para fotos dos estudantes da EMEB Candelário
+  const PHOTOS_DIR = path.join(os.tmpdir(), 'emeb_candelario_student_photos_v1');
+  if (!fs.existsSync(PHOTOS_DIR)) {
+    try {
+      fs.mkdirSync(PHOTOS_DIR, { recursive: true });
+    } catch {}
+  }
+
+  // API: Servir fotos salvas localmente no servidor para todos os usuários com cache HTTP
+  app.get('/api/photos/:filename', (req, res) => {
+    const filename = path.basename(req.params.filename || '');
+    if (!filename || filename.includes('..')) {
+      res.status(400).end();
+      return;
+    }
+    const filePath = path.join(PHOTOS_DIR, filename);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).end();
+      return;
+    }
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
+  const savePhotoDataUrlToFile = (studentId: string, dataUrl: string): string => {
+    const cleanId = String(studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const filename = `${cleanId}.jpg`;
+    const filePath = path.join(PHOTOS_DIR, filename);
+    const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      const buffer = Buffer.from(matches[2], 'base64');
+      fs.writeFileSync(filePath, buffer);
+    } else {
+      fs.writeFileSync(filePath, Buffer.from(dataUrl));
+    }
+    return `/api/photos/${filename}`;
+  };
+
+  // API: Upload individual de foto pelo PEB I ou Admin
+  app.post('/api/photos/upload', requireInstitutionalAuth, (req, res) => {
+    const { studentId, photoDataUrl } = req.body || {};
+    if (!studentId || !photoDataUrl) {
+      res.status(400).json({ error: 'studentId e photoDataUrl são obrigatórios' });
+      return;
+    }
+    try {
+      const photoUrl = savePhotoDataUrlToFile(studentId, photoDataUrl);
+      const current = readSharedState();
+      let updated = false;
+      const now = Date.now();
+      if (Array.isArray(current.classes)) {
+        current.classes = current.classes.map((cls: any) => {
+          if (!Array.isArray(cls.students)) return cls;
+          const has = cls.students.some((s: any) => s.id === studentId);
+          if (!has) return cls;
+          updated = true;
+          return {
+            ...cls,
+            updatedAtMs: now,
+            students: cls.students.map((s: any) => {
+              if (s.id !== studentId) return s;
+              return {
+                ...s,
+                photo: `${photoUrl}?v=${now}`,
+                photoManualLink: true,
+                updatedAtMs: now,
+              };
+            }),
+          };
+        });
+      }
+      if (updated) {
+        writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
+      }
+      res.json({ ok: true, photoUrl: `${photoUrl}?v=${now}` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Falha ao salvar foto' });
+    }
+  });
+
+  // API: Upload em lote de fotos nomeadas pelo Admin (Arraste & Solte)
+  app.post('/api/photos/batch', requireAdminAuth, (req, res) => {
+    const { photos } = req.body || {};
+    if (!Array.isArray(photos) || photos.length === 0) {
+      res.status(400).json({ error: 'Nenhuma foto fornecida' });
+      return;
+    }
+    try {
+      const current = readSharedState();
+      const photoMap = new Map<string, string>();
+      const now = Date.now();
+      for (const item of photos) {
+        if (item.studentId && item.photoDataUrl) {
+          const photoUrl = savePhotoDataUrlToFile(item.studentId, item.photoDataUrl);
+          photoMap.set(item.studentId, `${photoUrl}?v=${now}`);
+        }
+      }
+      let totalUpdated = 0;
+      if (Array.isArray(current.classes)) {
+        current.classes = current.classes.map((cls: any) => {
+          if (!Array.isArray(cls.students)) return cls;
+          let clsUpdated = false;
+          const updatedStudents = cls.students.map((s: any) => {
+            const newPhotoUrl = photoMap.get(s.id);
+            if (!newPhotoUrl) return s;
+            clsUpdated = true;
+            totalUpdated++;
+            return {
+              ...s,
+              photo: newPhotoUrl,
+              photoManualLink: true,
+              updatedAtMs: now,
+            };
+          });
+          if (clsUpdated) {
+            return {
+              ...cls,
+              updatedAtMs: now,
+              students: updatedStudents,
+            };
+          }
+          return cls;
+        });
+      }
+      writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
+      res.json({ ok: true, updatedCount: totalUpdated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Falha ao processar lote de fotos' });
+    }
+  });
+
+  // API: Limpar todas as fotos de todos os estudantes (Reset para testes)
+  app.post('/api/photos/clear-all', requireAdminAuth, (req, res) => {
+    try {
+      if (fs.existsSync(PHOTOS_DIR)) {
+        const files = fs.readdirSync(PHOTOS_DIR);
+        for (const file of files) {
+          try {
+            fs.unlinkSync(path.join(PHOTOS_DIR, file));
+          } catch {}
+        }
+      }
+      const current = readSharedState();
+      let clearedCount = 0;
+      const now = Date.now();
+      if (Array.isArray(current.classes)) {
+        current.classes = current.classes.map((cls: any) => {
+          if (!Array.isArray(cls.students)) return cls;
+          return {
+            ...cls,
+            updatedAtMs: now,
+            students: cls.students.map((s: any) => {
+              if (s.photo || s.photoDriveId || s.photoDriveUrl) clearedCount++;
+              return {
+                ...s,
+                photo: '',
+                photoDriveId: '',
+                photoDriveUrl: '',
+                photoManualLink: false,
+                updatedAtMs: now,
+              };
+            }),
+          };
+        });
+      }
+      writeSharedState({
+        classes: current.classes,
+        classesUpdatedAtMs: now,
+        discoveredDrivePhotos: [],
+      });
+      res.json({ ok: true, clearedCount });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Falha ao limpar fotos' });
+    }
+  });
+
   // Cache em memória das imagens do Drive para carregamento instantâneo nos dispositivos dos professores
   const drivePhotoBufferCache = new Map<
     string,

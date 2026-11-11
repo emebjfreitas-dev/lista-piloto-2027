@@ -7,6 +7,7 @@ import {
   getStoredDiscoveredDrivePhotos,
   DiscoveredDrivePhotoFile,
 } from '../services/googleSheetsApi';
+import { uploadStudentPhotoViaApi } from '../services/db';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface UploadFotoModalProps {
@@ -36,7 +37,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   onSavePhoto,
   onSyncDrivePhotos,
 }) => {
-  const [activeTab, setActiveTab] = useState<'drive_catalog' | 'device_upload'>('drive_catalog');
+  const [activeTab, setActiveTab] = useState<'device_upload' | 'drive_catalog'>('device_upload');
   const [previewUrl, setPreviewUrl] = useState<string>(student?.photo || '');
   const [selectedDriveFile, setSelectedDriveFile] = useState<DiscoveredDrivePhotoFile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -225,7 +226,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     if (!file || !student) return;
 
     setIsProcessing(true);
-    setStatusMsg('Carregando e otimizando foto do dispositivo...');
+    setStatusMsg('Carregando e otimizando foto do estudante...');
 
     const dataUrl = await compressImageFileToDataUrl(file);
     if (!dataUrl) {
@@ -235,21 +236,27 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     }
 
     setPreviewUrl(dataUrl);
-    onSavePhoto(student.id, dataUrl, undefined, undefined, true);
-    setStatusMsg('✓ Foto do dispositivo aplicada e vinculada ao estudante!');
-    setUploadSuccess(true);
 
     try {
-      const token = await getAccessToken();
-      if (token) {
-        const uploaded = await uploadStudentPhotoToDrive(student, className, dataUrl);
-        onSavePhoto(student.id, dataUrl, uploaded.webViewLink, uploaded.fileId, true);
-      }
+      // 1. Salvar no servidor central para todos os usuários
+      const apiRes = await uploadStudentPhotoViaApi(student.id, dataUrl);
+      const finalUrl = apiRes.photoUrl || dataUrl;
+      onSavePhoto(student.id, finalUrl, undefined, undefined, true);
+      setStatusMsg('✓ Foto enviada e sincronizada para toda a escola!');
+      setUploadSuccess(true);
     } catch {
-      // foto permanece vinculada localmente e no servidor
+      onSavePhoto(student.id, dataUrl, undefined, undefined, true);
+      setStatusMsg('✓ Foto aplicada localmente.');
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleRemovePhoto = () => {
+    if (!student) return;
+    setPreviewUrl('');
+    onSavePhoto(student.id, '', '', '', false);
+    setStatusMsg('Foto removida deste estudante.');
   };
 
   const handleSelectDrivePhoto = (item: DiscoveredDrivePhotoFile) => {
@@ -273,8 +280,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     }
   };
 
-  const handleSave = () => {
-    if (!previewUrl || !student) return;
+  const handleSave = async () => {
+    if (!student) return;
+    setIsProcessing(true);
+    let finalUrl = previewUrl;
     if (selectedDriveFile) {
       onSavePhoto(
         student.id,
@@ -284,9 +293,16 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
         true
       );
     } else {
-      onSavePhoto(student.id, previewUrl, student.photoDriveUrl, student.photoDriveId, true);
+      if (previewUrl && previewUrl.startsWith('data:image')) {
+        try {
+          const apiRes = await uploadStudentPhotoViaApi(student.id, previewUrl);
+          if (apiRes.photoUrl) finalUrl = apiRes.photoUrl;
+        } catch {}
+      }
+      onSavePhoto(student.id, finalUrl, student.photoDriveUrl, student.photoDriveId, true);
     }
     setUploadSuccess(true);
+    setIsProcessing(false);
     setTimeout(() => {
       setUploadSuccess(false);
       // Se houver próximo aluno na turma, avança direto para agilizar a conferência!
@@ -402,7 +418,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-1 ring-white" />
                       )}
                     </div>
-                    <span className="text-[11px] font-mono font-bold">
+                    <span className="text-[11px] font-semibold tabular-nums">
                       Nº {st.number.toString().padStart(2, '0')}
                     </span>
                     <span className="text-xs font-semibold truncate max-w-[85px]">
@@ -435,7 +451,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-900 font-mono">
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-900 tabular-nums">
                     Nº {student.number.toString().padStart(2, '0')}
                   </span>
                   <span className="text-sm font-bold text-slate-950 truncate">
@@ -648,6 +664,18 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
 
         {/* Modal Actions Sticky */}
         <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200 p-4 flex gap-2 shrink-0 z-10">
+          {previewUrl && (
+            <button
+              type="button"
+              onClick={handleRemovePhoto}
+              className="h-11 px-3.5 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs rounded-2xl transition-colors cursor-pointer flex items-center gap-1 border border-rose-200"
+              title="Remover foto deste aluno"
+            >
+              <span className="material-symbols-outlined text-[16px] text-rose-600">delete</span>
+              <span className="hidden sm:inline">Remover</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onClose}

@@ -62,6 +62,7 @@ interface HomeScreenProps {
   onOpenStudentPdf?: (student: Student, className: string) => void;
   onSaveSchoolNotices?: (updatedNotices: SchoolNotice[]) => void;
   onNavigateToAcessos?: () => void;
+  onOpenAdminPhotosModal?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -80,6 +81,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenStudentPdf,
   onSaveSchoolNotices,
   onNavigateToAcessos,
+  onOpenAdminPhotosModal,
 }) => {
   const [currentClock, setCurrentClock] = useState(() => new Date());
   const [selectedShiftFilter, setSelectedShiftFilter] = useState<'TODOS' | 'MANHÃ' | 'TARDE'>('TODOS');
@@ -296,7 +298,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <span>{todayFormatted}</span>
             </div>
 
-            <div className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-800 font-semibold font-mono tabular-nums shadow-2xs">
+            <div className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-800 font-semibold tabular-nums shadow-2xs">
               <Clock className="w-4 h-4 text-slate-600 shrink-0" />
               <span>{timeFormatted}</span>
             </div>
@@ -528,6 +530,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </span>
             </div>
           </button>
+
+          {/* Opção Admin: Arraste & Solte de Fotos Nomeadas */}
+          {userRole === 'admin' && onOpenAdminPhotosModal && (
+            <button
+              type="button"
+              onClick={onOpenAdminPhotosModal}
+              className="w-full text-left bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-950 hover:to-indigo-950 text-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group col-span-1 md:col-span-2 xl:col-span-3 border border-blue-800"
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-14 h-14 rounded-2xl bg-white text-blue-950 flex items-center justify-center shrink-0 shadow-xs">
+                  <span className="material-symbols-outlined text-[32px] text-blue-700">
+                    add_photo_alternate
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-300 block">
+                    Gestão Escolar · Exclusivo Admin
+                  </span>
+                  <h3 className="text-lg font-bold text-white truncate">
+                    Arraste &amp; Solte de Fotos Nomeadas dos Alunos
+                  </h3>
+                  <p className="text-xs font-semibold text-blue-200 truncate mt-1">
+                    Vincule dezenas ou centenas de fotos de uma vez (por RA, Nome ou Turma) e sincronize com todos os professores
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end shrink-0">
+                <span className="px-3 py-1 rounded-xl bg-blue-950 text-white text-xs font-bold border border-blue-700">
+                  Lote de Fotos
+                </span>
+                <span className="text-xs text-white font-bold flex items-center gap-1 mt-2.5">
+                  Abrir <ArrowRight className="w-4 h-4" />
+                </span>
+              </div>
+            </button>
+          )}
         </div>
       </section>
 
@@ -700,7 +738,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               Total de Alunos
             </span>
             <div className="mt-2">
-              <span className="text-3xl font-bold font-mono tabular-nums text-slate-950 block">
+              <span className="text-3xl font-bold tabular-nums tracking-tight text-slate-950 block">
                 {schoolStats.totalStudents}
               </span>
               <span className="text-xs font-semibold text-slate-600 block mt-0.5">
@@ -714,7 +752,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               Turmas Ativas
             </span>
             <div className="mt-2">
-              <span className="text-3xl font-bold font-mono tabular-nums text-slate-950 block">
+              <span className="text-3xl font-bold tabular-nums tracking-tight text-slate-950 block">
                 {schoolStats.totalClasses}
               </span>
               <span className="text-xs font-semibold text-slate-600 block mt-0.5">
@@ -728,7 +766,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               Presença Média
             </span>
             <div className="mt-2">
-              <span className="text-3xl font-bold font-mono tabular-nums text-emerald-800 block">
+              <span className="text-3xl font-bold tabular-nums tracking-tight text-emerald-800 block">
                 {schoolStats.avgPresence}%
               </span>
               <span className="text-xs text-emerald-900 block font-bold mt-0.5">
@@ -745,7 +783,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               Busca Ativa (ECA) →
             </span>
             <div className="mt-2">
-              <span className="text-3xl font-bold font-mono tabular-nums text-rose-800 block">
+              <span className="text-3xl font-bold tabular-nums tracking-tight text-rose-800 block">
                 {schoolStats.criticalConsecutiveCount}
               </span>
               <span className="text-xs font-semibold text-slate-600 block mt-0.5">
@@ -929,7 +967,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       <div className="bg-slate-950 text-white px-4 py-3 rounded-2xl text-xs shadow-2xl space-y-1">
                         <div className="font-bold text-white text-sm">{data.name}</div>
                         <div className="text-slate-200 font-semibold">Turno: {data.shift}</div>
-                        <div className="text-emerald-400 font-bold font-mono tabular-nums text-sm">
+                        <div className="text-emerald-400 font-bold tabular-nums text-sm">
                           Frequência: {data.presence}%
                         </div>
                         <div className="text-slate-300 text-xs font-medium">
