@@ -836,6 +836,191 @@ async function startServer() {
     }
   });
 
+  // Diretório persistente local para PDFs (fichas cadastrais/informativas) dos estudantes da EMEB Candelário
+  const PDFS_DIR = path.join(os.tmpdir(), 'emeb_candelario_student_pdfs_v1');
+  if (!fs.existsSync(PDFS_DIR)) {
+    try {
+      fs.mkdirSync(PDFS_DIR, { recursive: true });
+    } catch {}
+  }
+
+  // API: Servir PDFs salvos no servidor para visualização direta em tela cheia com cabeçalhos adequados
+  app.get('/api/pdfs/:filename', (req, res) => {
+    const filename = path.basename(req.params.filename || '');
+    if (!filename || filename.includes('..')) {
+      res.status(400).end();
+      return;
+    }
+    const filePath = path.join(PDFS_DIR, filename);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).end();
+      return;
+    }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
+  const savePdfDataUrlToFile = (studentId: string, dataUrlOrBase64: string): string => {
+    const cleanId = String(studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const filename = `${cleanId}.pdf`;
+    const filePath = path.join(PDFS_DIR, filename);
+    const matches = dataUrlOrBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      const buffer = Buffer.from(matches[2], 'base64');
+      fs.writeFileSync(filePath, buffer);
+    } else if (dataUrlOrBase64.startsWith('JVBERi0')) {
+      // Raw base64 PDF string (starts with %PDF in base64)
+      const buffer = Buffer.from(dataUrlOrBase64, 'base64');
+      fs.writeFileSync(filePath, buffer);
+    } else {
+      fs.writeFileSync(filePath, Buffer.from(dataUrlOrBase64));
+    }
+    return `/api/pdfs/${filename}`;
+  };
+
+  // API: Upload individual de PDF de estudante
+  app.post('/api/pdfs/upload', requireInstitutionalAuth, (req, res) => {
+    const { studentId, pdfDataUrl } = req.body || {};
+    if (!studentId || !pdfDataUrl) {
+      res.status(400).json({ error: 'studentId e pdfDataUrl são obrigatórios' });
+      return;
+    }
+    try {
+      const pdfUrl = savePdfDataUrlToFile(studentId, pdfDataUrl);
+      const current = readSharedState();
+      let updated = false;
+      const now = Date.now();
+      const cleanId = String(studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
+      if (Array.isArray(current.classes)) {
+        current.classes = current.classes.map((cls: any) => {
+          if (!Array.isArray(cls.students)) return cls;
+          const has = cls.students.some((s: any) => s.id === studentId);
+          if (!has) return cls;
+          updated = true;
+          return {
+            ...cls,
+            updatedAtMs: now,
+            students: cls.students.map((s: any) => {
+              if (s.id !== studentId) return s;
+              return {
+                ...s,
+                fichaPdfDriveUrl: `${pdfUrl}?v=${now}`,
+                fichaPdfDriveId: cleanId,
+                fichaPdfManualLink: true,
+                updatedAtMs: now,
+              };
+            }),
+          };
+        });
+      }
+      if (updated) {
+        writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
+      }
+      res.json({ ok: true, pdfUrl: `${pdfUrl}?v=${now}` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Falha ao salvar PDF' });
+    }
+  });
+
+  // API: Upload em lote de PDFs nomeados pelo Admin (Arraste & Solte)
+  app.post('/api/pdfs/batch', requireAdminAuth, (req, res) => {
+    const { pdfs } = req.body || {};
+    if (!Array.isArray(pdfs) || pdfs.length === 0) {
+      res.status(400).json({ error: 'Nenhum PDF fornecido' });
+      return;
+    }
+    try {
+      const current = readSharedState();
+      const pdfMap = new Map<string, string>();
+      const now = Date.now();
+      for (const item of pdfs) {
+        if (item.studentId && item.pdfDataUrl) {
+          const pdfUrl = savePdfDataUrlToFile(item.studentId, item.pdfDataUrl);
+          pdfMap.set(item.studentId, `${pdfUrl}?v=${now}`);
+        }
+      }
+      let totalUpdated = 0;
+      if (Array.isArray(current.classes)) {
+        current.classes = current.classes.map((cls: any) => {
+          if (!Array.isArray(cls.students)) return cls;
+          let clsUpdated = false;
+          const updatedStudents = cls.students.map((s: any) => {
+            const newPdfUrl = pdfMap.get(s.id);
+            if (!newPdfUrl) return s;
+            clsUpdated = true;
+            totalUpdated++;
+            const cleanId = String(s.id).replace(/[^a-zA-Z0-9-_]/g, '_');
+            return {
+              ...s,
+              fichaPdfDriveUrl: newPdfUrl,
+              fichaPdfDriveId: cleanId,
+              fichaPdfManualLink: true,
+              updatedAtMs: now,
+            };
+          });
+          if (clsUpdated) {
+            return {
+              ...cls,
+              updatedAtMs: now,
+              students: updatedStudents,
+            };
+          }
+          return cls;
+        });
+      }
+      writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
+      res.json({ ok: true, updatedCount: totalUpdated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Falha ao processar lote de PDFs' });
+    }
+  });
+
+  // API: Limpar todas as fichas PDF de todos os estudantes (Reset de PDFs)
+  app.post('/api/pdfs/clear-all', requireAdminAuth, (req, res) => {
+    try {
+      if (fs.existsSync(PDFS_DIR)) {
+        const files = fs.readdirSync(PDFS_DIR);
+        for (const file of files) {
+          try {
+            fs.unlinkSync(path.join(PDFS_DIR, file));
+          } catch {}
+        }
+      }
+      const current = readSharedState();
+      let clearedCount = 0;
+      const now = Date.now();
+      if (Array.isArray(current.classes)) {
+        current.classes = current.classes.map((cls: any) => {
+          if (!Array.isArray(cls.students)) return cls;
+          return {
+            ...cls,
+            updatedAtMs: now,
+            students: cls.students.map((s: any) => {
+              if (s.fichaPdfDriveUrl || s.fichaPdfDriveId) clearedCount++;
+              return {
+                ...s,
+                fichaPdfDriveId: '',
+                fichaPdfDriveUrl: '',
+                fichaPdfSubfolder: '',
+                fichaPdfManualLink: false,
+                updatedAtMs: now,
+              };
+            }),
+          };
+        });
+      }
+      writeSharedState({
+        classes: current.classes,
+        classesUpdatedAtMs: now,
+      });
+      res.json({ ok: true, clearedCount });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Falha ao limpar PDFs' });
+    }
+  });
+
   // Cache em memória das imagens do Drive para carregamento instantâneo nos dispositivos dos professores
   const drivePhotoBufferCache = new Map<
     string,

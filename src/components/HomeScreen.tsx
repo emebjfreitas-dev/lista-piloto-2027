@@ -270,10 +270,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   return (
     <div className="flex flex-col w-full space-y-5 pb-16 text-slate-950 font-sans">
       {/* 1. CABEÇALHO ACOLHEDOR COM PROPORÇÕES HARMONIOSAS */}
-      <section className="bg-white rounded-3xl p-6 sm:p-7 shadow-xs border border-slate-200/60">
+      <section className="bg-white rounded-3xl p-6 sm:p-7 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-1.5 min-w-0">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-900 text-xs font-bold mb-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-900 text-xs font-semibold mb-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
               <span>SISTEMA CONECTADO · Ações salvas automaticamente</span>
             </div>
@@ -281,29 +281,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
                 Olá, {formattedGreetingName}!
               </h1>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/80">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
                 <span className="w-2 h-2 rounded-full bg-emerald-600" />
                 {userRole === 'admin' ? 'Direção / Administração' : 'Educador(a)'}
               </span>
             </div>
-            <p className="text-xs sm:text-sm font-medium text-slate-600">
+            <p className="text-xs sm:text-sm font-normal text-slate-500">
               EMEB Prof. Joaquim Candelário de Freitas · Ano Letivo 2027 · SME Jundiaí (Secretaria Municipal de Educação)
             </p>
           </div>
 
           {/* Marcadores de Data, Hora e Turno em Superfícies Sólidas com Proporções Equilibradas */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-800 font-semibold shadow-2xs">
-              <Calendar className="w-4 h-4 text-slate-600 shrink-0" />
+            <div className="px-3.5 py-2 bg-slate-50 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-medium shadow-2xs">
+              <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
               <span>{todayFormatted}</span>
             </div>
 
-            <div className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-800 font-semibold tabular-nums shadow-2xs">
-              <Clock className="w-4 h-4 text-slate-600 shrink-0" />
+            <div className="px-3.5 py-2 bg-slate-50 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-medium tabular-nums shadow-2xs">
+              <Clock className="w-4 h-4 text-slate-500 shrink-0" />
               <span>{timeFormatted}</span>
             </div>
 
-            <div className="px-3.5 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-800 font-semibold shadow-2xs">
+            <div className="px-3.5 py-2 bg-slate-50 rounded-xl flex items-center gap-2 text-xs sm:text-sm text-slate-700 font-medium shadow-2xs">
               <span className={`w-2.5 h-2.5 rounded-full ${shiftInfo.dotColor}`} />
               <span>{shiftInfo.label}</span>
             </div>
@@ -311,14 +311,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       </section>
 
-      {/* 2. O GRANDE PAINEL DE SELEÇÃO TÁTIL (CONTRASTE DE SUPERFÍCIES — SEM CONTORNOS) */}
-      <section className="bg-slate-100/80 border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-5">
+      {/* 2. O GRANDE PAINEL DE SELEÇÃO TÁTIL (CONTRASTE DE SUPERFÍCIES — ZERO CONTORNO) */}
+      <section className="bg-slate-100/80 rounded-3xl p-6 sm:p-8 space-y-5">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-950 flex items-center gap-2.5">
             <span className="w-3.5 h-3.5 rounded-full bg-slate-950" />
             <span>O que você deseja fazer agora?</span>
           </h2>
-          <p className="text-sm sm:text-base font-semibold text-slate-800 mt-1">
+          <p className="text-sm sm:text-base font-normal text-slate-500 mt-1">
             Selecione uma das opções abaixo para abrir diretamente:
           </p>
         </div>
@@ -336,22 +336,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <Users className="w-7 h-7" />
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 block">
                   Lista Nominal
                 </span>
                 <h3 className="text-lg font-bold text-slate-950 truncate">
                   Ver Turmas e Alunos
                 </h3>
-                <p className="text-xs font-semibold text-slate-700 truncate mt-1">
+                <p className="text-xs font-normal text-slate-500 truncate mt-1">
                   Fotos, chamada e telefones dos responsáveis
                 </p>
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0">
-              <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium">
                 40 Turmas
               </span>
-              <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
+              <span className="text-xs text-slate-900 font-medium flex items-center gap-1 mt-2.5">
                 Abrir <ArrowRight className="w-4 h-4" />
               </span>
             </div>
@@ -369,22 +369,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <CalendarCheck className="w-7 h-7" />
                 </div>
                 <div className="min-w-0">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 block">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-emerald-200 block">
                     Chamada Mensal Oficial
                   </span>
                   <h3 className="text-lg font-bold text-white truncate">
                     Informar Faltas do Mês
                   </h3>
-                  <p className="text-xs font-semibold text-emerald-100 truncate mt-1">
+                  <p className="text-xs font-normal text-emerald-100 truncate mt-1">
                     Mês de {referencePeriod.monthName} / {referencePeriod.year}
                   </p>
                 </div>
               </div>
               <div className="flex flex-col items-end shrink-0">
-                <span className="px-3 py-1 rounded-xl bg-emerald-950 text-white text-xs font-bold">
+                <span className="px-2.5 py-1 rounded-xl bg-emerald-950 text-emerald-100 text-xs font-medium">
                   {windowEval.isAllowedToLaunch ? 'Janela Aberta' : 'Lançar'}
                 </span>
-                <span className="text-xs text-white font-bold flex items-center gap-1 mt-2.5">
+                <span className="text-xs text-white font-medium flex items-center gap-1 mt-2.5">
                   Acessar <ArrowRight className="w-4 h-4" />
                 </span>
               </div>
@@ -394,7 +394,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <CalendarCheck className="w-7 h-7 text-slate-600 shrink-0" />
               <div>
                 <p className="font-bold text-slate-950 text-base">Lançamento de Faltas</p>
-                <p className="font-semibold text-slate-700 mt-0.5">Perfil PEB II opera em modo consulta de turmas.</p>
+                <p className="font-normal text-slate-500 mt-0.5">Perfil PEB II opera em modo consulta de turmas.</p>
               </div>
             </div>
           )}
@@ -410,22 +410,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <AlertTriangle className="w-7 h-7" />
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wider text-rose-800 block">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-rose-700 block">
                   Busca Ativa &amp; ECA
                 </span>
                 <h3 className="text-lg font-bold text-slate-950 truncate">
                   Alunos em Atenção
                 </h3>
-                <p className="text-xs font-semibold text-slate-700 truncate mt-1">
+                <p className="text-xs font-normal text-slate-500 truncate mt-1">
                   Faltas consecutivas e contato familiar
                 </p>
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0">
-              <span className="px-3 py-1 rounded-xl bg-rose-100 text-rose-950 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-xl bg-rose-100 text-rose-800 text-xs font-medium">
                 {schoolStats.criticalConsecutiveCount} alertas
               </span>
-              <span className="text-xs text-rose-800 font-bold flex items-center gap-1 mt-2.5">
+              <span className="text-xs text-rose-700 font-medium flex items-center gap-1 mt-2.5">
                 Ver Casos <ArrowRight className="w-4 h-4" />
               </span>
             </div>
@@ -442,22 +442,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <HeartHandshake className="w-7 h-7" />
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 block">
                   Programas Sociais
                 </span>
                 <h3 className="text-lg font-bold text-slate-950 truncate">
                   Bolsa Família &amp; Fretado
                 </h3>
-                <p className="text-xs font-semibold text-slate-700 truncate mt-1">
+                <p className="text-xs font-normal text-slate-500 truncate mt-1">
                   Listas nominais, NIS e rotas oficiais
                 </p>
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0">
-              <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium">
                 Programas
               </span>
-              <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
+              <span className="text-xs text-slate-900 font-medium flex items-center gap-1 mt-2.5">
                 Abrir <ArrowRight className="w-4 h-4" />
               </span>
             </div>
@@ -474,22 +474,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <CalendarDays className="w-7 h-7" />
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 block">
                   Calendário Oficial
                 </span>
                 <h3 className="text-lg font-bold text-slate-950 truncate">
                   200 Dias Letivos
                 </h3>
-                <p className="text-xs font-semibold text-slate-700 truncate mt-1">
+                <p className="text-xs font-normal text-slate-500 truncate mt-1">
                   Dias de aula, feriados e recesso escolar
                 </p>
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0">
-              <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium">
                 2027
               </span>
-              <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
+              <span className="text-xs text-slate-900 font-medium flex items-center gap-1 mt-2.5">
                 Ver <ArrowRight className="w-4 h-4" />
               </span>
             </div>
@@ -510,22 +510,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <Bell className="w-7 h-7" />
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500 block">
                   Comunicação Interna
                 </span>
                 <h3 className="text-lg font-bold text-slate-950 truncate">
                   Quadro de Avisos
                 </h3>
-                <p className="text-xs font-semibold text-slate-700 truncate mt-1">
+                <p className="text-xs font-normal text-slate-500 truncate mt-1">
                   Recados da direção e prazos da coordenação
                 </p>
               </div>
             </div>
             <div className="flex flex-col items-end shrink-0">
-              <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-950 text-xs font-bold">
+              <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium">
                 {schoolNotices.length} avisos
               </span>
-              <span className="text-xs text-slate-950 font-bold flex items-center gap-1 mt-2.5">
+              <span className="text-xs text-slate-900 font-medium flex items-center gap-1 mt-2.5">
                 Ler <ArrowRight className="w-4 h-4" />
               </span>
             </div>

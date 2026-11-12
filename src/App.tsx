@@ -638,6 +638,7 @@ export default function App() {
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState(false);
   const [isJsonImportModalOpen, setIsJsonImportModalOpen] = useState(false);
+  const [isAdminPhotosModalOpen, setIsAdminPhotosModalOpen] = useState(false);
   const [photoModalStudent, setPhotoModalStudent] = useState<Student | null>(null);
   const [pdfModalData, setPdfModalData] = useState<{
     student: Student;
@@ -1326,6 +1327,7 @@ export default function App() {
         onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
         onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
         onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
+        onOpenAdminPhotosModal={() => setIsAdminPhotosModalOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -1424,6 +1426,9 @@ export default function App() {
             }}
             onNavigateToAcessos={() => {
               navigateToScreen('usuarios_acesso');
+            }}
+            onOpenAdminPhotosModal={() => {
+              setIsAdminPhotosModalOpen(true);
             }}
           />
         )}
@@ -2057,6 +2062,20 @@ export default function App() {
           else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
         }}
         currentUserEmail={currentUserEmail}
+      />
+
+      {/* Modal Admin de Arraste & Solte de Fotos Nomeadas */}
+      <AdminArrasteFotosModal
+        isOpen={isAdminPhotosModalOpen}
+        onClose={() => setIsAdminPhotosModalOpen(false)}
+        classes={classes}
+        onBatchPhotosSaved={(updatedClasses) => {
+          setClasses(updatedClasses);
+          saveStoredClasses(updatedClasses);
+          const found = updatedClasses.find((c) => c.id === selectedClass.id);
+          if (found) setSelectedClass(found);
+          else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
+        }}
       />
 
       {/* Global Notifications with Sonner (Open-source, light & accessible) */}

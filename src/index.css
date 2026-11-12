@@ -8,31 +8,37 @@
 
 @layer base {
   :root {
-    /* Modern Architectural High-Contrast Palette (WCAG 2.1 AA Compliant) */
+    /* Paleta Arquitetural Apple SF Pro — Pura Superfície & Zero Contorno */
     --canvas-bg: #f8fafc;
     --surface-bg: #ffffff;
     --surface-subtle: #f1f5f9;
-    --border-subtle: #cbd5e1;       /* 3.2:1 against white - WCAG non-text contrast */
-    --border-strong: #94a3b8;       /* 3.5:1 against subtle gray */
-    --text-primary: #090d16;        /* 18.5:1 against white - WCAG AAA */
-    --text-secondary: #334155;      /* 7.5:1 against white - WCAG AAA */
-    --text-muted: #475569;          /* 5.7:1 against white - WCAG AA compliant */
-    --accent-navy: #002244;         /* 13.5:1 */
-    --accent-blue: #1d4ed8;         /* 6.0:1 */
+    --surface-elevated: #ffffff;
+    --text-primary: #090d16;        /* WCAG AAA */
+    --text-secondary: #334155;      /* WCAG AAA */
+    --text-muted: #64748b;          /* WCAG AA */
+    --accent-navy: #002244;
+    --accent-blue: #0071e3;         /* Apple System Blue */
+    --accent-emerald: #027a48;
 
-    /* Tipografia Oficial Apple: SF Pro + SF Mono com Numerais Tabulares e Suporte Completo a Caracteres Especiais */
+    /* Curvas de Animação e Fluidez Oficial Apple (Spring & Natural Deceleration) */
+    --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-apple-spring: cubic-bezier(0.25, 1, 0.5, 1);
+    --duration-fast: 160ms;
+    --duration-normal: 240ms;
+
+    /* Tipografia Oficial Apple: SF Pro + SF Mono com Numerais Tabulares */
     --font-sans: "SF Pro Text", "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     --font-display: "SF Pro Display", "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
 
-    /* Escala Tipográfica Padronizada Apple */
-    --font-size-display: 1.5rem;      /* 24px - Títulos de Página */
-    --font-size-title: 1.25rem;       /* 20px - Seções Principais */
-    --font-size-subtitle: 1.0rem;     /* 16px - Subtítulos e Cards */
-    --font-size-base: 0.875rem;       /* 14px - Texto Principal */
-    --font-size-body: 0.8125rem;      /* 13px - Tabelas e Densidade */
-    --font-size-caption: 0.75rem;     /* 12px - Menus, Botões, Badges */
-    --font-size-micro: 0.6875rem;     /* 11px - Indicadores, Metadados */
+    /* Escala Tipográfica Harmoniosa Proporcional Apple */
+    --font-size-display: clamp(1.5rem, 2.5vw, 1.875rem);   /* 24-30px */
+    --font-size-title: clamp(1.15rem, 1.8vw, 1.35rem);     /* 18-22px */
+    --font-size-body: 0.9375rem;                           /* 15px */
+    --font-size-callout: 0.875rem;                         /* 14px */
+    --font-size-footnote: 0.8125rem;                       /* 13px */
+    --font-size-caption: 0.75rem;                          /* 12px */
+    --font-size-micro: 0.6875rem;                          /* 11px */
   }
 
   * {
@@ -40,24 +46,30 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Padronização Única e Confortável para Todos os Dispositivos (Mobile e Desktop) */
-  html {
-    font-size: clamp(15.5px, 0.35vw + 14.5px, 16.5px);
+  /* REGRA FUNDAMENTAL: NENHUM CONTORNO OU BORDA VISÍVEL EM NADA (PURA SUPERFÍCIE & SOMBRA DIFUSA) */
+  *,
+  *::before,
+  *::after {
+    border-color: transparent !important;
+    outline: none !important;
   }
 
+  /* Padronização com Nitidez e Fluidez em Todos os Dispositivos (Mobile, Tablet, Retina, 4K) */
   html {
+    font-size: clamp(15.5px, 0.35vw + 14.5px, 16.5px);
     font-family: var(--font-sans) !important;
     background-color: var(--canvas-bg);
     color: var(--text-primary);
     line-height: 1.47059;
     font-weight: 400;
     letter-spacing: -0.011em;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    text-rendering: optimizeLegibility !important;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "kern" 1, "liga" 1, "calt" 1;
     font-kerning: normal;
     scroll-behavior: smooth;
+    image-rendering: -webkit-optimize-contrast;
   }
 
   body {
@@ -67,15 +79,16 @@
     overflow-x: hidden;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
     font-kerning: normal;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    text-rendering: optimizeLegibility !important;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display) !important;
     color: var(--text-primary);
     letter-spacing: -0.022em;
-    font-weight: 600;
+    font-weight: 700;
     text-wrap: balance;
     font-feature-settings: "kern" 1, "liga" 1;
   }
@@ -85,7 +98,7 @@
     font-feature-settings: "kern" 1, "liga" 1;
   }
 
-  /* Padrão Oficial Apple SF Pro para Numerais e Dados em Todo o App (Tabular Lining Figures) */
+  /* Numerais Tabulares Apple SF Pro (Lining Figures Alinhados Perfeitamente) */
   .tabular-nums,
   .font-tabular,
   .font-numeric,
@@ -96,7 +109,6 @@
     letter-spacing: -0.015em;
   }
 
-  /* SF Mono reservado estritamente para blocos de código (<pre>, <code>, .font-code) */
   code,
   pre,
   .font-code {
@@ -106,7 +118,29 @@
     letter-spacing: -0.015em;
   }
 
-  /* Safe-area padding utilities for mobile */
+  /* Proporções Apple para Botões: Padronização Tátil, Proporção 2:1 e Fluidez */
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform var(--duration-fast) var(--ease-apple),
+                background-color var(--duration-fast) ease,
+                box-shadow var(--duration-fast) ease,
+                opacity var(--duration-fast) ease;
+    will-change: transform, opacity;
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: scale(0.978);
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Safe-area mobile padding */
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
   }
@@ -114,7 +148,7 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Modern scrollbars */
+  /* Barra de Rolagem Fluida Apple Minimalista */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -123,14 +157,15 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.4);
+    background: rgba(148, 163, 184, 0.35);
     border-radius: 9999px;
+    border: none !important;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(100, 116, 139, 0.6);
+    background: rgba(100, 116, 139, 0.55);
   }
 
-  /* Otimização de Scroll e Contenção de Overflow para Modais e Painéis */
+  /* Scroll Lock & Modais Suaves */
   .modal-scroll-body {
     overflow-y: auto !important;
     overflow-x: hidden !important;
@@ -140,41 +175,25 @@
     touch-action: pan-y !important;
     scroll-behavior: smooth;
     scrollbar-width: thin;
-    scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+    scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
   }
 
-  .modal-scroll-body::-webkit-scrollbar {
-    width: 6px;
-  }
-  .modal-scroll-body::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .modal-scroll-body::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.4);
-    border-radius: 9999px;
-  }
-  .modal-scroll-body::-webkit-scrollbar-thumb:hover {
-    background: rgba(15, 23, 42, 0.7);
-  }
-
-  /* Bloqueio de scroll de fundo com modal ativo */
   body.modal-open {
     overflow: hidden !important;
     touch-action: none;
   }
 
-  /* WCAG 2.1 AA Focused States (2.4.7 Focus Visible & 2.4.11 Focus Appearance) */
+  /* Foco Acessível Apple com Sombra Difusa (Sem Contorno ou Linha Rígida) */
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible,
   a:focus-visible {
-    outline: 2.5px solid #090d16 !important;
-    outline-offset: 2px !important;
-    box-shadow: 0 0 0 4px rgba(9, 13, 22, 0.22) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.4) !important;
   }
 
-  /* Form Elements: Non-text contrast >= 3.0:1 */
+  /* Inputs Fluidos e Confortáveis */
   input[type="text"],
   input[type="email"],
   input[type="number"],
@@ -182,29 +201,14 @@
   input[type="password"],
   select,
   textarea {
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-  }
-
-  /* Interactive Button and Hover Contrast */
-  button {
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-  }
-  button:not(:disabled):hover {
-    cursor: pointer;
+    border: none !important;
+    transition: background-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+    -webkit-appearance: none;
+    appearance: none;
   }
 }
 
-/* WCAG 2.1 AA Automated Contrast Protection for Normal Text (>= 4.5:1 on light canvas) */
-:not([class*="bg-slate-9"]):not([class*="bg-slate-8"]):not([class*="bg-black"]):not([class*="bg-blue-9"]):not([class*="bg-blue-8"]):not([class*="bg-emerald-9"]):not([class*="bg-rose-9"]):not([class*="bg-zinc-9"]) > .text-slate-400,
-:not([class*="bg-slate-9"]):not([class*="bg-slate-8"]):not([class*="bg-black"]):not([class*="bg-blue-9"]):not([class*="bg-blue-8"]):not([class*="bg-emerald-9"]):not([class*="bg-rose-9"]):not([class*="bg-zinc-9"]) > .text-gray-400 {
-  color: #475569 !important; /* Slate 600: 5.7:1 ratio on white, passes WCAG 2.1 AA */
-}
-:not([class*="bg-slate-9"]):not([class*="bg-slate-8"]):not([class*="bg-black"]):not([class*="bg-blue-9"]):not([class*="bg-blue-8"]):not([class*="bg-emerald-9"]):not([class*="bg-rose-9"]):not([class*="bg-zinc-9"]) > .text-slate-500,
-:not([class*="bg-slate-9"]):not([class*="bg-slate-8"]):not([class*="bg-black"]):not([class*="bg-blue-9"]):not([class*="bg-blue-8"]):not([class*="bg-emerald-9"]):not([class*="bg-rose-9"]):not([class*="bg-zinc-9"]) > .text-gray-500 {
-  color: #334155 !important; /* Slate 700: 7.5:1 ratio on white, passes WCAG 2.1 AA */
-}
-
-/* Ícones Apple: Padrão SF Symbols (Geometria Arredondada Contínua e Óptica Refinada) */
+/* Ícones Apple: Padrão SF Symbols com Óptica Balanceada */
 .material-symbols-outlined,
 .material-symbols-rounded {
   font-family: 'Material Symbols Rounded', 'Material Symbols Outlined' !important;
@@ -234,7 +238,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ícones Lucide com Traço e Curvatura dos SF Symbols da Apple */
 svg.lucide {
   stroke-width: 1.85px;
   stroke-linecap: round;
@@ -244,42 +247,44 @@ svg.lucide {
   shape-rendering: geometricPrecision;
 }
 
-/* Modern Minimalist Card Surface */
+/* Superfícies Modernas Apple: Sombras Difusas & Zero Bordas */
 .card-welcoming,
 .card-modern {
-  border-radius: 12px;
+  border-radius: 1.25rem;
   background-color: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.02);
+  transition: transform var(--duration-fast) var(--ease-apple), box-shadow var(--duration-fast) ease;
+  will-change: transform, box-shadow;
 }
 
 .card-welcoming:hover,
 .card-modern:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
 }
 
-/* Modern Segmented Control */
+/* Segmented Control Oficial iOS */
 .ios-segmented {
   background: #f1f5f9;
-  padding: 3px;
-  border-radius: 8px;
+  padding: 4px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  border: 1px solid #e2e8f0;
+  gap: 3px;
+  border: none !important;
 }
 
 .ios-segmented-item {
-  border-radius: 6px;
-  padding: 5px 12px;
+  border-radius: 9px;
+  padding: 6px 14px;
   font-size: 0.75rem;
   font-weight: 500;
-  transition: all 0.14s ease;
+  transition: all var(--duration-fast) var(--ease-apple);
   color: #64748b;
   cursor: pointer;
   white-space: nowrap;
+  border: none !important;
 }
 
 .ios-segmented-item:hover {
@@ -290,85 +295,43 @@ svg.lucide {
   background: #ffffff;
   color: #0f172a !important;
   font-weight: 600;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-/* Tokens Globais da Escala Tipográfica */
-.type-display {
-  font-size: 1.5rem;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.025em;
-}
-.type-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.02em;
-}
-.type-subtitle {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.35;
-  letter-spacing: -0.015em;
-}
-.type-base {
-  font-size: 0.875rem;
-  font-weight: 400;
-  line-height: 1.5;
-}
-.type-body {
-  font-size: 0.8125rem;
-  font-weight: 400;
-  line-height: 1.45;
-}
-.type-caption {
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.4;
-}
-.type-micro {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  line-height: 1.35;
-  letter-spacing: 0.02em;
-}
-
-/* Utility to hide scrollbars */
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-@keyframes gentleFadeIn {
+/* Animações Fluidas e Aceleradas por Hardware */
+@keyframes appleFadeIn {
   from {
     opacity: 0;
-    transform: translateY(2px);
+    transform: translate3d(0, 4px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes appleScaleIn {
+  from {
+    opacity: 0;
+    transform: scale3d(0.97, 0.97, 1);
+  }
+  to {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
   }
 }
 
 .animate-gentle-fade {
-  animation: gentleFadeIn 0.15s ease-out forwards;
+  animation: appleFadeIn 0.22s var(--ease-apple) forwards;
+  will-change: opacity, transform;
 }
 
-/* Print Styles */
-@media print {
-  .no-print {
-    display: none !important;
-  }
-  body {
-    background: #ffffff !important;
-  }
+.animate-apple-pop {
+  animation: appleScaleIn 0.24s var(--ease-apple) forwards;
+  will-change: opacity, transform;
 }
 
-/* WCAG 2.2 AA Accessibility */
+/* Acessibilidade WCAG e Redução de Movimento */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -377,10 +340,11 @@ svg.lucide {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    transform: none !important;
   }
 }
 
-/* Leaflet Map Overrides */
+/* Leaflet Maps sem Contornos */
 .leaflet-div-icon {
   background: transparent !important;
   border: none !important;
@@ -388,10 +352,10 @@ svg.lucide {
 
 .candelario-map-container .leaflet-popup-content-wrapper {
   padding: 0 !important;
-  border-radius: 12px !important;
+  border-radius: 16px !important;
   overflow: hidden !important;
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.12) !important;
-  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12) !important;
+  border: none !important;
 }
 
 .candelario-map-container .leaflet-popup-content {

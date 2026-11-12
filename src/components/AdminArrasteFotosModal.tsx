@@ -409,10 +409,10 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
+        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
       >
         {/* Cabeçalho do Modal */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-5 shrink-0 bg-slate-50/50">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[22px]">drive_folder_upload</span>
@@ -426,7 +426,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   Exclusivo Admin
                 </span>
               </div>
-              <p className="text-xs text-slate-600 truncate font-medium">
+              <p className="text-xs text-slate-500 truncate font-normal">
                 Vincule fotos em massa por RA, Nome ou Turma e sincronize com todos os professores
               </p>
             </div>
@@ -444,7 +444,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
         <div className="modal-scroll-body flex-1 p-4 sm:p-6 space-y-4">
           {/* Status Message */}
           {statusMessage && (
-            <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-950 flex items-center justify-between gap-2">
+            <div className="p-3.5 rounded-2xl bg-blue-50 text-xs font-semibold text-blue-950 flex items-center justify-between gap-2 shadow-2xs">
               <span>{statusMessage}</span>
               <button
                 type="button"
@@ -456,16 +456,16 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
             </div>
           )}
 
-          {/* Área de Arraste e Solte (Dropzone) */}
+          {/* Área de Arraste e Solte (Dropzone - Zero Contorno) */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all ${
+            className={`rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all shadow-2xs ${
               isDragging
-                ? 'border-blue-600 bg-blue-50/70 scale-[0.995]'
-                : 'border-slate-300 hover:border-slate-400 bg-slate-50/60 hover:bg-slate-50'
+                ? 'bg-blue-100/80 scale-[0.995]'
+                : 'bg-slate-100/70 hover:bg-slate-100'
             }`}
           >
             <input

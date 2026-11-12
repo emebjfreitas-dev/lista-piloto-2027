@@ -3916,5 +3916,106 @@ export const clearAllStudentPhotosViaApi = async (): Promise<{ ok: boolean; clea
   return { ok: true, clearedCount: count };
 };
 
+/**
+ * Upload individual de ficha PDF pelo Admin ou Educador para o servidor central
+ */
+export const uploadStudentPdfViaApi = async (
+  studentId: string,
+  pdfDataUrl: string
+): Promise<{ ok: boolean; pdfUrl?: string }> => {
+  if (!isBackendApiAvailable()) {
+    return { ok: true, pdfUrl: pdfDataUrl };
+  }
+  try {
+    const res = await fetch('/api/pdfs/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getActiveUserAuthHeaders(),
+      },
+      body: JSON.stringify({ studentId, pdfDataUrl }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, pdfUrl: data.pdfUrl };
+    }
+  } catch (e) {
+    console.warn('Aviso: falha ao enviar PDF para /api/pdfs/upload:', e);
+  }
+  return { ok: true, pdfUrl: pdfDataUrl };
+};
+
+/**
+ * Upload em lote de PDFs nomeados arrastados pelo Admin
+ */
+export const uploadBatchStudentPdfsViaApi = async (
+  pdfs: { studentId: string; pdfDataUrl: string }[]
+): Promise<{ ok: boolean; updatedCount: number }> => {
+  if (!isBackendApiAvailable()) {
+    return { ok: true, updatedCount: pdfs.length };
+  }
+  try {
+    const res = await fetch('/api/pdfs/batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getActiveUserAuthHeaders(),
+      },
+      body: JSON.stringify({ pdfs }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, updatedCount: data.updatedCount ?? pdfs.length };
+    }
+  } catch (e) {
+    console.warn('Aviso: falha ao enviar lote de PDFs para /api/pdfs/batch:', e);
+  }
+  return { ok: true, updatedCount: pdfs.length };
+};
+
+/**
+ * Limpar todas as fichas PDF de todos os estudantes (Reset de PDFs)
+ */
+export const clearAllStudentPdfsViaApi = async (): Promise<{ ok: boolean; clearedCount: number }> => {
+  // Limpar localmente
+  const current = getStoredClasses();
+  let count = 0;
+  const cleared = current.map((cls) => ({
+    ...cls,
+    updatedAtMs: Date.now(),
+    students: cls.students.map((s) => {
+      if (s.fichaPdfDriveUrl || s.fichaPdfDriveId) count++;
+      return {
+        ...s,
+        fichaPdfDriveId: '',
+        fichaPdfDriveUrl: '',
+        fichaPdfSubfolder: '',
+        fichaPdfManualLink: false,
+        updatedAtMs: Date.now(),
+      };
+    }),
+  }));
+  saveStoredClasses(cleared, true);
+
+  if (isBackendApiAvailable()) {
+    try {
+      const res = await fetch('/api/pdfs/clear-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { ok: true, clearedCount: data.clearedCount ?? count };
+      }
+    } catch (e) {
+      console.warn('Aviso: falha ao chamar /api/pdfs/clear-all:', e);
+    }
+  }
+  return { ok: true, clearedCount: count };
+};
+
 
 

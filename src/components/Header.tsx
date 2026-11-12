@@ -33,6 +33,7 @@ interface HeaderProps {
   onOpenConfigDaysModal?: () => void;
   onOpenJsonImportModal?: () => void;
   onOpenAdminPhotosModal?: () => void;
+  onOpenAdminPdfsModal?: () => void;
   onNavigatePlanilha: () => void;
   onLogout: () => void;
 }
@@ -54,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenConfigDaysModal,
   onOpenJsonImportModal,
   onOpenAdminPhotosModal,
+  onOpenAdminPdfsModal,
   onNavigatePlanilha,
   onLogout,
 }) => {

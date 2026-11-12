@@ -637,14 +637,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   </span>
                 </div>
                 <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
-                  <span className="text-[11px] font-bold uppercase text-slate-600 block">Responsável Principal</span>
-                  <span className="font-bold text-slate-950 block mt-0.5 truncate" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
+                  <span className="text-[11px] font-medium uppercase text-slate-500 block">Responsável Principal</span>
+                  <span className="font-semibold text-slate-900 block mt-0.5 truncate" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
                     {guardian1Info.parentesco}: {guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}
                   </span>
                 </div>
                 <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
-                  <span className="text-[11px] font-bold uppercase text-slate-600 block">Status do Acompanhamento</span>
-                  <span className={`font-bold block mt-0.5 truncate ${hasFamilyFeedback ? 'text-emerald-900' : 'text-orange-900'}`}>
+                  <span className="text-[11px] font-medium uppercase text-slate-500 block">Status do Acompanhamento</span>
+                  <span className={`font-semibold block mt-0.5 truncate ${hasFamilyFeedback ? 'text-emerald-900' : 'text-orange-950'}`}>
                     {hasFamilyFeedback ? `Feedback: "${familyFeedbackText}"` : 'Pendente de contato'}
                   </span>
                 </div>
@@ -1296,7 +1296,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-1">
+                        <span className="text-[11px] font-medium text-slate-500 uppercase tracking-tight flex items-center gap-1">
                           {isSensitiveField && (
                             <span className="material-symbols-outlined text-[13px] text-amber-700" title="Dado Pessoal Sensível (LGPD Art. 14)">
                               lock
@@ -1305,7 +1305,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           <span>{field.label}</span>
                         </span>
                         {canEdit && (
-                          <span className="material-symbols-outlined text-[13px] text-slate-500">
+                          <span className="material-symbols-outlined text-[13px] text-slate-400">
                             edit
                           </span>
                         )}
@@ -1322,12 +1322,12 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') setEditingKey(null);
                           }}
-                          className="w-full mt-1 px-2 py-1 bg-white text-slate-950 font-bold text-sm tabular-nums rounded-lg ring-2 ring-[#0071e3] focus:outline-none"
+                          className="w-full mt-1 px-2 py-1 bg-white text-slate-950 font-semibold text-sm tabular-nums rounded-lg ring-2 ring-[#0071e3] focus:outline-none"
                         />
                       ) : (
                         <p
-                          className={`text-sm font-bold tabular-nums mt-0.5 break-words ${
-                            displayVal === '—' ? 'text-slate-400 font-normal' : 'text-slate-950'
+                          className={`text-sm font-semibold tabular-nums mt-0.5 break-words ${
+                            displayVal === '—' ? 'text-slate-400 font-normal' : 'text-slate-900'
                           } ${isSensitiveField && !isLgpdRevealed ? 'font-mono tracking-wider' : ''}`}
                         >
                           {displayVal}
