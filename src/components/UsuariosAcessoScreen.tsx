@@ -6,7 +6,6 @@ import {
   AttendanceWindowConfig,
   UserAccessSessionLog,
   SecurityAuditLogEntry,
-  RbacRoleDefinition,
   LgpdProtectionConfig,
 } from '../types';
 import { INSTITUTIONAL_EMAIL_DOMAIN, INITIAL_AUTHORIZED_USERS } from '../data/mockData';
@@ -22,12 +21,44 @@ import {
   saveStoredLgpdConfig,
   exportSecurityAuditLogsCSV,
   RBAC_ROLE_DEFINITIONS,
-  maskSensitiveText,
   resetDatabase,
   pushClassesToServer,
   exportSchoolDataToJsonFile,
 } from '../services/db';
 import { StudentAvatar } from './StudentAvatar';
+import {
+  ArrowLeft,
+  School,
+  Users,
+  ShieldCheck,
+  ShieldAlert,
+  Lock,
+  Unlock,
+  Activity,
+  Search,
+  X,
+  Check,
+  CheckCircle2,
+  AlertTriangle,
+  AlertCircle,
+  Download,
+  Upload,
+  RefreshCw,
+  UserPlus,
+  Edit3,
+  Eye,
+  Trash2,
+  Sun,
+  Sunset,
+  Clock,
+  Key,
+  RotateCcw,
+  FileSpreadsheet,
+  History,
+  Plus,
+  Ban,
+  Info,
+} from 'lucide-react';
 
 interface UsuariosAcessoScreenProps {
   authorizedUsers: AuthorizedUser[];
@@ -47,8 +78,12 @@ interface UsuariosAcessoScreenProps {
   onBack: () => void;
 }
 
-type SubTabId = 'quadro_turmas' | 'contas_acesso' | 'rbac_matriz' | 'seguranca_lgpd' | 'monitoramento';
-
+type SubTabId =
+  | 'quadro_turmas'
+  | 'contas_acesso'
+  | 'rbac_matriz'
+  | 'seguranca_lgpd'
+  | 'monitoramento';
 
 export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   authorizedUsers,
@@ -84,6 +119,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     englishTeacher: string;
   } | null>(null);
 
+  const [showAddUserForm, setShowAddUserForm] = useState(false);
   const [emailPrefix, setEmailPrefix] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole>('usuario');
@@ -108,15 +144,44 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   >({});
   const [recentlySavedUserIds, setRecentlySavedUserIds] = useState<Record<string, boolean>>({});
 
-  // Estados de Segurança Máxima, LGPD e Matriz RBAC
-  const [securityLogs, setSecurityLogs] = useState<SecurityAuditLogEntry[]>(() => getStoredSecurityAuditLogs());
+  // Estados de Segurança, LGPD, Matriz RBAC e Modais Inline
+  const [securityLogs, setSecurityLogs] = useState<SecurityAuditLogEntry[]>(() =>
+    getStoredSecurityAuditLogs()
+  );
   const [lgpdConfig, setLgpdConfig] = useState<LgpdProtectionConfig>(() => getStoredLgpdConfig());
   const [securitySearchTerm, setSecuritySearchTerm] = useState('');
-  const [securitySeverityFilter, setSecuritySeverityFilter] = useState<'all' | 'info' | 'warning' | 'security_alert'>('all');
-  const [securityEventTypeFilter, setSecurityEventTypeFilter] = useState<string>('all');
+  const [securitySeverityFilter, setSecuritySeverityFilter] = useState<
+    'all' | 'info' | 'warning' | 'security_alert'
+  >('all');
   const [selectedRbacRoleKey, setSelectedRbacRoleKey] = useState<string>('admin');
+  const [confirmResetModalOpen, setConfirmResetModalOpen] = useState(false);
+  const [isResettingDb, setIsResettingDb] = useState(false);
 
   const canManage = userRole === 'admin';
+
+  const triggerFeedback = (type: 'success' | 'error', text: string) => {
+    setFeedbackMsg({ type, text });
+    window.setTimeout(() => setFeedbackMsg(null), 4500);
+  };
+
+  const markUserSavedFlash = (userIds: string[]) => {
+    setRecentlySavedUserIds((prev) => {
+      const next = { ...prev };
+      userIds.forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+    window.setTimeout(() => {
+      setRecentlySavedUserIds((prev) => {
+        const next = { ...prev };
+        userIds.forEach((id) => {
+          delete next[id];
+        });
+        return next;
+      });
+    }, 3000);
+  };
 
   const handleToggleMasking = () => {
     if (!canManage) return;
@@ -125,10 +190,12 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     setLgpdConfig(updated);
     const newEntry = addSecurityAuditLog({
       userEmail: currentUserEmail,
-      userName: 'Administrador Escolar Candelário',
+      userName: 'Administrador Escolar',
       userRole: 'admin',
       eventType: 'DATA_MASKING_TOGGLED',
-      actionTitle: nextVal ? 'Mascaramento LGPD Ativado' : 'Mascaramento LGPD Desativado (Modo Auditoria)',
+      actionTitle: nextVal
+        ? 'Mascaramento LGPD Ativado'
+        : 'Mascaramento LGPD Desativado (Modo Auditoria)',
       details: nextVal
         ? 'Dados sensíveis de menores (CPF, NIS, Endereço, Laudos) ocultados automaticamente.'
         : 'Mascaramento desativado temporariamente para conferência administrativa.',
@@ -139,8 +206,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     triggerFeedback(
       'success',
       nextVal
-        ? 'Política LGPD: Mascaramento de dados de menores ATIVADO.'
-        : 'Aviso: Mascaramento temporariamente desativado para conferência.'
+        ? 'Mascaramento de dados sensíveis ativado.'
+        : 'Mascaramento temporariamente desativado para conferência.'
     );
   };
 
@@ -148,23 +215,23 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     exportSecurityAuditLogsCSV();
     const newEntry = addSecurityAuditLog({
       userEmail: currentUserEmail,
-      userName: 'Administrador Escolar Candelário',
+      userName: 'Administrador Escolar',
       userRole: 'admin',
       eventType: 'STUDENT_DATA_EXPORTED',
       actionTitle: 'Relatório de Auditoria LGPD Exportado',
-      details: 'Download completo do log de acessos e eventos de segurança em formato CSV auditável.',
+      details: 'Download completo do log de acessos e eventos de segurança em formato CSV.',
       targetResource: 'Auditoria de Segurança',
       severity: 'info',
     });
     setSecurityLogs((prev) => [newEntry, ...prev]);
-    triggerFeedback('success', 'Relatório de Auditoria LGPD exportado com sucesso (.CSV)!');
+    triggerFeedback('success', 'Relatório de Auditoria LGPD exportado (.CSV).');
   };
 
   const handleClearSecurityLogs = () => {
     if (!canManage) return;
     clearStoredSecurityAuditLogs();
     setSecurityLogs([]);
-    triggerFeedback('success', 'Logs de auditoria de segurança limpos.');
+    triggerFeedback('success', 'Logs de auditoria limpos.');
   };
 
   const getUserEffectiveClassIds = (u: AuthorizedUser): string[] => {
@@ -237,31 +304,6 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     };
   };
 
-  const triggerFeedback = (type: 'success' | 'error', text: string) => {
-    setFeedbackMsg({ type, text });
-    window.setTimeout(() => setFeedbackMsg(null), 4500);
-  };
-
-  const markUserSavedFlash = (userIds: string[]) => {
-    setRecentlySavedUserIds((prev) => {
-      const next = { ...prev };
-      userIds.forEach((id) => {
-        next[id] = true;
-      });
-      return next;
-    });
-    window.setTimeout(() => {
-      setRecentlySavedUserIds((prev) => {
-        const next = { ...prev };
-        userIds.forEach((id) => {
-          delete next[id];
-        });
-        return next;
-      });
-    }, 3500);
-  };
-
-  // Find regente user for a class (100% unified instance)
   const findRegenteUserForClass = (cls: ClassGroup): AuthorizedUser | undefined => {
     const byClassId = authorizedUsers.find(
       (u) =>
@@ -324,7 +366,6 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       onUpdateClasses(updatedClasses);
     }
 
-    // Keep regente AuthorizedUser in sync without redundancy
     const regenteUser = findRegenteUserForClass(cls);
     if (regenteUser && matrixDraft.teacherName.trim()) {
       const nextUsers = authorizedUsers.map((u) =>
@@ -346,7 +387,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     setMatrixDraft(null);
     triggerFeedback(
       'success',
-      `Quadro da turma ${cls.turmaAbrev || cls.name} atualizado e sincronizado em tempo real!`
+      `Quadro da turma ${cls.turmaAbrev || cls.name} atualizado.`
     );
   };
 
@@ -362,14 +403,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     if (!isValidInstitutionalEmail(fullEmail)) {
       triggerFeedback(
         'error',
-        `Somente e-mails institucionais com final ${INSTITUTIONAL_EMAIL_DOMAIN} podem ser cadastrados.`
+        `Somente e-mails com final ${INSTITUTIONAL_EMAIL_DOMAIN} podem ser cadastrados.`
       );
       return;
     }
 
     const localPart = fullEmail.replace(INSTITUTIONAL_EMAIL_DOMAIN, '').trim();
     if (!localPart || localPart.length < 2) {
-      triggerFeedback('error', 'Informe o identificador do e-mail antes do @educacao.jundiai.sp.gov.br.');
+      triggerFeedback('error', 'Informe o identificador do e-mail institucional.');
       return;
     }
 
@@ -377,7 +418,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       (u) => u.email.trim().toLowerCase() === fullEmail
     );
     if (exists) {
-      triggerFeedback('error', `O e-mail ${fullEmail} já está cadastrado na lista de acessos.`);
+      triggerFeedback('error', `O e-mail ${fullEmail} já está cadastrado.`);
       return;
     }
 
@@ -410,16 +451,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     onSaveAuthorizedUsers([newUser, ...authorizedUsers]);
     setEmailPrefix('');
     setName('');
-    triggerFeedback(
-      'success',
-      `Acesso concedido para ${fullEmail} (${
-        role === 'admin'
-          ? 'ADMIN'
-          : role === 'usuario'
-          ? `PEB I • ${assignedClassName}`
-          : 'PEB II • Especialista'
-      }).`
-    );
+    setShowAddUserForm(false);
+    triggerFeedback('success', `Acesso liberado para ${fullEmail}.`);
   };
 
   const handleChangeUserRole = (userId: string, newRole: UserRole) => {
@@ -596,17 +629,16 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     if (!canManage) return;
     const adminsActive = authorizedUsers.filter((u) => u.role === 'admin' && u.active);
     if (user.role === 'admin' && adminsActive.length <= 1) {
-      triggerFeedback('error', 'É obrigatório manter pelo menos 1 e-mail Administrador ativo.');
+      triggerFeedback('error', 'É obrigatório manter pelo menos 1 Administrador ativo.');
       return;
     }
     const next = authorizedUsers.filter((u) => u.id !== user.id);
     onSaveAuthorizedUsers(next);
-    triggerFeedback('success', `Acesso de ${user.email} revogado.`);
+    triggerFeedback('success', `Acesso de ${user.email} removido.`);
   };
 
   const handleRestoreOfficialSchoolMatrix = () => {
     if (!canManage) return;
-    // Preserve live session counters when restoring official matrix users
     const metricsByEmail = new Map(
       authorizedUsers.map((u) => [u.email.trim().toLowerCase(), u])
     );
@@ -626,55 +658,57 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     onSaveAuthorizedUsers(mergedUsers);
     triggerFeedback(
       'success',
-      `Quadro Oficial sincronizado: ${classes.length} Turmas (37 Professores Regentes + 3 Turmas Vagas) + Especialistas + Gestão!`
+      `Quadro Oficial sincronizado com ${classes.length} turmas e especialistas.`
     );
   };
 
-  const handleResetAllSchoolData = async () => {
-    if (!canManage) return;
-    const confirmed = window.confirm(
-      'ATENÇÃO: Deseja redefinir todo o banco de dados escolar para a base limpa oficial da SED?\n\n' +
-      '• 1.237 estudantes e 40 turmas da base oficial SED serão restaurados.\n' +
-      '• Todas as fotos vinculadas permanecem preservadas.\n' +
-      '• A sincronização com Google Sheets foi completamente descontinuada.\n\n' +
-      'Confirma o reset institucional?'
-    );
-    if (!confirmed) return;
-
+  const executeResetAllSchoolData = async () => {
+    if (!canManage || isResettingDb) return;
+    setIsResettingDb(true);
     try {
       const freshClasses = resetDatabase();
       if (onUpdateClasses) {
         onUpdateClasses(freshClasses);
       }
       await pushClassesToServer(freshClasses);
-      addSecurityAuditLog({
+      const newEntry = addSecurityAuditLog({
         userEmail: currentUserEmail,
         userName: 'Administrador Escolar',
         userRole: 'admin',
         eventType: 'DATABASE_FACTORY_RESET',
         actionTitle: 'Redefinição de Fábrica SED',
-        details: 'Redefinição completa do banco escolar para a base limpa da SED (1.237 alunos e 40 turmas)',
+        details: 'Restauração completa da base oficial SED (1.237 estudantes e 40 turmas).',
         severity: 'warning',
       });
+      setSecurityLogs((prev) => [newEntry, ...prev]);
+      setConfirmResetModalOpen(false);
       triggerFeedback(
         'success',
-        '✓ Banco escolar redefinido com sucesso! 1.237 estudantes e 40 turmas restaurados na base oficial.'
+        'Base oficial SED restaurada (1.237 estudantes e 40 turmas).'
       );
     } catch (err: any) {
       triggerFeedback(
         'error',
         `Falha ao redefinir banco escolar: ${err?.message || 'Erro desconhecido'}`
       );
+    } finally {
+      setIsResettingDb(false);
     }
   };
 
-  // Filtered classes for Quadro de Turmas e Professores
+  // Filtered classes for Quadro Docente (mantendo estritamente a ordem oficial do array `classes`)
   const filteredMatrixClasses = useMemo(() => {
     const q = matrixSearchTerm.toLowerCase().trim();
     return classes.filter((cls) => {
       if (matrixShiftFilter === 'MANHÃ' && cls.shift !== 'Turno Manhã') return false;
       if (matrixShiftFilter === 'TARDE' && cls.shift !== 'Turno Tarde') return false;
-      if (matrixShiftFilter === 'VAGAS' && !cls.isVaga && cls.teacherName !== 'TURMA VAGA') return false;
+      if (
+        matrixShiftFilter === 'VAGAS' &&
+        !cls.isVaga &&
+        cls.teacherName !== 'TURMA VAGA'
+      ) {
+        return false;
+      }
       if (!q) return true;
       return (
         cls.name.toLowerCase().includes(q) ||
@@ -691,7 +725,6 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     });
   }, [classes, matrixShiftFilter, matrixSearchTerm]);
 
-  // Unique Specialists Summary (Arte, Ed. Física, Inglês)
   const specialistsUsers = useMemo(
     () =>
       authorizedUsers.filter(
@@ -716,14 +749,38 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     });
   }, [authorizedUsers, roleFilter, onlyAccessedFilter, searchTerm]);
 
-  const filteredLogs = accessSessionLogs.filter(
-    (l) =>
-      l.email.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
-      l.name.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
-      l.assignedClassName.toLowerCase().includes(logSearchTerm.toLowerCase())
-  );
+  const filteredLogs = useMemo(() => {
+    const q = logSearchTerm.toLowerCase().trim();
+    if (!q) return accessSessionLogs;
+    return accessSessionLogs.filter(
+      (l) =>
+        l.email.toLowerCase().includes(q) ||
+        l.name.toLowerCase().includes(q) ||
+        l.assignedClassName.toLowerCase().includes(q)
+    );
+  }, [accessSessionLogs, logSearchTerm]);
 
-  // KPIs
+  const filteredSecurityLogs = useMemo(() => {
+    const q = securitySearchTerm.toLowerCase().trim();
+    return securityLogs.filter((entry) => {
+      if (
+        securitySeverityFilter !== 'all' &&
+        entry.severity !== securitySeverityFilter
+      ) {
+        return false;
+      }
+      if (!q) return true;
+      return (
+        entry.userEmail.toLowerCase().includes(q) ||
+        entry.actionTitle.toLowerCase().includes(q) ||
+        entry.details.toLowerCase().includes(q) ||
+        entry.eventType.toLowerCase().includes(q) ||
+        (entry.userName || '').toLowerCase().includes(q)
+      );
+    });
+  }, [securityLogs, securitySearchTerm, securitySeverityFilter]);
+
+  // KPIs & Contagens
   const totalUsersWhoAccessed = authorizedUsers.filter(
     (u) => (u.totalAccessCount || 0) > 0
   ).length;
@@ -741,6 +798,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     return diffMs < 120000;
   }).length;
 
+  const peb1Count = authorizedUsers.filter((u) => u.role === 'usuario').length;
+  const peb2Count = specialistsUsers.length;
+  const adminCount = authorizedUsers.filter((u) => u.role === 'admin').length;
+
   const windowEval = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
 
   const handleToggleExceptionalLaunch = () => {
@@ -755,14 +816,16 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     triggerFeedback(
       'success',
       nextState
-        ? 'Botão "Lançar Faltas" LIBERADO EXCEPCIONALMENTE para todas as turmas!'
-        : 'Liberação excepcional encerrada. O botão "Lançar Faltas" segue a regra automática do calendário.'
+        ? 'Lançamento de faltas liberado excepcionalmente.'
+        : 'Liberação excepcional encerrada.'
     );
   };
 
   const manhaTurmasCount = classes.filter((c) => c.shift === 'Turno Manhã').length;
   const tardeTurmasCount = classes.filter((c) => c.shift === 'Turno Tarde').length;
-  const vacantTurmasCount = classes.filter((c) => c.isVaga || c.teacherName === 'TURMA VAGA').length;
+  const vacantTurmasCount = classes.filter(
+    (c) => c.isVaga || c.teacherName === 'TURMA VAGA'
+  ).length;
   const totalActiveStudentsAll = classes.reduce(
     (acc, c) =>
       acc +
@@ -773,222 +836,195 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     0
   );
 
-  // Dados para o Gráfico de Rosca (Donut Chart) de Distribuição de Acessos (PEB I, PEB II e Admin)
-  const roleDistributionData = useMemo(() => {
-    const peb1Users = authorizedUsers.filter((u) => u.role === 'usuario');
-    const peb2Users = authorizedUsers.filter((u) => u.role === 'peb2');
-    const adminUsers = authorizedUsers.filter((u) => u.role === 'admin');
-    const total = Math.max(authorizedUsers.length, 1);
+  const tabs: { id: SubTabId; label: string; count?: number; icon: React.ReactNode }[] = [
+    {
+      id: 'quadro_turmas',
+      label: 'Quadro Docente',
+      count: classes.length,
+      icon: <School className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'contas_acesso',
+      label: 'Contas e Perfis',
+      count: authorizedUsers.length,
+      icon: <Users className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'rbac_matriz',
+      label: 'Permissões',
+      icon: <ShieldCheck className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'seguranca_lgpd',
+      label: 'Segurança e LGPD',
+      icon: <Lock className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'monitoramento',
+      label: 'Tempo de Tela',
+      count: accessSessionLogs.length,
+      icon: <Activity className="w-4 h-4 shrink-0" />,
+    },
+  ];
 
-    const peb1Logins = peb1Users.reduce((acc, u) => acc + (u.totalAccessCount || 0), 0);
-    const peb2Logins = peb2Users.reduce((acc, u) => acc + (u.totalAccessCount || 0), 0);
-    const adminLogins = adminUsers.reduce((acc, u) => acc + (u.totalAccessCount || 0), 0);
-
-    return [
-      {
-        id: 'usuario' as const,
-        name: 'PEB I (Regentes)',
-        shortName: 'PEB I',
-        value: peb1Users.length,
-        activeCount: peb1Users.filter((u) => u.active).length,
-        accessedCount: peb1Users.filter((u) => (u.totalAccessCount || 0) > 0).length,
-        loginsCount: peb1Logins,
-        percentage: Math.round((peb1Users.length / total) * 100),
-        color: '#0071e3', // Apple Blue
-        description: 'Acesso direto à sua turma e lançamento de faltas',
-      },
-      {
-        id: 'peb2' as const,
-        name: 'PEB II (Especialistas)',
-        shortName: 'PEB II',
-        value: peb2Users.length,
-        activeCount: peb2Users.filter((u) => u.active).length,
-        accessedCount: peb2Users.filter((u) => (u.totalAccessCount || 0) > 0).length,
-        loginsCount: peb2Logins,
-        percentage: Math.round((peb2Users.length / total) * 100),
-        color: '#ff9500', // Apple Amber
-        description: 'Arte, Ed. Física e Inglês (Visualização das turmas)',
-      },
-      {
-        id: 'admin' as const,
-        name: 'Admin / Gestão',
-        shortName: 'Admin',
-        value: adminUsers.length,
-        activeCount: adminUsers.filter((u) => u.active).length,
-        accessedCount: adminUsers.filter((u) => (u.totalAccessCount || 0) > 0).length,
-        loginsCount: adminLogins,
-        percentage: Math.round((adminUsers.length / total) * 100),
-        color: '#1d1d1f', // Apple Carbon Black
-        description: 'Direção, Coordenação e Secretaria (Acesso Pleno)',
-      },
-    ];
-  }, [authorizedUsers]);
+  const rbacModules = [
+    {
+      module: 'Visualizar Turmas e Estudantes',
+      subtitle: 'Identificação e fotos escolares',
+      admin: 'Acesso total',
+      peb1: 'Sua turma',
+      peb2: '40 turmas',
+      apoio: 'Acesso total',
+    },
+    {
+      module: 'Lançamento de Faltas do Mês',
+      subtitle: 'Registro de ausências e atestados',
+      admin: 'Acesso total',
+      peb1: 'Sua turma',
+      peb2: 'Bloqueado',
+      apoio: 'Bloqueado',
+    },
+    {
+      module: 'Busca Ativa e Devolutivas',
+      subtitle: 'Alertas de 3, 5 e 10 dias',
+      admin: 'Acesso total',
+      peb1: 'Registra e lê',
+      peb2: 'Bloqueado',
+      apoio: 'Acesso total',
+    },
+    {
+      module: 'Dados Sensíveis (LGPD Art. 14)',
+      subtitle: 'CPF, NIS, endereço e laudos',
+      admin: 'Auditado',
+      peb1: 'Mascarado',
+      peb2: 'Mascarado',
+      apoio: 'Auditado',
+    },
+    {
+      module: 'Dias Letivos Oficiais',
+      subtitle: 'Calendário de 200 dias e feriados',
+      admin: 'Acesso total',
+      peb1: 'Bloqueado',
+      peb2: 'Bloqueado',
+      apoio: 'Bloqueado',
+    },
+    {
+      module: 'Gestão de Acessos e Auditoria',
+      subtitle: 'Contas, perfis e logs',
+      admin: 'Acesso total',
+      peb1: 'Bloqueado',
+      peb2: 'Bloqueado',
+      apoio: 'Bloqueado',
+    },
+  ];
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-5.5rem)] lg:h-[calc(100vh-6rem)] w-full max-w-[1600px] mx-auto bg-slate-50/70 rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden animate-gentle-fade">
-      {/* 1. CABEÇALHO FIXO (SHRINK-0) — NUNCA ROLA FORA DA TELA */}
-      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 border-b border-slate-200/90 space-y-2 z-10">
-        {/* Breadcrumb Limpo */}
-        <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
-          <div className="flex items-center gap-1.5">
-            {onBack && (
-              <>
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-                  <span>Voltar</span>
-                </button>
-                <span className="text-slate-300">/</span>
-              </>
+    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade text-[#1d1d1f] overflow-x-hidden">
+      {/* Feedback Toast Flutuante Limpo */}
+      {feedbackMsg && (
+        <div
+          role="status"
+          className={`rounded-2xl px-4 py-3 text-sm font-medium flex items-center justify-between gap-3 shadow-sm transition-all duration-100 ${
+            feedbackMsg.type === 'success'
+              ? 'bg-[#eaf6ef] text-[#005035]'
+              : 'bg-[#fee2e2] text-[#991b1b]'
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            {feedbackMsg.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0" />
             )}
-            <span className="font-semibold text-slate-800">Professores &amp; Acessos</span>
+            <span className="break-words">{feedbackMsg.text}</span>
           </div>
-          <span className="text-slate-400 text-xs hidden sm:inline">
-            Quadro Docente &amp; Acessos Institucionais 2027
-          </span>
-        </div>
-
-        {/* Título & Sub-Abas Segmentadas em Linha Fixa */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight truncate">
-              Professores, Turmas SED &amp; Acessos
-            </h1>
-            <span className="text-xs text-slate-500 font-medium hidden md:inline">
-              · {classes.length} Turmas ({manhaTurmasCount} Manhã / {tardeTurmasCount} Tarde)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200/80 overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('quadro_turmas')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-                activeSubTab === 'quadro_turmas' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[15px]">school</span>
-              <span>1. Quadro Docente ({classes.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('contas_acesso')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-                activeSubTab === 'contas_acesso' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[15px]">manage_accounts</span>
-              <span>2. Usuários &amp; Perfis ({authorizedUsers.length})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('rbac_matriz')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-                activeSubTab === 'rbac_matriz' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[15px]">shield_person</span>
-              <span>3. Matriz RBAC</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('seguranca_lgpd')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-                activeSubTab === 'seguranca_lgpd' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[15px]">security</span>
-              <span>4. Segurança &amp; LGPD</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('monitoramento')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
-                activeSubTab === 'monitoramento' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[15px]">monitoring</span>
-              <span>5. Tempo de Tela ({accessSessionLogs.length})</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* 2. ÁREA DE ROLAGEM INTERNA CONTIDA */}
-      <main className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 focus:outline-none">
-        {/* Feedback Toast */}
-        {feedbackMsg && (
-          <div
-            className={`p-4 rounded-2xl font-bold text-sm flex items-center justify-between gap-2 shadow-md ${
-              feedbackMsg.type === 'success'
-                ? 'bg-emerald-100 text-emerald-950'
-                : 'bg-rose-100 text-rose-950'
-            }`}
+          <button
+            type="button"
+            onClick={() => setFeedbackMsg(null)}
+            className="p-1 rounded-lg hover:bg-black/5 cursor-pointer shrink-0"
+            aria-label="Fechar aviso"
           >
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[22px]">
-                {feedbackMsg.type === 'success' ? 'check_circle' : 'error'}
-              </span>
-              <span>{feedbackMsg.text}</span>
-            </div>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* 1. CABEÇALHO LIMPO & UNIFICADO (SEM ROLAGEM PRESA) */}
+      <section className="bg-white rounded-3xl px-4 py-4 sm:px-6 sm:py-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1.5 min-w-0">
             <button
               type="button"
-              onClick={() => setFeedbackMsg(null)}
-              className="text-xs underline font-bold cursor-pointer"
+              onClick={onBack}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6e6e73] hover:text-[#1d1d1f] transition-colors duration-100 cursor-pointer"
             >
-              Fechar
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Voltar</span>
             </button>
-          </div>
-        )}
-
-        {/* Top Executive Header Card */}
-        <section className="card-welcoming bg-white rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="px-2.5 py-0.5 rounded-full bg-slate-950 text-white text-[11px] font-bold uppercase tracking-wider">
-                  Quadro Oficial Docente &amp; Acessos 2027
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-950 text-[11px] font-bold">
-                  {classes.length} Turmas ({manhaTurmasCount} Manhã · {tardeTurmasCount} Tarde)
-                </span>
-              </div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-950 tracking-tight">
-                Professores, Turmas SED &amp; Gerenciamento de Acessos
-              </h2>
-              <p className="text-xs text-slate-600 font-medium max-w-3xl">
-                Base unificada com as {classes.length} turmas oficiais de 2027 (20 Manhã · 20 Tarde), docentes regentes (PEB I), especialistas (PEB II), códigos SED e monitoramento de acessos.
-              </p>
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#1d1d1f]">
+              Acessos e Quadro Docente
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#6e6e73] tabular-nums">
+              <span>{classes.length} turmas ({manhaTurmasCount} manhã · {tardeTurmasCount} tarde)</span>
+              <span aria-hidden="true">·</span>
+              <span>{authorizedUsers.length} contas</span>
+              <span aria-hidden="true">·</span>
+              <span>{totalActiveStudentsAll} alunos ativos</span>
+              {activeNowSessionsCount > 0 && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-[#047857] font-medium">
+                    {activeNowSessionsCount} online agora
+                  </span>
+                </>
+              )}
             </div>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Ações Rápidas sem Duplicação */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 exportOfficialMatrixToXLS(classes, authorizedUsers);
-                triggerFeedback(
-                  'success',
-                  'Planilha do Quadro Oficial de Turmas, Professores e Acessos (.xls) baixada com sucesso!'
-                );
+                triggerFeedback('success', 'Planilha do Quadro Oficial (.xls) baixada.');
               }}
-              className="min-h-[44px] px-4 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-sm flex items-center gap-2 shadow-xs cursor-pointer transition-all active:scale-97"
+              className="min-h-[40px] px-3.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors duration-100 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[19px]">download</span>
-              <span>Baixar Quadro Completo (.XLS)</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>Baixar XLS</span>
             </button>
 
             {canManage && (
               <button
                 type="button"
                 onClick={handleRestoreOfficialSchoolMatrix}
-                title={`Sincronizar as ${classes.length} turmas oficiais e especialistas com o Quadro Oficial 2027`}
-                className="min-h-[44px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-sm flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors duration-100 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">sync_saved_locally</span>
-                <span>Sincronizar Quadro Oficial</span>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Sincronizar Quadro</span>
+              </button>
+            )}
+
+            {canManage && (
+              <button
+                type="button"
+                onClick={() => exportSchoolDataToJsonFile(classes, currentUserEmail)}
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors duration-100 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-[#0071e3]" />
+                <span>Backup JSON</span>
+              </button>
+            )}
+
+            {canManage && onOpenJsonImportModal && (
+              <button
+                type="button"
+                onClick={onOpenJsonImportModal}
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0062c4] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors duration-100 cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Importar JSON</span>
               </button>
             )}
 
@@ -996,290 +1032,110 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               <button
                 type="button"
                 onClick={onNavigateToDatabaseEmailsTab}
-                className="min-h-[44px] px-4 rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold text-sm flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors duration-100 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">table_chart</span>
+                <FileSpreadsheet className="w-3.5 h-3.5 text-[#047857]" />
                 <span>Planilha</span>
+              </button>
+            )}
+
+            {canManage && (
+              <button
+                type="button"
+                onClick={() => setConfirmResetModalOpen(true)}
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#fee2e2]/70 hover:bg-[#fee2e2] text-[#991b1b] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors duration-100 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Redefinir SED</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Summary KPI Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1">
-          <div className="p-3.5 rounded-2xl bg-slate-100 shadow-2xs">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
-              Turmas Oficiais
-            </span>
-            <span className="text-xl font-bold text-slate-950 tabular-nums">
+        {/* 4 Indicadores Simples & Clicáveis */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('quadro_turmas')}
+            className="text-left p-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#ededf0] transition-colors duration-100 cursor-pointer"
+          >
+            <span className="text-[11px] font-medium text-[#6e6e73] block">Turmas Oficiais</span>
+            <span className="text-xl font-semibold text-[#1d1d1f] tabular-nums block mt-0.5">
               {classes.length}
             </span>
-            <span className="text-[11px] font-semibold text-slate-600 block">
-              {manhaTurmasCount} Manhã · {tardeTurmasCount} Tarde
+            <span className="text-[11px] text-[#6e6e73] tabular-nums block mt-0.5">
+              {manhaTurmasCount} manhã · {tardeTurmasCount} tarde
+              {vacantTurmasCount > 0 ? ` · ${vacantTurmasCount} vagas` : ''}
             </span>
-          </div>
+          </button>
 
-          <div className="p-3.5 rounded-2xl bg-emerald-100/80 shadow-2xs">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-950 block">
-              Regentes (PEB I)
+          <button
+            type="button"
+            onClick={() => {
+              setActiveSubTab('contas_acesso');
+              setRoleFilter('all');
+            }}
+            className="text-left p-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#ededf0] transition-colors duration-100 cursor-pointer"
+          >
+            <span className="text-[11px] font-medium text-[#6e6e73] block">Perfis Cadastrados</span>
+            <span className="text-xl font-semibold text-[#1d1d1f] tabular-nums block mt-0.5">
+              {authorizedUsers.length}
             </span>
-            <span className="text-xl font-bold text-emerald-950 tabular-nums">
-              {authorizedUsers.filter((u) => u.role === 'usuario').length}
+            <span className="text-[11px] text-[#6e6e73] tabular-nums block mt-0.5">
+              PEB I: {peb1Count} · PEB II: {peb2Count} · Admin: {adminCount}
             </span>
-            <span className="text-[11px] font-semibold text-emerald-900 block">
-              Acesso direto à sua turma
-            </span>
-          </div>
+          </button>
 
-          <div className="p-3.5 rounded-2xl bg-amber-100/80 shadow-2xs">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-950 block">
-              Especialistas (PEB II)
-            </span>
-            <span className="text-xl font-bold text-amber-950 tabular-nums">
-              {specialistsUsers.length}
-            </span>
-            <span className="text-[11px] font-semibold text-amber-900 block">
-              Arte · Ed. Física · Inglês
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-sky-100/80 shadow-2xs">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-950 block">
-              Estudantes Ativos
-            </span>
-            <span className="text-xl font-bold text-sky-950 tabular-nums">
-              {totalActiveStudentsAll}
-            </span>
-            <span className="text-[11px] font-semibold text-sky-900 block">
-              Matrículas ativas SED
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-100 shadow-2xs">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
-              Já Acessaram
-            </span>
-            <span className="text-xl font-bold text-slate-950 tabular-nums">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('monitoramento')}
+            className="text-left p-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#ededf0] transition-colors duration-100 cursor-pointer"
+          >
+            <span className="text-[11px] font-medium text-[#6e6e73] block">Acessos Realizados</span>
+            <span className="text-xl font-semibold text-[#1d1d1f] tabular-nums block mt-0.5">
               {totalUsersWhoAccessed}/{authorizedUsers.length}
             </span>
-            <span className="text-[11px] font-semibold text-slate-600 block">
-              {totalAccessesCount} logins · {activeNowSessionsCount} online
+            <span className="text-[11px] text-[#047857] font-medium tabular-nums block mt-0.5">
+              {totalAccessesCount} entradas · {activeNowSessionsCount} online
             </span>
-          </div>
+          </button>
 
-          <div className="p-3.5 rounded-2xl bg-emerald-100/90 shadow-2xs">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-950 block">
-              Tempo Total de Tela
-            </span>
-            <span className="text-lg font-bold text-emerald-950 tabular-nums block mt-0.5">
+          <div className="p-3.5 rounded-2xl bg-[#f5f5f7]">
+            <span className="text-[11px] font-medium text-[#6e6e73] block">Tempo Total de Uso</span>
+            <span className="text-xl font-semibold text-[#1d1d1f] tabular-nums block mt-0.5">
               {formatDurationHuman(totalPlatformDurationSeconds)}
             </span>
-            <span className="text-[11px] font-semibold text-emerald-900 block">
-              Monitorado a cada 5s
+            <span className="text-[11px] text-[#6e6e73] block mt-0.5">
+              Monitorado automaticamente
             </span>
           </div>
         </div>
 
-        {/* Gráfico de Rosca (Donut Chart Recharts): Distribuição Visual de Acessos (PEB I, PEB II e Admin) */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-[#f5f5f7] flex flex-col lg:flex-row items-center justify-between gap-5">
-          {/* Lado Esquerdo: Donut Chart com Total Central */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full lg:w-auto">
-            <div className="relative w-[176px] h-[176px] shrink-0">
-              {(() => {
-                const total = Math.max(
-                  1,
-                  roleDistributionData.reduce((acc, item) => acc + item.value, 0)
-                );
-                const radius = 64;
-                const circumference = 2 * Math.PI * radius;
-                let cumulativePercent = 0;
-
-                return (
-                  <svg
-                    viewBox="0 0 176 176"
-                    className="w-full h-full -rotate-90 transform overflow-visible"
-                  >
-                    <circle
-                      cx="88"
-                      cy="88"
-                      r={radius}
-                      fill="transparent"
-                      stroke="#e5e7eb"
-                      strokeWidth="22"
-                    />
-                    {roleDistributionData.map((entry) => {
-                      const sliceFraction = entry.value / total;
-                      const strokeDasharray = `${Math.max(
-                        0,
-                        sliceFraction * circumference - 3
-                      )} ${circumference}`;
-                      const strokeDashoffset = -cumulativePercent * circumference;
-                      cumulativePercent += sliceFraction;
-
-                      return (
-                        <circle
-                          key={entry.id}
-                          cx="88"
-                          cy="88"
-                          r={radius}
-                          fill="transparent"
-                          stroke={entry.color}
-                          strokeWidth="22"
-                          strokeDasharray={strokeDasharray}
-                          strokeDashoffset={strokeDashoffset}
-                          strokeLinecap="butt"
-                          className="cursor-pointer transition-opacity hover:opacity-80"
-                          onClick={() => {
-                            setActiveSubTab('contas_acesso');
-                            setRoleFilter((prev) => (prev === entry.id ? 'all' : entry.id));
-                          }}
-                        >
-                          <title>
-                            {`${entry.name}: ${entry.value} contas (${entry.percentage}%) • ${entry.loginsCount} logins`}
-                          </title>
-                        </circle>
-                      );
-                    })}
-                  </svg>
-                );
-              })()}
-
-              {/* Centro da Rosca */}
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-xl font-semibold text-[#1d1d1f] tabular-nums leading-none">
-                  {authorizedUsers.length}
-                </span>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#6e6e73] mt-1">
-                  Contas Ativas
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1.5 text-center sm:text-left">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white text-[#1d1d1f] text-[11px] font-bold shadow-2xs">
-                <span className="material-symbols-outlined text-[14px] text-[#0071e3]">
-                  donut_large
-                </span>
-                Distribuição de Perfis de Acesso
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-[#1d1d1f] tracking-tight">
-                Proporção entre PEB I, PEB II e Admin
-              </h2>
-              <p className="text-xs text-[#6e6e73] max-w-sm leading-relaxed">
-                Clique em qualquer fatia ou cartão ao lado para filtrar rapidamente a lista de e-mails e permissões por perfil.
-              </p>
-              {roleFilter !== 'all' && (
-                <button
-                  type="button"
-                  onClick={() => setRoleFilter('all')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1d1d1f] text-white text-xs font-semibold cursor-pointer mt-1"
-                >
-                  <span>Filtro ativo: {roleFilter === 'usuario' ? 'PEB I' : roleFilter === 'peb2' ? 'PEB II' : 'Admin'}</span>
-                  <span className="material-symbols-outlined text-[14px]">close</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Lado Direito: Cartões Interativos da Legenda (PEB I, PEB II, Admin) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full lg:flex-1">
-            {roleDistributionData.map((item) => {
-              const isSelected = roleFilter === item.id && activeSubTab === 'contas_acesso';
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveSubTab('contas_acesso');
-                    setRoleFilter((prev) => (prev === item.id ? 'all' : item.id));
-                  }}
-                  className={`text-left p-3.5 rounded-2xl transition-all cursor-pointer flex flex-col justify-between gap-2 ${
-                    isSelected
-                      ? 'bg-[#1d1d1f] text-white shadow-sm scale-[1.01]'
-                      : 'bg-white hover:bg-white/80 text-[#1d1d1f] shadow-2xs'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 w-full">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-xs font-bold truncate">
-                        {item.name}
-                      </span>
-                    </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums ${
-                        isSelected
-                          ? 'bg-white/15 text-white'
-                          : 'bg-[#f5f5f7] text-[#1d1d1f]'
-                      }`}
-                    >
-                      {item.percentage}%
-                    </span>
-                  </div>
-
-                  <div className="flex items-baseline justify-between gap-2 pt-0.5">
-                    <div>
-                      <span className="text-xl font-semibold tabular-nums leading-none">
-                        {item.value}
-                      </span>
-                      <span
-                        className={`text-xs font-medium ml-1 ${
-                          isSelected ? 'text-white/80' : 'text-[#6e6e73]'
-                        }`}
-                      >
-                        contas
-                      </span>
-                    </div>
-                    <span
-                      className={`text-[11px] font-semibold tabular-nums ${
-                        isSelected ? 'text-white/90' : 'text-[#0066cc]'
-                      }`}
-                    >
-                      {item.accessedCount}/{item.value} acessaram ({item.loginsCount} logins)
-                    </span>
-                  </div>
-
-                  <p
-                    className={`text-[11px] leading-snug ${
-                      isSelected ? 'text-white/75' : 'text-[#86868b]'
-                    }`}
-                  >
-                    {item.description}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Controle Rápido da Janela do Botão Lançar Faltas */}
+        {/* Controle da Janela de Lançamento de Faltas */}
         <div
-          className={`p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-            windowEval.isAllowedToLaunch
-              ? 'bg-emerald-100 text-emerald-950'
-              : 'bg-amber-100 text-amber-950'
+          className={`p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            windowEval.isAllowedToLaunch ? 'bg-[#eaf6ef]' : 'bg-[#fef3c7]/80'
           }`}
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span
+          <div className="flex items-start sm:items-center gap-3 min-w-0">
+            <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white ${
-                windowEval.isAllowedToLaunch ? 'bg-[#005035]' : 'bg-[#b45309]'
+                windowEval.isAllowedToLaunch ? 'bg-[#047857]' : 'bg-[#b45309]'
               }`}
             >
-              <span className="material-symbols-outlined text-[20px]">
-                {windowEval.isAllowedToLaunch ? 'lock_open' : 'schedule'}
-              </span>
-            </span>
+              {windowEval.isAllowedToLaunch ? (
+                <Unlock className="w-4 h-4" />
+              ) : (
+                <Clock className="w-4 h-4" />
+              )}
+            </div>
             <div className="min-w-0">
-              <span className="text-sm font-semibold text-[#003440] block">
+              <p className="text-xs sm:text-sm font-semibold text-[#1d1d1f]">
                 {windowEval.statusTitle}
-              </span>
-              <span className="text-xs text-[#436370] block truncate">
+              </p>
+              <p className="text-xs text-[#6e6e73] break-words">
                 {windowEval.statusDescription}
-              </span>
+              </p>
             </div>
           </div>
 
@@ -1287,166 +1143,150 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             <button
               type="button"
               onClick={handleToggleExceptionalLaunch}
-              className={`min-h-[40px] px-4 rounded-xl font-semibold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all ${
+              className={`min-h-[40px] px-4 rounded-xl text-xs font-semibold inline-flex items-center justify-center gap-1.5 shrink-0 cursor-pointer transition-colors duration-100 ${
                 attendanceWindowConfig.exceptionalOverrideOpen
-                  ? 'bg-[#ba1a1a] hover:bg-[#93000a] text-white'
-                  : 'bg-[#005035] hover:bg-[#003723] text-white'
+                  ? 'bg-[#b3261e] hover:bg-[#991b1b] text-white'
+                  : 'bg-[#047857] hover:bg-[#065f46] text-white'
               }`}
             >
-              <span className="material-symbols-outlined text-[17px]">
-                {attendanceWindowConfig.exceptionalOverrideOpen ? 'lock_reset' : 'key'}
-              </span>
+              <Key className="w-3.5 h-3.5" />
               <span>
                 {attendanceWindowConfig.exceptionalOverrideOpen
-                  ? 'Encerrar Abertura Excepcional'
-                  : 'Liberar Lançamento Excepcional'}
+                  ? 'Encerrar Liberação'
+                  : 'Liberar Lançamento'}
               </span>
             </button>
           )}
         </div>
 
-        {/* Sub-Abas iOS Segmented Control */}
-        <div className="ios-segmented w-full flex overflow-x-auto gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('quadro_turmas')}
-            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
-              activeSubTab === 'quadro_turmas' ? 'ios-segmented-item-active' : ''
-            }`}
-          >
-            <span className="material-symbols-outlined text-[17px]">school</span>
-            <span>1. Quadro Docente ({classes.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('contas_acesso')}
-            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
-              activeSubTab === 'contas_acesso' ? 'ios-segmented-item-active' : ''
-            }`}
-          >
-            <span className="material-symbols-outlined text-[17px]">manage_accounts</span>
-            <span>2. Usuários &amp; Perfis ({authorizedUsers.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('rbac_matriz')}
-            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
-              activeSubTab === 'rbac_matriz' ? 'ios-segmented-item-active' : ''
-            }`}
-          >
-            <span className="material-symbols-outlined text-[17px]">shield_person</span>
-            <span>3. Matriz RBAC</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('seguranca_lgpd')}
-            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
-              activeSubTab === 'seguranca_lgpd' ? 'ios-segmented-item-active' : ''
-            }`}
-          >
-            <span className="material-symbols-outlined text-[17px]">security</span>
-            <span>4. Segurança &amp; LGPD</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('monitoramento')}
-            className={`flex-1 ios-segmented-item flex items-center justify-center gap-1.5 py-2 px-3 whitespace-nowrap ${
-              activeSubTab === 'monitoramento' ? 'ios-segmented-item-active' : ''
-            }`}
-          >
-            <span className="material-symbols-outlined text-[17px]">monitoring</span>
-            <span>5. Tempo de Tela ({accessSessionLogs.length})</span>
-          </button>
-        </div>
+        {/* Barra Única de Navegação das 5 Sub-Abas */}
+        <nav
+          aria-label="Seções do gerenciamento de acessos"
+          className="flex items-center gap-1.5 p-1.5 bg-[#f5f5f7] rounded-2xl overflow-x-auto"
+        >
+          {tabs.map((t) => {
+            const isActive = activeSubTab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveSubTab(t.id)}
+                className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors duration-100 ${
+                  isActive
+                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
+                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                }`}
+              >
+                {t.icon}
+                <span>{t.label}</span>
+                {typeof t.count === 'number' && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded-md text-[11px] tabular-nums ${
+                      isActive ? 'bg-[#f5f5f7] text-[#1d1d1f]' : 'bg-black/5 text-[#6e6e73]'
+                    }`}
+                  >
+                    {t.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </section>
 
       {/* =====================================================================
-          SUB-ABA 1: QUADRO OFICIAL DE TURMAS, PROFESSORES REGENTES E ESPECIALISTAS
+          SUB-ABA 1: QUADRO DOCENTE (MOBILE CARDS + TABELA DESKTOP)
           ===================================================================== */}
       {activeSubTab === 'quadro_turmas' && (
-        <div className="space-y-5">
-          {/* Barra de Filtro Rápido do Quadro de Turmas */}
-          <section className="card-welcoming bg-white rounded-3xl p-5 shadow-sm space-y-4">
+        <div className="space-y-4">
+          <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
+            {/* Barra de Filtros e Busca */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {(
-                  [
-                    { id: 'ALL', label: `Todas (${classes.length})` },
-                    { id: 'MANHÃ', label: `☀️ Manhã (${manhaTurmasCount})` },
-                    { id: 'TARDE', label: `⛅ Tarde (${tardeTurmasCount})` },
-                    { id: 'VAGAS', label: `⚠️ Turmas Vagas (${vacantTurmasCount})` },
-                  ] as const
-                ).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setMatrixShiftFilter(item.id)}
-                    className={`min-h-[38px] px-3.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                      matrixShiftFilter === item.id
-                        ? item.id === 'VAGAS'
-                          ? 'bg-amber-600 text-white shadow-2xs'
-                          : 'bg-[#003440] text-white shadow-2xs'
-                        : item.id === 'VAGAS' && vacantTurmasCount > 0
-                        ? 'bg-amber-100 text-amber-950 hover:bg-amber-200'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setMatrixShiftFilter('ALL')}
+                  className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium cursor-pointer transition-colors duration-100 ${
+                    matrixShiftFilter === 'ALL'
+                      ? 'bg-[#1d1d1f] text-white font-semibold'
+                      : 'bg-[#f5f5f7] text-[#6e6e73] hover:text-[#1d1d1f]'
+                  }`}
+                >
+                  Todas ({classes.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixShiftFilter('MANHÃ')}
+                  className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100 ${
+                    matrixShiftFilter === 'MANHÃ'
+                      ? 'bg-[#1d1d1f] text-white font-semibold'
+                      : 'bg-[#f5f5f7] text-[#6e6e73] hover:text-[#1d1d1f]'
+                  }`}
+                >
+                  <Sun className="w-3.5 h-3.5 text-[#d97706]" />
+                  <span>Manhã ({manhaTurmasCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixShiftFilter('TARDE')}
+                  className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100 ${
+                    matrixShiftFilter === 'TARDE'
+                      ? 'bg-[#1d1d1f] text-white font-semibold'
+                      : 'bg-[#f5f5f7] text-[#6e6e73] hover:text-[#1d1d1f]'
+                  }`}
+                >
+                  <Sunset className="w-3.5 h-3.5 text-[#0071e3]" />
+                  <span>Tarde ({tardeTurmasCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMatrixShiftFilter('VAGAS')}
+                  className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100 ${
+                    matrixShiftFilter === 'VAGAS'
+                      ? 'bg-[#b45309] text-white font-semibold'
+                      : 'bg-[#fef3c7] text-[#92400e] hover:bg-[#fde68a]'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Turmas Vagas ({vacantTurmasCount})</span>
+                </button>
               </div>
 
               <div className="relative flex-1 max-w-xl">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8e8e93] text-[19px]">
-                  search
-                </span>
+                <Search className="w-4 h-4 text-[#86868b] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={matrixSearchTerm}
                   onChange={(e) => setMatrixSearchTerm(e.target.value)}
-                  placeholder="Filtrar por sigla (G4C, 1A), professora, sala, código SED ou especialista..."
-                  className="w-full min-h-[42px] pl-10 pr-9 rounded-2xl bg-slate-100 text-sm font-semibold text-slate-900 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#003440]"
+                  placeholder="Buscar turma, professor, sala ou código SED..."
+                  className="w-full min-h-[44px] pl-10 pr-9 rounded-2xl bg-[#f5f5f7] focus:bg-white text-sm text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none"
                 />
                 {matrixSearchTerm && (
                   <button
                     type="button"
                     onClick={() => setMatrixSearchTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8e8e93] hover:text-[#1c1c1e] cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] p-1 cursor-pointer"
+                    aria-label="Limpar busca"
                   >
-                    <span className="material-symbols-outlined text-[18px]">cancel</span>
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Tabela Completa das 40 Turmas Oficiais de 2027 com todas as Colunas Oficiais e Ações Diretas */}
-            <div className="rounded-2xl overflow-x-auto shadow-sm">
-              <table className="w-full text-left text-xs border-collapse min-w-[1440px]">
-                <thead className="bg-[#003440] text-white font-semibold uppercase tracking-wider text-[11px]">
-                  <tr>
-                    <th className="py-3 px-2.5 text-center">Turma Abrev</th>
-                    <th className="py-3 px-3">Professor(a) Regente + E-mail de Acesso</th>
-                    <th className="py-3 px-2.5">Turma</th>
-                    <th className="py-3 px-2.5">Sala de Aula</th>
-                    <th className="py-3 px-2 text-center">Período</th>
-                    <th className="py-3 px-2.5">Turma SED</th>
-                    <th className="py-3 px-2 text-center">Qtd</th>
-                    <th className="py-3 px-2.5 text-center">Classe SED</th>
-                    <th className="py-3 px-2">Pronome / Prenome</th>
-                    <th className="py-3 px-2.5">Arte (PEB II)</th>
-                    <th className="py-3 px-2.5">Educação Física (PEB II)</th>
-                    <th className="py-3 px-2.5">Língua Inglesa (PEB II)</th>
-                    <th className="py-3 px-3 text-center">Acesso &amp; Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/[0.06]">
-                  {filteredMatrixClasses.map((cls, idx) => {
+            {filteredMatrixClasses.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-[#f5f5f7] text-center text-sm text-[#6e6e73]">
+                Nenhuma turma encontrada para o filtro informado.
+              </div>
+            ) : (
+              <>
+                {/* VISÃO MOBILE & TABLET (CARDS LEGÍVEIS, ZERO CORTE HORIZONTAL) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:hidden">
+                  {filteredMatrixClasses.map((cls) => {
                     const regenteUser = findRegenteUserForClass(cls);
-                    const isEditing = editingMatrixClassId === cls.id && matrixDraft !== null;
+                    const isEditing =
+                      editingMatrixClassId === cls.id && matrixDraft !== null;
+                    const isVaga = cls.isVaga || cls.teacherName === 'TURMA VAGA';
                     const activeCount = cls.students.filter((s) => {
                       const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
                       return (
@@ -1457,357 +1297,679 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     }).length;
 
                     return (
-                      <tr
+                      <article
                         key={cls.id}
-                        className={`transition-colors ${
-                          isEditing
-                            ? 'bg-[#eaf6ef]/80'
-                            : idx % 2 === 0
-                            ? 'bg-white hover:bg-[#f6f9f8]'
-                            : 'bg-[#f9fbfa] hover:bg-[#f1f6f4]'
+                        className={`rounded-2xl p-4 space-y-3 transition-colors duration-100 ${
+                          isEditing ? 'bg-[#eaf6ef]' : 'bg-[#f5f5f7]/80'
                         }`}
                       >
-                        {/* TURMA ABREV */}
-                        <td className="py-2.5 px-2.5 text-center">
-                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-xl bg-[#003440] text-white font-mono font-semibold text-xs">
-                            {cls.turmaAbrev || cls.name}
-                          </span>
-                        </td>
+                        {/* Topo do Card: Turma + Turno + Alunos */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span
+                              className={`px-2.5 py-1.5 rounded-xl font-semibold text-xs tabular-nums shrink-0 ${
+                                isVaga
+                                  ? 'bg-[#fef3c7] text-[#92400e]'
+                                  : 'bg-white text-[#1d1d1f]'
+                              }`}
+                            >
+                              {cls.turmaAbrev || cls.name}
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-semibold text-[#1d1d1f] truncate">
+                                {cls.name}
+                              </h3>
+                              <p className="text-xs text-[#6e6e73] truncate">
+                                {cls.shift.replace('Turno ', '')} · {cls.room}
+                              </p>
+                            </div>
+                          </div>
 
-                        {/* PROFESSOR(A) + EMAIL */}
-                        <td className="py-2.5 px-3">
-                          {isEditing && matrixDraft ? (
-                            <input
-                              type="text"
-                              value={matrixDraft.teacherName}
-                              onChange={(e) =>
-                                setMatrixDraft({ ...matrixDraft, teacherName: e.target.value })
-                              }
-                              className="w-full px-3 py-1.5 rounded-xl bg-slate-100 font-bold text-slate-950 text-xs focus:bg-white focus:outline-none shadow-2xs"
-                            />
-                          ) : cls.isVaga || cls.teacherName === 'TURMA VAGA' ? (
-                            <div className="flex flex-col items-start gap-1">
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100 text-amber-950 font-bold text-xs shadow-2xs">
-                                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                                TURMA VAGA (Aguardando Atribuição)
-                              </span>
+                          <span className="text-xs font-semibold text-[#047857] bg-white px-2.5 py-1 rounded-xl tabular-nums shrink-0">
+                            {activeCount} alunos
+                          </span>
+                        </div>
+
+                        {isEditing && matrixDraft ? (
+                          <div className="space-y-2.5 pt-1">
+                            <div>
+                              <label className="text-[11px] font-medium text-[#6e6e73] block mb-1">
+                                Professor(a) Regente
+                              </label>
+                              <input
+                                type="text"
+                                value={matrixDraft.teacherName}
+                                onChange={(e) =>
+                                  setMatrixDraft({
+                                    ...matrixDraft,
+                                    teacherName: e.target.value,
+                                  })
+                                }
+                                className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[11px] font-medium text-[#6e6e73] block mb-1">
+                                  Pronome
+                                </label>
+                                <select
+                                  value={matrixDraft.teacherPronoun}
+                                  onChange={(e) =>
+                                    setMatrixDraft({
+                                      ...matrixDraft,
+                                      teacherPronoun: e.target.value,
+                                    })
+                                  }
+                                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
+                                >
+                                  <option value="PROFESSORA">PROFESSORA</option>
+                                  <option value="PROFESSOR">PROFESSOR</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-[#6e6e73] block mb-1">
+                                  Prenome
+                                </label>
+                                <input
+                                  type="text"
+                                  value={matrixDraft.teacherFirstName}
+                                  onChange={(e) =>
+                                    setMatrixDraft({
+                                      ...matrixDraft,
+                                      teacherFirstName: e.target.value,
+                                    })
+                                  }
+                                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[11px] font-medium text-[#6e6e73] block mb-1">
+                                  Sala
+                                </label>
+                                <input
+                                  type="text"
+                                  value={matrixDraft.room}
+                                  onChange={(e) =>
+                                    setMatrixDraft({ ...matrixDraft, room: e.target.value })
+                                  }
+                                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-[#6e6e73] block mb-1">
+                                  Período
+                                </label>
+                                <select
+                                  value={matrixDraft.shift}
+                                  onChange={(e) =>
+                                    setMatrixDraft({
+                                      ...matrixDraft,
+                                      shift: e.target.value as 'Turno Manhã' | 'Turno Tarde',
+                                    })
+                                  }
+                                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
+                                >
+                                  <option value="Turno Manhã">Manhã</option>
+                                  <option value="Turno Tarde">Tarde</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[11px] font-medium text-[#6e6e73] block mb-1">
+                                  Turma SED
+                                </label>
+                                <input
+                                  type="text"
+                                  value={matrixDraft.turmaSedName}
+                                  onChange={(e) =>
+                                    setMatrixDraft({
+                                      ...matrixDraft,
+                                      turmaSedName: e.target.value,
+                                    })
+                                  }
+                                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-[#6e6e73] block mb-1">
+                                  Código SED
+                                </label>
+                                <input
+                                  type="text"
+                                  value={matrixDraft.classeSedCode}
+                                  onChange={(e) =>
+                                    setMatrixDraft({
+                                      ...matrixDraft,
+                                      classeSedCode: e.target.value,
+                                    })
+                                  }
+                                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-2">
+                              <input
+                                type="text"
+                                placeholder="Professor(a) Arte"
+                                value={matrixDraft.artTeacher}
+                                onChange={(e) =>
+                                  setMatrixDraft({
+                                    ...matrixDraft,
+                                    artTeacher: e.target.value,
+                                  })
+                                }
+                                className="w-full min-h-[38px] px-3 rounded-xl bg-white text-xs text-[#1d1d1f]"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Professor(a) Ed. Física"
+                                value={matrixDraft.peTeacher}
+                                onChange={(e) =>
+                                  setMatrixDraft({
+                                    ...matrixDraft,
+                                    peTeacher: e.target.value,
+                                  })
+                                }
+                                className="w-full min-h-[38px] px-3 rounded-xl bg-white text-xs text-[#1d1d1f]"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Professor(a) Língua Inglesa"
+                                value={matrixDraft.englishTeacher}
+                                onChange={(e) =>
+                                  setMatrixDraft({
+                                    ...matrixDraft,
+                                    englishTeacher: e.target.value,
+                                  })
+                                }
+                                className="w-full min-h-[38px] px-3 rounded-xl bg-white text-xs text-[#1d1d1f]"
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveMatrixRow(cls)}
+                                className="flex-1 min-h-[42px] rounded-xl bg-[#047857] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                              >
+                                <Check className="w-4 h-4" />
+                                <span>Salvar</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingMatrixClassId(null);
+                                  setMatrixDraft(null);
+                                }}
+                                className="min-h-[42px] px-4 rounded-xl bg-white text-[#6e6e73] text-xs font-semibold cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Dados do Regente e E-mail sem Corte */}
+                            <div className="bg-white rounded-xl p-3 space-y-1">
+                              {isVaga ? (
+                                <div className="flex items-center gap-2 text-[#b45309] text-xs font-semibold">
+                                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                                  <span>Turma vaga · Aguardando atribuição</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="text-xs font-semibold text-[#1d1d1f] break-words">
+                                    {cls.teacherName || regenteUser?.name || '—'}
+                                  </p>
+                                  {regenteUser ? (
+                                    <p className="text-xs text-[#047857] break-all">
+                                      {regenteUser.email}
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs text-[#b3261e]">
+                                      Sem e-mail vinculado
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+
+                            {/* Informações SED + Especialistas */}
+                            <div className="text-[11px] text-[#6e6e73] space-y-1">
+                              {(cls.turmaSedName || cls.classeSedCode) && (
+                                <p className="tabular-nums">
+                                  SED: {cls.turmaSedName || '—'} · Cód. {cls.classeSedCode || '—'}
+                                </p>
+                              )}
+                              {(cls.artTeacher || cls.peTeacher || cls.englishTeacher) && (
+                                <p className="break-words">
+                                  Especialistas:{' '}
+                                  {[
+                                    cls.artTeacher && `Arte: ${cls.artTeacher}`,
+                                    cls.peTeacher && `Ed. Física: ${cls.peTeacher}`,
+                                    cls.englishTeacher && `Inglês: ${cls.englishTeacher}`,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Botões de Ação */}
+                            <div className="flex items-center gap-2 pt-0.5">
                               {canManage && (
                                 <button
                                   type="button"
                                   onClick={() => handleStartEditMatrixRow(cls)}
-                                  className="text-[11px] text-emerald-800 hover:text-emerald-950 font-bold underline flex items-center gap-1 cursor-pointer"
+                                  className="min-h-[40px] px-3.5 rounded-xl bg-white hover:bg-[#ededf0] text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                                 >
-                                  <span className="material-symbols-outlined text-[13px]">person_add</span>
-                                  Designar Professor(a)
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  <span>{isVaga ? 'Designar' : 'Editar'}</span>
+                                </button>
+                              )}
+
+                              {regenteUser && onSimulateTeacherProfile && (
+                                <button
+                                  type="button"
+                                  onClick={() => onSimulateTeacherProfile(regenteUser)}
+                                  className="flex-1 min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#d5efe0] text-[#005035] text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Abrir Visão</span>
                                 </button>
                               )}
                             </div>
-                          ) : (
-                            <div>
-                              <span className="font-bold text-slate-900 block">
-                                {cls.teacherName || regenteUser?.name || '—'}
-                              </span>
-                              {regenteUser ? (
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="font-mono text-[11px] text-emerald-800 font-bold">
-                                    {regenteUser.email}
+                          </>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {/* VISÃO DESKTOP (TABELA CLEAN MINIMALISTA, SEM FUNDO ESCURO PESADO) */}
+                <div className="hidden lg:block overflow-x-auto rounded-2xl">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-[#f5f5f7] text-[#6e6e73] font-semibold text-[11px]">
+                      <tr>
+                        <th className="py-3 px-3 rounded-tl-xl">Turma</th>
+                        <th className="py-3 px-3">Professor(a) Regente e E-mail</th>
+                        <th className="py-3 px-3">Sala e Período</th>
+                        <th className="py-3 px-3">Identificação SED</th>
+                        <th className="py-3 px-3 text-center">Alunos</th>
+                        <th className="py-3 px-3">Especialistas (PEB II)</th>
+                        <th className="py-3 px-3 text-right rounded-tr-xl">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/[0.04]">
+                      {filteredMatrixClasses.map((cls) => {
+                        const regenteUser = findRegenteUserForClass(cls);
+                        const isEditing =
+                          editingMatrixClassId === cls.id && matrixDraft !== null;
+                        const isVaga = cls.isVaga || cls.teacherName === 'TURMA VAGA';
+                        const activeCount = cls.students.filter((s) => {
+                          const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+                          return (
+                            !sit.includes('BXTR') &&
+                            !sit.includes('TRANSF') &&
+                            !sit.includes('REMAN')
+                          );
+                        }).length;
+
+                        return (
+                          <tr
+                            key={cls.id}
+                            className={`transition-colors duration-100 ${
+                              isEditing ? 'bg-[#eaf6ef]/70' : 'hover:bg-[#f5f5f7]/60'
+                            }`}
+                          >
+                            {/* TURMA */}
+                            <td className="py-3 px-3 align-top whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`px-2 py-1 rounded-lg font-semibold text-xs tabular-nums ${
+                                    isVaga
+                                      ? 'bg-[#fef3c7] text-[#92400e]'
+                                      : 'bg-[#f5f5f7] text-[#1d1d1f]'
+                                  }`}
+                                >
+                                  {cls.turmaAbrev || cls.name}
+                                </span>
+                                <span className="font-semibold text-[#1d1d1f]">
+                                  {cls.name}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* REGENTE + EMAIL */}
+                            <td className="py-3 px-3 align-top">
+                              {isEditing && matrixDraft ? (
+                                <div className="space-y-1.5 min-w-[230px]">
+                                  <input
+                                    type="text"
+                                    value={matrixDraft.teacherName}
+                                    onChange={(e) =>
+                                      setMatrixDraft({
+                                        ...matrixDraft,
+                                        teacherName: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Nome completo"
+                                    className="w-full px-2.5 py-1.5 rounded-lg bg-white text-xs font-medium text-[#1d1d1f]"
+                                  />
+                                  <div className="flex gap-1.5">
+                                    <select
+                                      value={matrixDraft.teacherPronoun}
+                                      onChange={(e) =>
+                                        setMatrixDraft({
+                                          ...matrixDraft,
+                                          teacherPronoun: e.target.value,
+                                        })
+                                      }
+                                      className="px-2 py-1 rounded-lg bg-white text-[11px] font-medium"
+                                    >
+                                      <option value="PROFESSORA">PROFESSORA</option>
+                                      <option value="PROFESSOR">PROFESSOR</option>
+                                    </select>
+                                    <input
+                                      type="text"
+                                      value={matrixDraft.teacherFirstName}
+                                      onChange={(e) =>
+                                        setMatrixDraft({
+                                          ...matrixDraft,
+                                          teacherFirstName: e.target.value,
+                                        })
+                                      }
+                                      placeholder="Prenome"
+                                      className="w-24 px-2 py-1 rounded-lg bg-white text-[11px]"
+                                    />
+                                  </div>
+                                </div>
+                              ) : isVaga ? (
+                                <div className="space-y-1">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#fef3c7] text-[#92400e] font-medium text-xs">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    Turma Vaga
                                   </span>
-                                  {(regenteUser.totalAccessCount || 0) > 0 && (
-                                    <span className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 font-mono font-bold text-[11px]">
-                                      {regenteUser.totalAccessCount}x ·{' '}
-                                      {formatDurationHuman(regenteUser.totalDurationSeconds)}
-                                    </span>
+                                  {canManage && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartEditMatrixRow(cls)}
+                                      className="block text-[11px] text-[#047857] hover:underline font-medium cursor-pointer"
+                                    >
+                                      Designar docente
+                                    </button>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-rose-700 font-bold">
-                                  Sem e-mail vinculado
+                                <div className="space-y-0.5">
+                                  <span className="font-semibold text-[#1d1d1f] block">
+                                    {cls.teacherName || regenteUser?.name || '—'}
+                                  </span>
+                                  {regenteUser ? (
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="text-[11px] text-[#047857]">
+                                        {regenteUser.email}
+                                      </span>
+                                      {(regenteUser.totalAccessCount || 0) > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] text-[10px] font-medium tabular-nums">
+                                          {regenteUser.totalAccessCount}x ·{' '}
+                                          {formatDurationHuman(regenteUser.totalDurationSeconds)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-[11px] text-[#b3261e]">
+                                      Sem e-mail vinculado
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* SALA E PERÍODO */}
+                            <td className="py-3 px-3 align-top whitespace-nowrap">
+                              {isEditing && matrixDraft ? (
+                                <div className="space-y-1.5">
+                                  <input
+                                    type="text"
+                                    value={matrixDraft.room}
+                                    onChange={(e) =>
+                                      setMatrixDraft({ ...matrixDraft, room: e.target.value })
+                                    }
+                                    className="w-32 px-2.5 py-1.5 rounded-lg bg-white text-xs"
+                                  />
+                                  <select
+                                    value={matrixDraft.shift}
+                                    onChange={(e) =>
+                                      setMatrixDraft({
+                                        ...matrixDraft,
+                                        shift: e.target.value as 'Turno Manhã' | 'Turno Tarde',
+                                      })
+                                    }
+                                    className="block w-32 px-2 py-1 rounded-lg bg-white text-[11px]"
+                                  >
+                                    <option value="Turno Manhã">Manhã</option>
+                                    <option value="Turno Tarde">Tarde</option>
+                                  </select>
+                                </div>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  <span className="text-[#1d1d1f] font-medium block">
+                                    {cls.room}
+                                  </span>
+                                  <span
+                                    className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-medium ${
+                                      cls.shift === 'Turno Manhã'
+                                        ? 'bg-[#fef3c7] text-[#92400e]'
+                                        : 'bg-[#e0f2fe] text-[#075985]'
+                                    }`}
+                                  >
+                                    {cls.shift.replace('Turno ', '')}
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* SED */}
+                            <td className="py-3 px-3 align-top">
+                              {isEditing && matrixDraft ? (
+                                <div className="space-y-1.5">
+                                  <input
+                                    type="text"
+                                    value={matrixDraft.turmaSedName}
+                                    onChange={(e) =>
+                                      setMatrixDraft({
+                                        ...matrixDraft,
+                                        turmaSedName: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Turma SED"
+                                    className="w-36 px-2.5 py-1.5 rounded-lg bg-white text-xs"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={matrixDraft.classeSedCode}
+                                    onChange={(e) =>
+                                      setMatrixDraft({
+                                        ...matrixDraft,
+                                        classeSedCode: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Código SED"
+                                    className="block w-36 px-2.5 py-1 rounded-lg bg-white text-[11px] tabular-nums"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  <span className="text-[#1d1d1f] block">
+                                    {cls.turmaSedName || '—'}
+                                  </span>
+                                  <span className="text-[11px] text-[#6e6e73] tabular-nums block">
+                                    Cód. {cls.classeSedCode || '—'}
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* QTD */}
+                            <td className="py-3 px-3 align-top text-center tabular-nums">
+                              <span className="font-semibold text-[#047857] text-sm">
+                                {activeCount}
+                              </span>
+                              {cls.students.length !== activeCount && (
+                                <span className="block text-[11px] text-[#6e6e73]">
+                                  ({cls.students.length})
                                 </span>
                               )}
-                            </div>
-                          )}
-                        </td>
+                            </td>
 
-                        {/* TURMA */}
-                        <td className="py-2.5 px-2.5 font-bold text-slate-900 whitespace-nowrap">
-                          {cls.name}
-                        </td>
+                            {/* ESPECIALISTAS */}
+                            <td className="py-3 px-3 align-top">
+                              {isEditing && matrixDraft ? (
+                                <div className="space-y-1 min-w-[200px]">
+                                  <input
+                                    type="text"
+                                    placeholder="Arte"
+                                    value={matrixDraft.artTeacher}
+                                    onChange={(e) =>
+                                      setMatrixDraft({
+                                        ...matrixDraft,
+                                        artTeacher: e.target.value,
+                                      })
+                                    }
+                                    className="w-full px-2 py-1 rounded-lg bg-white text-[11px]"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Ed. Física"
+                                    value={matrixDraft.peTeacher}
+                                    onChange={(e) =>
+                                      setMatrixDraft({
+                                        ...matrixDraft,
+                                        peTeacher: e.target.value,
+                                      })
+                                    }
+                                    className="w-full px-2 py-1 rounded-lg bg-white text-[11px]"
+                                  />
+                                  <input
+                                    type="text"
+                                    placeholder="Inglês"
+                                    value={matrixDraft.englishTeacher}
+                                    onChange={(e) =>
+                                      setMatrixDraft({
+                                        ...matrixDraft,
+                                        englishTeacher: e.target.value,
+                                      })
+                                    }
+                                    className="w-full px-2 py-1 rounded-lg bg-white text-[11px]"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="text-[11px] text-[#6e6e73] space-y-0.5 max-w-[240px]">
+                                  {cls.artTeacher && (
+                                    <p className="truncate">
+                                      <span className="text-[#1d1d1f] font-medium">Arte:</span>{' '}
+                                      {cls.artTeacher}
+                                    </p>
+                                  )}
+                                  {cls.peTeacher && (
+                                    <p className="truncate">
+                                      <span className="text-[#1d1d1f] font-medium">Ed. Fís:</span>{' '}
+                                      {cls.peTeacher}
+                                    </p>
+                                  )}
+                                  {cls.englishTeacher && (
+                                    <p className="truncate">
+                                      <span className="text-[#1d1d1f] font-medium">Inglês:</span>{' '}
+                                      {cls.englishTeacher}
+                                    </p>
+                                  )}
+                                  {!cls.artTeacher && !cls.peTeacher && !cls.englishTeacher && (
+                                    <span>—</span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
 
-                        {/* SALA DE AULA */}
-                        <td className="py-2.5 px-2.5 whitespace-nowrap">
-                          {isEditing && matrixDraft ? (
-                            <input
-                              type="text"
-                              value={matrixDraft.room}
-                              onChange={(e) =>
-                                setMatrixDraft({ ...matrixDraft, room: e.target.value })
-                              }
-                              className="w-36 px-2.5 py-1.5 rounded-xl bg-slate-100 font-bold text-xs shadow-2xs focus:bg-white focus:outline-none"
-                            />
-                          ) : (
-                            <span className="font-semibold text-slate-700">{cls.room}</span>
-                          )}
-                        </td>
-
-                        {/* PERÍODO */}
-                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                          {isEditing && matrixDraft ? (
-                            <select
-                              value={matrixDraft.shift}
-                              onChange={(e) =>
-                                setMatrixDraft({
-                                  ...matrixDraft,
-                                  shift: e.target.value as 'Turno Manhã' | 'Turno Tarde',
-                                })
-                              }
-                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 font-bold text-xs shadow-2xs focus:bg-white focus:outline-none"
-                            >
-                              <option value="Turno Manhã">MANHÃ</option>
-                              <option value="Turno Tarde">TARDE</option>
-                            </select>
-                          ) : (
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase ${
-                                cls.shift === 'Turno Manhã'
-                                  ? 'bg-[#fef3c7] text-[#92400e]'
-                                  : 'bg-[#e0f2fe] text-[#075985]'
-                              }`}
-                            >
-                              {cls.shift.replace('Turno ', '').toUpperCase()}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* TURMA SED */}
-                        <td className="py-2.5 px-2.5">
-                          {isEditing && matrixDraft ? (
-                            <input
-                              type="text"
-                              value={matrixDraft.turmaSedName}
-                              onChange={(e) =>
-                                setMatrixDraft({ ...matrixDraft, turmaSedName: e.target.value })
-                              }
-                              className="w-48 px-2.5 py-1.5 rounded-xl bg-slate-100 font-mono text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
-                            />
-                          ) : (
-                            <span className="font-mono text-xs text-slate-600 font-bold block">
-                              {cls.turmaSedName || '—'}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* QTD */}
-                        <td className="py-2.5 px-2 text-center font-mono">
-                          <span className="font-bold text-emerald-800 text-sm">
-                            {activeCount}
-                          </span>
-                          {cls.students.length !== activeCount && (
-                            <span className="block text-[11px] text-slate-500 font-medium">
-                              ({cls.students.length} total)
-                            </span>
-                          )}
-                        </td>
-
-                        {/* CLASSE SED */}
-                        <td className="py-2.5 px-2.5 text-center font-mono">
-                          {isEditing && matrixDraft ? (
-                            <input
-                              type="text"
-                              value={matrixDraft.classeSedCode}
-                              onChange={(e) =>
-                                setMatrixDraft({
-                                  ...matrixDraft,
-                                  classeSedCode: e.target.value,
-                                })
-                              }
-                              className="w-28 px-2.5 py-1.5 rounded-xl bg-slate-100 font-mono text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
-                            />
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-900 font-bold text-xs">
-                              {cls.classeSedCode || '—'}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* PRONOME TRAT / PRENOME */}
-                        <td className="py-2.5 px-2 whitespace-nowrap">
-                          {isEditing && matrixDraft ? (
-                            <div className="flex items-center gap-1.5">
-                              <select
-                                value={matrixDraft.teacherPronoun}
-                                onChange={(e) =>
-                                  setMatrixDraft({
-                                    ...matrixDraft,
-                                    teacherPronoun: e.target.value,
-                                  })
-                                }
-                                className="px-2 py-1.5 rounded-xl bg-slate-100 text-[11px] font-bold shadow-2xs focus:bg-white focus:outline-none"
-                              >
-                                <option value="PROFESSORA">PROFESSORA</option>
-                                <option value="PROFESSOR">PROFESSOR</option>
-                              </select>
-                              <input
-                                type="text"
-                                value={matrixDraft.teacherFirstName}
-                                onChange={(e) =>
-                                  setMatrixDraft({
-                                    ...matrixDraft,
-                                    teacherFirstName: e.target.value,
-                                  })
-                                }
-                                className="w-24 px-2 py-1.5 rounded-xl bg-slate-100 text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
-                              />
-                            </div>
-                          ) : (
-                            <div>
-                              <span className="text-[11px] font-bold text-slate-500 block">
-                                {cls.teacherPronoun || 'PROFESSORA'}
-                              </span>
-                              <span className="font-bold text-emerald-900 text-xs">
-                                {cls.teacherFirstName || '—'}
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* ARTE */}
-                        <td className="py-2.5 px-2.5">
-                          {isEditing && matrixDraft ? (
-                            <input
-                              type="text"
-                              value={matrixDraft.artTeacher}
-                              onChange={(e) =>
-                                setMatrixDraft({ ...matrixDraft, artTeacher: e.target.value })
-                              }
-                              className="w-40 px-2.5 py-1.5 rounded-xl bg-slate-100 text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
-                            />
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-800 block">
-                              {cls.artTeacher || '—'}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* EDUCAÇÃO FÍSICA */}
-                        <td className="py-2.5 px-2.5">
-                          {isEditing && matrixDraft ? (
-                            <input
-                              type="text"
-                              value={matrixDraft.peTeacher}
-                              onChange={(e) =>
-                                setMatrixDraft({ ...matrixDraft, peTeacher: e.target.value })
-                              }
-                              className="w-40 px-2.5 py-1.5 rounded-xl bg-slate-100 text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
-                            />
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-800 block">
-                              {cls.peTeacher || '—'}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* LÍNGUA INGLESA */}
-                        <td className="py-2.5 px-2.5">
-                          {isEditing && matrixDraft ? (
-                            <input
-                              type="text"
-                              value={matrixDraft.englishTeacher}
-                              onChange={(e) =>
-                                setMatrixDraft({
-                                  ...matrixDraft,
-                                  englishTeacher: e.target.value,
-                                })
-                              }
-                              className="w-40 px-2.5 py-1.5 rounded-xl bg-slate-100 text-xs font-bold shadow-2xs focus:bg-white focus:outline-none"
-                            />
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-800 block">
-                              {cls.englishTeacher || '—'}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* AÇÕES DIRETAS (Editar Linha / Simular Visão da Professora / Abrir Turma) */}
-                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {isEditing ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveMatrixRow(cls)}
-                                  className="px-2.5 py-1 rounded-lg bg-[#005035] hover:bg-[#003723] text-white font-semibold text-xs flex items-center gap-1 cursor-pointer"
-                                >
-                                  <span className="material-symbols-outlined text-[14px]">
-                                    check
-                                  </span>
-                                  <span>Salvar</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingMatrixClassId(null);
-                                    setMatrixDraft(null);
-                                  }}
-                                  className="px-2 py-1 rounded-lg bg-[#f2f4f3] text-[#436370] font-bold text-xs cursor-pointer"
-                                >
-                                  Cancelar
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                {canManage && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStartEditMatrixRow(cls)}
-                                    title="Editar dados da turma e professores"
-                                    className="px-2 py-1 rounded-lg bg-[#f2f4f3] hover:bg-[#003440] text-[#003440] hover:text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">
-                                      edit
-                                    </span>
-                                    <span>Editar</span>
-                                  </button>
+                            {/* AÇÕES */}
+                            <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                {isEditing ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveMatrixRow(cls)}
+                                      className="px-3 py-1.5 rounded-lg bg-[#047857] text-white font-semibold text-xs inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>Salvar</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingMatrixClassId(null);
+                                        setMatrixDraft(null);
+                                      }}
+                                      className="px-2.5 py-1.5 rounded-lg bg-white text-[#6e6e73] font-medium text-xs cursor-pointer"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    {canManage && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleStartEditMatrixRow(cls)}
+                                        className="px-2.5 py-1.5 rounded-lg bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-medium text-xs inline-flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                        <span>Editar</span>
+                                      </button>
+                                    )}
+                                    {regenteUser && onSimulateTeacherProfile && (
+                                      <button
+                                        type="button"
+                                        onClick={() => onSimulateTeacherProfile(regenteUser)}
+                                        className="px-2.5 py-1.5 rounded-lg bg-[#eaf6ef] hover:bg-[#d5efe0] text-[#005035] font-semibold text-xs inline-flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                        <span>Abrir</span>
+                                      </button>
+                                    )}
+                                  </>
                                 )}
-
-                                {regenteUser && onSimulateTeacherProfile && (
-                                  <button
-                                    type="button"
-                                    onClick={() => onSimulateTeacherProfile(regenteUser)}
-                                    title={`Entrar na visão de ${regenteUser.name} (${cls.name})`}
-                                    className="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px]">
-                                      visibility
-                                    </span>
-                                    <span>Abrir Turma</span>
-                                  </button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </section>
 
-          {/* Quadro Consolidado de Especialistas PEB II (Arte, Educação Física e Língua Inglesa) */}
-          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          {/* Quadro Consolidado de Especialistas PEB II */}
+          <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block">
-                  Quadro de Especialistas PEB II (Arte · Educação Física · Língua Inglesa)
-                </span>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Professores Especialistas e Turmas Atendidas ({specialistsUsers.length} Especialistas)
+                <h2 className="text-base font-semibold text-[#1d1d1f]">
+                  Especialistas PEB II ({specialistsUsers.length})
                 </h2>
+                <p className="text-xs text-[#6e6e73]">
+                  Arte, Educação Física e Língua Inglesa com visualização das turmas atribuídas
+                </p>
               </div>
-              <span className="text-xs font-bold text-slate-600">
-                Perfil PEB II: Visualização das turmas atribuídas · Sem duplicidade de cadastro
-              </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -1822,19 +1984,19 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 return (
                   <div
                     key={spec.id}
-                    className="p-4 rounded-2xl bg-slate-100 flex flex-col justify-between gap-3 shadow-2xs"
+                    className="p-4 rounded-2xl bg-[#f5f5f7] flex flex-col justify-between gap-3"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         <StudentAvatar name={spec.name} size="sm" />
                         <div className="min-w-0">
-                          <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-950 text-[11px] font-bold uppercase">
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-[#fef3c7] text-[#92400e] text-[10px] font-semibold uppercase">
                             {spec.subjectName || 'ESPECIALISTA PEB II'}
                           </span>
-                          <h3 className="font-bold text-sm text-slate-950 truncate mt-0.5">
+                          <h3 className="font-semibold text-sm text-[#1d1d1f] truncate mt-0.5">
                             {spec.name}
                           </h3>
-                          <p className="font-mono text-xs text-emerald-900 font-bold truncate">
+                          <p className="text-xs text-[#047857] break-all">
                             {spec.email}
                           </p>
                         </div>
@@ -1844,22 +2006,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         <button
                           type="button"
                           onClick={() => onSimulateTeacherProfile(spec)}
-                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-900 text-slate-900 hover:text-white font-bold text-xs shrink-0 cursor-pointer transition-colors shadow-2xs"
+                          className="min-h-[36px] px-3 rounded-xl bg-white hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white font-semibold text-xs shrink-0 cursor-pointer transition-colors duration-100"
                         >
-                          Simular
+                          Abrir
                         </button>
                       )}
                     </div>
 
-                    <div className="pt-2">
-                      <span className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                        {specClasses.length} Turmas Vinculadas:
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-medium text-[#6e6e73] block">
+                        {specClasses.length} turmas vinculadas
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {specClasses.map((c) => (
                           <span
                             key={c.id}
-                            className="px-2 py-0.5 rounded-lg bg-white font-mono font-bold text-[11px] text-slate-900 shadow-2xs"
+                            className="px-2 py-0.5 rounded-md bg-white text-[11px] font-medium text-[#1d1d1f] tabular-nums"
                           >
                             {c.turmaAbrev || c.name}
                           </span>
@@ -1875,142 +2037,30 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* =====================================================================
-          SUB-ABA 2: GERENCIAMENTO DE CONTAS E PERMISSÕES (@educacao.jundiai.sp.gov.br)
+          SUB-ABA 2: CONTAS E PERFIS (@educacao.jundiai.sp.gov.br)
           ===================================================================== */}
       {activeSubTab === 'contas_acesso' && (
-        <div className="space-y-5">
-          {/* Formulário Prático para Cadastrar Novo E-mail */}
-          {canManage && (
-            <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-slate-900">
-                <span className="material-symbols-outlined text-[24px] text-emerald-800">
-                  person_add
-                </span>
-                <h2 className="text-base font-bold">
-                  Adicionar Novo E-mail Institucional ({INSTITUTIONAL_EMAIL_DOMAIN})
-                </h2>
-              </div>
-
-              <form
-                onSubmit={handleAddUser}
-                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 items-end"
-              >
-                <div className="xl:col-span-4 space-y-1">
-                  <label className="block text-xs font-bold text-slate-800 uppercase">
-                    1. E-mail Institucional
-                  </label>
-                  <div className="flex items-center rounded-2xl bg-slate-100 focus-within:bg-white overflow-hidden shadow-2xs">
-                    <input
-                      type="text"
-                      required
-                      value={emailPrefix}
-                      onChange={(e) => setEmailPrefix(e.target.value)}
-                      placeholder="nome.sobrenome"
-                      className="w-full min-h-[44px] px-3.5 bg-transparent text-slate-950 font-bold text-sm focus:outline-none"
-                    />
-                    {!emailPrefix.includes('@') && (
-                      <span className="px-3 py-2 bg-slate-200 text-slate-800 font-mono font-bold text-xs shrink-0">
-                        {INSTITUTIONAL_EMAIL_DOMAIN}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="xl:col-span-3 space-y-1">
-                  <label className="block text-xs font-bold text-slate-800 uppercase">
-                    2. Nome Completo do(a) Educador(a)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex: Maria Aparecida da Silva"
-                    className="w-full min-h-[44px] px-3.5 rounded-2xl bg-slate-100 focus:bg-white text-slate-950 font-bold text-sm focus:outline-none shadow-2xs"
-                  />
-                </div>
-
-                <div className="xl:col-span-2 space-y-1">
-                  <label className="block text-xs font-bold text-slate-800 uppercase">
-                    3. Perfil de Acesso
-                  </label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as UserRole)}
-                    className="w-full min-h-[44px] px-3 rounded-2xl bg-slate-100 text-slate-950 font-bold text-sm focus:outline-none shadow-2xs cursor-pointer"
-                  >
-                    <option value="usuario">PEB I (Regente · Sua Turma)</option>
-                    <option value="peb2">PEB II (Especialista · Leitura)</option>
-                    <option value="admin">ADMIN (Gestão · Todas as {classes.length} Turmas)</option>
-                  </select>
-                </div>
-
-                <div className="xl:col-span-2 space-y-1">
-                  <label className="block text-xs font-bold text-slate-800 uppercase">
-                    4. Turma Vinculada
-                  </label>
-                  {role === 'usuario' ? (
-                    <select
-                      value={assignedClassId}
-                      onChange={(e) => setAssignedClassId(e.target.value)}
-                      className="w-full min-h-[44px] px-3 rounded-2xl bg-emerald-100 text-emerald-950 font-bold text-sm focus:outline-none shadow-2xs cursor-pointer"
-                    >
-                      {classes.map((cls) => (
-                        <option key={cls.id} value={cls.id}>
-                          {cls.turmaAbrev || cls.name} — {cls.name} ({cls.shift.replace('Turno ', '')})
-                          {cls.isVaga || cls.teacherName === 'TURMA VAGA' ? ' [TURMA VAGA]' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="min-h-[44px] px-3 rounded-2xl bg-slate-100 text-slate-700 font-bold text-xs flex items-center shadow-2xs">
-                      {role === 'admin' ? `Todas as ${classes.length} Turmas` : 'Turmas de Especialista'}
-                    </div>
-                  )}
-                </div>
-
-                <div className="xl:col-span-1">
-                  <button
-                    type="submit"
-                    className="w-full min-h-[44px] px-3 rounded-2xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-sm flex items-center justify-center gap-1 cursor-pointer shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">add</span>
-                    <span>Salvar</span>
-                  </button>
-                </div>
-              </form>
-            </section>
-          )}
-
-          {/* Lista Unificada de Contas Cadastradas */}
-          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="space-y-4">
+          <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
+            {/* Barra de Filtros, Busca e Novo E-mail */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 {(
                   [
                     { id: 'all', label: `Todos (${authorizedUsers.length})` },
-                    {
-                      id: 'usuario',
-                      label: `PEB I Regentes (${authorizedUsers.filter((u) => u.role === 'usuario').length})`,
-                    },
-                    {
-                      id: 'peb2',
-                      label: `PEB II Especialistas (${authorizedUsers.filter((u) => u.role === 'peb2').length})`,
-                    },
-                    {
-                      id: 'admin',
-                      label: `Gestão / Admin (${authorizedUsers.filter((u) => u.role === 'admin').length})`,
-                    },
+                    { id: 'usuario', label: `PEB I (${peb1Count})` },
+                    { id: 'peb2', label: `PEB II (${peb2Count})` },
+                    { id: 'admin', label: `Admin (${adminCount})` },
                   ] as const
                 ).map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setRoleFilter(tab.id)}
-                    className={`min-h-[36px] px-3 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                    className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium cursor-pointer transition-colors duration-100 ${
                       roleFilter === tab.id
-                        ? 'bg-[#003440] text-white'
-                        : 'bg-[#f2f4f3] text-[#436370] hover:bg-[#e4e8e6]'
+                        ? 'bg-[#1d1d1f] text-white font-semibold'
+                        : 'bg-[#f5f5f7] text-[#6e6e73] hover:text-[#1d1d1f]'
                     }`}
                   >
                     {tab.label}
@@ -2020,45 +2070,159 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setOnlyAccessedFilter(!onlyAccessedFilter)}
-                  className={`min-h-[36px] px-3 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                  className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium inline-flex items-center gap-1 cursor-pointer transition-colors duration-100 ${
                     onlyAccessedFilter
-                      ? 'bg-[#005035] text-white'
+                      ? 'bg-[#047857] text-white font-semibold'
                       : 'bg-[#eaf6ef] text-[#005035]'
                   }`}
                 >
-                  ✓ Já Acessaram ({totalUsersWhoAccessed})
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Já acessaram ({totalUsersWhoAccessed})</span>
                 </button>
               </div>
 
-              <div className="relative w-full lg:w-80">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8e8e93] text-[18px]">
-                  search
-                </span>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar por e-mail, nome ou turma..."
-                  className="w-full min-h-[44px] pl-9 pr-3 rounded-2xl bg-slate-100 text-slate-950 text-sm font-bold focus:outline-none focus:bg-white shadow-2xs"
-                />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative flex-1 sm:w-72">
+                  <Search className="w-4 h-4 text-[#86868b] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar por e-mail, nome ou turma..."
+                    className="w-full min-h-[42px] pl-10 pr-8 rounded-2xl bg-[#f5f5f7] focus:bg-white text-sm text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none"
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#86868b] p-1 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddUserForm((prev) => !prev)}
+                    className="min-h-[42px] px-4 rounded-2xl bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors duration-100"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>{showAddUserForm ? 'Fechar Cadastro' : 'Novo E-mail'}</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="rounded-2xl overflow-x-auto shadow-sm">
-              <table className="w-full text-left text-xs border-collapse min-w-[1100px]">
-                <thead className="bg-[#003440] text-white font-bold uppercase text-[11px]">
-                  <tr>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3">E-mail Institucional</th>
-                    <th className="py-3 px-3">Educador(a) / Disciplina</th>
-                    <th className="py-3 px-3">Perfil de Permissão</th>
-                    <th className="py-3 px-3">Turma(s) Vinculada(s)</th>
-                    <th className="py-3 px-2.5 text-center">Acessos</th>
-                    <th className="py-3 px-3">Tempo de Uso</th>
-                    <th className="py-3 px-3 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+            {/* Formulário Expansível Limpo de Cadastro */}
+            {canManage && showAddUserForm && (
+              <form
+                onSubmit={handleAddUser}
+                className="p-4 rounded-2xl bg-[#f5f5f7] space-y-3 animate-gentle-fade"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-semibold text-[#1d1d1f]">
+                    Liberar Novo E-mail Institucional ({INSTITUTIONAL_EMAIL_DOMAIN})
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 items-end">
+                  <div className="xl:col-span-4 space-y-1">
+                    <label className="block text-[11px] font-medium text-[#6e6e73]">
+                      E-mail institucional
+                    </label>
+                    <div className="flex items-center rounded-xl bg-white overflow-hidden">
+                      <input
+                        type="text"
+                        required
+                        value={emailPrefix}
+                        onChange={(e) => setEmailPrefix(e.target.value)}
+                        placeholder="nome.sobrenome"
+                        className="w-full min-h-[42px] px-3 bg-transparent text-[#1d1d1f] text-sm focus:outline-none"
+                      />
+                      {!emailPrefix.includes('@') && (
+                        <span className="px-2.5 py-2 bg-[#f5f5f7] text-[#6e6e73] text-[11px] font-medium shrink-0">
+                          {INSTITUTIONAL_EMAIL_DOMAIN}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="xl:col-span-3 space-y-1">
+                    <label className="block text-[11px] font-medium text-[#6e6e73]">
+                      Nome completo
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ex: Maria Aparecida da Silva"
+                      className="w-full min-h-[42px] px-3 rounded-xl bg-white text-[#1d1d1f] text-sm focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="xl:col-span-2 space-y-1">
+                    <label className="block text-[11px] font-medium text-[#6e6e73]">
+                      Perfil de acesso
+                    </label>
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as UserRole)}
+                      className="w-full min-h-[42px] px-3 rounded-xl bg-white text-[#1d1d1f] text-xs font-medium focus:outline-none cursor-pointer"
+                    >
+                      <option value="usuario">PEB I (Regente)</option>
+                      <option value="peb2">PEB II (Especialista)</option>
+                      <option value="admin">ADMIN (Gestão)</option>
+                    </select>
+                  </div>
+
+                  <div className="xl:col-span-2 space-y-1">
+                    <label className="block text-[11px] font-medium text-[#6e6e73]">
+                      Turma vinculada
+                    </label>
+                    {role === 'usuario' ? (
+                      <select
+                        value={assignedClassId}
+                        onChange={(e) => setAssignedClassId(e.target.value)}
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#eaf6ef] text-[#005035] text-xs font-semibold focus:outline-none cursor-pointer"
+                      >
+                        {classes.map((cls) => (
+                          <option key={cls.id} value={cls.id}>
+                            {cls.turmaAbrev || cls.name} — {cls.name} (
+                            {cls.shift.replace('Turno ', '')})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="min-h-[42px] px-3 rounded-xl bg-white text-[#6e6e73] text-xs flex items-center">
+                        {role === 'admin' ? `Todas as ${classes.length} turmas` : 'Especialista'}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="xl:col-span-1">
+                    <button
+                      type="submit"
+                      className="w-full min-h-[42px] px-3 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Salvar</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+
+            {filteredUsers.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-[#f5f5f7] text-center text-sm text-[#6e6e73]">
+                Nenhuma conta encontrada para o filtro informado.
+              </div>
+            ) : (
+              <>
+                {/* VISÃO MOBILE & TABLET (CARDS LIMPOS, E-MAIL SEM CORTE) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:hidden">
                   {filteredUsers.map((u) => {
                     const effectiveRole = draftEdits[u.id]?.role || u.role;
                     const effectiveClassId =
@@ -2068,205 +2232,612 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     const wasRecentlySaved = Boolean(recentlySavedUserIds[u.id]);
 
                     return (
-                      <tr
+                      <article
                         key={u.id}
-                        className={`hover:bg-slate-50 transition-colors ${
-                          !u.active ? 'opacity-60 bg-rose-50/50' : ''
+                        className={`rounded-2xl p-4 space-y-3 bg-[#f5f5f7] ${
+                          !u.active ? 'opacity-65' : ''
                         }`}
                       >
-                        <td className="py-2.5 px-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-semibold text-[#1d1d1f] break-words">
+                              {u.name}
+                            </h3>
+                            <p className="text-xs text-[#047857] break-all mt-0.5">
+                              {u.email}
+                            </p>
+                            {u.subjectName && (
+                              <span className="inline-block mt-1 px-2 py-0.5 rounded-md bg-[#fef3c7] text-[#92400e] text-[10px] font-semibold">
+                                {u.subjectName}
+                              </span>
+                            )}
+                          </div>
+
                           <button
                             type="button"
                             disabled={!canManage}
                             onClick={() => handleToggleActive(u.id)}
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 cursor-pointer ${
                               u.active
-                                ? 'bg-emerald-100 text-emerald-950'
-                                : 'bg-rose-100 text-rose-950'
+                                ? 'bg-[#eaf6ef] text-[#005035]'
+                                : 'bg-[#fee2e2] text-[#991b1b]'
                             }`}
                           >
                             {u.active ? 'Liberado' : 'Bloqueado'}
                           </button>
-                        </td>
+                        </div>
 
-                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
-                          {u.email}
-                        </td>
-
-                        <td className="py-2.5 px-3">
-                          <span className="font-bold text-slate-950 block">
-                            {u.name}
-                          </span>
-                          {u.subjectName && (
-                            <span className="text-[11px] font-bold text-amber-800">
-                              Especialista: {u.subjectName}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-3">
-                          {canManage ? (
-                            <select
-                              value={effectiveRole}
-                              onChange={(e) =>
-                                handleChangeUserRole(u.id, e.target.value as UserRole)
-                              }
-                              className="px-2.5 py-1 rounded-xl bg-slate-100 font-bold text-xs text-slate-950 cursor-pointer shadow-2xs"
-                            >
-                              <option value="usuario">PEB I (Regente)</option>
-                              <option value="peb2">PEB II (Especialista)</option>
-                              <option value="admin">ADMIN (Pleno)</option>
-                            </select>
-                          ) : (
-                            <span className="font-bold">{effectiveRole.toUpperCase()}</span>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-3">
-                          {effectiveRole === 'usuario' && canManage ? (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <select
-                                  value={
-                                    effectiveClassId === 'all'
-                                      ? classes[0]?.id || 'g04a'
-                                      : effectiveClassId
-                                  }
-                                  onChange={(e) =>
-                                    handleChangeUserClass(u.id, e.target.value)
-                                  }
-                                  className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-950 font-bold text-xs cursor-pointer shadow-2xs"
-                                >
-                                  {classes.map((cls) => (
-                                    <option key={cls.id} value={cls.id}>
-                                      {cls.turmaAbrev || cls.name} — {cls.name} (
-                                      {cls.shift.replace('Turno ', '')})
-                                    </option>
-                                  ))}
-                                </select>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setAddingSecondClassForUserId(
-                                      addingSecondClassForUserId === u.id ? null : u.id
-                                    )
-                                  }
-                                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-900 text-slate-800 hover:text-white font-bold text-[11px] cursor-pointer shadow-2xs"
-                                >
-                                  + 2ª Turma
-                                </button>
-
-                                {wasRecentlySaved && (
-                                  <span className="text-[11px] font-bold text-emerald-800">
-                                    ✓ Salvo
-                                  </span>
-                                )}
-                              </div>
-
-                              {getUserEffectiveClassIds(u).length > 1 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {getUserEffectiveClassIds(u).map((cid) => {
-                                    const cObj = classes.find((c) => c.id === cid);
-                                    if (!cObj) return null;
-                                    return (
-                                      <span
-                                        key={cid}
-                                        className="px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 font-bold text-[11px] inline-flex items-center gap-1 shadow-2xs"
-                                      >
-                                        <span>{cObj.turmaAbrev || cObj.name}</span>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            handleRemoveClassFromUser(u.id, cid)
-                                          }
-                                          className="hover:text-rose-700 font-bold cursor-pointer"
-                                        >
-                                          ×
-                                        </button>
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-                              )}
-
-                              {addingSecondClassForUserId === u.id && (
-                                <select
-                                  defaultValue=""
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      handleAddExtraClassToUser(u.id, e.target.value);
-                                    }
-                                  }}
-                                  className="px-2.5 py-1 rounded-xl bg-slate-100 text-xs font-bold text-slate-950 shadow-2xs"
-                                >
-                                  <option value="" disabled>
-                                    Escolher 2ª turma...
-                                  </option>
-                                  {classes
-                                    .filter(
-                                      (c) => !getUserEffectiveClassIds(u).includes(c.id)
-                                    )
-                                    .map((c) => (
-                                      <option key={c.id} value={c.id}>
-                                        + {c.turmaAbrev || c.name} — {c.name}
-                                      </option>
-                                    ))}
-                                </select>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="font-bold text-slate-800 text-xs">
-                              {effectiveClassName}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-2.5 text-center font-mono font-semibold">
-                          <span
-                            className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
-                              (u.totalAccessCount || 0) > 0
-                                ? 'bg-emerald-100 text-emerald-950'
-                                : 'bg-slate-100 text-slate-500'
-                            }`}
-                          >
-                            {u.totalAccessCount || 0}x
-                          </span>
-                        </td>
-
-                        <td className="py-2.5 px-3 font-mono text-xs">
-                          <span className="font-bold text-emerald-900 block">
-                            {formatDurationHuman(u.totalDurationSeconds)}
-                          </span>
-                          {u.lastLoginAt && (
-                            <span className="text-[11px] text-slate-500 block font-sans">
-                              {u.lastLoginAt}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="py-2.5 px-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {onSimulateTeacherProfile && (
-                              <button
-                                type="button"
-                                onClick={() => onSimulateTeacherProfile(u)}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-800 text-emerald-950 hover:text-white font-bold text-xs cursor-pointer transition-colors shadow-2xs"
+                        <div className="grid grid-cols-1 gap-2">
+                          <div>
+                            <label className="text-[11px] text-[#6e6e73] block mb-1">
+                              Perfil de permissão
+                            </label>
+                            {canManage ? (
+                              <select
+                                value={effectiveRole}
+                                onChange={(e) =>
+                                  handleChangeUserRole(u.id, e.target.value as UserRole)
+                                }
+                                className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
                               >
-                                Abrir Visão
-                              </button>
-                            )}
-                            {canManage && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveUser(u)}
-                                className="px-2 py-1 rounded-lg bg-rose-100 hover:bg-rose-800 text-rose-950 hover:text-white font-bold text-xs cursor-pointer transition-colors shadow-2xs"
-                              >
-                                Remover
-                              </button>
+                                <option value="usuario">PEB I (Regente)</option>
+                                <option value="peb2">PEB II (Especialista)</option>
+                                <option value="admin">ADMIN (Acesso Pleno)</option>
+                              </select>
+                            ) : (
+                              <span className="text-xs font-semibold">
+                                {effectiveRole.toUpperCase()}
+                              </span>
                             )}
                           </div>
+
+                          <div>
+                            <label className="text-[11px] text-[#6e6e73] block mb-1">
+                              Turma(s) vinculada(s)
+                            </label>
+                            {effectiveRole === 'usuario' && canManage ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <select
+                                    value={
+                                      effectiveClassId === 'all'
+                                        ? classes[0]?.id || 'g04a'
+                                        : effectiveClassId
+                                    }
+                                    onChange={(e) =>
+                                      handleChangeUserClass(u.id, e.target.value)
+                                    }
+                                    className="flex-1 min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
+                                  >
+                                    {classes.map((cls) => (
+                                      <option key={cls.id} value={cls.id}>
+                                        {cls.turmaAbrev || cls.name} — {cls.name} (
+                                        {cls.shift.replace('Turno ', '')})
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setAddingSecondClassForUserId(
+                                        addingSecondClassForUserId === u.id ? null : u.id
+                                      )
+                                    }
+                                    className="min-h-[40px] px-3 rounded-xl bg-white text-xs font-semibold text-[#1d1d1f] shrink-0 cursor-pointer"
+                                  >
+                                    + Turma
+                                  </button>
+                                </div>
+
+                                {getUserEffectiveClassIds(u).length > 1 && (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {getUserEffectiveClassIds(u).map((cid) => {
+                                      const cObj = classes.find((c) => c.id === cid);
+                                      if (!cObj) return null;
+                                      return (
+                                        <span
+                                          key={cid}
+                                          className="px-2 py-1 rounded-lg bg-white text-[#005035] font-semibold text-[11px] inline-flex items-center gap-1"
+                                        >
+                                          <span>{cObj.turmaAbrev || cObj.name}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handleRemoveClassFromUser(u.id, cid)
+                                            }
+                                            className="text-[#6e6e73] hover:text-[#b3261e] cursor-pointer"
+                                          >
+                                            ×
+                                          </button>
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+
+                                {addingSecondClassForUserId === u.id && (
+                                  <select
+                                    defaultValue=""
+                                    onChange={(e) => {
+                                      if (e.target.value) {
+                                        handleAddExtraClassToUser(u.id, e.target.value);
+                                      }
+                                    }}
+                                    className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium"
+                                  >
+                                    <option value="" disabled>
+                                      Escolher 2ª turma...
+                                    </option>
+                                    {classes
+                                      .filter(
+                                        (c) => !getUserEffectiveClassIds(u).includes(c.id)
+                                      )
+                                      .map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                          + {c.turmaAbrev || c.name} — {c.name}
+                                        </option>
+                                      ))}
+                                  </select>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-[#1d1d1f] bg-white rounded-xl px-3 py-2.5">
+                                {effectiveClassName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 text-[11px] text-[#6e6e73] tabular-nums">
+                          <span>
+                            {u.totalAccessCount || 0} acessos ·{' '}
+                            {formatDurationHuman(u.totalDurationSeconds)}
+                          </span>
+                          {wasRecentlySaved && (
+                            <span className="text-[#047857] font-semibold">Salvo</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-0.5">
+                          {onSimulateTeacherProfile && (
+                            <button
+                              type="button"
+                              onClick={() => onSimulateTeacherProfile(u)}
+                              className="flex-1 min-h-[40px] px-3 rounded-xl bg-[#eaf6ef] text-[#005035] font-semibold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Abrir Visão</span>
+                            </button>
+                          )}
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveUser(u)}
+                              className="min-h-[40px] px-3.5 rounded-xl bg-white text-[#b3261e] font-semibold text-xs inline-flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Remover</span>
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {/* VISÃO DESKTOP */}
+                <div className="hidden lg:block overflow-x-auto rounded-2xl">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-[#f5f5f7] text-[#6e6e73] font-semibold text-[11px]">
+                      <tr>
+                        <th className="py-3 px-3 rounded-tl-xl">Status</th>
+                        <th className="py-3 px-3">Educador(a) e E-mail</th>
+                        <th className="py-3 px-3">Perfil</th>
+                        <th className="py-3 px-3">Turma(s) Vinculada(s)</th>
+                        <th className="py-3 px-3 text-center">Acessos</th>
+                        <th className="py-3 px-3">Tempo de Uso</th>
+                        <th className="py-3 px-3 text-right rounded-tr-xl">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/[0.04]">
+                      {filteredUsers.map((u) => {
+                        const effectiveRole = draftEdits[u.id]?.role || u.role;
+                        const effectiveClassId =
+                          draftEdits[u.id]?.assignedClassId || u.assignedClassId;
+                        const effectiveClassName =
+                          draftEdits[u.id]?.assignedClassName || u.assignedClassName;
+                        const wasRecentlySaved = Boolean(recentlySavedUserIds[u.id]);
+
+                        return (
+                          <tr
+                            key={u.id}
+                            className={`hover:bg-[#f5f5f7]/60 transition-colors duration-100 ${
+                              !u.active ? 'opacity-60' : ''
+                            }`}
+                          >
+                            <td className="py-3 px-3 align-top">
+                              <button
+                                type="button"
+                                disabled={!canManage}
+                                onClick={() => handleToggleActive(u.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer ${
+                                  u.active
+                                    ? 'bg-[#eaf6ef] text-[#005035]'
+                                    : 'bg-[#fee2e2] text-[#991b1b]'
+                                }`}
+                              >
+                                {u.active ? 'Liberado' : 'Bloqueado'}
+                              </button>
+                            </td>
+
+                            <td className="py-3 px-3 align-top">
+                              <span className="font-semibold text-[#1d1d1f] block">
+                                {u.name}
+                              </span>
+                              <span className="text-[11px] text-[#047857] block">
+                                {u.email}
+                              </span>
+                              {u.subjectName && (
+                                <span className="text-[11px] text-[#b45309] font-medium block">
+                                  {u.subjectName}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 align-top">
+                              {canManage ? (
+                                <select
+                                  value={effectiveRole}
+                                  onChange={(e) =>
+                                    handleChangeUserRole(u.id, e.target.value as UserRole)
+                                  }
+                                  className="px-2.5 py-1.5 rounded-xl bg-[#f5f5f7] font-medium text-xs text-[#1d1d1f] cursor-pointer"
+                                >
+                                  <option value="usuario">PEB I (Regente)</option>
+                                  <option value="peb2">PEB II (Especialista)</option>
+                                  <option value="admin">ADMIN (Pleno)</option>
+                                </select>
+                              ) : (
+                                <span className="font-semibold">
+                                  {effectiveRole.toUpperCase()}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 align-top">
+                              {effectiveRole === 'usuario' && canManage ? (
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <select
+                                      value={
+                                        effectiveClassId === 'all'
+                                          ? classes[0]?.id || 'g04a'
+                                          : effectiveClassId
+                                      }
+                                      onChange={(e) =>
+                                        handleChangeUserClass(u.id, e.target.value)
+                                      }
+                                      className="px-2.5 py-1.5 rounded-xl bg-[#eaf6ef] text-[#005035] font-semibold text-xs cursor-pointer"
+                                    >
+                                      {classes.map((cls) => (
+                                        <option key={cls.id} value={cls.id}>
+                                          {cls.turmaAbrev || cls.name} — {cls.name} (
+                                          {cls.shift.replace('Turno ', '')})
+                                        </option>
+                                      ))}
+                                    </select>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setAddingSecondClassForUserId(
+                                          addingSecondClassForUserId === u.id ? null : u.id
+                                        )
+                                      }
+                                      className="px-2.5 py-1.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-medium text-[11px] cursor-pointer"
+                                    >
+                                      + 2ª Turma
+                                    </button>
+
+                                    {wasRecentlySaved && (
+                                      <span className="text-[11px] font-semibold text-[#047857]">
+                                        Salvo
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {getUserEffectiveClassIds(u).length > 1 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {getUserEffectiveClassIds(u).map((cid) => {
+                                        const cObj = classes.find((c) => c.id === cid);
+                                        if (!cObj) return null;
+                                        return (
+                                          <span
+                                            key={cid}
+                                            className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-medium text-[11px] inline-flex items-center gap-1"
+                                          >
+                                            <span>{cObj.turmaAbrev || cObj.name}</span>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                handleRemoveClassFromUser(u.id, cid)
+                                              }
+                                              className="hover:text-[#b3261e] font-bold cursor-pointer"
+                                            >
+                                              ×
+                                            </button>
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {addingSecondClassForUserId === u.id && (
+                                    <select
+                                      defaultValue=""
+                                      onChange={(e) => {
+                                        if (e.target.value) {
+                                          handleAddExtraClassToUser(u.id, e.target.value);
+                                        }
+                                      }}
+                                      className="px-2.5 py-1.5 rounded-xl bg-[#f5f5f7] text-xs font-medium text-[#1d1d1f]"
+                                    >
+                                      <option value="" disabled>
+                                        Escolher 2ª turma...
+                                      </option>
+                                      {classes
+                                        .filter(
+                                          (c) => !getUserEffectiveClassIds(u).includes(c.id)
+                                        )
+                                        .map((c) => (
+                                          <option key={c.id} value={c.id}>
+                                            + {c.turmaAbrev || c.name} — {c.name}
+                                          </option>
+                                        ))}
+                                    </select>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[#6e6e73] text-xs">
+                                  {effectiveClassName}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 align-top text-center tabular-nums">
+                              <span
+                                className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
+                                  (u.totalAccessCount || 0) > 0
+                                    ? 'bg-[#eaf6ef] text-[#005035]'
+                                    : 'bg-[#f5f5f7] text-[#6e6e73]'
+                                }`}
+                              >
+                                {u.totalAccessCount || 0}x
+                              </span>
+                            </td>
+
+                            <td className="py-3 px-3 align-top tabular-nums">
+                              <span className="font-semibold text-[#1d1d1f] block">
+                                {formatDurationHuman(u.totalDurationSeconds)}
+                              </span>
+                              {u.lastLoginAt && (
+                                <span className="text-[11px] text-[#6e6e73] block">
+                                  {u.lastLoginAt}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3 align-top text-right whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                {onSimulateTeacherProfile && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onSimulateTeacherProfile(u)}
+                                    className="px-2.5 py-1.5 rounded-lg bg-[#eaf6ef] hover:bg-[#d5efe0] text-[#005035] font-semibold text-xs cursor-pointer"
+                                  >
+                                    Abrir Visão
+                                  </button>
+                                )}
+                                {canManage && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveUser(u)}
+                                    className="px-2.5 py-1.5 rounded-lg bg-[#fee2e2]/70 hover:bg-[#fee2e2] text-[#991b1b] font-semibold text-xs cursor-pointer"
+                                  >
+                                    Remover
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* =====================================================================
+          SUB-ABA 3: MATRIZ RBAC (ZERO CONTORNOS, RESPONSIVA)
+          ===================================================================== */}
+      {activeSubTab === 'rbac_matriz' && (
+        <div className="space-y-4">
+          <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base sm:text-lg font-semibold text-[#1d1d1f]">
+                  Perfis e Permissões de Acesso (RBAC)
+                </h2>
+                <p className="text-xs text-[#6e6e73]">
+                  Cada servidor acessa apenas os recursos autorizados para sua função.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('seguranca_lgpd')}
+                className="min-h-[40px] px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Ver Auditoria LGPD</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {RBAC_ROLE_DEFINITIONS.map((r) => {
+                const isSelected = selectedRbacRoleKey === r.roleKey;
+                return (
+                  <button
+                    key={r.roleKey}
+                    type="button"
+                    onClick={() => setSelectedRbacRoleKey(r.roleKey)}
+                    className={`text-left p-4 rounded-2xl transition-colors duration-100 cursor-pointer flex flex-col justify-between gap-3 ${
+                      isSelected
+                        ? 'bg-[#1d1d1f] text-white'
+                        : 'bg-[#f5f5f7] hover:bg-[#ededf0] text-[#1d1d1f]'
+                    }`}
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${
+                            isSelected
+                              ? 'bg-white/15 text-white'
+                              : 'bg-white text-[#6e6e73]'
+                          }`}
+                        >
+                          {r.badgeLabel}
+                        </span>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-[#34d399]" />}
+                      </div>
+                      <h3 className="font-semibold text-sm">{r.name}</h3>
+                      <p
+                        className={`text-xs leading-relaxed ${
+                          isSelected ? 'text-white/75' : 'text-[#6e6e73]'
+                        }`}
+                      >
+                        {r.description}
+                      </p>
+                    </div>
+
+                    <div
+                      className={`pt-2 text-[11px] flex items-center justify-between ${
+                        isSelected ? 'text-white/80' : 'text-[#6e6e73]'
+                      }`}
+                    >
+                      <span>
+                        {r.roleKey === 'admin'
+                          ? 'Acesso pleno'
+                          : r.roleKey === 'usuario'
+                          ? 'Turma atribuída'
+                          : r.roleKey === 'peb2'
+                          ? '40 turmas (leitura)'
+                          : 'Acompanhamento'}
+                      </span>
+                      <span className="font-semibold">
+                        {r.canEditAttendance ? 'Edita chamada' : 'Somente leitura'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-[#1d1d1f]">
+                Permissões por Módulo
+              </h3>
+              <p className="text-xs text-[#6e6e73]">
+                Comparativo detalhado entre os quatro perfis institucionais
+              </p>
+            </div>
+
+            {/* Cards Mobile para Permissões */}
+            <div className="grid grid-cols-1 gap-2.5 md:hidden">
+              {rbacModules.map((row) => (
+                <div key={row.module} className="p-3.5 rounded-2xl bg-[#f5f5f7] space-y-2.5">
+                  <div>
+                    <h4 className="text-xs font-semibold text-[#1d1d1f]">{row.module}</h4>
+                    <p className="text-[11px] text-[#6e6e73]">{row.subtitle}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                    <div className="bg-white rounded-xl p-2">
+                      <span className="text-[#6e6e73] block">Admin</span>
+                      <span className="font-semibold text-[#047857]">{row.admin}</span>
+                    </div>
+                    <div className="bg-white rounded-xl p-2">
+                      <span className="text-[#6e6e73] block">PEB I</span>
+                      <span className="font-semibold text-[#1d1d1f]">{row.peb1}</span>
+                    </div>
+                    <div className="bg-white rounded-xl p-2">
+                      <span className="text-[#6e6e73] block">PEB II</span>
+                      <span className="font-semibold text-[#1d1d1f]">{row.peb2}</span>
+                    </div>
+                    <div className="bg-white rounded-xl p-2">
+                      <span className="text-[#6e6e73] block">Coordenação</span>
+                      <span className="font-semibold text-[#1d1d1f]">{row.apoio}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Tabela Desktop para Permissões */}
+            <div className="hidden md:block overflow-x-auto rounded-2xl">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#f5f5f7] text-[#6e6e73] text-[11px] font-semibold">
+                  <tr>
+                    <th className="py-3 px-4 rounded-tl-xl">Recurso do Sistema</th>
+                    <th className="py-3 px-4 text-center">Admin</th>
+                    <th className="py-3 px-4 text-center">PEB I</th>
+                    <th className="py-3 px-4 text-center">PEB II</th>
+                    <th className="py-3 px-4 text-center rounded-tr-xl">Coordenação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/[0.04]">
+                  {rbacModules.map((row) => {
+                    const renderVal = (val: string) => {
+                      if (val === 'Bloqueado') {
+                        return (
+                          <span className="inline-flex items-center gap-1 text-[#86868b]">
+                            <Ban className="w-3.5 h-3.5" />
+                            <span>Não</span>
+                          </span>
+                        );
+                      }
+                      if (val === 'Mascarado') {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#fef3c7] text-[#92400e] font-medium">
+                            <Lock className="w-3 h-3" />
+                            <span>Mascarado</span>
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-medium">
+                          <Check className="w-3 h-3" />
+                          <span>{val}</span>
+                        </span>
+                      );
+                    };
+
+                    return (
+                      <tr key={row.module} className="hover:bg-[#f5f5f7]/60">
+                        <td className="py-3 px-4">
+                          <span className="font-semibold text-[#1d1d1f] block">
+                            {row.module}
+                          </span>
+                          <span className="text-[11px] text-[#6e6e73]">{row.subtitle}</span>
                         </td>
+                        <td className="py-3 px-4 text-center">{renderVal(row.admin)}</td>
+                        <td className="py-3 px-4 text-center">{renderVal(row.peb1)}</td>
+                        <td className="py-3 px-4 text-center">{renderVal(row.peb2)}</td>
+                        <td className="py-3 px-4 text-center">{renderVal(row.apoio)}</td>
                       </tr>
                     );
                   })}
@@ -2278,297 +2849,18 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* =====================================================================
-          SUB-ABA 3: MATRIZ RBAC & NÍVEIS DE ACESSO (LEAST PRIVILEGE)
-          ===================================================================== */}
-      {activeSubTab === 'rbac_matriz' && (
-        <div className="space-y-5 animate-in fade-in duration-150">
-          {/* Card Conceitual de Segurança e Menor Privilégio */}
-          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider">
-                    Controle de Acesso Baseado em Funções (RBAC)
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[11px] font-bold">
-                    Princípio do Menor Privilégio Ativo
-                  </span>
-                </div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Matriz Institucional de Níveis e Permissões de Acesso
-                </h2>
-                <p className="text-xs text-slate-600 max-w-3xl leading-relaxed">
-                  Cada servidor visualiza e opera exclusivamente os recursos autorizados para sua função pedagógica ou administrativa. Tentativas de acesso a telas ou ações não autorizadas são bloqueadas no cliente e no servidor, gerando alerta imediato na trilha de auditoria.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setActiveSubTab('seguranca_lgpd')}
-                  className="min-h-[42px] px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold inline-flex items-center gap-2 transition-colors cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
-                  <span>Ver Logs de Auditoria LGPD</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Grid dos 4 Perfis de Acesso com Detalhes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-              {RBAC_ROLE_DEFINITIONS.map((r) => {
-                const isSelected = selectedRbacRoleKey === r.roleKey;
-                return (
-                  <div
-                    key={r.roleKey}
-                    onClick={() => setSelectedRbacRoleKey(r.roleKey)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-                      isSelected
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                        : 'bg-slate-50 hover:bg-white text-slate-900 border-slate-200'
-                    }`}
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            isSelected
-                              ? 'bg-white/20 text-white'
-                              : 'bg-slate-200 text-slate-800'
-                          }`}
-                        >
-                          {r.badgeLabel}
-                        </span>
-                        {isSelected && (
-                          <span className="material-symbols-outlined text-[16px] text-emerald-400">
-                            check_circle
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-sm">{r.name}</h3>
-                      <p
-                        className={`text-xs leading-relaxed ${
-                          isSelected ? 'text-slate-300' : 'text-slate-600'
-                        }`}
-                      >
-                        {r.description}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-black/10 text-[11px] font-mono flex items-center justify-between">
-                      <span className={isSelected ? 'text-slate-300' : 'text-slate-500'}>
-                        {r.roleKey === 'admin'
-                          ? 'Acesso Pleno'
-                          : r.roleKey === 'usuario'
-                          ? 'Turma(s) Atribuída(s)'
-                          : r.roleKey === 'peb2'
-                          ? '40 Turmas (Visualização)'
-                          : 'Acompanhamento'}
-                      </span>
-                      <span className="font-bold">
-                        {r.canEditAttendance ? 'Edita Chamada' : 'Sem Edição de Faltas'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Tabela Interativa da Matriz de Permissões */}
-          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                  Segregação de Funções &amp; Menor Privilégio
-                </span>
-                <h3 className="text-base font-bold text-slate-900">
-                  Permissões Detalhadas por Módulo e Função
-                </h3>
-              </div>
-              <span className="text-xs text-slate-500 font-mono">
-                Conforme Instrução Normativa SME / Jundiaí
-              </span>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse min-w-[760px]">
-                <thead className="bg-slate-900 text-white text-[11px] font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4">Recurso / Módulo do Sistema</th>
-                    <th className="py-3 px-4 text-center">Admin (Gestão)</th>
-                    <th className="py-3 px-4 text-center">PEB I (Regente)</th>
-                    <th className="py-3 px-4 text-center">PEB II (Especialista)</th>
-                    <th className="py-3 px-4 text-center">Coordenação / Apoio</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                  <tr className="hover:bg-slate-50/80">
-                    <td className="py-3 px-4">
-                      <span className="font-bold block text-slate-900">Visualizar Turmas e Estudantes</span>
-                      <span className="text-[11px] text-slate-500">Acesso aos dados de identificação e fotos oficiais</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">check</span>
-                        Sua Turma
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">check</span>
-                        40 Turmas
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    </td>
-                  </tr>
-
-                  <tr className="hover:bg-slate-50/80">
-                    <td className="py-3 px-4">
-                      <span className="font-bold block text-slate-900">Lançamento de Faltas do Mês</span>
-                      <span className="text-[11px] text-slate-500">Registro de ausências e atestados conforme janela de chamada</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">check</span>
-                        Sua Turma
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                  </tr>
-
-                  <tr className="hover:bg-slate-50/80">
-                    <td className="py-3 px-4">
-                      <span className="font-bold block text-slate-900">Registro de Busca Ativa &amp; Devolutivas</span>
-                      <span className="text-[11px] text-slate-500">Alertas de 3, 5 e 10 dias consecutivos de faltas</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">check</span>
-                        Registra / Lê
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    </td>
-                  </tr>
-
-                  <tr className="hover:bg-slate-50/80">
-                    <td className="py-3 px-4">
-                      <span className="font-bold block text-slate-900">Dados Pessoais Sensíveis (LGPD Art. 14)</span>
-                      <span className="text-[11px] text-slate-500">CPF, NIS, Endereço residencial e CID/Laudos médicos</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">visibility</span>
-                        Auditado
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-amber-700 font-bold">
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">lock</span>
-                        Mascarado
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-amber-700 font-bold">
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">lock</span>
-                        Mascarado
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full">
-                        <span className="material-symbols-outlined text-[14px]">visibility</span>
-                        Auditado
-                      </span>
-                    </td>
-                  </tr>
-
-                  <tr className="hover:bg-slate-50/80">
-                    <td className="py-3 px-4">
-                      <span className="font-bold block text-slate-900">Homologação Oficial de 200 Dias Letivos</span>
-                      <span className="text-[11px] text-slate-500">Configuração de datas letivas e feriados municipais</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                  </tr>
-
-                  <tr className="hover:bg-slate-50/80">
-                    <td className="py-3 px-4">
-                      <span className="font-bold block text-slate-900">Gerenciamento de Acessos &amp; Auditoria</span>
-                      <span className="text-[11px] text-slate-500">Concessão, revogação, histórico e relatórios de segurança</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-emerald-700 font-bold">
-                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">
-                      <span className="material-symbols-outlined text-[18px]">block</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-      )}
-
-      {/* =====================================================================
-          SUB-ABA 4: SEGURANÇA MÁXIMA & LGPD (LEI Nº 13.709/2018)
+          SUB-ABA 4: SEGURANÇA & LGPD (ZERO CONTORNOS, RESPONSIVA)
           ===================================================================== */}
       {activeSubTab === 'seguranca_lgpd' && (
-        <div className="space-y-5 animate-in fade-in duration-150">
-          {/* Card de Indicadores de Conformidade LGPD & Segurança */}
-          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+        <div className="space-y-4">
+          <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-800 text-white text-[11px] font-bold uppercase tracking-wider">
-                    LGPD Ativa · Lei nº 13.709/2018
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
-                    Art. 14 · Proteção de Dados de Menores
-                  </span>
-                </div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Painel de Segurança Máxima, Privacidade e Auditoria
+                <h2 className="text-base sm:text-lg font-semibold text-[#1d1d1f]">
+                  Segurança, Privacidade e LGPD (Art. 14)
                 </h2>
-                <p className="text-xs text-slate-600 max-w-3xl leading-relaxed">
-                  Arquitetura de proteção contínua com criptografia em trânsito e repouso, mascaramento automatizado de dados pessoais e sensíveis, tokens de sessão verificados e rastreabilidade total de acessos e tentativas bloqueadas.
+                <p className="text-xs text-[#6e6e73] max-w-2xl">
+                  Proteção contínua de dados de crianças e adolescentes com mascaramento automático e trilha de auditoria.
                 </p>
               </div>
 
@@ -2576,9 +2868,9 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleExportSecurityAudit}
-                  className="min-h-[42px] px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
+                  className="min-h-[40px] px-4 rounded-xl bg-[#1d1d1f] hover:bg-black text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  <Download className="w-3.5 h-3.5" />
                   <span>Exportar Auditoria (.CSV)</span>
                 </button>
 
@@ -2586,87 +2878,77 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   <button
                     type="button"
                     onClick={handleToggleMasking}
-                    className={`min-h-[42px] px-4 rounded-2xl font-bold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer ${
+                    className={`min-h-[40px] px-4 rounded-xl font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer ${
                       lgpdConfig.maskSensitiveDataByDefault
-                        ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-950'
-                        : 'bg-amber-100 hover:bg-amber-200 text-amber-950'
+                        ? 'bg-[#eaf6ef] text-[#005035]'
+                        : 'bg-[#fef3c7] text-[#92400e]'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {lgpdConfig.maskSensitiveDataByDefault ? 'lock' : 'lock_open'}
-                    </span>
+                    {lgpdConfig.maskSensitiveDataByDefault ? (
+                      <Lock className="w-3.5 h-3.5" />
+                    ) : (
+                      <Unlock className="w-3.5 h-3.5" />
+                    )}
                     <span>
                       {lgpdConfig.maskSensitiveDataByDefault
-                        ? 'Mascaramento: ATIVADO'
-                        : 'Mascaramento: DESATIVADO'}
+                        ? 'Mascaramento Ativo'
+                        : 'Mascaramento Desativado'}
                     </span>
                   </button>
                 )}
               </div>
             </div>
 
-            {/* 4 Indicadores Rápidos de Segurança */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <div className="flex items-center gap-1.5 text-emerald-800">
-                  <span className="material-symbols-outlined text-[18px]">lock</span>
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Criptografia</span>
-                </div>
-                <div className="text-base font-bold text-slate-900">TLS 1.3 / HTTPS</div>
-                <p className="text-[11px] text-slate-500">
-                  Comunicação criptografada em trânsito e armazenamento seguro em repouso.
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div className="p-3.5 rounded-2xl bg-[#f5f5f7] space-y-1">
+                <span className="text-[11px] font-medium text-[#047857] block">Criptografia</span>
+                <span className="text-sm font-semibold text-[#1d1d1f] block">TLS 1.3 / HTTPS</span>
+                <p className="text-[11px] text-[#6e6e73]">
+                  Dados protegidos em trânsito e armazenamento local.
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <div className="flex items-center gap-1.5 text-blue-700">
-                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Autenticação</span>
-                </div>
-                <div className="text-base font-bold text-slate-900">MFA &amp; Token Ativos</div>
-                <p className="text-[11px] text-slate-500">
-                  Validação de e-mail institucional @educacao.jundiai.sp.gov.br e tokens Google.
+              <div className="p-3.5 rounded-2xl bg-[#f5f5f7] space-y-1">
+                <span className="text-[11px] font-medium text-[#0071e3] block">Autenticação</span>
+                <span className="text-sm font-semibold text-[#1d1d1f] block">
+                  Domínio Institucional
+                </span>
+                <p className="text-[11px] text-[#6e6e73]">
+                  Apenas e-mails {INSTITUTIONAL_EMAIL_DOMAIN}.
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <div className="flex items-center gap-1.5 text-purple-700">
-                  <span className="material-symbols-outlined text-[18px]">visibility_off</span>
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Proteção LGPD</span>
-                </div>
-                <div className="text-base font-bold text-slate-900">
+              <div className="p-3.5 rounded-2xl bg-[#f5f5f7] space-y-1">
+                <span className="text-[11px] font-medium text-[#6e6e73] block">Proteção LGPD</span>
+                <span className="text-sm font-semibold text-[#1d1d1f] block">
                   {lgpdConfig.maskSensitiveDataByDefault ? 'Dados Mascarados' : 'Modo Auditoria'}
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  CPF, NIS, endereços e laudos de crianças protegidos contra exposição.
+                </span>
+                <p className="text-[11px] text-[#6e6e73]">
+                  CPF, NIS, endereços e laudos protegidos.
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <div className="flex items-center gap-1.5 text-slate-800">
-                  <span className="material-symbols-outlined text-[18px]">history</span>
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Retenção Legal</span>
-                </div>
-                <div className="text-base font-bold text-slate-900 font-mono tabular-nums">
+              <div className="p-3.5 rounded-2xl bg-[#f5f5f7] space-y-1">
+                <span className="text-[11px] font-medium text-[#6e6e73] block">Retenção Legal</span>
+                <span className="text-sm font-semibold text-[#1d1d1f] tabular-nums block">
                   5 Anos Letivos
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  Política de guarda legal (1.825 dias) para atendimento a auditorias oficiais.
+                </span>
+                <p className="text-[11px] text-[#6e6e73]">
+                  Guarda de 1.825 dias para auditoria escolar.
                 </p>
               </div>
             </div>
           </section>
 
-          {/* Tabela de Trilha de Auditoria em Tempo Real */}
-          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+          <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                  Trilha Auditável Contínua
-                </span>
-                <h3 className="text-base font-bold text-slate-900">
-                  Registro de Acessos, Modificações e Tentativas Bloqueadas ({securityLogs.length})
+                <h3 className="text-base font-semibold text-[#1d1d1f]">
+                  Trilha de Auditoria ({securityLogs.length})
                 </h3>
+                <p className="text-xs text-[#6e6e73]">
+                  Eventos de acesso, alterações e bloqueios registrados automaticamente
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -2674,26 +2956,26 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   type="text"
                   value={securitySearchTerm}
                   onChange={(e) => setSecuritySearchTerm(e.target.value)}
-                  placeholder="Buscar por usuário, ação ou detalhe..."
-                  className="min-h-[38px] px-3.5 rounded-xl bg-slate-100 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none border border-slate-200"
+                  placeholder="Buscar usuário ou ação..."
+                  className="min-h-[40px] px-3.5 rounded-xl bg-[#f5f5f7] text-xs text-[#1d1d1f] focus:bg-white focus:outline-none"
                 />
 
                 <select
                   value={securitySeverityFilter}
                   onChange={(e) => setSecuritySeverityFilter(e.target.value as any)}
-                  className="min-h-[38px] px-3 rounded-xl bg-slate-100 text-xs font-semibold text-slate-800 border border-slate-200 cursor-pointer"
+                  className="min-h-[40px] px-3 rounded-xl bg-[#f5f5f7] text-xs font-medium text-[#1d1d1f] cursor-pointer"
                 >
-                  <option value="all">Todas as Severidades</option>
+                  <option value="all">Todas severidades</option>
                   <option value="info">Informativo</option>
                   <option value="warning">Avisos</option>
-                  <option value="security_alert">Bloqueios &amp; Alertas</option>
+                  <option value="security_alert">Bloqueios</option>
                 </select>
 
                 {canManage && securityLogs.length > 0 && (
                   <button
                     type="button"
                     onClick={handleClearSecurityLogs}
-                    className="min-h-[38px] px-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-xs font-bold transition-colors cursor-pointer"
+                    className="min-h-[40px] px-3 rounded-xl bg-[#f5f5f7] hover:bg-[#fee2e2] text-[#6e6e73] hover:text-[#991b1b] text-xs font-semibold cursor-pointer"
                   >
                     Limpar
                   </button>
@@ -2701,90 +2983,105 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               </div>
             </div>
 
-            {/* Listagem de Logs */}
-            {(() => {
-              const q = securitySearchTerm.toLowerCase().trim();
-              const filtered = securityLogs.filter((entry) => {
-                if (securitySeverityFilter !== 'all' && entry.severity !== securitySeverityFilter) {
-                  return false;
-                }
-                if (!q) return true;
-                return (
-                  entry.userEmail.toLowerCase().includes(q) ||
-                  entry.actionTitle.toLowerCase().includes(q) ||
-                  entry.details.toLowerCase().includes(q) ||
-                  entry.eventType.toLowerCase().includes(q) ||
-                  (entry.userName || '').toLowerCase().includes(q)
-                );
-              });
+            {filteredSecurityLogs.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-[#f5f5f7] text-center text-xs text-[#6e6e73]">
+                Nenhum evento registrado para o filtro selecionado.
+              </div>
+            ) : (
+              <>
+                {/* Cards Mobile Auditoria */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 lg:hidden">
+                  {filteredSecurityLogs.map((log) => {
+                    const isAlert =
+                      log.severity === 'security_alert' || log.severity === 'critical';
+                    const isWarning = log.severity === 'warning';
+                    return (
+                      <div key={log.id} className="p-3.5 rounded-2xl bg-[#f5f5f7] space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-semibold inline-flex items-center gap-1 ${
+                              isAlert
+                                ? 'bg-[#fee2e2] text-[#991b1b]'
+                                : isWarning
+                                ? 'bg-[#fef3c7] text-[#92400e]'
+                                : 'bg-[#eaf6ef] text-[#005035]'
+                            }`}
+                          >
+                            {isAlert ? (
+                              <ShieldAlert className="w-3 h-3" />
+                            ) : isWarning ? (
+                              <AlertTriangle className="w-3 h-3" />
+                            ) : (
+                              <Info className="w-3 h-3" />
+                            )}
+                            <span>
+                              {isAlert ? 'Bloqueio' : isWarning ? 'Aviso' : 'Registro'}
+                            </span>
+                          </span>
+                          <span className="text-[11px] text-[#6e6e73] tabular-nums">
+                            {new Date(log.timestampISO).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-[#1d1d1f]">
+                          {log.actionTitle}
+                        </p>
+                        <p className="text-xs text-[#6e6e73] break-words">{log.details}</p>
+                        <p className="text-[11px] text-[#047857] break-all">
+                          {log.userEmail} ({log.userRole.toUpperCase()})
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
 
-              if (filtered.length === 0) {
-                return (
-                  <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center text-slate-600 text-xs font-medium">
-                    Nenhum evento registrado para o filtro informado. Todas as operações críticas são gravadas automaticamente.
-                  </div>
-                );
-              }
-
-              return (
-                <div className="rounded-2xl border border-slate-200 overflow-x-auto max-h-[500px]">
-                  <table className="w-full text-left text-xs border-collapse min-w-[900px]">
-                    <thead className="bg-slate-900 text-white text-[11px] font-semibold uppercase tracking-wider sticky top-0 z-10">
+                {/* Tabela Desktop Auditoria */}
+                <div className="hidden lg:block overflow-x-auto max-h-[480px] rounded-2xl">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-[#f5f5f7] text-[#6e6e73] text-[11px] font-semibold sticky top-0 z-10">
                       <tr>
-                        <th className="py-2.5 px-3">Severidade</th>
-                        <th className="py-2.5 px-3">Data/Hora (ISO)</th>
-                        <th className="py-2.5 px-3">Usuário &amp; Perfil</th>
-                        <th className="py-2.5 px-3">Evento / Ação</th>
-                        <th className="py-2.5 px-3">Detalhes do Evento</th>
-                        <th className="py-2.5 px-3">IP do Cliente</th>
+                        <th className="py-2.5 px-3">Tipo</th>
+                        <th className="py-2.5 px-3">Data/Hora</th>
+                        <th className="py-3 px-3">Usuário</th>
+                        <th className="py-2.5 px-3">Evento</th>
+                        <th className="py-2.5 px-3">Detalhes</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filtered.map((log) => {
-                        const isAlert = log.severity === 'security_alert' || log.severity === 'critical';
+                    <tbody className="divide-y divide-black/[0.04]">
+                      {filteredSecurityLogs.map((log) => {
+                        const isAlert =
+                          log.severity === 'security_alert' || log.severity === 'critical';
                         const isWarning = log.severity === 'warning';
                         return (
-                          <tr key={log.id} className="hover:bg-slate-50">
-                            <td className="py-2.5 px-3">
+                          <tr key={log.id} className="hover:bg-[#f5f5f7]/60">
+                            <td className="py-2.5 px-3 align-top">
                               <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 ${
+                                className={`px-2 py-0.5 rounded-md text-[10px] font-semibold inline-flex items-center gap-1 ${
                                   isAlert
-                                    ? 'bg-rose-100 text-rose-900 border border-rose-200'
+                                    ? 'bg-[#fee2e2] text-[#991b1b]'
                                     : isWarning
-                                    ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                                    : 'bg-emerald-100 text-emerald-950 border border-emerald-200'
+                                    ? 'bg-[#fef3c7] text-[#92400e]'
+                                    : 'bg-[#eaf6ef] text-[#005035]'
                                 }`}
                               >
-                                <span className="material-symbols-outlined text-[13px]">
-                                  {isAlert ? 'security_update_warning' : isWarning ? 'warning' : 'info'}
-                                </span>
                                 {isAlert ? 'Bloqueio' : isWarning ? 'Aviso' : 'Registro'}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600 tabular-nums whitespace-nowrap">
+                            <td className="py-2.5 px-3 align-top tabular-nums text-[11px] text-[#6e6e73] whitespace-nowrap">
                               {new Date(log.timestampISO).toLocaleString('pt-BR')}
                             </td>
-                            <td className="py-2.5 px-3">
-                              <span className="font-bold text-slate-900 block truncate max-w-[200px]">
+                            <td className="py-2.5 px-3 align-top">
+                              <span className="font-semibold text-[#1d1d1f] block">
                                 {log.userName || log.userEmail.split('@')[0]}
                               </span>
-                              <span className="font-mono text-[11px] text-slate-500 block truncate max-w-[200px]">
-                                {log.userEmail} · <strong className="uppercase">{log.userRole}</strong>
+                              <span className="text-[11px] text-[#6e6e73]">
+                                {log.userEmail} · {log.userRole.toUpperCase()}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3">
-                              <span className="font-bold text-slate-900 block">
-                                {log.actionTitle}
-                              </span>
-                              <span className="font-mono text-[10px] text-slate-500 uppercase">
-                                {log.eventType}
-                              </span>
+                            <td className="py-2.5 px-3 align-top font-semibold text-[#1d1d1f]">
+                              {log.actionTitle}
                             </td>
-                            <td className="py-2.5 px-3 text-slate-700 text-xs max-w-sm">
+                            <td className="py-2.5 px-3 align-top text-[#6e6e73] max-w-md">
                               {log.details}
-                            </td>
-                            <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                              {log.clientIp || '127.0.0.1'}
                             </td>
                           </tr>
                         );
@@ -2792,40 +3089,40 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     </tbody>
                   </table>
                 </div>
-              );
-            })()}
+              </>
+            )}
           </section>
         </div>
       )}
 
       {/* =====================================================================
-          SUB-ABA 5: MONITORAMENTO EM TEMPO REAL DE TEMPO DE TELA E SESSÕES
+          SUB-ABA 5: TEMPO DE TELA E SESSÕES (RESPONSIVA)
           ===================================================================== */}
       {activeSubTab === 'monitoramento' && (
-        <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 block">
-                Auditoria Real-Time (Heartbeat a cada 5 segundos)
-              </span>
-              <h2 className="text-lg font-bold text-slate-900">
-                Histórico de Sessões, Horário de Entrada/Saída e Tempo de Permanência
+              <h2 className="text-base sm:text-lg font-semibold text-[#1d1d1f]">
+                Sessões e Tempo de Tela ({accessSessionLogs.length})
               </h2>
+              <p className="text-xs text-[#6e6e73]">
+                Histórico de entradas, telas visitadas e permanência em tempo real
+              </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
                 value={logSearchTerm}
                 onChange={(e) => setLogSearchTerm(e.target.value)}
-                placeholder="Filtrar sessão por e-mail ou turma..."
-                className="min-h-[40px] px-3.5 rounded-2xl bg-slate-100 text-xs font-bold text-slate-950 focus:bg-white focus:outline-none shadow-2xs"
+                placeholder="Filtrar por e-mail ou turma..."
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#f5f5f7] text-xs text-[#1d1d1f] focus:bg-white focus:outline-none"
               />
               {canManage && onClearAccessLogs && accessSessionLogs.length > 0 && (
                 <button
                   type="button"
                   onClick={onClearAccessLogs}
-                  className="min-h-[40px] px-3.5 rounded-2xl bg-rose-100 hover:bg-rose-200 text-rose-950 font-bold text-xs cursor-pointer shadow-2xs"
+                  className="min-h-[40px] px-3.5 rounded-xl bg-[#fee2e2] text-[#991b1b] font-semibold text-xs cursor-pointer"
                 >
                   Limpar Logs
                 </button>
@@ -2834,152 +3131,173 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           </div>
 
           {filteredLogs.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-slate-100 text-center text-slate-700 font-bold text-sm">
-              Nenhuma sessão registrada para o filtro informado. Assim que os educadores entram no aplicativo, o tempo de tela é contabilizado automaticamente.
+            <div className="p-8 rounded-2xl bg-[#f5f5f7] text-center text-xs text-[#6e6e73]">
+              Nenhuma sessão registrada para o filtro informado.
             </div>
           ) : (
-            <div className="rounded-2xl overflow-x-auto max-h-[520px] shadow-sm">
-              <table className="w-full text-left text-xs border-collapse min-w-[960px]">
-                <thead className="bg-[#003440] text-white font-semibold uppercase text-[11px] sticky top-0">
-                  <tr>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3">Educador(a) / E-mail</th>
-                    <th className="py-3 px-3">Turma / Perfil</th>
-                    <th className="py-3 px-3">Início da Sessão</th>
-                    <th className="py-3 px-3">Última Atividade</th>
-                    <th className="py-3 px-3">Tela Visitada</th>
-                    <th className="py-3 px-3 text-center">Tempo na Sessão</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/[0.05]">
-                  {filteredLogs.map((log) => {
-                    const isOnline =
-                      !log.logoutTimeISO &&
-                      Date.now() - new Date(log.lastHeartbeatISO).getTime() < 120000;
-                    return (
-                      <tr key={log.id} className="hover:bg-[#f6f9f8]">
-                        <td className="py-2.5 px-3">
+            <>
+              {/* Cards Mobile Sessões */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 lg:hidden">
+                {filteredLogs.map((log) => {
+                  const isOnline =
+                    !log.logoutTimeISO &&
+                    Date.now() - new Date(log.lastHeartbeatISO).getTime() < 120000;
+                  return (
+                    <div key={log.id} className="p-3.5 rounded-2xl bg-[#f5f5f7] space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold inline-flex items-center gap-1.5 ${
+                            isOnline
+                              ? 'bg-[#eaf6ef] text-[#005035]'
+                              : 'bg-white text-[#6e6e73]'
+                          }`}
+                        >
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase ${
-                              isOnline
-                                ? 'bg-[#eaf6ef] text-[#005035]'
-                                : 'bg-[#f2f4f3] text-[#5a676b]'
+                            className={`w-2 h-2 rounded-full ${
+                              isOnline ? 'bg-[#047857]' : 'bg-[#86868b]'
                             }`}
-                          >
-                            {isOnline ? '● Online' : 'Finalizada'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span className="font-semibold text-[#003440] block">
-                            {log.name}
-                          </span>
-                          <span className="font-mono text-[11px] text-[#005035]">
-                            {log.email}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 font-semibold text-[#374346]">
-                          {log.assignedClassName}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-xs">
-                          {new Date(log.loginTimeISO).toLocaleString('pt-BR')}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-xs">
-                          {new Date(log.lastHeartbeatISO).toLocaleString('pt-BR')}
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-[#005035]">
-                          {log.lastScreen || '1. Turmas'}
-                        </td>
-                        <td className="py-2.5 px-3 text-center font-mono font-semibold text-[#003440]">
+                          />
+                          <span>{isOnline ? 'Online' : 'Finalizada'}</span>
+                        </span>
+                        <span className="text-xs font-semibold text-[#1d1d1f] tabular-nums">
                           {formatDurationHuman(log.durationSeconds)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </span>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold text-[#1d1d1f] break-words">
+                          {log.name}
+                        </p>
+                        <p className="text-xs text-[#047857] break-all">{log.email}</p>
+                        <p className="text-[11px] text-[#6e6e73] mt-0.5">
+                          {log.assignedClassName}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#6e6e73] tabular-nums pt-1">
+                        <span>Início: {new Date(log.loginTimeISO).toLocaleString('pt-BR')}</span>
+                        <span className="font-medium text-[#1d1d1f]">
+                          {log.lastScreen || '1. Turmas'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tabela Desktop Sessões */}
+              <div className="hidden lg:block overflow-x-auto max-h-[500px] rounded-2xl">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#f5f5f7] text-[#6e6e73] font-semibold text-[11px] sticky top-0">
+                    <tr>
+                      <th className="py-3 px-3">Status</th>
+                      <th className="py-3 px-3">Educador(a) e E-mail</th>
+                      <th className="py-3 px-3">Turma / Perfil</th>
+                      <th className="py-3 px-3">Início</th>
+                      <th className="py-3 px-3">Última Atividade</th>
+                      <th className="py-3 px-3">Tela Visitada</th>
+                      <th className="py-3 px-3 text-center">Permanência</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-black/[0.04]">
+                    {filteredLogs.map((log) => {
+                      const isOnline =
+                        !log.logoutTimeISO &&
+                        Date.now() - new Date(log.lastHeartbeatISO).getTime() < 120000;
+                      return (
+                        <tr key={log.id} className="hover:bg-[#f5f5f7]/60">
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[11px] font-semibold inline-flex items-center gap-1.5 ${
+                                isOnline
+                                  ? 'bg-[#eaf6ef] text-[#005035]'
+                                  : 'bg-[#f5f5f7] text-[#6e6e73]'
+                              }`}
+                            >
+                              <span
+                                className={`w-2 h-2 rounded-full ${
+                                  isOnline ? 'bg-[#047857]' : 'bg-[#86868b]'
+                                }`}
+                              />
+                              <span>{isOnline ? 'Online' : 'Finalizada'}</span>
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="font-semibold text-[#1d1d1f] block">
+                              {log.name}
+                            </span>
+                            <span className="text-[11px] text-[#047857]">{log.email}</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-[#6e6e73]">
+                            {log.assignedClassName}
+                          </td>
+                          <td className="py-2.5 px-3 tabular-nums text-[11px] text-[#6e6e73]">
+                            {new Date(log.loginTimeISO).toLocaleString('pt-BR')}
+                          </td>
+                          <td className="py-2.5 px-3 tabular-nums text-[11px] text-[#6e6e73]">
+                            {new Date(log.lastHeartbeatISO).toLocaleString('pt-BR')}
+                          </td>
+                          <td className="py-2.5 px-3 font-medium text-[#1d1d1f]">
+                            {log.lastScreen || '1. Turmas'}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-semibold text-[#1d1d1f] tabular-nums">
+                            {formatDurationHuman(log.durationSeconds)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       )}
-      </main>
 
-      {/* 3. RODAPÉ DE AÇÃO FIXO (STICKY FOOTER SHRINK-0) — SEMPRE VISÍVEL */}
-      <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 text-xs text-slate-600">
-          <span className="font-mono font-bold text-slate-900 tabular-nums">
-            {classes.length} Turmas
-          </span>
-          <span className="text-slate-300">·</span>
-          <span className="font-mono font-bold text-slate-900 tabular-nums">
-            {authorizedUsers.length} Contas Institucionais
-          </span>
-          <span className="text-slate-300 hidden md:inline">·</span>
-          <span className="text-slate-500 hidden md:inline">
-            {totalActiveStudentsAll} Alunos no SED
-          </span>
+      {/* Modal Inline de Confirmação de Reset da Base SED (Sem window.confirm) */}
+      {confirmResetModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex items-center justify-center p-4 animate-gentle-fade"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-sed-title"
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#fee2e2] text-[#991b1b] flex items-center justify-center shrink-0">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h2 id="reset-sed-title" className="text-base font-semibold text-[#1d1d1f]">
+                  Restaurar base oficial SED?
+                </h2>
+                <p className="text-xs text-[#6e6e73] leading-relaxed">
+                  Os 1.237 estudantes e as 40 turmas oficiais serão restaurados para a configuração padrão. As fotos vinculadas continuam preservadas.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isResettingDb}
+                onClick={() => setConfirmResetModalOpen(false)}
+                className="min-h-[40px] px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isResettingDb}
+                onClick={executeResetAllSchoolData}
+                className="min-h-[40px] px-4 rounded-xl bg-[#b3261e] hover:bg-[#991b1b] text-white text-xs font-semibold cursor-pointer"
+              >
+                {isResettingDb ? 'Restaurando...' : 'Confirmar Restauração'}
+              </button>
+            </div>
+          </div>
         </div>
-
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
-          <button
-            type="button"
-            onClick={() => {
-              exportOfficialMatrixToXLS(classes, authorizedUsers);
-              triggerFeedback('success', 'Planilha do Quadro Oficial (.xls) baixada com sucesso!');
-            }}
-            className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[15px]">download</span>
-            <span>Baixar XLS</span>
-          </button>
-
-          {canManage && (
-            <button
-              type="button"
-              onClick={handleRestoreOfficialSchoolMatrix}
-              className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[15px]">sync_saved_locally</span>
-              <span>Sincronizar Quadro Oficial</span>
-            </button>
-          )}
-
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => exportSchoolDataToJsonFile(classes, currentUserEmail)}
-              title="Baixar arquivo JSON completo com todas as 40 turmas para backup"
-              className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[15px] text-blue-600">file_download</span>
-              <span>Exportar JSON</span>
-            </button>
-          )}
-
-          {canManage && onOpenJsonImportModal && (
-            <button
-              type="button"
-              onClick={onOpenJsonImportModal}
-              title="Arraste e solte o arquivo JSON para atualizar turmas e estudantes com validação"
-              className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-            >
-              <span className="material-symbols-outlined text-[16px]">upload_file</span>
-              <span>Atualizar via JSON (Arraste &amp; Solte)</span>
-            </button>
-          )}
-
-          {canManage && (
-            <button
-              type="button"
-              onClick={handleResetAllSchoolData}
-              title="Redefinir banco escolar para a base limpa da SED (1.237 estudantes e 40 turmas)"
-              className="h-8 px-3 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-bold inline-flex items-center gap-1.5 transition-colors border border-rose-200 cursor-pointer shadow-2xs"
-            >
-              <span className="material-symbols-outlined text-[15px] text-rose-700">restart_alt</span>
-              <span>Resetar Dados (Base SED)</span>
-            </button>
-          )}
-        </div>
-      </footer>
+      )}
     </div>
   );
 };

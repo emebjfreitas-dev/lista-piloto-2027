@@ -474,11 +474,11 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   }, [calendarConfig.year, visualCalendarMonth, parsedResult.calendarDays, holidays]);
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-5.5rem)] lg:h-[calc(100vh-6rem)] max-w-7xl mx-auto w-full bg-slate-50/70 rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden animate-gentle-fade">
+    <div className="flex flex-col min-h-[calc(100dvh-9.5rem)] lg:h-[calc(100vh-6rem)] max-w-7xl mx-auto w-full bg-slate-50/70 rounded-3xl shadow-sm overflow-hidden animate-gentle-fade">
       {/* ========================================================================= */}
       {/* 1. CABEÇALHO FIXO (SHRINK-0) — NUNCA ROLA FORA DA TELA                     */}
       {/* ========================================================================= */}
-      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 border-b border-slate-200/90 space-y-2 z-10">
+      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 shadow-2xs space-y-2 z-10">
         {/* Breadcrumb e Informações Rápidas */}
         <div className="flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -524,7 +524,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
           </div>
 
           {/* Segmented Tabs */}
-          <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200/80 overflow-x-auto">
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto max-w-full">
             <button
               type="button"
               onClick={() => setActiveTab('editor')}
@@ -595,8 +595,8 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
         {/* ========================================================================= */}
         {/* SELETOR VISUAL: FREQUÊNCIA DE SINCRONIZAÇÃO AUTOMÁTICA (30, 60, 120 MIN)  */}
         {/* ========================================================================= */}
-        <section className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <section className="bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
@@ -777,7 +777,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             {/* Split em 2 Colunas */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
               {/* Coluna Esquerda: Editor de Texto */}
-              <div className="lg:col-span-7 bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+              <div className="lg:col-span-7 bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="space-y-0.5">
                     <h2 className="text-sm font-bold text-slate-900">
@@ -859,7 +859,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               </div>
 
               {/* Coluna Direita: Distribuição Mensal e Diagnóstico */}
-              <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+              <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-slate-900">
                     Distribuição Mensal dos Dias
@@ -949,8 +949,8 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 </div>
               </div>
 
-              <div className="max-h-56 sm:max-h-64 overflow-y-auto border border-slate-200 rounded-lg overscroll-contain">
-                <table className="w-full text-left text-xs">
+              <div className="max-h-56 sm:max-h-64 overflow-y-auto overflow-x-auto bg-slate-50/40 rounded-xl overscroll-contain">
+                <table className="w-full min-w-[520px] text-left text-xs">
                   <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
                     <tr>
                       <th className="py-2 px-3 w-12 font-mono text-center">Nº</th>
@@ -1027,8 +1027,8 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               </button>
             </div>
 
-            <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-lg overscroll-contain">
-              <table className="w-full text-left text-xs">
+            <div className="max-h-80 overflow-y-auto overflow-x-auto bg-slate-50/40 rounded-xl overscroll-contain">
+              <table className="w-full min-w-[520px] text-left text-xs">
                 <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
                   <tr>
                     <th className="py-2 px-3 w-28 font-mono">Data</th>
@@ -1193,7 +1193,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
         {/* ABA 4: AUDITORIA                                                      */}
         {/* --------------------------------------------------------------------- */}
         {activeTab === 'auditoria' && (
-          <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900">
                 Histórico Sequencial de Auditoria ({auditLogs.length} Registros)
@@ -1203,9 +1203,9 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               </p>
             </div>
 
-            <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-lg overscroll-contain">
-              <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
+            <div className="max-h-80 overflow-x-auto overflow-y-auto bg-slate-50/50 rounded-xl overscroll-contain">
+              <table className="w-full min-w-[600px] text-left text-xs">
+                <thead className="sticky top-0 bg-slate-100 text-slate-700 font-semibold z-10">
                   <tr>
                     <th className="py-2 px-3 w-36 font-mono">Data/Hora</th>
                     <th className="py-2 px-3 w-56">Responsável</th>

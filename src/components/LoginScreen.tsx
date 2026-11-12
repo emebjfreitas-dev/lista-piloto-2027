@@ -3,6 +3,7 @@ import { AuthorizedUser, SchoolNotice } from '../types';
 import { APP_LOGO_URL, APP_LOGO_FALLBACK_URL, INITIAL_AUTHORIZED_USERS } from '../data/mockData';
 import { findAuthorizedUserByEmail, saveStoredAuthorizedUsers } from '../services/db';
 import { googleSignIn } from '../services/googleSheetsApi';
+import { Loader2 } from 'lucide-react';
 
 const ADMIN_OFFICIAL_EMAIL = 'emebjfreitas@jundiai.sp.gov.br';
 
@@ -106,9 +107,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   return (
     <div className="min-h-screen w-full bg-slate-900 flex items-center justify-center p-4 sm:p-6 select-none font-sans">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/90 shadow-2xl p-8 sm:p-10 flex flex-col items-center text-center">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-10 flex flex-col items-center text-center">
         {/* Brasão Oficial */}
-        <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200/90 p-3 flex items-center justify-center mb-5 shadow-xs">
+        <div className="w-20 h-20 rounded-2xl bg-slate-50 p-3 flex items-center justify-center mb-5 shadow-xs">
           <img
             src={APP_LOGO_URL}
             alt="Brasão de Jundiaí"
@@ -122,13 +123,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </div>
 
         {/* Título Institucional */}
-        <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-1">
+        <p className="text-[11px] uppercase tracking-wider font-semibold text-[#48484a] mb-1">
           Prefeitura de Jundiaí · SME
         </p>
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950">
+        <h1 className="text-lg sm:text-2xl font-semibold tracking-tight text-[#111827]">
           EMEB Prof. Joaquim Candelário de Freitas
         </h1>
-        <p className="text-xs text-slate-500 font-medium mt-1 mb-8">
+        <p className="text-xs sm:text-[13px] text-[#3c3c43] font-medium mt-1.5 mb-8">
           Portal de Gestão Escolar &amp; Lista Piloto 2027
         </p>
 
@@ -137,10 +138,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           type="button"
           disabled={loading}
           onClick={handleGoogleWorkspaceLogin}
-          className="w-full h-13 bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-400 rounded-2xl text-slate-900 font-bold text-sm sm:text-base flex items-center justify-center gap-3 transition-all cursor-pointer shadow-xs active:scale-[0.99] disabled:opacity-60"
+          className="w-full min-h-[52px] px-4 bg-[#ebebf0] hover:bg-[#dfe0e6] rounded-2xl text-[#111827] font-semibold text-sm sm:text-base flex items-center justify-center gap-3 transition-all cursor-pointer shadow-xs active:scale-[0.99] disabled:opacity-60"
         >
           {loading ? (
-            <div className="w-5 h-5 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin text-[#111827]" />
           ) : (
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
               <path
@@ -164,12 +165,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <span>{loading ? 'Conectando...' : 'Entrar com Google Workspace'}</span>
         </button>
 
-        <p className="text-[11px] text-slate-400 mt-4 font-medium">
+        <p className="text-xs text-[#48484a] mt-4 font-medium">
           Acesso exclusivo para contas institucionais autorizadas
         </p>
 
         {errorMsg && (
-          <div className="w-full mt-4 p-3 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 text-xs font-semibold">
+          <div className="w-full mt-4 p-3 rounded-xl bg-rose-100 text-rose-900 text-xs font-semibold">
             {errorMsg}
           </div>
         )}

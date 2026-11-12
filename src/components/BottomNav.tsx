@@ -136,11 +136,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 }`}
               >
                 <div className="flex items-center justify-center w-7 h-7">
-                  <IconComp className={`w-5 h-5 transition-colors ${isActive ? 'text-slate-950 stroke-[2.2]' : 'text-slate-400 stroke-[1.8]'}`} />
+                  <IconComp className={`w-5 h-5 transition-colors ${isActive ? 'text-[#111827] stroke-[2.2]' : 'text-[#48484a] stroke-[1.85]'}`} />
                 </div>
                 <span
                   className={`text-[11px] tracking-tight leading-none mt-1 truncate transition-colors ${
-                    isActive ? 'font-semibold text-slate-950' : 'font-normal text-slate-400'
+                    isActive ? 'font-semibold text-[#111827]' : 'font-medium text-[#48484a]'
                   }`}
                 >
                   {item.label}
@@ -157,13 +157,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               className="group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95"
             >
               <div className="flex items-center justify-center w-7 h-7">
-                <MoreHorizontal className={`w-5 h-5 transition-colors ${isMoreActive || showMoreMenu ? 'text-slate-950 stroke-[2.2]' : 'text-slate-400 stroke-[1.8]'}`} />
+                <MoreHorizontal className={`w-5 h-5 transition-colors ${isMoreActive || showMoreMenu ? 'text-[#111827] stroke-[2.2]' : 'text-[#48484a] stroke-[1.85]'}`} />
               </div>
               <span
                 className={`text-[11px] tracking-tight leading-none mt-1 truncate transition-colors ${
                   isMoreActive || showMoreMenu
-                    ? 'font-semibold text-slate-950'
-                    : 'font-normal text-slate-400'
+                    ? 'font-semibold text-[#111827]'
+                    : 'font-medium text-[#48484a]'
                 }`}
               >
                 Mais
@@ -263,7 +263,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                     setShowMoreMenu(false);
                     onLogout();
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl text-rose-800 bg-rose-50 hover:bg-rose-100 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer border border-rose-200"
+                  className="w-full py-2.5 px-4 rounded-xl text-rose-800 bg-rose-50 hover:bg-rose-100 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4 text-rose-800" />
                   <span>Sair da Conta Institucional</span>

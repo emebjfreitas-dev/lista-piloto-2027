@@ -28,6 +28,7 @@ import {
   INITIAL_AUTHORIZED_USERS,
   INSTITUTIONAL_EMAIL_DOMAIN,
 } from '../data/mockData';
+import { sortClassesInOfficialOrder } from '../data/officialMatrix2027';
 import {
   getStudentAttendanceMetrics,
   getClassAttendanceMetrics,
@@ -768,7 +769,7 @@ export const mergeClassesWithConcurrencyControl = (
   localUpdatedAtMs: number
 ): ClassGroup[] => {
   const localMap = new Map(localClasses.map((c) => [c.id.toLowerCase(), c]));
-  return remoteClasses.map((remCls) => {
+  const merged = remoteClasses.map((remCls) => {
     const locCls = localMap.get(remCls.id.toLowerCase());
     if (!locCls) return remCls;
 
@@ -827,6 +828,7 @@ export const mergeClassesWithConcurrencyControl = (
       students: mergedStudents,
     };
   });
+  return sortClassesInOfficialOrder(merged);
 };
 
 export const pushClassesToServer = async (
@@ -3954,23 +3956,52 @@ export const uploadBatchStudentPdfsViaApi = async (
   if (!isBackendApiAvailable()) {
     return { ok: true, updatedCount: pdfs.length };
   }
-  try {
-    const res = await fetch('/api/pdfs/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getActiveUserAuthHeaders(),
-      },
-      body: JSON.stringify({ pdfs }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return { ok: true, updatedCount: data.updatedCount ?? pdfs.length };
+  const MAX_CHUNK_BYTES = 12 * 1024 * 1024;
+  const MAX_CHUNK_ITEMS = 5;
+  const chunks: { studentId: string; pdfDataUrl: string }[][] = [];
+  let currentChunk: { studentId: string; pdfDataUrl: string }[] = [];
+  let currentBytes = 0;
+
+  for (const item of pdfs) {
+    const itemSize = item.pdfDataUrl.length;
+    if (
+      currentChunk.length > 0 &&
+      (currentChunk.length >= MAX_CHUNK_ITEMS || currentBytes + itemSize > MAX_CHUNK_BYTES)
+    ) {
+      chunks.push(currentChunk);
+      currentChunk = [];
+      currentBytes = 0;
     }
-  } catch (e) {
-    console.warn('Aviso: falha ao enviar lote de PDFs para /api/pdfs/batch:', e);
+    currentChunk.push(item);
+    currentBytes += itemSize;
   }
-  return { ok: true, updatedCount: pdfs.length };
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  let totalUpdated = 0;
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch('/api/pdfs/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getActiveUserAuthHeaders(),
+        },
+        body: JSON.stringify({ pdfs: chunk }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        totalUpdated += data.updatedCount ?? chunk.length;
+      } else {
+        totalUpdated += chunk.length;
+      }
+    } catch (e) {
+      console.warn('Aviso: falha ao enviar lote de PDFs para /api/pdfs/batch:', e);
+      totalUpdated += chunk.length;
+    }
+  }
+  return { ok: true, updatedCount: totalUpdated || pdfs.length };
 };
 
 /**

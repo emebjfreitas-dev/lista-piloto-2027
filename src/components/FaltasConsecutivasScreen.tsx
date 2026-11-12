@@ -540,7 +540,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 const target = availableClasses.find((c) => c.id === e.target.value);
                 if (target) onSelectClass(target);
               }}
-              className="h-10 px-3.5 rounded-xl bg-slate-100 text-slate-950 text-sm font-bold cursor-pointer focus:outline-none shadow-xs"
+              className="w-full sm:w-auto min-w-0 h-10 px-3.5 rounded-xl bg-slate-100 text-slate-950 text-sm font-bold cursor-pointer focus:outline-none shadow-xs"
             >
               {availableClasses.map((cls) => (
                 <option key={cls.id} value={cls.id}>
@@ -623,7 +623,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       )}
 
       {/* Cabeçalho Principal: Faltas Seguidas, Acúmulo & Feedback da Família */}
-      <section className="card-welcoming bg-white p-5 sm:p-6 space-y-4">
+      <section className="card-welcoming bg-white p-4 sm:p-6 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -687,7 +687,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
         </div>
 
         {/* 4 Indicadores de Acúmulo */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-4 rounded-2xl bg-rose-100/80 shadow-xs flex flex-col justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-rose-950 block">
               Sequências no Ano
@@ -801,30 +801,30 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                     <StudentAvatar student={student} size="md" />
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <h3 className="font-bold text-base text-[#1d1d1f] truncate">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <h3 className="font-semibold text-base text-[#1d1d1f] truncate">
                           {student.name}
                         </h3>
                         {viewAllClassesMode && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-[11px] font-bold">
-                            Turma {cls.name}
+                          <span className="text-xs font-medium text-slate-500">
+                            · Turma {cls.name}
                           </span>
                         )}
                         {hasOccurrences && (
-                          <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-xs font-medium">
-                            {occurrences.length}{' '}
+                          <span className="text-xs font-semibold text-rose-700">
+                            · {occurrences.length}{' '}
                             {occurrences.length === 1
-                              ? 'sequência no ano'
-                              : 'sequências no ano'}{' '}
+                              ? 'ocorrência no ano'
+                              : 'ocorrências no ano'}{' '}
                             ({totalConsecutiveDaysYear}d)
                           </span>
                         )}
                       </div>
 
-                      {/* Resumo de Acúmulo + Pílulas Clicáveis de Cada Ocorrência do Ano */}
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] font-semibold text-xs tabular-nums">
-                          <span>Acúmulo Mês: {accumulatedMonthAbsences} faltas</span>
+                      {/* Resumo direto de faltas seguidas */}
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
+                        <span className="text-slate-700 font-medium tabular-nums">
+                          Total de faltas no mês: <strong>{accumulatedMonthAbsences}</strong>
                         </span>
 
                         {occurrences.map((occ) => {
@@ -844,31 +844,31 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                 });
                               }}
                               title="Clique para abrir e ler esta ocorrência com calma"
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+                              className={`min-h-[34px] inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
                                 hasFeedback
                                   ? 'bg-[#28cd41]/15 text-[#1d8338] hover:bg-[#28cd41]/25'
-                                  : 'bg-[#ff3b30]/12 text-[#ff3b30] hover:bg-[#ff3b30]/20'
+                                  : 'bg-[#ff3b30]/12 text-[#d70015] hover:bg-[#ff3b30]/20'
                               }`}
                             >
                               <span className="material-symbols-outlined text-[14px]">
                                 {hasFeedback ? 'mark_chat_read' : 'event_busy'}
                               </span>
                               <span>
-                                {occ.sequenceNumber}ª Ocorrência ({occ.selectedDates.length}d:{' '}
+                                {occ.sequenceNumber}ª sequência ({occ.selectedDates.length} dias:{' '}
                                 {occ.selectedDates.join(', ')})
                               </span>
                               {hasFeedback && (
-                                <span className="underline ml-0.5">Ler Feedback</span>
+                                <span className="underline ml-0.5 whitespace-nowrap">Ver resposta</span>
                               )}
                             </button>
                           );
                         })}
 
                         {!hasOccurrences && (
-                          <span className="text-xs text-[#86868b]">
+                          <span className="text-xs text-slate-500">
                             {canReportDays
-                              ? 'Toque para selecionar 3+ dias seguidos e abrir nova ocorrência'
-                              : 'Sem ocorrências registradas no ano'}
+                              ? 'Toque para marcar 3 ou mais dias seguidos de falta'
+                              : 'Nenhuma falta seguida registrada no ano'}
                           </span>
                         )}
                       </div>
@@ -876,36 +876,34 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   </div>
 
                   {/* Ação Direita */}
-                  <div className="flex items-center justify-between lg:justify-end gap-2.5 shrink-0">
-                    {canReportDays && (
-                      <span className="px-3 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-xs font-semibold">
-                        + Nova Ocorrência (3+ dias)
+                  <div className="flex items-center justify-end gap-2 shrink-0">
+                    <span className="min-h-[38px] px-3.5 rounded-xl bg-slate-100 text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap">
+                      <span>{isExpanded ? 'Fechar' : canReportDays ? 'Registrar / Ver' : 'Ver Histórico'}</span>
+                      <span
+                        className={`material-symbols-outlined text-[18px] text-slate-500 transition-transform ${
+                          isExpanded ? 'rotate-180 text-[#0071e3]' : ''
+                        }`}
+                      >
+                        expand_more
                       </span>
-                    )}
-                    <span
-                      className={`material-symbols-outlined text-[20px] text-[#86868b] transition-transform ${
-                        isExpanded ? 'rotate-180 text-[#1d1d1f]' : ''
-                      }`}
-                    >
-                      expand_more
                     </span>
                   </div>
                 </div>
 
-                {/* Painel Expansível: 1) Histórico Acumulado Clicável do Ano + 2) Novo Registro de 3+ Dias Seguidos */}
+                {/* Painel Expansível: 1) O que já foi registrado no ano + 2) Novo registro */}
                 {isExpanded && (
-                  <div className="px-4 sm:px-6 pb-5 pt-2 bg-[#f5f5f7]/70 space-y-4 animate-gentle-fade">
+                  <div className="px-4 sm:px-6 pb-5 pt-2 bg-[#f5f5f7] space-y-4 animate-gentle-fade">
                     {/* 1. Linha do Tempo Acumulativa de Todas as Ocorrências da Criança no Ano */}
                     {occurrences.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold uppercase tracking-wider text-[#6e6e73]">
-                            Histórico Acumulado da Criança no Ano ({occurrences.length}{' '}
-                            {occurrences.length === 1 ? 'ocorrência' : 'ocorrências'}) — Toque para ler com calma:
+                          <span className="text-xs font-semibold text-slate-600">
+                            Histórico de faltas seguidas neste ano ({occurrences.length}{' '}
+                            {occurrences.length === 1 ? 'registro' : 'registros'})
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {occurrences.map((occ) => {
                             const hasFeedback = Boolean(
                               (occ.familyFeedback || '').trim()
@@ -915,23 +913,23 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             return (
                               <div
                                 key={occ.id}
-                                className="bg-white rounded-2xl p-4 space-y-2.5 shadow-2xs"
+                                className="bg-white rounded-2xl p-4 sm:p-5 space-y-3 shadow-2xs"
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div>
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-xs font-medium uppercase">
-                                      {occ.sequenceNumber}ª Sequência de Faltas ({occ.selectedDates.length} dias seguidos)
+                                    <span className="text-xs font-semibold text-rose-700 block">
+                                      {occ.sequenceNumber}ª vez com faltas seguidas ({occ.selectedDates.length} dias)
                                     </span>
-                                    <p className="text-sm font-bold text-[#1d1d1f] mt-1">
-                                      Dias: {occ.selectedDates.join(' • ')}
+                                    <p className="text-sm font-bold text-[#1d1d1f] mt-0.5 tabular-nums">
+                                      Dias: {occ.selectedDates.join(' · ')}
                                     </p>
-                                    <p className="text-xs text-[#86868b]">
-                                      Registrado em {occ.reportedAt || 'Outubro/2027'} por{' '}
-                                      {occ.reportedByTeacher || cls.teacherName || 'PEB I'}
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                      Informado em {occ.reportedAt || 'Outubro/2027'} por{' '}
+                                      {occ.reportedByTeacher || cls.teacherName || 'Professora'}
                                     </p>
                                   </div>
 
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1.5 shrink-0">
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -941,9 +939,9 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                           occurrenceId: occ.id,
                                         })
                                       }
-                                      className="px-2.5 py-1 rounded-full bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0066cc] text-xs font-bold cursor-pointer"
+                                      className="min-h-[34px] px-3 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0066cc] text-xs font-semibold cursor-pointer whitespace-nowrap"
                                     >
-                                      Ler com calma
+                                      Abrir leitura
                                     </button>
                                     {canReportDays && (
                                       <button
@@ -951,8 +949,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                         onClick={() =>
                                           handleRemoveOccurrence(cls, student, occ.id)
                                         }
-                                        title="Excluir esta ocorrência"
-                                        className="w-7 h-7 rounded-full hover:bg-[#ff3b30]/10 text-[#86868b] hover:text-[#ff3b30] flex items-center justify-center cursor-pointer"
+                                        title="Excluir este registro"
+                                        className="w-8 h-8 rounded-xl hover:bg-[#ff3b30]/10 text-[#86868b] hover:text-[#ff3b30] flex items-center justify-center cursor-pointer"
                                       >
                                         <span className="material-symbols-outlined text-[16px]">
                                           delete
@@ -1098,7 +1096,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+                        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                           {recentSchoolDays.map((day) => {
                             const isSelected = draftDays.includes(day.key);
                             return (

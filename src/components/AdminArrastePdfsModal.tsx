@@ -395,7 +395,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-100"
     >
       <div
         onClick={(e) => e.stopPropagation()}

@@ -750,7 +750,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       src={effectivePhotoUrl}
                       alt={draft.name}
                       onError={handlePortraitImgError}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-103"
+                      className="w-full h-full object-cover transition-transform duration-100 group-hover:scale-103"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/35 to-transparent flex items-center justify-between text-white">
@@ -1056,10 +1056,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                             <span className="material-symbols-outlined text-[18px]">person</span>
                           </div>
                           <div className="min-w-0">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                              {g1.roleLabel} · Filiação 1 ({g1.gender})
+                            <span className="text-[11px] font-semibold text-slate-500 block">
+                              {g1.shortRoleLabel || 'Mãe / Responsável 1'}
                             </span>
-                            <p className="text-sm font-bold text-slate-950 leading-snug mt-0.5">
+                            <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5">
                               {g1.cleanName || 'Não informado'}
                             </p>
                           </div>
@@ -1070,10 +1070,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                             <span className="material-symbols-outlined text-[18px]">person</span>
                           </div>
                           <div className="min-w-0">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                              {g2.roleLabel} · Filiação 2 ({g2.gender})
+                            <span className="text-[11px] font-semibold text-slate-500 block">
+                              {g2.shortRoleLabel || 'Pai / Responsável 2'}
                             </span>
-                            <p className="text-sm font-bold text-slate-950 leading-snug mt-0.5">
+                            <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5">
                               {g2.cleanName || 'Não informado'}
                             </p>
                           </div>
@@ -1090,10 +1090,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       <span className="material-symbols-outlined text-[18px]">call</span>
                     </div>
                     <div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                        Contato Rápido (WhatsApp)
+                      <span className="text-[11px] font-semibold text-slate-500 block">
+                        Telefone da família
                       </span>
-                      <span className="text-sm font-bold text-slate-950 tabular-nums">
+                      <span className="text-sm font-semibold text-slate-950 tabular-nums">
                         {draft.telefones || draft.guardianPhone || 'Sem telefone cadastrado'}
                       </span>
                     </div>
@@ -1107,10 +1107,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           href={ph.waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold text-xs tabular-nums flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                          className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold text-xs tabular-nums flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                         >
                           <span className="material-symbols-outlined text-[16px]">chat</span>
-                          <span>Chamar {ph.display}</span>
+                          <span>WhatsApp {ph.display}</span>
                         </a>
                       ))}
                     </div>
@@ -1125,18 +1125,18 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         <span className="material-symbols-outlined text-[18px]">location_on</span>
                       </div>
                       <div className="min-w-0">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                          Endereço Residencial
+                        <span className="text-[11px] font-semibold text-slate-500 block">
+                          Endereço onde mora
                         </span>
-                        <p className="text-sm font-bold text-slate-950 leading-snug mt-0.5">
+                        <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5">
                           {fullAddress || '—'}
                         </p>
                       </div>
                     </div>
 
                     {draft.rotaOnibus && (
-                      <span className="px-3 py-1 rounded-xl bg-sky-100 text-sky-950 font-bold text-xs tabular-nums shrink-0">
-                        🚌 {draft.rotaOnibus}
+                      <span className="px-3 py-1 rounded-xl bg-sky-100 text-sky-950 font-semibold text-xs tabular-nums shrink-0">
+                        Ônibus: {draft.rotaOnibus}
                       </span>
                     )}
                   </div>
@@ -1147,10 +1147,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     <button
                       type="button"
                       onClick={handleSaveAll}
-                      className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                      className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors whitespace-nowrap"
                     >
                       <span className="material-symbols-outlined text-[16px]">save</span>
-                      <span>Salvar Informações Rápidas</span>
+                      <span>Salvar Alterações</span>
                     </button>
                   </div>
                 )}
@@ -1159,23 +1159,18 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
           </div>
 
           {/* FICHA CADASTRAL COMPLETA (48 CAMPOS OFICIAIS SED / SME JUNDIAÍ) */}
-          <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[18px]">badge</span>
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-slate-950">
-                      Ficha Cadastral Completa Oficial (48 Dados SED / SME)
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 text-[10px] font-bold">
-                      SED · SME Jundiaí
-                    </span>
-                  </div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-950">
+                    Todos os Dados do Estudante (48 Informações)
+                  </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    Todos os 48 campos cadastrais oficiais com conformidade LGPD (Art. 14)
+                    Toque em uma categoria abaixo ou pesquise um dado específico
                   </p>
                 </div>
               </div>
@@ -1185,14 +1180,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   type="text"
                   value={searchField}
                   onChange={(e) => setSearchField(e.target.value)}
-                  placeholder="Filtrar campo (ex: CPF, SUS, CEP)..."
-                  className="h-9 px-3.5 bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-slate-300 rounded-xl text-xs font-medium focus:outline-none transition-colors w-full sm:w-56"
+                  placeholder="Procurar dado (ex: CPF, SUS, CEP)..."
+                  className="min-h-[40px] px-3.5 bg-slate-100 hover:bg-slate-200/60 focus:bg-white rounded-xl text-xs font-medium focus:outline-none transition-colors w-full sm:w-60"
                 />
                 {canEdit && (
                   <button
                     type="button"
                     onClick={handleSaveAll}
-                    className="h-9 px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0 transition-colors"
+                    className="min-h-[40px] px-4 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0 transition-colors whitespace-nowrap"
                   >
                     <span className="material-symbols-outlined text-[16px]">save</span>
                     <span>Salvar</span>
@@ -1204,16 +1199,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <div className="flex flex-wrap gap-1.5">
                 {[
                   { id: 'todos', label: 'Todos (48)' },
-                  { id: 'escolar', label: 'Escolar & Matrícula' },
-                  { id: 'pessoal', label: 'Pessoal & Saúde' },
-                  { id: 'familia', label: 'Família & Contatos' },
-                  { id: 'endereco', label: 'Endereço & Ônibus' },
+                  { id: 'escolar', label: 'Escola e Turma' },
+                  { id: 'pessoal', label: 'Documentos e Saúde' },
+                  { id: 'familia', label: 'Família e Telefones' },
+                  { id: 'endereco', label: 'Endereço e Ônibus' },
                 ].map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setActiveCategory(cat.id as GridCategory)}
-                    className={`px-3 py-1 rounded-lg font-bold text-xs cursor-pointer transition-colors ${
+                    className={`min-h-[36px] px-3.5 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-colors whitespace-nowrap ${
                       activeCategory === cat.id
                         ? 'bg-slate-950 text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -1224,19 +1219,19 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 ))}
               </div>
 
-              {/* Barra de Status e Controle LGPD (Art. 14 Proteção a Menores) */}
-              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-100/90 border border-slate-200/80">
+              {/* Barra de Privacidade dos Dados (Proteção LGPD) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100/90">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="material-symbols-outlined text-[17px] text-emerald-800">
                     security
                   </span>
-                  <span className="font-bold text-slate-800">
-                    LGPD (Art. 14):
+                  <span className="font-semibold text-slate-800">
+                    Privacidade:
                   </span>
                   <span className="text-slate-600">
                     {isLgpdRevealed
-                      ? 'Dados sensíveis exibidos (Modo de Auditoria Ativo)'
-                      : 'CPF, NIS, RG, endereço e contatos sob mascaramento preventivo'}
+                      ? 'Documentos e endereço completos estão visíveis agora'
+                      : 'CPF, NIS, RG, endereço e telefones ficam protegidos com asteriscos'}
                   </span>
                 </div>
 
@@ -1244,16 +1239,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   <button
                     type="button"
                     onClick={handleToggleLgpdReveal}
-                    className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer bg-white hover:bg-slate-50 text-slate-900 border border-slate-200 shadow-2xs inline-flex items-center gap-1.5"
+                    className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer bg-white hover:bg-slate-50 text-slate-900 shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap"
                   >
                     <span className="material-symbols-outlined text-[15px]">
                       {isLgpdRevealed ? 'visibility_off' : 'visibility'}
                     </span>
-                    <span>{isLgpdRevealed ? 'Ocultar Dados Sensíveis' : 'Revelar (Ação Auditada)'}</span>
+                    <span>{isLgpdRevealed ? 'Ocultar Dados' : 'Mostrar Dados'}</span>
                   </button>
                 ) : (
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
-                    Acesso Restrito ao Gestor
+                  <span className="text-[11px] font-medium text-slate-500">
+                    Visível apenas para a direção
                   </span>
                 )}
               </div>
@@ -1341,7 +1336,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         </div>
 
         {/* Sticky Action Footer — Sempre visível sem scroll */}
-        <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 flex items-center justify-between gap-3 z-20">
+        <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] flex flex-wrap items-center justify-between gap-2.5 z-20">
           <div className="flex items-center gap-2 text-xs text-slate-600">
             {savedBanner ? (
               <span className="text-emerald-700 font-semibold flex items-center gap-1">
@@ -1349,14 +1344,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 Alterações salvas com sucesso!
               </span>
             ) : (
-              <span>Chamada Nº {draft.number} · RA {draft.ra || '—'} · {className}</span>
+              <span className="tabular-nums">Chamada Nº {draft.number} · RA {draft.ra || '—'} · {className}</span>
             )}
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 ml-auto">
             <button
               type="button"
               onClick={onClose}
-              className="h-10 sm:h-11 px-4 text-xs sm:text-sm font-semibold border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
+              className="min-h-[40px] px-4 text-xs sm:text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl cursor-pointer transition-colors whitespace-nowrap"
             >
               Fechar
             </button>
@@ -1364,7 +1359,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <button
                 type="button"
                 onClick={handleSaveAll}
-                className="h-10 sm:h-11 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors shadow-xs whitespace-nowrap"
+                className="min-h-[40px] px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors shadow-xs whitespace-nowrap"
               >
                 <span className="material-symbols-outlined text-[17px] text-emerald-400">save</span>
                 <span>Salvar Alterações</span>

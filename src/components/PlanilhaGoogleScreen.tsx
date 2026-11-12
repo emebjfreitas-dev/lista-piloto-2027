@@ -1194,9 +1194,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-5.5rem)] lg:h-[calc(100vh-6rem)] max-w-[1600px] mx-auto w-full bg-slate-50/70 rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden animate-gentle-fade">
+    <div className="flex flex-col min-h-[calc(100dvh-9.5rem)] lg:h-[calc(100vh-6rem)] max-w-[1600px] mx-auto w-full bg-slate-50/70 rounded-3xl shadow-sm overflow-hidden animate-gentle-fade">
       {/* 1. CABEÇALHO FIXO (SHRINK-0) — NUNCA ROLA FORA DA TELA */}
-      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 border-b border-slate-200/90 space-y-1.5 z-10">
+      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 shadow-2xs space-y-1.5 z-10">
         {/* Breadcrumb Limpo */}
         <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
           <div className="flex items-center gap-1.5">
@@ -1248,7 +1248,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
       {/* Status Toast */}
       {statusMessage && (
-        <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-200">
+        <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-100">
           <div
             className={`p-4 rounded-2xl shadow-2xl flex items-center gap-3 border-2 ${
               statusMessage.type === 'error'
@@ -1273,7 +1273,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       )}
 
       {/* Apple OS Minimalist Executive Header + Collapsible Cloud Workspace Drawer (Zero Feature Loss) */}
-      <section className="card-welcoming bg-white rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
+      <section className="card-welcoming bg-white rounded-3xl p-4 sm:p-6 lg:p-7 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
@@ -1310,7 +1310,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isLoggingIn}
-                className="min-h-[40px] px-3.5 rounded-xl bg-white hover:bg-[#f5f7f6] text-[#003440] font-bold text-sm border border-[#003440]/20 shadow-2xs flex items-center gap-2 cursor-pointer"
+                className="min-h-[40px] px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#003440] font-bold text-sm shadow-2xs flex items-center gap-2 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px] text-[#005035]">
                   cloud_sync
@@ -1322,7 +1322,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 type="button"
                 disabled={isSyncingCloud}
                 onClick={handleSyncAllCloudAndFoldersNow}
-                className="min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-semibold text-sm border border-[#005035]/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                className="min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#a4f3ca] text-[#005035] font-semibold text-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
               >
                 <span
                   className={`material-symbols-outlined text-[18px] ${
@@ -1342,10 +1342,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <button
               type="button"
               onClick={() => setShowCloudSettingsDrawer(!showCloudSettingsDrawer)}
-              className={`min-h-[40px] px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 border cursor-pointer transition-colors ${
+              className={`min-h-[40px] px-3.5 rounded-xl font-bold text-sm flex items-center gap-1.5 cursor-pointer transition-colors ${
                 showCloudSettingsDrawer
-                  ? 'bg-[#005035] text-white border-[#005035]'
-                  : 'bg-[#f5f7f6] hover:bg-[#e3e8e6] text-[#003440] border-[#003440]/12'
+                  ? 'bg-[#005035] text-white'
+                  : 'bg-[#f5f7f6] hover:bg-[#e3e8e6] text-[#003440]'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">
@@ -1627,7 +1627,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       </section>
 
       {/* Apple OS Semantic Segmented Control Bar (Clean, Cohesive, Zero Clutter) */}
-      <div className="bg-[#e6ebea]/90 backdrop-blur-md p-1.5 rounded-2xl border border-[#003440]/10 flex items-center gap-1 overflow-x-auto">
+      <div className="bg-[#e6ebea]/90 backdrop-blur-md p-1.5 rounded-2xl flex items-center gap-1 overflow-x-auto max-w-full">
         {[
           {
             id: 'diagnostico_inconsistencias',

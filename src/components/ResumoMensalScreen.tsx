@@ -7,7 +7,7 @@ import {
   getDefaultReferencePeriod,
 } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
-import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
+import { StudentDataExpansionPanel } from './StudentDataExpansionPanel';
 
 export interface ResumoMensalScreenProps {
   currentClass: ClassGroup;
@@ -137,7 +137,6 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
   // Expansão visual detalhada de estudantes (sem sair da tela)
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   // Despacho da gestão escolar
   const [pedagogicalNotes, setPedagogicalNotes] = useState(currentClass.pedagogicalNotes || '');
@@ -375,27 +374,6 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
     });
   }, [kpiData.evaluatedStudents, alertFilterMode, searchQuery]);
 
-  const handleCopyStudentRecord = (item: EvaluatedStudentSnapshot) => {
-    const text = [
-      `REGISTRO OFICIAL - BUSCA ATIVA / FREQUÊNCIA`,
-      `Estudante: ${item.student.name} | RA: ${item.student.ra}-${item.student.digRa || '0'}`,
-      `Turma: ${item.cls.name} (${item.cls.shift})`,
-      `Mês de Referência: ${selectedMonthName}/2027`,
-      `Presenças: ${item.presencas}/${item.diasLetivos} (${item.frequenciaPercent}%)`,
-      `Meta Legal MEC: Mínimo ${item.minLegalPercent}% (${item.isBelowLegal ? 'ABAIXO DA META' : 'CONFORME'})`,
-      `Faltas: ${item.faltas} (${item.atestados} c/ atestado, ${item.semAtestado} injustificadas)`,
-      item.hasConsecutiveAlert ? `Alerta de Busca Ativa: ${item.alertLabel}` : `Sem alerta consecutivo`,
-      item.student.telefones ? `Telefones de Contato: ${item.student.telefones}` : '',
-      item.familyFeedback ? `Retorno Família: ${item.familyFeedback}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    navigator.clipboard?.writeText(text);
-    setCopyFeedback(item.student.id);
-    setTimeout(() => setCopyFeedback(null), 2500);
-  };
-
   return (
     <div className="flex flex-col w-full space-y-5 pb-16 animate-gentle-fade text-slate-900">
       {/* Breadcrumb Limpo */}
@@ -472,7 +450,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       </section>
 
       {/* BARRA DE SLICERS (POWER BI - MINIMALISTA E SÓBRIA) */}
-      <section className="bg-white rounded-3xl p-5 shadow-sm space-y-3">
+      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm space-y-3">
         <div className="flex items-center justify-between pb-2 text-xs font-bold text-slate-800">
           <div className="flex items-center gap-1.5 uppercase tracking-wider text-slate-900 font-bold">
             <span className="material-symbols-outlined text-slate-700 text-[18px]">
@@ -578,7 +556,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       </section>
 
       {/* BLOCO SCORECARD MEC: KPIS OFICIAIS DE DESEMPENHO (DESIGN MINIMALISTA POWER BI) */}
-      <section className="bg-white rounded-3xl p-6 shadow-sm space-y-4">
+      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-2">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-700 text-[24px]">
@@ -598,7 +576,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
           {/* KPI 1: Taxa de Permanência Escolar */}
           <div className="bg-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
             <div className="flex items-center justify-between">
@@ -817,9 +795,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       {/* PAINEL CENTRAL: GRÁFICO POR TURMA & MATRIZ EXECUTIVA */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Gráfico de Colunas Power BI */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-6 shadow-sm flex flex-col justify-between min-w-0">
           <div className="space-y-0.5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-xs font-bold text-slate-950 uppercase tracking-wider">
                 Desempenho por Turma ({selectedMonthName})
               </h2>
@@ -832,35 +810,38 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </p>
           </div>
 
-          <div className="w-full h-[260px] relative pt-6 pb-8 px-2 flex flex-col justify-end select-none mt-2">
-            {/* Linhas de grade e referências */}
-            <div className="absolute inset-x-2 top-6 bottom-8 pointer-events-none">
-              {[100, 75, 60, 0].map((val) => (
+          <div className="w-full overflow-x-auto pb-1 mt-2">
+            <div className={`h-[260px] relative pt-6 pb-8 px-2 flex flex-col justify-end select-none ${
+              kpiData.classMetrics.length > 10 ? 'min-w-[540px]' : 'w-full'
+            }`}>
+              {/* Linhas de grade e referências */}
+              <div className="absolute inset-x-2 top-6 bottom-8 pointer-events-none">
+                {[100, 75, 60, 0].map((val) => (
+                  <div
+                    key={val}
+                    className="absolute left-0 right-0 flex items-center gap-2"
+                    style={{ bottom: `${val}%`, transform: 'translateY(50%)' }}
+                  >
+                    <span className="w-6 text-right text-[10px] font-mono text-slate-400">
+                      {val}%
+                    </span>
+                    <div className="flex-1 h-px bg-slate-200/60" />
+                  </div>
+                ))}
+
+                {/* Linha Meta 85% */}
                 <div
-                  key={val}
-                  className="absolute left-0 right-0 flex items-center gap-2"
-                  style={{ bottom: `${val}%`, transform: 'translateY(50%)' }}
+                  className="absolute left-8 right-0 h-0.5 bg-slate-800 z-10 flex items-center justify-end"
+                  style={{ bottom: '85%' }}
                 >
-                  <span className="w-6 text-right text-[10px] font-mono text-slate-400">
-                    {val}%
+                  <span className="bg-slate-900 text-white text-[9px] font-bold px-2 py-0.5 rounded-md -mt-4 mr-1">
+                    Meta 85%
                   </span>
-                  <div className="flex-1 h-px bg-slate-200/60" />
                 </div>
-              ))}
-
-              {/* Linha Meta 85% */}
-              <div
-                className="absolute left-8 right-0 h-0.5 bg-slate-800 z-10 flex items-center justify-end"
-                style={{ bottom: '85%' }}
-              >
-                <span className="bg-slate-900 text-white text-[9px] font-bold px-2 py-0.5 rounded-md -mt-4 mr-1">
-                  Meta 85%
-                </span>
               </div>
-            </div>
 
-            {/* Colunas */}
-            <div className="relative z-20 pl-8 pr-1 h-full flex items-end justify-around gap-2">
+              {/* Colunas */}
+              <div className="relative z-20 pl-8 pr-1 h-full flex items-end justify-around gap-2">
               {kpiData.classMetrics.map((entry) => {
                 const isSelected = scopeFilter === entry.classId;
                 const meetsSchool = entry.frequencyRate >= 85;
@@ -903,7 +884,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
                     <div className="w-full max-w-[32px] h-full flex items-end justify-center">
                       <div
-                        className={`w-full rounded-t-md transition-all duration-300 ${
+                        className={`w-full rounded-t-md transition-all duration-100 ${
                           isSelected ? 'ring-2 ring-slate-900 ring-offset-1' : ''
                         }`}
                         style={{
@@ -925,8 +906,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               })}
             </div>
           </div>
+          </div>
 
-          <div className="pt-2 flex items-center justify-between text-[11px] text-slate-600 font-bold">
+          <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 font-bold">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-xs bg-[#047857]" /> ≥85%
@@ -1049,8 +1031,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       {/* PAINEL DE OPERAÇÃO: BUSCA ATIVA COM EXPANSÃO VISUAL DE DADOS DO ESTUDANTE */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Tabela de Estudantes em Alerta com Expansão Detalhada */}
-        <div className="lg:col-span-8 bg-white rounded-3xl shadow-sm overflow-hidden flex flex-col justify-between">
-          <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="lg:col-span-8 bg-white rounded-3xl shadow-sm overflow-hidden flex flex-col justify-between min-w-0">
+          <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-amber-700 text-[22px]">
@@ -1066,21 +1048,21 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
             </div>
 
             {/* Campo de Busca & Filtros Rápidos */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-auto">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar aluno ou RA..."
-                  className="h-10 pl-9 pr-3 bg-slate-100 rounded-xl text-xs text-slate-950 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600 shadow-2xs"
+                  className="w-full sm:w-48 h-10 pl-9 pr-3 bg-slate-100 rounded-xl text-xs text-slate-950 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600 shadow-2xs"
                 />
                 <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">
                   search
                 </span>
               </div>
 
-              <div className="inline-flex rounded-xl bg-slate-100 p-1 text-[11px] font-bold">
+              <div className="inline-flex flex-wrap max-w-full rounded-xl bg-slate-100 p-1 text-[11px] font-bold gap-0.5">
                 <button
                   type="button"
                   onClick={() => setAlertFilterMode('all_alerts')}
@@ -1165,7 +1147,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-bold">
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-[11px] font-bold">
                 {kpiData.tier10Count > 0 && (
                   <span className="px-2.5 py-1 rounded-xl bg-rose-200 text-rose-950">
                     {kpiData.tier10Count} Crítico (10d)
@@ -1295,299 +1277,21 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                           </td>
                         </tr>
 
-                        {/* EXPANSÃO VISUAL MELHORADA DO ESTUDANTE (DEDICADA, SEM NAVEGAÇÃO EXTERNA) */}
+                        {/* EXPANSÃO UNIFICADA E SIMPLES DE ENTENDER PARA LEIGOS */}
                         {isExpanded && (
-                          <tr className="bg-slate-100/50">
-                            <td colSpan={7} className="p-4 sm:p-5">
-                              <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-md space-y-4">
-                                {/* Topo da Expansão */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-3">
-                                  <div className="flex items-center gap-3">
-                                    <StudentAvatar student={item.student} size="md" expandableOnClick={false} />
-                                    <div>
-                                      <h3 className="text-sm font-bold text-slate-950 flex items-center gap-2">
-                                        <span>{item.student.name}</span>
-                                        <span className="text-[11px] font-normal text-slate-600">
-                                          (Nº {item.student.numeroChamada || item.student.number || '—'})
-                                        </span>
-                                      </h3>
-                                      <p className="text-xs text-slate-600 font-mono">
-                                        RA: {item.student.ra || 'S/N'}-{item.student.digRa || '0'} • Turma {item.cls.name} ({item.cls.shift}) • Nasc: {item.student.dataNascimento || '—'} {item.student.idade ? `(${item.student.idade} anos)` : ''}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    {onOpenStudentPdf && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onOpenStudentPdf(item.student);
-                                        }}
-                                        className="px-3 py-1.5 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-950 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs"
-                                      >
-                                        <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                                        <span>Ficha PDF</span>
-                                      </button>
-                                    )}
-
-                                    {onOpenStudentGrid && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onOpenStudentGrid(item.student);
-                                        }}
-                                        className="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
-                                      >
-                                        <span className="material-symbols-outlined text-[16px]">open_in_full</span>
-                                        <span>Ficha Completa (48 Dados)</span>
-                                      </button>
-                                    )}
-
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCopyStudentRecord(item);
-                                      }}
-                                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
-                                    >
-                                      <span className="material-symbols-outlined text-[15px]">
-                                        {copyFeedback === item.student.id ? 'check' : 'content_copy'}
-                                      </span>
-                                      <span>{copyFeedback === item.student.id ? 'Copiado!' : 'Copiar Dados'}</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setExpandedStudentId(null);
-                                      }}
-                                      className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
-                                      title="Fechar detalhes"
-                                    >
-                                      <span className="material-symbols-outlined text-[18px]">close</span>
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {/* Grade de Indicadores Visuais do Aluno */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                                  {/* Visual Gauge de Frequência */}
-                                  <div className="p-4 bg-slate-100 rounded-2xl space-y-2 shadow-xs">
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
-                                      Balanço de Frequência no Mês
-                                    </span>
-                                    <div className="flex items-baseline justify-between">
-                                      <span className={`text-xl font-bold font-mono ${item.isBelowLegal ? 'text-rose-800' : 'text-slate-950'}`}>
-                                        {item.frequenciaPercent}%
-                                      </span>
-                                      <span className="text-[11px] text-slate-600 font-bold">
-                                        {item.presencas} presenças em {item.diasLetivos} dias
-                                      </span>
-                                    </div>
-                                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden flex">
-                                      <div
-                                        className="bg-emerald-700 h-2"
-                                        style={{ width: `${item.frequenciaPercent}%` }}
-                                      />
-                                      <div
-                                        className="bg-rose-600 h-2"
-                                        style={{ width: `${100 - item.frequenciaPercent}%` }}
-                                      />
-                                    </div>
-                                    <div className="flex justify-between text-[11px] text-slate-700 font-semibold pt-1">
-                                      <span>Atestados: <strong className="text-emerald-900">{item.atestados}d</strong></span>
-                                      <span>Sem justificativa: <strong className="text-rose-900">{item.semAtestado}d</strong></span>
-                                    </div>
-                                  </div>
-
-                                  {/* Situação Legal MEC */}
-                                  <div className="p-4 bg-slate-100 rounded-2xl space-y-2 shadow-xs">
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
-                                      Conformidade Legal MEC (LDB)
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                      <span className={`material-symbols-outlined text-[20px] ${item.isBelowLegal ? 'text-rose-700' : 'text-emerald-700'}`}>
-                                        {item.isBelowLegal ? 'gpp_bad' : 'verified_user'}
-                                      </span>
-                                      <span className={`text-xs font-bold ${item.isBelowLegal ? 'text-rose-900' : 'text-emerald-950'}`}>
-                                        {item.isBelowLegal ? 'Abaixo do Piso Legal' : 'Conforme a LDB'}
-                                      </span>
-                                    </div>
-                                    <p className="text-xs text-slate-700 font-medium">
-                                      {item.isInfantil
-                                        ? 'Educação Infantil: Piso mínimo LDB Art. 31 de 60% de frequência.'
-                                        : 'Ensino Fundamental: Piso mínimo LDB Art. 24 de 75% de frequência.'}
-                                    </p>
-                                    <p className="text-[11px] text-slate-500 font-medium">
-                                      {item.isBelowLegal
-                                        ? 'Requer acompanhamento pedagógico e intervenção da gestão escolar.'
-                                        : 'Frequência regular dentro dos parâmetros institucionais.'}
-                                    </p>
-                                  </div>
-
-                                  {/* Alerta de Busca Ativa ECA */}
-                                  <div
-                                    className={`p-4 rounded-2xl space-y-2 shadow-xs transition-all ${
-                                      item.hasConsecutiveAlert
-                                        ? item.consecutiveAlertTier === '10d'
-                                          ? 'bg-rose-100/90 text-rose-950'
-                                          : 'bg-amber-100/90 text-amber-950'
-                                        : 'bg-slate-100 text-slate-900'
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-[11px] font-bold uppercase tracking-wider block">
-                                        Protocolo de Busca Ativa
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className={`material-symbols-outlined text-[20px] ${
-                                          item.hasConsecutiveAlert
-                                            ? item.consecutiveAlertTier === '10d'
-                                              ? 'text-rose-900'
-                                              : 'text-amber-900'
-                                            : 'text-emerald-800'
-                                        }`}
-                                      >
-                                        {item.hasConsecutiveAlert ? 'notification_important' : 'task_alt'}
-                                      </span>
-                                      <span className="text-xs font-bold">
-                                        {item.hasConsecutiveAlert ? item.alertLabel : 'Sem Alerta de Consecutivas'}
-                                      </span>
-                                    </div>
-                                    <p className="text-xs font-medium">
-                                      {item.hasConsecutiveAlert
-                                        ? item.consecutiveAlertTier === '10d'
-                                          ? 'Gatilho crítico: Notificação formal ao Conselho Tutelar e Busca Ativa emergencial.'
-                                          : item.consecutiveAlertTier === '5d'
-                                          ? 'Gatilho intermediário: Contato imediato com responsável legal e busca escolar.'
-                                          : 'Gatilho preventivo: Observação atenta da equipe pedagógica.'
-                                        : 'Nenhum ciclo contínuo de faltas não justificadas detectado.'}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                {/* Dados Cadastrais, Família e Logística Escolar */}
-                                <div className="p-4 bg-slate-100 rounded-2xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs shadow-xs">
-                                  <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
-                                      Telefones &amp; Contato Direto
-                                    </span>
-                                    {(() => {
-                                      const rawPhone = item.student.telefones || item.student.guardianPhone;
-                                      const waList = buildWhatsAppLinksFromPhoneString(
-                                        rawPhone,
-                                        item.student.name,
-                                        `Olá! Somos da Secretaria de Educação de Jundiaí / EMEB Joaquim Candelário de Freitas. Gostaríamos de conversar sobre o acompanhamento escolar de ${item.student.name}.`
-                                      );
-                                      if (!rawPhone || waList.length === 0) {
-                                        return <span className="text-slate-400 italic">Sem telefone cadastrado</span>;
-                                      }
-                                      return (
-                                        <div className="space-y-1">
-                                          <div className="font-bold text-slate-950 font-mono text-xs">
-                                            {rawPhone}
-                                          </div>
-                                          <div className="flex items-center gap-1.5 pt-0.5">
-                                            <a
-                                              href={waList[0].waUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25d366]/20 hover:bg-[#25d366]/30 text-[#075e54] font-bold text-[11px] transition-colors"
-                                              title={`Abrir WhatsApp: ${waList[0].display}`}
-                                            >
-                                              <span className="material-symbols-outlined text-[13px]">chat</span>
-                                              <span>WhatsApp</span>
-                                            </a>
-                                            <a
-                                              href={`tel:${rawPhone.replace(/\D/g, '')}`}
-                                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-950 font-bold text-[11px] transition-colors"
-                                              title="Ligar"
-                                            >
-                                              <span className="material-symbols-outlined text-[13px]">call</span>
-                                              <span>Ligar</span>
-                                            </a>
-                                          </div>
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
-
-                                  <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
-                                      Filiação / Responsável
-                                    </span>
-                                    <span className="font-bold text-slate-950 truncate block">
-                                      {item.student.filiacao1 || item.student.guardianName || 'Responsável não informado'}
-                                    </span>
-                                    {item.student.filiacao2 && (
-                                      <span className="text-[11px] text-slate-600 truncate block">
-                                        {item.student.filiacao2}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
-                                      Programas Sociais / AEE
-                                    </span>
-                                    <div className="space-y-1">
-                                      <span className="font-bold text-slate-950 block">
-                                        {item.student.nis ? (
-                                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-emerald-200 text-emerald-950 font-mono text-[11px] font-bold">
-                                            Bolsa Família (NIS {item.student.nis})
-                                          </span>
-                                        ) : (
-                                          <span className="text-slate-600">Sem NIS informado</span>
-                                        )}
-                                      </span>
-                                      {item.student.deficiencia && (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-purple-200 text-purple-950 text-[11px] font-bold block truncate">
-                                          AEE: {item.student.deficiencia}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block mb-1">
-                                      Logística &amp; Endereço
-                                    </span>
-                                    <span className="font-bold text-slate-950 block">
-                                      {item.student.rotaOnibus ? (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-sky-200 text-sky-950 font-bold text-[11px]">
-                                          🚌 Ônibus Fretado: {item.student.rotaOnibus}
-                                        </span>
-                                      ) : (
-                                        <span className="text-slate-600">Transporte individual</span>
-                                      )}
-                                    </span>
-                                    {(item.student.logradouro || item.student.bairro) && (
-                                      <span className="text-[11px] text-slate-600 block truncate mt-0.5 font-medium">
-                                        {item.student.logradouro} {item.student.numeroResidencia ? `nº ${item.student.numeroResidencia}` : ''} {item.student.bairro ? `· ${item.student.bairro}` : ''}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Retorno da Família Registrado */}
-                                {item.familyFeedback && (
-                                  <div className="p-4 bg-amber-100 rounded-2xl text-xs text-amber-950 flex items-start gap-2 shadow-xs">
-                                    <span className="material-symbols-outlined text-amber-800 text-[18px] shrink-0 mt-0.5">
-                                      feedback
-                                    </span>
-                                    <div>
-                                      <span className="font-bold block">Último retorno da família / justificativa:</span>
-                                      <p className="mt-0.5 text-slate-900 font-medium">{item.familyFeedback}</p>
-                                    </div>
-                                  </div>
-                                )}
+                          <tr className="bg-slate-50/70">
+                            <td colSpan={7} className="p-3 sm:p-4">
+                              <div className="sticky left-0 w-[calc(100vw-2.5rem)] max-w-full lg:w-full">
+                                <StudentDataExpansionPanel
+                                  student={item.student}
+                                  classGroup={item.cls}
+                                  diasLetivosMes={item.diasLetivos}
+                                  minLegalPresence={item.minLegalPercent}
+                                  onOpenStudentPdf={onOpenStudentPdf}
+                                  onOpenStudentGrid={onOpenStudentGrid}
+                                  onCollapse={() => setExpandedStudentId(null)}
+                                  familyFeedback={item.familyFeedback}
+                                />
                               </div>
                             </td>
                           </tr>

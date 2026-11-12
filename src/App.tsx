@@ -53,9 +53,7 @@ import {
   readAuthorizedUsersFromGoogleSheet,
   readSessionLogsFromGoogleSheet,
   syncPhotosFromDriveFolder,
-  syncNominalPdfsFromDriveSubfolders,
   attachPhotosFromDiscoveredCache,
-  attachNominalPdfsFromDiscoveredCache,
   logoutGoogle,
   getGoogleSheetsSyncFrequency,
 } from './services/googleSheetsApi';
@@ -73,7 +71,6 @@ import { MapaEstudantesScreen } from './components/MapaEstudantesScreen';
 import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
 import { UsuariosAcessoScreen } from './components/UsuariosAcessoScreen';
 import { ListasNominaisScreen } from './components/ListasNominaisScreen';
-import { NovaTurmaModal } from './components/NovaTurmaModal';
 import { AlunosModal } from './components/AlunosModal';
 import { RelatorioImpressaoModal } from './components/RelatorioImpressaoModal';
 import { AnotacoesModal } from './components/AnotacoesModal';
@@ -83,6 +80,7 @@ import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModa
 import { SpotlightCommandModal } from './components/SpotlightCommandModal';
 import { AtualizarDadosJsonModal } from './components/AtualizarDadosJsonModal';
 import { AdminArrasteFotosModal } from './components/AdminArrasteFotosModal';
+import { AdminArrastePdfsModal } from './components/AdminArrastePdfsModal';
 import { Toaster, toast } from 'sonner';
 
 const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
@@ -238,7 +236,7 @@ export default function App() {
 
     setNavigationHistory((prev) => [...prev, currentScreen]);
     setCurrentScreen(nextScreen);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   };
 
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
@@ -444,19 +442,15 @@ export default function App() {
       }
 
       if (shared.classes && shared.classes.length > 0) {
-        const hydratedClasses = attachPhotosFromDiscoveredCache(
-          attachNominalPdfsFromDiscoveredCache(shared.classes)
-        );
+        const hydratedClasses = attachPhotosFromDiscoveredCache(shared.classes);
         setClasses(hydratedClasses);
         setSelectedClass((prev) => {
           const found = hydratedClasses.find((c) => c.id === prev.id);
           return found || prev;
         });
-      } else if (shared.discoveredDrivePhotos || shared.discoveredNominalPdfs) {
+      } else if (shared.discoveredDrivePhotos) {
         setClasses((prevClasses) => {
-          const hydratedClasses = attachPhotosFromDiscoveredCache(
-            attachNominalPdfsFromDiscoveredCache(prevClasses)
-          );
+          const hydratedClasses = attachPhotosFromDiscoveredCache(prevClasses);
           setSelectedClass((prevSel) => {
             const found = hydratedClasses.find((c) => c.id === prevSel.id);
             return found || prevSel;
@@ -501,9 +495,7 @@ export default function App() {
           remoteUpdatedAtMs,
           localUpdatedAtMs
         );
-        const hydrated = attachPhotosFromDiscoveredCache(
-          attachNominalPdfsFromDiscoveredCache(merged)
-        );
+        const hydrated = attachPhotosFromDiscoveredCache(merged);
         saveStoredClasses(hydrated, true);
         setClasses(hydrated);
         setSelectedClass((prev) => {
@@ -547,12 +539,9 @@ export default function App() {
       } else if (
         e.key === 'emeb_candelario_sed_classes_2027_v6' ||
         e.key === 'emeb_candelario_sed_classes_2027_v5' ||
-        e.key === 'emeb_candelario_discovered_drive_photos_2027_v1' ||
-        e.key === 'emeb_candelario_discovered_nominal_pdfs_2027_v1'
+        e.key === 'emeb_candelario_discovered_drive_photos_2027_v1'
       ) {
-        const freshClasses = attachPhotosFromDiscoveredCache(
-          attachNominalPdfsFromDiscoveredCache(getStoredClasses())
-        );
+        const freshClasses = attachPhotosFromDiscoveredCache(getStoredClasses());
         setClasses(freshClasses);
         setSelectedClass((prev) => {
           const found = freshClasses.find((c) => c.id === prev.id);
@@ -633,12 +622,12 @@ export default function App() {
   }, [userRole, assignedClassId, assignedClassIds, classes]);
 
   // Modal states
-  const [isNewClassModalOpen, setIsNewClassModalOpen] = useState(false);
   const [isStudentListModalOpen, setIsStudentListModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState(false);
   const [isJsonImportModalOpen, setIsJsonImportModalOpen] = useState(false);
   const [isAdminPhotosModalOpen, setIsAdminPhotosModalOpen] = useState(false);
+  const [isAdminPdfsModalOpen, setIsAdminPdfsModalOpen] = useState(false);
   const [photoModalStudent, setPhotoModalStudent] = useState<Student | null>(null);
   const [pdfModalData, setPdfModalData] = useState<{
     student: Student;
@@ -834,15 +823,6 @@ export default function App() {
     setSelectedClass(updated);
   };
 
-  const handleAddNewClass = (newClass: ClassGroup) => {
-    if (userRole !== 'admin') return;
-    setClasses((prev) => {
-      const next = [{ ...newClass, updatedAtMs: Date.now() }, ...prev];
-      saveStoredClasses(next);
-      return next;
-    });
-  };
-
   const handleSaveStudentPhoto = (
     studentId: string,
     newPhotoUrl: string,
@@ -911,7 +891,7 @@ export default function App() {
       const prevScreen = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory((prev) => prev.slice(0, -1));
       setCurrentScreen(prevScreen);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo(0, 0);
       return;
     }
     if (currentScreen === 'frequencia_mensal') {
@@ -923,7 +903,7 @@ export default function App() {
     } else {
       setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas');
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   };
 
   const handleLoginSuccess = (authUser: AuthorizedUser) => {
@@ -996,7 +976,7 @@ export default function App() {
       if (targetClass) setSelectedClass(targetClass);
     }
     setCurrentScreen('home');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   };
 
   // Real-time session duration tracker (ticks every 5 seconds while logged in, even after F5 refresh!)
@@ -1208,7 +1188,7 @@ export default function App() {
       // ignore sign-out error
     }
     setCurrentScreen('login');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   };
 
   const handleSyncWithClasses = () => {
@@ -1226,10 +1206,7 @@ export default function App() {
         }
       }
       const photoSync = await syncPhotosFromDriveFolder(latestClasses);
-      const pdfSync = await syncNominalPdfsFromDriveSubfolders(
-        photoSync.updatedClasses
-      );
-      latestClasses = pdfSync.updatedClasses;
+      latestClasses = photoSync.updatedClasses;
       setClasses(latestClasses);
       saveStoredClasses(latestClasses);
       setSelectedClass((prev) => {
@@ -1253,7 +1230,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex flex-col font-sans selection:bg-[#0071e3]/15 selection:text-[#0066cc]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f5f5f7] text-[#1d1d1f] flex flex-col font-sans selection:bg-[#0071e3]/15 selection:text-[#0066cc]">
       {/* Top Minimalist Header */}
       <Header
         currentScreen={currentScreen}
@@ -1298,7 +1275,7 @@ export default function App() {
           setSimulatedTeacherEmail(null);
           setUserRole('admin');
           setCurrentScreen('usuarios_acesso');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo(0, 0);
         }}
         onBack={handleBack}
         onChangeScreen={(screen) => {
@@ -1328,6 +1305,7 @@ export default function App() {
         onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
         onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
         onOpenAdminPhotosModal={() => setIsAdminPhotosModalOpen(true)}
+        onOpenAdminPdfsModal={() => setIsAdminPdfsModalOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -1341,7 +1319,7 @@ export default function App() {
       >
         {/* Banner de Aviso de Menor Privilégio e Segurança LGPD */}
         {securityBlockNotice && (
-          <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
+          <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-100">
             <div className="flex items-start gap-3">
               <span className="material-symbols-outlined text-amber-700 text-[24px] shrink-0 mt-0.5">
                 security
@@ -1398,6 +1376,7 @@ export default function App() {
                 navigateToScreen(targetScreen);
               }
             }}
+            onSelectClassForDetails={handleSelectClassForDetails}
             onSelectClassForMonthlyAttendance={(cls) => {
               setSelectedClass(cls);
               navigateToScreen('frequencia_mensal');
@@ -1429,6 +1408,9 @@ export default function App() {
             }}
             onOpenAdminPhotosModal={() => {
               setIsAdminPhotosModalOpen(true);
+            }}
+            onOpenAdminPdfsModal={() => {
+              setIsAdminPdfsModalOpen(true);
             }}
           />
         )}
@@ -1480,7 +1462,7 @@ export default function App() {
               setSimulatedTeacherEmail(teacher.email);
               setUserRole(teacher.role);
               setCurrentScreen(teacher.role === 'usuario' ? 'detalhes' : 'turmas');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              window.scrollTo(0, 0);
             }}
             onNavigateToDatabaseEmailsTab={() => setCurrentScreen('planilha')}
             onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
@@ -1523,14 +1505,13 @@ export default function App() {
               setSelectedClass(cls);
               setIsStudentListModalOpen(true);
             }}
-            onOpenNewClassModal={() => setIsNewClassModalOpen(true)}
             onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
             onNavigateToSheet={() => setCurrentScreen('planilha')}
             onNavigateToAcessos={() => setCurrentScreen('usuarios_acesso')}
             onSelectStudentForConsecutiveScreen={(cls) => {
               setSelectedClass(cls);
               setCurrentScreen('faltas_consecutivas');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              window.scrollTo(0, 0);
             }}
             onOpenStudentGrid={(student, classId, className, diasLetivosMes) =>
               setGridModalData({
@@ -1553,7 +1534,7 @@ export default function App() {
             onSwitchAssignedClass={(cls) => {
               setAssignedClassId(cls.id);
               setSelectedClass(cls);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              window.scrollTo(0, 0);
             }}
             userRole={userRole}
             userEmail={simulatedTeacherEmail || currentUserEmail}
@@ -1701,7 +1682,7 @@ export default function App() {
               onOpenMonthlyLaunchForClass={(cls) => {
                 setSelectedClass(cls);
                 setCurrentScreen('frequencia_mensal');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo(0, 0);
               }}
               onOpenReportPrint={() => setIsReportPrintModalOpen(true)}
               onOpenStudentPdf={(student) =>
@@ -1763,7 +1744,7 @@ export default function App() {
             onNavigateToTurma={(cls) => {
               setSelectedClass(cls);
               setCurrentScreen('detalhes');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              window.scrollTo(0, 0);
             }}
             onBack={handleBack}
           />
@@ -1810,21 +1791,15 @@ export default function App() {
           }
           if (userRole === 'usuario' && screen === 'turmas') {
             setCurrentScreen('detalhes');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo(0, 0);
             return;
           }
           setCurrentScreen(screen);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo(0, 0);
         }}
       />
 
       {/* Modals */}
-      <NovaTurmaModal
-        isOpen={isNewClassModalOpen}
-        onClose={() => setIsNewClassModalOpen(false)}
-        onAddClass={handleAddNewClass}
-      />
-
       <AlunosModal
         isOpen={isStudentListModalOpen}
         onClose={() => setIsStudentListModalOpen(false)}
@@ -1915,7 +1890,7 @@ export default function App() {
         onNavigateToConsecutiveAbsences={() => {
           setGridModalData(null);
           setCurrentScreen('faltas_consecutivas');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo(0, 0);
         }}
       />
 
@@ -1929,7 +1904,7 @@ export default function App() {
           setAssignedClassId(cls.id);
           setSelectedClass(cls);
           setCurrentScreen('detalhes');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo(0, 0);
         }}
         onOpenStudentGrid={(student, classId, className, diasLetivosMes) => {
           const foundCls = classes.find((c) => c.id === classId);
@@ -1946,24 +1921,19 @@ export default function App() {
         }}
         onNavigateToScreen={(screen) => {
           setCurrentScreen(screen);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          window.scrollTo(0, 0);
         }}
       />
 
-      {/* Visualizador no App dos Documentos PDF Nominais (Fichas Informativas das Subpastas do Drive) */}
+      {/* Visualizador no App dos Documentos PDF Nominais */}
       <VisualizarPdfNominalModal
         isOpen={pdfModalData !== null}
         onClose={() => setPdfModalData(null)}
         student={pdfModalData?.student || null}
         className={pdfModalData?.className || selectedClass.name}
+        userRole={userRole}
         allClasses={classes}
-        onSyncDrivePdfs={async () => {
-          const pdfSync = await syncNominalPdfsFromDriveSubfolders(getStoredClasses());
-          if (pdfSync.matchedPdfsCount > 0) {
-            setClasses(pdfSync.updatedClasses);
-            saveStoredClasses(pdfSync.updatedClasses);
-          }
-        }}
+        onOpenAdminPdfsModal={() => setIsAdminPdfsModalOpen(true)}
         onUpdateAllClasses={(updated) => {
           setClasses(updated);
           saveStoredClasses(updated);
@@ -2070,6 +2040,20 @@ export default function App() {
         onClose={() => setIsAdminPhotosModalOpen(false)}
         classes={classes}
         onBatchPhotosSaved={(updatedClasses) => {
+          setClasses(updatedClasses);
+          saveStoredClasses(updatedClasses);
+          const found = updatedClasses.find((c) => c.id === selectedClass.id);
+          if (found) setSelectedClass(found);
+          else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
+        }}
+      />
+
+      {/* Modal Admin de Arraste & Solte em Lote de Fichas PDF dos Alunos (Método Único) */}
+      <AdminArrastePdfsModal
+        isOpen={isAdminPdfsModalOpen}
+        onClose={() => setIsAdminPdfsModalOpen(false)}
+        classes={classes}
+        onBatchPdfsSaved={(updatedClasses) => {
           setClasses(updatedClasses);
           saveStoredClasses(updatedClasses);
           const found = updatedClasses.find((c) => c.id === selectedClass.id);

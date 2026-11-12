@@ -29,9 +29,7 @@ import {
   Search,
   Sun,
   Sunset,
-  FileSpreadsheet,
-  Eye,
-  Edit3,
+  ChevronRight,
   HeartHandshake,
   CalendarDays,
 } from 'lucide-react';
@@ -56,6 +54,7 @@ interface HomeScreenProps {
   schoolNotices?: SchoolNotice[];
   attendanceWindowConfig: AttendanceWindowConfig;
   onNavigateToScreen: (screen: ScreenType) => void;
+  onSelectClassForDetails?: (cls: ClassGroup) => void;
   onSelectClassForMonthlyAttendance: (cls: ClassGroup) => void;
   onSelectStudentForConsecutiveScreen?: (classId: string, studentId: string) => void;
   onOpenStudentGrid?: (student: Student) => void;
@@ -63,6 +62,7 @@ interface HomeScreenProps {
   onSaveSchoolNotices?: (updatedNotices: SchoolNotice[]) => void;
   onNavigateToAcessos?: () => void;
   onOpenAdminPhotosModal?: () => void;
+  onOpenAdminPdfsModal?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -75,6 +75,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   schoolNotices = [],
   attendanceWindowConfig,
   onNavigateToScreen,
+  onSelectClassForDetails,
   onSelectClassForMonthlyAttendance,
   onSelectStudentForConsecutiveScreen,
   onOpenStudentGrid,
@@ -82,6 +83,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSaveSchoolNotices,
   onNavigateToAcessos,
   onOpenAdminPhotosModal,
+  onOpenAdminPdfsModal,
 }) => {
   const [currentClock, setCurrentClock] = useState(() => new Date());
   const [selectedShiftFilter, setSelectedShiftFilter] = useState<'TODOS' | 'MANHÃ' | 'TARDE'>('TODOS');
@@ -270,7 +272,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   return (
     <div className="flex flex-col w-full space-y-5 pb-16 text-slate-950 font-sans">
       {/* 1. CABEÇALHO ACOLHEDOR COM PROPORÇÕES HARMONIOSAS */}
-      <section className="bg-white rounded-3xl p-6 sm:p-7 shadow-xs">
+      <section className="bg-white rounded-3xl p-4 sm:p-6 lg:p-7 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-1.5 min-w-0">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-900 text-xs font-semibold mb-1">
@@ -312,7 +314,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </section>
 
       {/* 2. O GRANDE PAINEL DE SELEÇÃO TÁTIL (CONTRASTE DE SUPERFÍCIES — ZERO CONTORNO) */}
-      <section className="bg-slate-100/80 rounded-3xl p-6 sm:p-8 space-y-5">
+      <section className="bg-slate-100/80 rounded-3xl p-4 sm:p-6 lg:p-8 space-y-5">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-950 flex items-center gap-2.5">
             <span className="w-3.5 h-3.5 rounded-full bg-slate-950" />
@@ -324,12 +326,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         {/* Grade de Blocos Táteis Grandes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
           {/* Opção 1: Ver Turmas e Estudantes */}
           <button
             type="button"
             onClick={() => onNavigateToScreen('turmas')}
-            className="w-full text-left bg-white hover:bg-slate-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
+            className="w-full text-left bg-white hover:bg-slate-50 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-3 sm:gap-4 group"
           >
             <div className="flex items-center gap-4 min-w-0">
               <div className="w-14 h-14 rounded-2xl bg-slate-950 text-white flex items-center justify-center shrink-0">
@@ -501,7 +503,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onClick={() => {
               setActiveHubTab('avisos');
               const el = document.getElementById('central-comunicados');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
+              if (el) el.scrollIntoView();
             }}
             className="w-full text-left bg-white hover:bg-slate-50 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
           >
@@ -531,66 +533,105 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           </button>
 
-          {/* Opção Admin: Arraste & Solte de Fotos Nomeadas */}
-          {userRole === 'admin' && onOpenAdminPhotosModal && (
-            <button
-              type="button"
-              onClick={onOpenAdminPhotosModal}
-              className="w-full text-left bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-950 hover:to-indigo-950 text-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group col-span-1 md:col-span-2 xl:col-span-3 border border-blue-800"
-            >
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="w-14 h-14 rounded-2xl bg-white text-blue-950 flex items-center justify-center shrink-0 shadow-xs">
-                  <span className="material-symbols-outlined text-[32px] text-blue-700">
-                    add_photo_alternate
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-bold uppercase tracking-wider text-blue-300 block">
-                    Gestão Escolar · Exclusivo Admin
-                  </span>
-                  <h3 className="text-lg font-bold text-white truncate">
-                    Arraste &amp; Solte de Fotos Nomeadas dos Alunos
-                  </h3>
-                  <p className="text-xs font-semibold text-blue-200 truncate mt-1">
-                    Vincule dezenas ou centenas de fotos de uma vez (por RA, Nome ou Turma) e sincronize com todos os professores
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end shrink-0">
-                <span className="px-3 py-1 rounded-xl bg-blue-950 text-white text-xs font-bold border border-blue-700">
-                  Lote de Fotos
-                </span>
-                <span className="text-xs text-white font-bold flex items-center gap-1 mt-2.5">
-                  Abrir <ArrowRight className="w-4 h-4" />
-                </span>
-              </div>
-            </button>
+          {/* Opções Exclusivas Admin: Lote de Fotos & Lote de Fichas PDF */}
+          {userRole === 'admin' && (onOpenAdminPhotosModal || onOpenAdminPdfsModal) && (
+            <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {onOpenAdminPhotosModal && (
+                <button
+                  type="button"
+                  onClick={onOpenAdminPhotosModal}
+                  className="w-full text-left bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-950 hover:to-indigo-950 text-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-14 h-14 rounded-2xl bg-white text-blue-950 flex items-center justify-center shrink-0 shadow-xs">
+                      <span className="material-symbols-outlined text-[30px] text-blue-700">
+                        add_photo_alternate
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-blue-200 block">
+                        Gestão Escolar · Exclusivo Admin
+                      </span>
+                      <h3 className="text-lg font-bold text-white truncate">
+                        Arraste &amp; Solte de Fotos Nomeadas
+                      </h3>
+                      <p className="text-xs font-normal text-blue-100 truncate mt-1">
+                        Vincule fotos em lote por RA, Nome ou Turma
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="px-2.5 py-1 rounded-xl bg-blue-950/90 text-white text-xs font-medium">
+                      Lote de Fotos
+                    </span>
+                    <span className="text-xs text-white font-medium flex items-center gap-1 mt-2.5">
+                      Abrir <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </button>
+              )}
+
+              {onOpenAdminPdfsModal && (
+                <button
+                  type="button"
+                  onClick={onOpenAdminPdfsModal}
+                  className="w-full text-left bg-gradient-to-r from-rose-900 to-red-900 hover:from-rose-950 hover:to-red-950 text-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-between gap-4 group"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-14 h-14 rounded-2xl bg-white text-rose-950 flex items-center justify-center shrink-0 shadow-xs">
+                      <span className="material-symbols-outlined text-[30px] text-rose-700">
+                        picture_as_pdf
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[11px] font-medium uppercase tracking-wider text-rose-200 block">
+                        Método Único · Exclusivo Admin
+                      </span>
+                      <h3 className="text-lg font-bold text-white truncate">
+                        Arraste &amp; Solte de Fichas PDF dos Alunos
+                      </h3>
+                      <p className="text-xs font-normal text-rose-100 truncate mt-1">
+                        Vincule fichas em lote por RA, Nome ou Turma + Nº
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="px-2.5 py-1 rounded-xl bg-rose-950/90 text-white text-xs font-medium">
+                      Lote de PDFs
+                    </span>
+                    <span className="text-xs text-white font-medium flex items-center gap-1 mt-2.5">
+                      Abrir <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </button>
+              )}
+            </div>
           )}
         </div>
       </section>
 
-      {/* 3. SELETOR DIRETO DE TURMAS (SEM CONTORNOS BOBOS — SUPERFÍCIES LIMPAS) */}
-      <section className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+      {/* 3. SELETOR DIRETO DE TURMAS — MINIMALISTA, SEM CONTORNOS */}
+      <section className="bg-white rounded-3xl p-4 sm:p-6 lg:p-8 shadow-sm space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-950 flex items-center gap-2.5">
-              <Users className="w-7 h-7 text-slate-900" />
-              <span>Escolha sua Turma para Trabalhar</span>
+              <Users className="w-7 h-7 text-slate-900 shrink-0" />
+              <span>Turmas da Escola</span>
             </h2>
-            <p className="text-sm sm:text-base font-semibold text-slate-800 mt-1">
-              Clique em <strong className="font-bold text-slate-950">"Ver Alunos"</strong> para consultar a lista ou em <strong className="font-bold text-slate-950">"Lançar Faltas"</strong> para a chamada:
+            <p className="text-sm sm:text-base font-normal text-slate-600 mt-1">
+              Selecione uma turma para abrir a lista de estudantes e registros:
             </p>
           </div>
 
-          {/* Botoeira de Filtro de Turnos Grandes em Superfície Sólida */}
-          <div className="inline-flex p-1.5 bg-slate-100 rounded-2xl gap-1 self-start md:self-auto">
+          {/* Botoeira de Filtro de Turnos */}
+          <div className="inline-flex flex-wrap max-w-full p-1.5 bg-slate-100 rounded-2xl gap-1 self-start md:self-auto">
             <button
               type="button"
               onClick={() => setSelectedShiftFilter('TODOS')}
-              className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                 selectedShiftFilter === 'TODOS'
                   ? 'bg-slate-950 text-white shadow-sm'
-                  : 'text-slate-800 hover:bg-slate-200'
+                  : 'text-slate-700 hover:bg-slate-200'
               }`}
             >
               Todas (40)
@@ -598,112 +639,86 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={() => setSelectedShiftFilter('MANHÃ')}
-              className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
                 selectedShiftFilter === 'MANHÃ'
                   ? 'bg-slate-950 text-white shadow-sm'
-                  : 'text-slate-800 hover:bg-slate-200'
+                  : 'text-slate-700 hover:bg-slate-200'
               }`}
             >
-              <Sun className="w-4 h-4 text-amber-500" />
+              <Sun className="w-4 h-4 text-amber-500 shrink-0" />
               <span>Manhã (20)</span>
             </button>
             <button
               type="button"
               onClick={() => setSelectedShiftFilter('TARDE')}
-              className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
                 selectedShiftFilter === 'TARDE'
                   ? 'bg-slate-950 text-white shadow-sm'
-                  : 'text-slate-800 hover:bg-slate-200'
+                  : 'text-slate-700 hover:bg-slate-200'
               }`}
             >
-              <Sunset className="w-4 h-4 text-sky-500" />
+              <Sunset className="w-4 h-4 text-sky-500 shrink-0" />
               <span>Tarde (20)</span>
             </button>
           </div>
         </div>
 
-        {/* Campo de Busca em Superfície Suave */}
+        {/* Campo de Busca sem Contorno */}
         <div className="relative">
-          <Search className="w-5 h-5 text-slate-700 absolute left-4 top-1/2 -translate-y-1/2" />
+          <Search className="w-5 h-5 text-[#48484a] absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={turmaSearchInput}
             onChange={(e) => setTurmaSearchInput(e.target.value)}
-            placeholder="Digite o nome da turma ou da professora para encontrar rápido (ex: G4 A, 1º B, 5º A)..."
-            className="w-full h-13 pl-12 pr-4 rounded-2xl bg-slate-100 text-slate-950 text-sm sm:text-base font-semibold placeholder:text-slate-500 focus:outline-none focus:bg-slate-200/80 transition-all"
+            placeholder="Buscar turma ou professora (ex: G4 A, 1º B, 5º A)..."
+            className="w-full h-12 pl-12 pr-4 rounded-2xl bg-[#e9e9ef] text-[#111827] text-sm sm:text-base font-normal placeholder:text-[#5c5c60] focus:outline-none focus:bg-[#dfe0e6] transition-all"
           />
         </div>
 
-        {/* Grade de Cartões de Turmas — Limpos, sem contornos, em Superfície Suave */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Cartões Minimalistas de Turmas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {filteredClasses.map((cls) => {
             const isMorning =
               (cls.shift || '').toUpperCase().includes('MANHÃ') || cls.periodo === 'MANHÃ';
 
             return (
-              <div
+              <button
                 key={cls.id}
-                className="bg-slate-50 hover:bg-slate-100/90 rounded-2xl p-5 transition-all flex flex-col justify-between gap-4"
+                type="button"
+                onClick={() =>
+                  onSelectClassForDetails
+                    ? onSelectClassForDetails(cls)
+                    : onNavigateToScreen('detalhes')
+                }
+                className="w-full text-left bg-[#f2f2f7] hover:bg-[#e5e5ec] active:scale-[0.99] rounded-2xl p-4 sm:p-5 transition-all duration-100 flex flex-col justify-between gap-2.5 cursor-pointer group"
               >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
-                        isMorning
-                          ? 'bg-amber-200 text-amber-950'
-                          : 'bg-sky-200 text-sky-950'
-                      }`}
-                    >
-                      {isMorning ? <Sun className="w-3.5 h-3.5" /> : <Sunset className="w-3.5 h-3.5" />}
-                      <span>{isMorning ? 'Manhã' : 'Tarde'}</span>
-                    </span>
-                    <span className="text-xs text-slate-900 font-bold">
-                      Sala {cls.room || '—'}
-                    </span>
+                <div className="flex items-start justify-between gap-2 w-full">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-[#111827] leading-snug truncate">
+                      {cls.name}
+                    </h3>
+                    <p className="text-xs text-[#48484a] truncate mt-0.5">
+                      {isMorning ? 'Manhã' : 'Tarde'} · {cls.room || '—'}
+                    </p>
                   </div>
 
-                  <h3 className="text-xl font-bold text-slate-950 mt-3 leading-snug">
-                    {cls.name}
-                  </h3>
-                  <p className="text-sm text-slate-800 font-semibold truncate mt-1">
+                  <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                    <span className="font-mono text-xs font-semibold text-[#006644] tabular-nums">
+                      {cls.presenceRate}%
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-[#48484a] group-hover:text-[#111827] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                </div>
+
+                <div className="w-full space-y-0.5 pt-1">
+                  <p className="text-[13px] text-[#374151] font-medium truncate">
                     {cls.teacherName || 'Professor(a) atribuído'}
                   </p>
-                  <p className="text-xs text-slate-700 font-bold mt-1">
-                    {cls.students.length} estudantes matriculados
+                  <p className="text-xs text-[#48484a] tabular-nums">
+                    {cls.students.length} estudantes
                   </p>
                 </div>
-
-                {/* Dois Botões Táteis em Superfícies Sólidas */}
-                <div className="grid grid-cols-2 gap-2.5 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToScreen('detalhes')}
-                    className="h-11 px-3 bg-white hover:bg-slate-200 text-slate-950 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                  >
-                    <Eye className="w-4 h-4 text-slate-900" />
-                    <span>Ver Alunos</span>
-                  </button>
-
-                  {userRole !== 'peb2' ? (
-                    <button
-                      type="button"
-                      onClick={() => onSelectClassForMonthlyAttendance(cls)}
-                      className="h-11 px-3 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Edit3 className="w-4 h-4 text-white" />
-                      <span>Faltas</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      className="h-11 px-3 bg-slate-200 text-slate-500 rounded-xl text-xs font-semibold flex items-center justify-center cursor-not-allowed"
-                    >
-                      <span>Consulta</span>
-                    </button>
-                  )}
-                </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -717,8 +732,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </section>
 
       {/* 4. FAIXA DE INDICADORES (NÚMEROS GRANDES EM SUPERFÍCIE LIMPA) */}
-      <section className="bg-white rounded-3xl shadow-sm py-6 px-6 sm:px-8">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+      <section className="bg-white rounded-3xl shadow-sm p-4 sm:py-6 sm:px-8">
+        <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
           <div className="flex flex-col justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
               Mês da Chamada
@@ -795,9 +810,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </section>
 
       {/* 5. CENTRAL DE AVISOS, PRAZOS E BUSCA ATIVA */}
-      <section id="central-comunicados" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+      <section id="central-comunicados" className="bg-white rounded-3xl p-4 sm:p-6 lg:p-8 shadow-sm space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h3 className="text-xl font-bold text-slate-950">
               Central de Informações e Prazos da Escola
             </h3>
@@ -806,41 +821,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </p>
           </div>
 
-          <div className="inline-flex items-center p-1.5 bg-slate-100 rounded-2xl text-sm font-bold gap-1 self-start sm:self-auto">
+          <div className="inline-flex flex-wrap max-w-full items-center p-1.5 bg-slate-100 rounded-2xl text-xs sm:text-sm font-bold gap-1 self-start sm:self-auto">
             <button
               type="button"
               onClick={() => setActiveHubTab('avisos')}
-              className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer ${
                 activeHubTab === 'avisos'
                   ? 'bg-slate-950 text-white shadow-sm'
                   : 'text-slate-800 hover:bg-slate-200'
               }`}
             >
-              <Bell className="w-4 h-4" />
+              <Bell className="w-4 h-4 shrink-0" />
               <span>Avisos ({schoolNotices.length})</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveHubTab('prazos')}
-              className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer ${
                 activeHubTab === 'prazos'
                   ? 'bg-slate-950 text-white shadow-sm'
                   : 'text-slate-800 hover:bg-slate-200'
               }`}
             >
-              <Clock className="w-4 h-4" />
+              <Clock className="w-4 h-4 shrink-0" />
               <span>Prazos do Mês</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveHubTab('busca_ativa')}
-              className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-colors cursor-pointer ${
                 activeHubTab === 'busca_ativa'
                   ? 'bg-rose-700 text-white shadow-sm'
                   : 'text-rose-900 hover:bg-rose-100'
               }`}
             >
-              <ShieldAlert className="w-4 h-4" />
+              <ShieldAlert className="w-4 h-4 shrink-0" />
               <span>Busca Ativa ({schoolStats.criticalConsecutiveCount})</span>
             </button>
           </div>
@@ -891,11 +906,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </section>
 
       {/* 6. GRÁFICO COMPARATIVO SIMPLES POR TURNO */}
-      <section className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+      <section className="bg-white rounded-3xl p-4 sm:p-6 lg:p-8 shadow-sm space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h3 className="text-xl font-bold text-slate-950 flex items-center gap-2">
-              <BarChart3 className="w-6 h-6 text-slate-900" />
+              <BarChart3 className="w-6 h-6 text-slate-900 shrink-0" />
               <span>Frequência das Turmas — Meta da LDB</span>
             </h3>
             <p className="text-sm font-semibold text-slate-700 mt-0.5">
@@ -903,11 +918,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </p>
           </div>
 
-          <div className="inline-flex items-center p-1.5 bg-slate-100 rounded-2xl text-sm font-bold self-start sm:self-auto gap-1">
+          <div className="inline-flex flex-wrap max-w-full items-center p-1.5 bg-slate-100 rounded-2xl text-xs sm:text-sm font-bold self-start sm:self-auto gap-1">
             <button
               type="button"
               onClick={() => setChartFilterShift('all')}
-              className={`px-4 py-2 rounded-xl transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition-colors cursor-pointer ${
                 chartFilterShift === 'all'
                   ? 'bg-slate-950 text-white shadow-sm'
                   : 'text-slate-800 hover:bg-slate-200'
@@ -918,7 +933,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={() => setChartFilterShift('MANHÃ')}
-              className={`px-4 py-2 rounded-xl transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition-colors cursor-pointer ${
                 chartFilterShift === 'MANHÃ'
                   ? 'bg-slate-950 text-white shadow-sm'
                   : 'text-slate-800 hover:bg-slate-200'
@@ -929,7 +944,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={() => setChartFilterShift('TARDE')}
-              className={`px-4 py-2 rounded-xl transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 rounded-xl transition-colors cursor-pointer ${
                 chartFilterShift === 'TARDE'
                   ? 'bg-slate-950 text-white shadow-sm'
                   : 'text-slate-800 hover:bg-slate-200'
@@ -1004,18 +1019,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </ResponsiveContainer>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between text-xs sm:text-sm text-slate-800 pt-4 gap-2">
-          <div className="flex items-center gap-5">
+        <div className="flex flex-wrap items-center justify-between text-xs sm:text-sm text-slate-800 pt-4 gap-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <span className="flex items-center gap-2 font-bold text-emerald-950">
-              <span className="w-3 h-3 rounded-xs bg-emerald-700" />
+              <span className="w-3 h-3 rounded-xs bg-emerald-700 shrink-0" />
               ≥ 85% (Frequência Alta)
             </span>
             <span className="flex items-center gap-2 font-bold text-amber-950">
-              <span className="w-3 h-3 rounded-xs bg-amber-600" />
+              <span className="w-3 h-3 rounded-xs bg-amber-600 shrink-0" />
               75% a 84% (Atenção)
             </span>
             <span className="flex items-center gap-2 font-bold text-rose-950">
-              <span className="w-3 h-3 rounded-xs bg-rose-700" />
+              <span className="w-3 h-3 rounded-xs bg-rose-700 shrink-0" />
               &lt; 75% (Abaixo da Meta)
             </span>
           </div>

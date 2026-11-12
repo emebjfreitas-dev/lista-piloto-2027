@@ -663,7 +663,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
       </div>
 
       {/* Header Card */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+      <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3.5">
             <div className="w-14 h-14 rounded-2xl bg-slate-950 text-white flex items-center justify-center shrink-0 shadow-md">
@@ -898,26 +898,25 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
             {/* Map Canvas */}
             <div
               ref={mapContainerRef}
-              className="w-full h-[520px] sm:h-[620px] rounded-2xl overflow-hidden z-0"
-              style={{ minHeight: '500px' }}
+              className="w-full h-[380px] sm:h-[520px] lg:h-[620px] rounded-2xl overflow-hidden z-0"
             />
 
             {/* Quick Floating Hint Overlay on Map */}
-            <div className="absolute bottom-5 left-5 z-10 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl max-w-[280px]">
+            <div className="absolute bottom-3 left-3 sm:bottom-5 sm:left-5 z-10 bg-white/95 backdrop-blur-md rounded-2xl p-3 sm:p-4 shadow-xl max-w-[220px] sm:max-w-[280px]">
               <span className="font-bold text-slate-950 text-xs block mb-1">
                 Legenda Simples:
               </span>
               <div className="space-y-1.5 text-xs font-bold text-slate-800">
                 <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-600" />
+                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 shrink-0" />
                   <span>Raio de 1 km da Escola</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full bg-purple-600" />
+                  <span className="w-3.5 h-3.5 rounded-full bg-purple-600 shrink-0" />
                   <span>Criança com Ônibus Escolar</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full bg-blue-600" />
+                  <span className="w-3.5 h-3.5 rounded-full bg-blue-600 shrink-0" />
                   <span>Transporte Individual / A pé</span>
                 </div>
               </div>
@@ -928,7 +927,7 @@ export const MapaEstudantesScreen: React.FC<MapaEstudantesScreenProps> = ({
         {/* Right Inspector & Full Turn-by-Turn Routing Panel */}
         <div className={`lg:col-span-5 space-y-4 ${activeMobileTab === 'map' ? 'hidden lg:block' : 'block'}`}>
           {selectedStudentMarker || (isCustomPointsMode && customPointA && customPointB) ? (
-            <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-5 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-5 animate-in fade-in duration-100">
               {/* Top Banner of Selected Item */}
               <div className="flex items-start justify-between gap-3 pb-2">
                 <div className="flex items-center gap-3">

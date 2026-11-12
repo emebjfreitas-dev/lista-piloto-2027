@@ -20,21 +20,21 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-bold tracking-tight rounded-2xl transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer select-none';
+      'inline-flex items-center justify-center font-semibold tracking-tight rounded-2xl transition-all duration-100 focus-visible:outline-none disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer select-none';
 
     const variants = {
       default: 'bg-[#1d1d1f] hover:bg-black text-white shadow-xs',
-      secondary: 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] shadow-2xs',
-      outline: 'bg-slate-100 hover:bg-slate-200 text-slate-900 shadow-2xs',
-      ghost: 'hover:bg-black/[0.05] text-[#1d1d1f]',
-      destructive: 'bg-[#ff3b30] hover:bg-[#d7261b] text-white shadow-xs',
+      secondary: 'bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] shadow-2xs',
+      outline: 'bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] shadow-2xs',
+      ghost: 'hover:bg-black/[0.06] text-[#111827]',
+      destructive: 'bg-[#d92d20] hover:bg-[#b42318] text-white shadow-xs',
       success: 'bg-[#005035] hover:bg-[#003824] text-white shadow-xs',
     };
 
     const sizes = {
-      default: 'h-10 px-4 py-2 text-sm',
-      sm: 'h-8 px-3 text-xs rounded-xl',
-      lg: 'h-12 px-6 text-sm rounded-2xl',
+      default: 'min-h-[42px] px-4 py-2 text-[13px]',
+      sm: 'min-h-[36px] px-3 text-xs rounded-xl',
+      lg: 'min-h-[46px] px-6 text-sm rounded-2xl',
       icon: 'h-9 w-9 p-0 rounded-xl',
     };
 

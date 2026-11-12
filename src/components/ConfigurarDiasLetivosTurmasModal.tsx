@@ -219,7 +219,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
   );
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-100">
       <div className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]">
         {/* Clean Modern Header */}
         <div className="bg-white border-b border-slate-100 px-6 py-5 flex items-start justify-between gap-4 shrink-0">

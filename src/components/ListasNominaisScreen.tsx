@@ -353,7 +353,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   return (
     <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-12 animate-gentle-fade">
       {toastMsg && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 max-w-lg mx-auto animate-in fade-in duration-200">
+        <div className="fixed bottom-20 left-4 right-4 z-50 max-w-lg mx-auto animate-in fade-in duration-100">
           <div className="bg-[#1d1d1f] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
             <span className="material-symbols-outlined text-[20px] text-[#28cd41]">
               check_circle
@@ -364,66 +364,61 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       )}
 
       {/* Breadcrumb Limpo */}
-      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+      <div className="flex items-center justify-between text-xs text-[#48484a] py-0.5">
         <div className="flex items-center gap-1.5">
           {onBack && (
             <>
               <button
                 type="button"
                 onClick={onBack}
-                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                className="text-[#3c3c43] hover:text-[#111827] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[15px]">arrow_back</span>
                 <span>Voltar</span>
               </button>
-              <span className="text-slate-300">/</span>
+              <span className="text-[#8e8e93]">/</span>
             </>
           )}
-          <span className="font-semibold text-slate-800">Bolsa Família &amp; Fretado</span>
+          <span className="font-semibold text-[#111827]">Bolsa Família &amp; Fretado</span>
         </div>
-        <span className="text-slate-400 text-xs hidden sm:inline">
+        <span className="text-[#48484a] text-xs hidden sm:inline">
           Listas Nominais e Condicionalidades Sociais
         </span>
       </div>
 
-      {/* CABEÇALHO SIMPLIFICADO & EXPORTAÇÃO (.XLS OU NOVA GOOGLE SHEET) */}
-      <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#6e6e73]">
-              <span className="text-[#1d1d1f] font-bold uppercase tracking-wider">
-                Bolsa Família &amp; Busca Ativa Bimestral
-              </span>
+      {/* CABEÇALHO SIMPLIFICADO & EXPORTAÇÃO */}
+      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="space-y-1.5 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-[#48484a]">
+              <span className="font-semibold text-[#111827]">Busca Ativa Bimestral</span>
               <span aria-hidden="true">·</span>
-              <span>{SCHOOL_NAME}</span>
-              <span aria-hidden="true">·</span>
-              <span className="text-[#be123c] font-bold">
-                Ens. Fundamental &lt; 75% | Ed. Infantil &lt; 60%
-              </span>
+              <span className="truncate">{SCHOOL_NAME}</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#1d1d1f] tracking-tight leading-tight">
-              Estudantes Abaixo da Meta de Presença — {currentBimester.shortLabel}
+            <h1 className="text-[21px] sm:text-2xl font-semibold text-[#111827] tracking-tight leading-snug">
+              Abaixo da Meta — {currentBimester.shortLabel}
             </h1>
-            <p className="text-sm text-[#6e6e73]">
-              Relação simplificada em <strong>ordem alfabética (A–Z)</strong> por bimestre (Fev+Mar até Out+Nov/2027), destacando etapa de ensino e existência de atestado médico.
+            <p className="text-[13px] sm:text-sm text-[#3c3c43] leading-relaxed">
+              Lista em <strong>ordem alfabética (A–Z)</strong> para Bolsa Família e Transporte Fretado.
+              <span className="text-[#b42318] font-semibold"> Fundamental &lt; 75% · Infantil &lt; 60%</span>.
             </p>
           </div>
 
-          {/* Ações de Exportação Direta: .XLS ou Imprimir/PDF */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {/* Ações de Exportação Proporcionais (lado a lado no mobile) */}
+          <div className="grid grid-cols-2 sm:inline-flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
             <button
               type="button"
               onClick={handleExportXLS}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-sm flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
             >
               <span className="material-symbols-outlined text-[18px]">download</span>
-              <span>Exportar Excel (.xlsx)</span>
+              <span>Exportar Excel</span>
             </button>
 
             <button
               type="button"
               onClick={() => window.print()}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-95 border border-slate-200"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-[0.98]"
             >
               <span className="material-symbols-outlined text-[18px]">print</span>
               <span>Imprimir / PDF</span>
@@ -433,8 +428,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
         {/* Link imediato quando uma Nova Google Sheet é gerada */}
         {createdSheetUrl && (
-          <div className="p-4 rounded-2xl bg-emerald-100/90 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-            <div className="flex items-center gap-2 font-bold text-sm">
+          <div className="p-4 rounded-2xl bg-emerald-100 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2 font-semibold text-sm">
               <span className="material-symbols-outlined text-[20px] text-emerald-800">
                 task_alt
               </span>
@@ -446,7 +441,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               href={createdSheetUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl bg-emerald-800 text-white font-bold text-xs inline-flex items-center gap-1.5 self-start sm:self-auto hover:bg-emerald-900 shadow-2xs"
+              className="px-4 py-2 rounded-xl bg-emerald-800 text-white font-semibold text-xs inline-flex items-center gap-1.5 self-start sm:self-auto hover:bg-emerald-900 shadow-2xs"
             >
               <span>Abrir Planilha no Google Sheets</span>
               <span className="material-symbols-outlined text-[15px]">
@@ -456,12 +451,12 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           </div>
         )}
 
-        {/* SELETOR VISUAL DE BIMESTRES (FEV+MAR ATÉ OUT+NOV DE 2027) */}
+        {/* SELETOR VISUAL DE BIMESTRES */}
         <div className="pt-1">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-2">
+          <span className="text-xs font-semibold text-[#3c3c43] block mb-2">
             Recorte Bimestral (2027)
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 min-[480px]:grid-cols-3 lg:grid-cols-6 gap-2">
             {OFFICIAL_BIMESTERS_2027.map((bim) => {
               const isSelected = bim.id === selectedBimesterId;
               return (
@@ -471,18 +466,18 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                   onClick={() => setSelectedBimesterId(bim.id)}
                   className={`p-3 rounded-2xl text-left transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
+                      ? 'bg-[#1d1d1f] text-white shadow-sm'
+                      : 'bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827]'
                   }`}
                 >
                   <span
-                    className={`text-[11px] font-bold uppercase block ${
-                      isSelected ? 'text-white/80' : 'text-slate-600'
+                    className={`text-[11px] font-semibold block ${
+                      isSelected ? 'text-white/80' : 'text-[#48484a]'
                     }`}
                   >
                     {bim.id === 'anual' ? 'Consolidado' : `${bim.id.replace('bim', 'º Bimestre')}`}
                   </span>
-                  <span className="text-sm font-bold block mt-0.5">
+                  <span className="text-[13px] font-semibold block mt-0.5 tabular-nums">
                     {bim.shortLabel}
                   </span>
                 </button>
@@ -491,8 +486,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           </div>
         </div>
 
-        {/* DESTAQUES VISUAIS (KPI CARDS CLICÁVEIS) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+        {/* DESTAQUES VISUAIS (SEM CONTORNO / ZERO RING) */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
           {/* Card 1: Total Abaixo da Meta */}
           <button
             type="button"
@@ -501,27 +496,27 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               setSelectedSegmentFilter('all');
               setSelectedAtestadoFilter('all');
             }}
-            className={`text-left rounded-3xl p-4 transition-all cursor-pointer shadow-sm ${
+            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer ${
               onlyBelowTarget &&
               selectedSegmentFilter === 'all' &&
               selectedAtestadoFilter === 'all'
-                ? 'bg-rose-200/90 text-rose-950 ring-2 ring-rose-500'
-                : 'bg-rose-100 hover:bg-rose-200/80 text-rose-950'
+                ? 'bg-rose-200 text-rose-950 shadow-sm'
+                : 'bg-rose-100/90 hover:bg-rose-200/80 text-rose-950'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-900">
-                Total Abaixo da Meta
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] font-semibold text-rose-900">
+                Abaixo da Meta
               </span>
-              <span className="material-symbols-outlined text-[20px] text-rose-700">
+              <span className="material-symbols-outlined text-[18px] text-rose-800">
                 warning
               </span>
             </div>
-            <span className="text-3xl font-extrabold text-rose-950 tabular-nums block mt-1 leading-none">
+            <span className="text-2xl sm:text-3xl font-semibold text-rose-950 tabular-nums block mt-1.5 leading-none">
               {kpiStats.totalBelowTarget}
             </span>
-            <span className="text-xs font-bold text-rose-800 block mt-1.5">
-              de {kpiStats.totalEvaluated} estudantes ativos
+            <span className="text-xs font-medium text-rose-900 block mt-1.5 tabular-nums">
+              de {kpiStats.totalEvaluated} ativos
             </span>
           </button>
 
@@ -534,25 +529,25 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 selectedSegmentFilter === 'fundamental' ? 'all' : 'fundamental'
               );
             }}
-            className={`text-left rounded-3xl p-4 transition-all cursor-pointer shadow-sm ${
+            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer ${
               selectedSegmentFilter === 'fundamental'
-                ? 'bg-sky-200/90 text-sky-950 ring-2 ring-sky-500'
-                : 'bg-sky-100 hover:bg-sky-200/80 text-sky-950'
+                ? 'bg-sky-200 text-sky-950 shadow-sm'
+                : 'bg-sky-100/90 hover:bg-sky-200/80 text-sky-950'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-900">
-                Ens. Fundamental (&lt; 75%)
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] font-semibold text-sky-900">
+                Fundamental (&lt; 75%)
               </span>
-              <span className="material-symbols-outlined text-[20px] text-sky-700">
+              <span className="material-symbols-outlined text-[18px] text-sky-800">
                 menu_book
               </span>
             </div>
-            <span className="text-3xl font-extrabold text-sky-950 tabular-nums block mt-1 leading-none">
+            <span className="text-2xl sm:text-3xl font-semibold text-sky-950 tabular-nums block mt-1.5 leading-none">
               {kpiStats.belowFundamentalCount}
             </span>
-            <span className="text-xs font-bold text-sky-800 block mt-1.5">
-              1º ao 5º Ano abaixo de 75%
+            <span className="text-xs font-medium text-sky-900 block mt-1.5">
+              1º ao 5º Ano
             </span>
           </button>
 
@@ -565,32 +560,32 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 selectedSegmentFilter === 'infantil' ? 'all' : 'infantil'
               );
             }}
-            className={`text-left rounded-3xl p-4 transition-all cursor-pointer shadow-sm ${
+            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer ${
               selectedSegmentFilter === 'infantil'
-                ? 'bg-amber-200/90 text-amber-950 ring-2 ring-amber-500'
-                : 'bg-amber-100 hover:bg-amber-200/80 text-amber-950'
+                ? 'bg-amber-200 text-amber-950 shadow-sm'
+                : 'bg-amber-100/90 hover:bg-amber-200/80 text-amber-950'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900">
-                Ed. Infantil (&lt; 60%)
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] font-semibold text-amber-950">
+                Infantil (&lt; 60%)
               </span>
-              <span className="material-symbols-outlined text-[20px] text-amber-700">
+              <span className="material-symbols-outlined text-[18px] text-amber-800">
                 child_care
               </span>
             </div>
-            <span className="text-3xl font-extrabold text-amber-950 tabular-nums block mt-1 leading-none">
+            <span className="text-2xl sm:text-3xl font-semibold text-amber-950 tabular-nums block mt-1.5 leading-none">
               {kpiStats.belowInfantilCount}
             </span>
-            <span className="text-xs font-bold text-amber-800 block mt-1.5">
-              G4 e G5 abaixo de 60%
+            <span className="text-xs font-medium text-amber-900 block mt-1.5">
+              G4 e G5
             </span>
           </button>
 
           {/* Card 4: Com Atestado vs Sem Atestado */}
-          <div className="rounded-3xl bg-slate-100 p-4 flex flex-col justify-between shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
-              Justificativa Médica (Atestado)
+          <div className="rounded-2xl sm:rounded-3xl bg-[#e9e9ef] p-3.5 sm:p-4 flex flex-col justify-between col-span-2 sm:col-span-1">
+            <span className="text-[11px] font-semibold text-[#3c3c43] block">
+              Justificativa Médica
             </span>
             <div className="grid grid-cols-2 gap-2 mt-2">
               <button
@@ -600,16 +595,16 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     selectedAtestadoFilter === 'com_atestado' ? 'all' : 'com_atestado'
                   )
                 }
-                className={`p-2.5 rounded-2xl text-center cursor-pointer transition-all ${
+                className={`p-2 rounded-xl text-center cursor-pointer transition-all ${
                   selectedAtestadoFilter === 'com_atestado'
-                    ? 'bg-emerald-700 text-white font-bold'
-                    : 'bg-emerald-100 text-emerald-950 hover:bg-emerald-200/80 font-bold'
+                    ? 'bg-emerald-800 text-white font-semibold'
+                    : 'bg-emerald-100 text-emerald-950 hover:bg-emerald-200/80 font-semibold'
                 }`}
               >
-                <span className="text-xl font-bold tabular-nums block leading-none">
+                <span className="text-lg font-semibold tabular-nums block leading-none">
                   {kpiStats.belowWithAtestadoCount}
                 </span>
-                <span className="text-[11px] font-bold block mt-1">
+                <span className="text-[11px] font-medium block mt-1">
                   Com Atestado
                 </span>
               </button>
@@ -620,16 +615,16 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     selectedAtestadoFilter === 'sem_atestado' ? 'all' : 'sem_atestado'
                   )
                 }
-                className={`p-2.5 rounded-2xl text-center cursor-pointer transition-all ${
+                className={`p-2 rounded-xl text-center cursor-pointer transition-all ${
                   selectedAtestadoFilter === 'sem_atestado'
-                    ? 'bg-rose-700 text-white font-bold'
-                    : 'bg-rose-100 text-rose-950 hover:bg-rose-200/80 font-bold'
+                    ? 'bg-rose-800 text-white font-semibold'
+                    : 'bg-rose-100 text-rose-950 hover:bg-rose-200/80 font-semibold'
                 }`}
               >
-                <span className="text-xl font-bold tabular-nums block leading-none">
+                <span className="text-lg font-semibold tabular-nums block leading-none">
                   {kpiStats.belowWithoutAtestadoCount}
                 </span>
-                <span className="text-[11px] font-bold block mt-1">
+                <span className="text-[11px] font-medium block mt-1">
                   Sem Atestado
                 </span>
               </button>
@@ -637,14 +632,14 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           </div>
         </div>
 
-        {/* BARRA DE FILTROS SIMPLIFICADA: POR TURMA / TODAS AS TURMAS, ETAPA, ATESTADO E BUSCA */}
+        {/* BARRA DE FILTROS SIMPLIFICADA SEM CONTORNOS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 pt-2">
           {/* Filtro 1: Por Turma ou Todas as Turmas */}
           <div className="lg:col-span-3">
             <select
               value={selectedClassFilter}
               onChange={(e) => setSelectedClassFilter(e.target.value)}
-              className="w-full min-h-[44px] px-3 bg-slate-100 text-slate-950 font-bold text-sm rounded-2xl cursor-pointer shadow-2xs focus:outline-none"
+              className="w-full min-h-[44px] px-3.5 bg-[#e9e9ef] text-[#111827] font-semibold text-sm rounded-2xl cursor-pointer focus:outline-none"
             >
               <option value="all">Todas as Turmas ({classes.length} turmas)</option>
               {classes.map((c) => (
@@ -660,7 +655,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <select
               value={selectedSegmentFilter}
               onChange={(e) => setSelectedSegmentFilter(e.target.value as any)}
-              className="w-full min-h-[44px] px-3 bg-slate-100 text-slate-950 font-bold text-sm rounded-2xl cursor-pointer shadow-2xs focus:outline-none"
+              className="w-full min-h-[44px] px-3.5 bg-[#e9e9ef] text-[#111827] font-semibold text-sm rounded-2xl cursor-pointer focus:outline-none"
             >
               <option value="all">Todas as Etapas (Inf. &lt;60% | Fund. &lt;75%)</option>
               <option value="fundamental">Ensino Fundamental (Meta &lt; 75%)</option>
@@ -673,7 +668,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <select
               value={selectedAtestadoFilter}
               onChange={(e) => setSelectedAtestadoFilter(e.target.value as any)}
-              className="w-full min-h-[44px] px-3 bg-slate-100 text-slate-950 font-bold text-sm rounded-2xl cursor-pointer shadow-2xs focus:outline-none"
+              className="w-full min-h-[44px] px-3.5 bg-[#e9e9ef] text-[#111827] font-semibold text-sm rounded-2xl cursor-pointer focus:outline-none"
             >
               <option value="all">Com e Sem Atestado</option>
               <option value="com_atestado">Com Atestado Médico</option>
@@ -681,12 +676,12 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             </select>
           </div>
 
-          {/* Filtro 4: Modo de Exibição (Somente Abaixo da Meta vs Todos) */}
+          {/* Filtro 4: Modo de Exibição */}
           <div className="lg:col-span-2">
             <select
               value={onlyBelowTarget ? 'abaixo_meta' : 'todos'}
               onChange={(e) => setOnlyBelowTarget(e.target.value === 'abaixo_meta')}
-              className="w-full min-h-[44px] px-3 bg-rose-100 text-rose-950 font-bold text-sm rounded-2xl cursor-pointer shadow-2xs focus:outline-none"
+              className="w-full min-h-[44px] px-3.5 bg-rose-100 text-rose-950 font-semibold text-sm rounded-2xl cursor-pointer focus:outline-none"
             >
               <option value="abaixo_meta">Apenas Abaixo da Meta</option>
               <option value="todos">Todos os Estudantes (A–Z)</option>
@@ -695,7 +690,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
           {/* Busca Rápida por Nome */}
           <div className="lg:col-span-2 relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#48484a] text-[18px]">
               search
             </span>
             <input
@@ -703,13 +698,14 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar aluno..."
-              className="w-full min-h-[44px] pl-9 pr-7 bg-slate-100 text-slate-950 text-sm rounded-2xl focus:bg-white focus:outline-none font-bold shadow-2xs"
+              className="w-full min-h-[44px] pl-10 pr-8 bg-[#e9e9ef] text-[#111827] text-sm rounded-2xl focus:bg-white focus:outline-none font-medium"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#48484a] hover:text-[#111827] cursor-pointer"
+                aria-label="Limpar busca"
               >
                 <span className="material-symbols-outlined text-[16px]">cancel</span>
               </button>
@@ -718,223 +714,298 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         </div>
       </section>
 
-      {/* TABELA NOMINAL SIMPLIFICADA E VISUAL EM ORDEM ALFABÉTICA (A-Z) */}
+      {/* RELAÇÃO NOMINAL RESPONSIVA (CARDS NO MOBILE + TABELA NO DESKTOP, ZERO CONTORNOS) */}
       <div className="bg-white rounded-3xl overflow-hidden shadow-sm">
-        <div className="px-5 py-4 bg-slate-100 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-950">
-            <span className="material-symbols-outlined text-[20px] text-blue-600">
+        <div className="px-4 sm:px-5 py-3.5 sm:py-4 bg-[#f2f2f7] flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+            <span className="material-symbols-outlined text-[20px] text-[#0066cc]">
               sort_by_alpha
             </span>
             <span>
-              Listagem em Ordem Alfabética (A–Z) • {filteredRows.length}{' '}
-              {filteredRows.length === 1 ? 'estudante listado' : 'estudantes listados'}
+              Ordem Alfabética (A–Z) · {filteredRows.length}{' '}
+              {filteredRows.length === 1 ? 'estudante' : 'estudantes'}
             </span>
           </div>
-          <span className="text-xs text-slate-600 font-bold">
-            Clique em qualquer estudante para abrir a Ficha Individual Completa
+          <span className="text-xs text-[#48484a] font-medium">
+            Toque no estudante para abrir a Ficha Individual
           </span>
         </div>
 
         {filteredRows.length === 0 ? (
           <div className="p-10 text-center space-y-2">
-            <span className="material-symbols-outlined text-[38px] text-[#28cd41]">
+            <span className="material-symbols-outlined text-[38px] text-[#047857]">
               verified
             </span>
-            <h3 className="text-base font-bold text-[#1d1d1f]">
+            <h3 className="text-base font-semibold text-[#111827]">
               Nenhum estudante abaixo da meta para os filtros selecionados
             </h3>
-            <p className="text-sm text-[#6e6e73]">
+            <p className="text-sm text-[#3c3c43]">
               Altere o bimestre, a turma ou selecione &ldquo;Todos os Estudantes (A–Z)&rdquo; para visualizar toda a relação.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse min-w-[980px]">
-              <thead className="bg-slate-100 text-slate-800 font-bold uppercase tracking-wider text-[11px]">
-                <tr>
-                  <th className="py-3 px-4 w-12 text-center">#</th>
-                  <th className="py-3 px-4">Estudante (Ordem Alfabética A–Z)</th>
-                  <th className="py-3 px-3">Turma &amp; Etapa</th>
-                  {currentBimester.months.length <= 2 ? (
-                    currentBimester.months.map((mObj) => (
-                      <th
-                        key={mObj.name}
-                        className="py-3 px-3 text-center bg-slate-200/60"
+          <>
+            {/* Cartões Mobile / Tablet (< lg) — Zero corte ou rolagem lateral forçada */}
+            <div className="lg:hidden p-3 sm:p-4 space-y-2.5">
+              {filteredRows.map((row, idx) => {
+                const { student, cls, rep, hasAtestado, isBelowTarget } = row;
+                return (
+                  <button
+                    key={`mob-${cls.id}-${student.id}`}
+                    type="button"
+                    onClick={() =>
+                      onOpenStudentGrid(
+                        student,
+                        cls.id,
+                        cls.name,
+                        cls.classesHeld || 20
+                      )
+                    }
+                    className={`w-full text-left p-3.5 rounded-2xl transition-colors cursor-pointer space-y-2.5 ${
+                      isBelowTarget
+                        ? 'bg-rose-50/90 hover:bg-rose-100/80'
+                        : 'bg-[#f4f4f8] hover:bg-[#ebebf0]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-xs font-semibold text-[#48484a] tabular-nums w-5 shrink-0">
+                          {(idx + 1).toString().padStart(2, '0')}
+                        </span>
+                        <StudentAvatar
+                          student={student}
+                          size="sm"
+                          expandableOnClick={false}
+                        />
+                        <div className="min-w-0">
+                          <span className="font-semibold text-[#111827] block truncate text-[14px]">
+                            {student.name}
+                          </span>
+                          <span className="text-xs text-[#48484a] block truncate">
+                            {cls.name} · RA {student.ra}-{student.digRa}
+                            {student.nis ? ` · NIS ${student.nis}` : ''}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-sm font-semibold tabular-nums shrink-0 ${
+                          isBelowTarget ? 'text-[#b42318]' : 'text-[#006644]'
+                        }`}
                       >
-                        {mObj.name.slice(0, 3)}/27
-                      </th>
-                    ))
-                  ) : (
-                    <th className="py-3 px-3 text-center bg-slate-200/60">
-                      Pior Mês no Período
-                    </th>
-                  )}
-                  <th className="py-3 px-3 text-center">Faltas no Bimestre</th>
-                  <th className="py-3 px-3 text-center">Tem Atestado?</th>
-                  <th className="py-3 px-4 text-center">% Presença vs Meta</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredRows.map((row, idx) => {
-                  const { student, cls, rep, hasAtestado, isBelowTarget } = row;
-                  return (
-                    <motion.tr
-                      key={`${cls.id}-${student.id}`}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.16, delay: Math.min(idx * 0.015, 0.3) }}
-                      onClick={() =>
-                        onOpenStudentGrid(
-                          student,
-                          cls.id,
-                          cls.name,
-                          cls.classesHeld || 20
-                        )
-                      }
-                      className={`cursor-pointer transition-colors ${
-                        isBelowTarget
-                          ? 'bg-[#fff1f2]/55 hover:bg-[#ffe4e6]/70'
-                          : 'hover:bg-[#f8fafc]'
-                      }`}
-                    >
-                      <td className="py-3 px-4 text-center font-mono text-xs font-bold text-[#64748b]">
-                        {(idx + 1).toString().padStart(2, '0')}
-                      </td>
+                        {rep.frequenciaBimestrePercent}%
+                      </span>
+                    </div>
 
-                      {/* Estudante em Ordem Alfabética */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <StudentAvatar
-                            student={student}
-                            size="sm"
-                            expandableOnClick={false}
-                          />
-                          <div className="min-w-0">
-                            <span className="font-bold text-[#0f172a] block truncate text-sm">
-                              {student.name}
-                            </span>
-                            <div className="flex items-center gap-1.5 text-xs text-[#64748b]">
-                              <span>RA {student.ra}-{student.digRa}</span>
-                              {student.nis && (
-                                <>
-                                  <span aria-hidden="true">·</span>
-                                  <span className="font-mono font-semibold text-[#006644]">
-                                    NIS {student.nis}
-                                  </span>
-                                </>
-                              )}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-0.5">
+                      <span className="text-[#3c3c43] tabular-nums font-medium">
+                        <strong className="text-[#b42318]">{rep.totalFaltasBimestre} faltas</strong> em {rep.totalDiasBimestre}d · Meta {rep.minLegalPresencePercent}%
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-lg font-semibold ${
+                          hasAtestado
+                            ? 'bg-emerald-100 text-emerald-950'
+                            : 'bg-rose-100 text-rose-950'
+                        }`}
+                      >
+                        {hasAtestado
+                          ? `Com Atestado (${rep.totalAtestadosBimestre})`
+                          : 'Sem Atestado'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tabela Desktop (>= lg) — Zebra tonal limpa sem divisores */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse min-w-[920px]">
+                <thead className="bg-[#f2f2f7] text-[#3c3c43] font-semibold text-xs">
+                  <tr>
+                    <th className="py-3 px-4 w-12 text-center">#</th>
+                    <th className="py-3 px-4">Estudante (Ordem Alfabética A–Z)</th>
+                    <th className="py-3 px-3">Turma &amp; Etapa</th>
+                    {currentBimester.months.length <= 2 ? (
+                      currentBimester.months.map((mObj) => (
+                        <th
+                          key={mObj.name}
+                          className="py-3 px-3 text-center bg-[#e9e9ef]"
+                        >
+                          {mObj.name.slice(0, 3)}/27
+                        </th>
+                      ))
+                    ) : (
+                      <th className="py-3 px-3 text-center bg-[#e9e9ef]">
+                        Pior Mês no Período
+                      </th>
+                    )}
+                    <th className="py-3 px-3 text-center">Faltas no Bimestre</th>
+                    <th className="py-3 px-3 text-center">Tem Atestado?</th>
+                    <th className="py-3 px-4 text-center">% Presença vs Meta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row, idx) => {
+                    const { student, cls, rep, hasAtestado, isBelowTarget } = row;
+                    return (
+                      <motion.tr
+                        key={`${cls.id}-${student.id}`}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.14, delay: Math.min(idx * 0.012, 0.25) }}
+                        onClick={() =>
+                          onOpenStudentGrid(
+                            student,
+                            cls.id,
+                            cls.name,
+                            cls.classesHeld || 20
+                          )
+                        }
+                        className={`cursor-pointer transition-colors ${
+                          isBelowTarget
+                            ? 'bg-rose-50/70 hover:bg-rose-100/75 odd:bg-rose-50'
+                            : 'hover:bg-[#ebebf0] odd:bg-[#f8f8fb]'
+                        }`}
+                      >
+                        <td className="py-3 px-4 text-center font-mono text-xs font-semibold text-[#48484a] tabular-nums">
+                          {(idx + 1).toString().padStart(2, '0')}
+                        </td>
+
+                        {/* Estudante em Ordem Alfabética */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <StudentAvatar
+                              student={student}
+                              size="sm"
+                              expandableOnClick={false}
+                            />
+                            <div className="min-w-0">
+                              <span className="font-semibold text-[#111827] block truncate text-sm">
+                                {student.name}
+                              </span>
+                              <div className="flex items-center gap-1.5 text-xs text-[#48484a]">
+                                <span>RA {student.ra}-{student.digRa}</span>
+                                {student.nis && (
+                                  <>
+                                    <span aria-hidden="true">·</span>
+                                    <span className="font-mono font-semibold text-[#006644]">
+                                      NIS {student.nis}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Turma & Etapa (Infantil ≥60% ou Fundamental ≥75%) */}
-                      <td className="py-3 px-3">
-                        <span className="font-bold text-[#0f172a] block">
-                          {cls.name}
-                        </span>
-                        <span className="text-xs text-[#64748b] block">
-                          {rep.isEducacaoInfantil
-                            ? 'Ed. Infantil (Meta ≥60%)'
-                            : 'Ens. Fundamental (Meta ≥75%)'}
-                        </span>
-                      </td>
-
-                      {/* Meses do Bimestre (Ex: Fev + Mar) */}
-                      {currentBimester.months.length <= 2 ? (
-                        rep.monthsBreakdown.map((mb) => (
-                          <td
-                            key={mb.monthName}
-                            className="py-3 px-3 text-center font-mono"
-                          >
-                            <span
-                              className={`font-semibold text-sm block ${
-                                mb.isBelowLegalThreshold
-                                  ? 'text-[#be123c]'
-                                  : 'text-[#0f172a]'
-                              }`}
-                            >
-                              {mb.frequenciaPercent}%
-                            </span>
-                            <span className="text-[11px] text-[#64748b] block">
-                              {mb.faltas}F · {mb.atestados}A
-                            </span>
-                          </td>
-                        ))
-                      ) : (
-                        <td className="py-3 px-3 text-center font-mono">
-                          <span className="font-semibold text-sm text-[#be123c] block">
-                            {row.worstMonthName}: {row.worstMonthPercent}%
+                        {/* Turma & Etapa (Infantil ≥60% ou Fundamental ≥75%) */}
+                        <td className="py-3 px-3">
+                          <span className="font-semibold text-[#111827] block">
+                            {cls.name}
+                          </span>
+                          <span className="text-xs text-[#48484a] block">
+                            {rep.isEducacaoInfantil
+                              ? 'Ed. Infantil (Meta ≥60%)'
+                              : 'Ens. Fundamental (Meta ≥75%)'}
                           </span>
                         </td>
-                      )}
 
-                      {/* Total de Faltas no Bimestre */}
-                      <td className="py-3 px-3 text-center font-mono">
-                        <span className="font-semibold text-sm text-[#be123c]">
-                          {rep.totalFaltasBimestre}
-                        </span>
-                        <span className="text-xs text-[#64748b] block">
-                          em {rep.totalDiasBimestre}d letivos
-                        </span>
-                      </td>
-
-                      {/* Se Tem Atestado ou Não (Destaque Visual Limpo) */}
-                      <td className="py-3 px-3 text-center">
-                        {hasAtestado ? (
-                          <div className="inline-flex flex-col items-center">
-                            <span className="text-xs font-semibold text-[#006644]">
-                              SIM ({rep.totalAtestadosBimestre} atestado{rep.totalAtestadosBimestre > 1 ? 's' : ''})
-                            </span>
-                            <span className="text-[11px] text-[#64748b]">
-                              {rep.totalSemAtestadoBimestre} s/ justificativa
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="inline-flex flex-col items-center">
-                            <span className="text-xs font-semibold text-[#be123c]">
-                              NÃO
-                            </span>
-                            <span className="text-[11px] text-[#9f1239]">
-                              100% sem atestado
-                            </span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* % Presença no Bimestre e Destaque de Meta */}
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="flex items-baseline gap-1.5 font-mono">
-                            <span
-                              className={`text-base font-semibold ${
-                                isBelowTarget ? 'text-[#be123c]' : 'text-[#006644]'
-                              }`}
+                        {/* Meses do Bimestre (Ex: Fev + Mar) */}
+                        {currentBimester.months.length <= 2 ? (
+                          rep.monthsBreakdown.map((mb) => (
+                            <td
+                              key={mb.monthName}
+                              className="py-3 px-3 text-center font-mono tabular-nums"
                             >
-                              {rep.frequenciaBimestrePercent}%
+                              <span
+                                className={`font-semibold text-sm block ${
+                                  mb.isBelowLegalThreshold
+                                    ? 'text-[#b42318]'
+                                    : 'text-[#111827]'
+                                }`}
+                              >
+                                {mb.frequenciaPercent}%
+                              </span>
+                              <span className="text-xs text-[#48484a] block">
+                                {mb.faltas}F · {mb.atestados}A
+                              </span>
+                            </td>
+                          ))
+                        ) : (
+                          <td className="py-3 px-3 text-center font-mono tabular-nums">
+                            <span className="font-semibold text-sm text-[#b42318] block">
+                              {row.worstMonthName}: {row.worstMonthPercent}%
                             </span>
-                            <span className="text-[11px] text-[#64748b]">
-                              / meta {rep.minLegalPresencePercent}%
-                            </span>
+                          </td>
+                        )}
+
+                        {/* Total de Faltas no Bimestre */}
+                        <td className="py-3 px-3 text-center font-mono tabular-nums">
+                          <span className="font-semibold text-sm text-[#b42318]">
+                            {rep.totalFaltasBimestre}
+                          </span>
+                          <span className="text-xs text-[#48484a] block">
+                            em {rep.totalDiasBimestre}d letivos
+                          </span>
+                        </td>
+
+                        {/* Se Tem Atestado ou Não */}
+                        <td className="py-3 px-3 text-center">
+                          {hasAtestado ? (
+                            <div className="inline-flex flex-col items-center">
+                              <span className="text-xs font-semibold text-[#006644]">
+                                SIM ({rep.totalAtestadosBimestre} atestado{rep.totalAtestadosBimestre > 1 ? 's' : ''})
+                              </span>
+                              <span className="text-xs text-[#48484a]">
+                                {rep.totalSemAtestadoBimestre} s/ justificativa
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="inline-flex flex-col items-center">
+                              <span className="text-xs font-semibold text-[#b42318]">
+                                NÃO
+                              </span>
+                              <span className="text-xs text-[#9f1239]">
+                                100% sem atestado
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* % Presença no Bimestre e Destaque de Meta */}
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-baseline gap-1.5 font-mono tabular-nums">
+                              <span
+                                className={`text-base font-semibold ${
+                                  isBelowTarget ? 'text-[#b42318]' : 'text-[#006644]'
+                                }`}
+                              >
+                                {rep.frequenciaBimestrePercent}%
+                              </span>
+                              <span className="text-xs text-[#48484a]">
+                                / meta {rep.minLegalPresencePercent}%
+                              </span>
+                            </div>
+                            <div className="w-28 h-1.5 rounded-full bg-[#dcdce4] overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  isBelowTarget ? 'bg-[#b42318]' : 'bg-[#006644]'
+                                }`}
+                                style={{
+                                  width: `${Math.min(100, Math.max(8, rep.frequenciaBimestrePercent))}%`,
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div className="w-28 h-1.5 rounded-full bg-[#e2e8f0] overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                isBelowTarget ? 'bg-[#be123c]' : 'bg-[#006644]'
-                              }`}
-                              style={{
-                                width: `${Math.min(100, Math.max(8, rep.frequenciaBimestrePercent))}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
