@@ -474,39 +474,39 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   }, [calendarConfig.year, visualCalendarMonth, parsedResult.calendarDays, holidays]);
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-9.5rem)] lg:h-[calc(100vh-6rem)] max-w-7xl mx-auto w-full bg-slate-50/70 rounded-3xl shadow-sm overflow-hidden animate-gentle-fade">
+    <div className="flex flex-col min-h-[calc(100dvh-9.5rem)] max-w-7xl mx-auto w-full bg-[#f2f2f7] rounded-3xl shadow-sm animate-gentle-fade">
       {/* ========================================================================= */}
-      {/* 1. CABEÇALHO FIXO (SHRINK-0) — NUNCA ROLA FORA DA TELA                     */}
+      {/* 1. CABEÇALHO                                                              */}
       {/* ========================================================================= */}
-      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 shadow-2xs space-y-2 z-10">
+      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 shadow-2xs space-y-2 z-10 rounded-t-3xl">
         {/* Breadcrumb e Informações Rápidas */}
-        <div className="flex items-center justify-between text-xs text-slate-500">
+        <div className="flex items-center justify-between text-xs text-[#48484a]">
           <div className="flex items-center gap-1.5 flex-wrap">
             {onBack && (
               <button
                 type="button"
                 onClick={onBack}
-                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                className="text-[#374151] hover:text-[#111827] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[15px]">arrow_back</span>
                 <span>Voltar</span>
               </button>
             )}
-            <span className="text-slate-300">/</span>
-            <span className="font-semibold text-slate-900">200 Dias Letivos</span>
-            <span className="text-slate-300">·</span>
-            <span className="text-slate-600 truncate max-w-[220px] sm:max-w-none">{SCHOOL_NAME}</span>
+            <span className="text-[#6e6e73]">/</span>
+            <span className="font-semibold text-[#111827]">200 Dias Letivos</span>
+            <span className="text-[#6e6e73]">·</span>
+            <span className="text-[#374151] truncate max-w-[220px] sm:max-w-none">{SCHOOL_NAME}</span>
           </div>
 
           <div className="flex items-center gap-2.5 text-xs">
             {isLoadingServer && (
-              <span className="text-slate-400 inline-flex items-center gap-1 font-mono text-[11px]">
+              <span className="text-[#48484a] inline-flex items-center gap-1 font-mono text-[11px]">
                 <span className="material-symbols-outlined text-[13px] animate-spin">sync</span>
                 <span className="hidden sm:inline">Sincronizando...</span>
               </span>
             )}
-            <span className="text-slate-600 font-medium inline-flex items-center gap-1.5 text-xs bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200/80">
-              <span className="material-symbols-outlined text-[15px] text-emerald-600">verified</span>
+            <span className="text-[#374151] font-medium inline-flex items-center gap-1.5 text-xs bg-[#e9e9ef] px-2.5 py-1 rounded-lg">
+              <span className="material-symbols-outlined text-[15px] text-[#006644]">verified</span>
               <span className="hidden sm:inline">Base Oficial SED (1.237 Alunos)</span>
             </span>
           </div>

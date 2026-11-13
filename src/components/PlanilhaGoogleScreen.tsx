@@ -1194,28 +1194,28 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-9.5rem)] lg:h-[calc(100vh-6rem)] max-w-[1600px] mx-auto w-full bg-slate-50/70 rounded-3xl shadow-sm overflow-hidden animate-gentle-fade">
-      {/* 1. CABEÇALHO FIXO (SHRINK-0) — NUNCA ROLA FORA DA TELA */}
-      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 shadow-2xs space-y-1.5 z-10">
+    <div className="flex flex-col min-h-[calc(100dvh-9.5rem)] max-w-[1600px] mx-auto w-full bg-[#f2f2f7] rounded-3xl shadow-sm animate-gentle-fade">
+      {/* 1. CABEÇALHO */}
+      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 shadow-2xs space-y-1.5 z-10 rounded-t-3xl">
         {/* Breadcrumb Limpo */}
-        <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+        <div className="flex items-center justify-between text-xs text-[#48484a] py-0.5">
           <div className="flex items-center gap-1.5">
             {onBack && (
               <>
                 <button
                   type="button"
                   onClick={onBack}
-                  className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  className="text-[#374151] hover:text-[#111827] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[15px]">arrow_back</span>
                   <span>Voltar</span>
                 </button>
-                <span className="text-slate-300">/</span>
+                <span className="text-[#6e6e73]">/</span>
               </>
             )}
-            <span className="font-semibold text-slate-800">Planilha Google &amp; Fotos</span>
-            <span className="text-slate-300">·</span>
-            <span className="text-slate-600 hidden sm:inline">Integração Sheets &amp; Drive</span>
+            <span className="font-semibold text-[#111827]">Planilha Google &amp; Fotos</span>
+            <span className="text-[#6e6e73]">·</span>
+            <span className="text-[#374151] hidden sm:inline">Integração Sheets &amp; Drive</span>
           </div>
 
           <a

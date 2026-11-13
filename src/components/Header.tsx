@@ -1,14 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { ClassGroup, ScreenType, UserRole } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Home,
+  Users,
+  CalendarCheck2,
+  ShieldAlert,
+  SlidersHorizontal,
+  ChevronDown,
+  Search,
+  CloudCheck,
+  CloudUpload,
+  LogOut,
+  ShieldCheck,
+  HeartHandshake,
+  CalendarDays,
+  BarChart3,
+  Database,
+  FileCode2,
+  UserCog,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
+import {
+  AttendanceWindowConfig,
+  AuthorizedUser,
+  ClassGroup,
+  ScreenType,
+  UserRole,
+} from '../types';
 import { APP_LOGO_URL, APP_LOGO_FALLBACK_URL, SCHOOL_NAME } from '../data/mockData';
 import { StudentAvatar } from './StudentAvatar';
 import { PushNotificationCenter } from './PushNotificationCenter';
-import {
-  getAccessToken,
-  getDriveAuthState,
-  googleSignIn,
-  initAuth,
-} from '../services/googleSheetsApi';
 import {
   subscribeToSyncStatus,
   SyncStatusSnapshot,
@@ -22,6 +43,9 @@ interface HeaderProps {
   userEmail?: string;
   userName?: string;
   userRole?: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
+  assignedClassIds?: string[];
+  attendanceWindowConfig?: AttendanceWindowConfig;
   visibleClasses?: ClassGroup[];
   allClasses?: ClassGroup[];
   onRestoreAdminRole?: () => void;
@@ -40,33 +64,27 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   currentScreen,
-  title,
   userEmail,
   userName,
   userRole = 'admin',
+  teacherRoleType,
+  assignedClassIds = [],
+  attendanceWindowConfig,
   visibleClasses = [],
   allClasses = [],
   onRestoreAdminRole,
-  onBack,
   onChangeScreen,
   onSelectClassById,
   onOpenSpotlightSearch,
-  onQuickSyncDriveNow,
-  onOpenConfigDaysModal,
-  onOpenJsonImportModal,
-  onOpenAdminPhotosModal,
-  onOpenAdminPdfsModal,
-  onNavigatePlanilha,
   onLogout,
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [hasDriveToken, setHasDriveToken] = useState(false);
-  const [isDriveTokenExpired, setIsDriveTokenExpired] = useState(false);
-  const [isSyncingDrive, setIsSyncingDrive] = useState(false);
+  const [isFlushingCloud, setIsFlushingCloud] = useState(false);
   const [showAdminNavDropdown, setShowAdminNavDropdown] = useState(false);
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  const adminMenuRef = useRef<HTMLDivElement>(null);
 
   const [syncSnapshot, setSyncSnapshot] = useState<SyncStatusSnapshot>({
     status: 'synced',
@@ -84,58 +102,26 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-    const checkTokenState = async () => {
-      const t = await getAccessToken();
-      const authState = getDriveAuthState();
-      if (mounted) {
-        setHasDriveToken(Boolean(t));
-        setIsDriveTokenExpired(authState.isExpired);
+    const handleOutside = (e: MouseEvent) => {
+      if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
+        setShowAdminNavDropdown(false);
       }
     };
-    checkTokenState();
-    const timer = window.setInterval(checkTokenState, 15000);
-    const unsub = initAuth(
-      () => {
-        if (mounted) {
-          setHasDriveToken(true);
-          setIsDriveTokenExpired(false);
-        }
-      },
-      () => {
-        if (mounted) setHasDriveToken(false);
-      }
-    );
-    return () => {
-      mounted = false;
-      window.clearInterval(timer);
-      unsub();
-    };
-  }, [currentScreen]);
+    if (showAdminNavDropdown) {
+      document.addEventListener('mousedown', handleOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [showAdminNavDropdown]);
 
-  const handleDriveSyncButtonClick = async () => {
-    if (isSyncingDrive) return;
-    setIsSyncingDrive(true);
+  const handleCloudFlushClick = async () => {
+    if (isFlushingCloud) return;
+    setIsFlushingCloud(true);
     try {
-      if (syncSnapshot.pendingCount > 0) {
-        await flushPendingOfflineQueue();
-      }
-      let token = await getAccessToken();
-      if (!token) {
-        const res = await googleSignIn();
-        token = res?.accessToken || (await getAccessToken());
-      }
-      if (token) {
-        setHasDriveToken(true);
-        setIsDriveTokenExpired(false);
-        if (onQuickSyncDriveNow) {
-          await onQuickSyncDriveNow();
-        }
-      }
+      await flushPendingOfflineQueue();
     } catch (err) {
-      console.warn('Aviso ao sincronizar Google Drive:', err);
+      console.warn('Aviso ao sincronizar nuvem Firebase:', err);
     } finally {
-      setIsSyncingDrive(false);
+      setIsFlushingCloud(false);
     }
   };
 
@@ -161,247 +147,254 @@ export const Header: React.FC<HeaderProps> = ({
 
   if (currentScreen === 'login') return null;
 
-  const isAdmin = userRole === 'admin';
+  const isAdmin =
+    userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
 
   const navigateTo = (screen: ScreenType) => {
     setShowAdminNavDropdown(false);
-    setIsMobileDrawerOpen(false);
     setShowProfileMenu(false);
     onChangeScreen?.(screen);
   };
 
+  const primaryNavItems: Array<{
+    id: ScreenType;
+    label: string;
+    activeMatch: boolean;
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [
+    {
+      id: 'home',
+      label: 'Início',
+      activeMatch: currentScreen === 'home',
+      icon: Home,
+    },
+    {
+      id: 'turmas',
+      label: 'Turmas',
+      activeMatch: currentScreen === 'turmas' || currentScreen === 'detalhes',
+      icon: Users,
+    },
+    ...(userRole !== 'peb2'
+      ? [
+          {
+            id: 'frequencia_mensal' as ScreenType,
+            label: 'Faltas do Mês',
+            activeMatch: currentScreen === 'frequencia_mensal',
+            icon: CalendarCheck2,
+          },
+        ]
+      : []),
+    {
+      id: 'faltas_consecutivas',
+      label: 'Busca Ativa',
+      activeMatch: currentScreen === 'faltas_consecutivas',
+      icon: ShieldAlert,
+    },
+  ];
+
+  const adminEssentialItems: Array<{
+    id: ScreenType;
+    label: string;
+    subtitle: string;
+    icon: React.ComponentType<{ className?: string }>;
+    tintClass: string;
+  }> = [
+    {
+      id: 'resumo',
+      label: 'Resumo & Mapa',
+      subtitle: 'Frequência mensal e padrão de faltas',
+      icon: BarChart3,
+      tintClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
+    },
+    {
+      id: 'bolsa_familia',
+      label: 'Bolsa Família & Fretado',
+      subtitle: 'Condicionalidades e alertas sociais',
+      icon: HeartHandshake,
+      tintClass: 'bg-[#fef3c7] text-[#92400e]',
+    },
+    {
+      id: 'dias_letivos',
+      label: '200 Dias Letivos',
+      subtitle: 'Calendário oficial e feriados 2027',
+      icon: CalendarDays,
+      tintClass: 'bg-[#eaf6ef] text-[#005035]',
+    },
+    {
+      id: 'usuarios_acesso',
+      label: 'Acessos & Segurança',
+      subtitle: 'Permissões, auditoria e alertas FCM',
+      icon: ShieldCheck,
+      tintClass: 'bg-[#f2f2f7] text-[#1d1d1f]',
+    },
+    {
+      id: 'diagnostico_bd',
+      label: 'Diagnóstico do Banco',
+      subtitle: 'Consistência cadastral e sincronismo',
+      icon: Database,
+      tintClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
+    },
+    {
+      id: 'importar_deficiencias_htm',
+      label: 'Deficiências (.HTM)',
+      subtitle: 'Importar registros SED para AEE',
+      icon: FileCode2,
+      tintClass: 'bg-[#eaf6ef] text-[#005035]',
+    },
+  ];
+
+  const isAdminScreenActive = [
+    'bolsa_familia',
+    'usuarios_acesso',
+    'dias_letivos',
+    'resumo',
+    'diagnostico_bd',
+    'importar_deficiencias_htm',
+  ].includes(currentScreen);
+
+  const roleShortLabel = isAdmin
+    ? 'Admin'
+    : teacherRoleType === 'aee'
+    ? 'AEE'
+    : teacherRoleType === 'apoio'
+    ? 'Apoio'
+    : userRole === 'usuario'
+    ? 'PEB I'
+    : 'PEB II';
+
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white shadow-xs">
-        <div className="h-14 px-2.5 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-1.5 sm:gap-3">
+      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-xl shadow-[0_1px_0_rgba(0,0,0,0.05)]">
+        <div className="h-14 px-3 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Zona 1: Identidade Institucional */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 xl:flex-initial">
-            <div
-              onClick={() => navigateTo('home')}
-              className="flex items-center gap-2 cursor-pointer group select-none min-w-0"
-              title="Ir para a Página Inicial"
-            >
-              <img
-                src={APP_LOGO_URL}
-                alt="Brasão de Jundiaí"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-                }}
-                className="w-7 h-7 object-contain shrink-0"
-              />
-              <div className="flex items-baseline gap-1.5 min-w-0">
-                <span className="text-[13px] sm:text-sm font-bold tracking-tight text-slate-950 group-hover:text-blue-700 transition-colors truncate">
-                  Lista Piloto 2027
-                </span>
-                <span className="text-slate-400 font-light hidden sm:inline" aria-hidden="true">·</span>
-                <span className="text-xs text-slate-800 font-semibold hidden md:inline whitespace-nowrap">
-                  EMEB Candelário
-                </span>
-              </div>
+          <button
+            type="button"
+            onClick={() => navigateTo('home')}
+            className="flex items-center gap-2.5 cursor-pointer group select-none min-w-0 text-left"
+            title="Ir para o Início"
+          >
+            <img
+              src={APP_LOGO_URL}
+              alt="Brasão de Jundiaí"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = APP_LOGO_FALLBACK_URL;
+              }}
+              className="w-7 h-7 object-contain shrink-0"
+            />
+            <div className="flex items-baseline gap-1.5 min-w-0">
+              <span className="text-[14px] font-semibold tracking-tight text-[#1d1d1f] group-hover:text-[#0071e3] transition-colors truncate">
+                Lista Piloto 2027
+              </span>
+              <span className="text-[#86868b] font-light hidden sm:inline" aria-hidden="true">
+                ·
+              </span>
+              <span className="text-xs text-[#6e6e73] font-medium hidden md:inline whitespace-nowrap">
+                EMEB Candelário
+              </span>
             </div>
-          </div>
+          </button>
 
-          {/* Zona 2: Navegação Horizontal Minimalista Apple (Desktop) */}
+          {/* Zona 2: Navegação Principal Enxuta (Desktop & Tablet Paisagem lg+) */}
           {onChangeScreen && (
             <nav
               aria-label="Navegação Principal"
-              className="hidden xl:flex items-center gap-1 p-1 bg-slate-100/80 rounded-2xl shrink-0"
+              className="hidden lg:flex items-center gap-1 p-1 bg-[#f2f2f7] rounded-2xl shrink-0"
             >
-              {/* Início */}
-              <button
-                type="button"
-                onClick={() => navigateTo('home')}
-                className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-                  currentScreen === 'home'
-                    ? 'bg-white text-slate-950 font-semibold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">grid_view</span>
-                <span>Início</span>
-              </button>
+              {primaryNavItems.map((item) => {
+                const IconComp = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigateTo(item.id)}
+                    aria-current={item.activeMatch ? 'page' : undefined}
+                    className={`h-8 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                      item.activeMatch
+                        ? 'bg-white text-[#1d1d1f] font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                        : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-white/60 font-medium'
+                    }`}
+                  >
+                    <IconComp
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        item.activeMatch ? 'text-[#0071e3] stroke-[2.25]' : 'text-[#6e6e73] stroke-[1.9]'
+                      }`}
+                    />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
 
-              {/* Turmas */}
-              <button
-                type="button"
-                onClick={() => navigateTo('turmas')}
-                className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-                  currentScreen === 'turmas' || currentScreen === 'detalhes'
-                    ? 'bg-white text-slate-950 font-semibold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">groups</span>
-                <span>Turmas</span>
-              </button>
-
-              {/* Informar Faltas do Mês (PEB I e Admin) */}
-              {userRole !== 'peb2' && (
-                <button
-                  type="button"
-                  onClick={() => navigateTo('frequencia_mensal')}
-                  title="Informar faltas do mês de referência"
-                  className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-                    currentScreen === 'frequencia_mensal'
-                      ? 'bg-white text-slate-950 font-semibold shadow-xs'
-                      : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px]">event_available</span>
-                  <span>Faltas do Mês</span>
-                </button>
-              )}
-
-              {/* Busca Ativa */}
-              <button
-                type="button"
-                onClick={() => navigateTo('faltas_consecutivas')}
-                className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-                  currentScreen === 'faltas_consecutivas'
-                    ? 'bg-white text-slate-950 font-semibold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">notifications</span>
-                <span>Busca Ativa</span>
-              </button>
-
-              {/* Gestão (Admin) */}
+              {/* Menu Gestão (Apenas Admin — Somente Telas Essenciais) */}
               {isAdmin && (
-                <div className="relative">
+                <div className="relative" ref={adminMenuRef}>
                   <button
                     type="button"
                     onClick={() => setShowAdminNavDropdown((prev) => !prev)}
-                    className={`h-7 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1 ${
-                      [
-                        'bolsa_familia',
-                        'usuarios_acesso',
-                        'dias_letivos',
-                      ].includes(currentScreen) || showAdminNavDropdown
-                        ? 'bg-white text-slate-950 font-semibold shadow-xs'
-                        : 'text-slate-600 hover:text-slate-950 hover:bg-white/60 font-medium'
+                    aria-expanded={showAdminNavDropdown}
+                    className={`h-8 px-3 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isAdminScreenActive || showAdminNavDropdown
+                        ? 'bg-white text-[#1d1d1f] font-semibold shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                        : 'text-[#48484a] hover:text-[#1d1d1f] hover:bg-white/60 font-medium'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[16px]">tune</span>
+                    <SlidersHorizontal
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        isAdminScreenActive || showAdminNavDropdown
+                          ? 'text-[#0071e3] stroke-[2.25]'
+                          : 'text-[#6e6e73] stroke-[1.9]'
+                      }`}
+                    />
                     <span>Gestão</span>
-                    <span className="material-symbols-outlined text-[14px] opacity-60">expand_more</span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-[#86868b] transition-transform duration-150 ${
+                        showAdminNavDropdown ? 'rotate-180' : ''
+                      }`}
+                    />
                   </button>
 
                   {showAdminNavDropdown && (
-                    <div
-                      className="absolute right-0 mt-2 w-60 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl p-1.5 space-y-0.5 z-50 animate-in fade-in duration-100"
-                      onMouseLeave={() => setShowAdminNavDropdown(false)}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => navigateTo('bolsa_familia')}
-                        className={`w-full px-2.5 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
-                          currentScreen === 'bolsa_familia'
-                            ? 'bg-[#e9e9ef] text-[#111827] font-semibold'
-                            : 'text-[#3c3c43] hover:bg-[#f2f2f7] font-medium'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-[#48484a]">
-                          volunteer_activism
-                        </span>
-                        <span>Bolsa Família &amp; Fretado</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => navigateTo('dias_letivos')}
-                        className={`w-full px-2.5 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
-                          currentScreen === 'dias_letivos'
-                            ? 'bg-[#e9e9ef] text-[#111827] font-semibold'
-                            : 'text-[#3c3c43] hover:bg-[#f2f2f7] font-medium'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-[#48484a]">
-                          calendar_month
-                        </span>
-                        <span>200 Dias Letivos</span>
-                      </button>
-
-                      {onOpenConfigDaysModal && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowAdminNavDropdown(false);
-                            onOpenConfigDaysModal();
-                          }}
-                          className="w-full px-2.5 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer text-[#3c3c43] hover:bg-[#f2f2f7] font-medium"
-                        >
-                          <span className="material-symbols-outlined text-[16px] text-[#48484a]">
-                            tune
-                          </span>
-                          <span>Configurar Calendário das Turmas</span>
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => navigateTo('usuarios_acesso')}
-                        className={`w-full px-2.5 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
-                          currentScreen === 'usuarios_acesso'
-                            ? 'bg-[#e9e9ef] text-[#111827] font-semibold'
-                            : 'text-[#3c3c43] hover:bg-[#f2f2f7] font-medium'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-[#48484a]">
-                          group_add
-                        </span>
-                        <span>Professores &amp; Acessos</span>
-                      </button>
-
-                      {onOpenJsonImportModal && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowAdminNavDropdown(false);
-                            onOpenJsonImportModal();
-                          }}
-                          className="w-full px-2.5 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer text-blue-800 hover:bg-blue-50 font-semibold mt-1"
-                        >
-                          <span className="material-symbols-outlined text-[16px] text-blue-700">
-                            upload_file
-                          </span>
-                          <span>Atualizar via JSON</span>
-                        </button>
-                      )}
-
-                      {onOpenAdminPhotosModal && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowAdminNavDropdown(false);
-                            onOpenAdminPhotosModal();
-                          }}
-                          className="w-full px-2.5 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer text-emerald-900 hover:bg-emerald-50 font-semibold mt-0.5"
-                        >
-                          <span className="material-symbols-outlined text-[16px] text-emerald-700">
-                            add_photo_alternate
-                          </span>
-                          <span>Arraste de Fotos Nomeadas</span>
-                        </button>
-                      )}
-
-                      {onOpenAdminPdfsModal && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowAdminNavDropdown(false);
-                            onOpenAdminPdfsModal();
-                          }}
-                          className="w-full px-2.5 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer text-rose-900 hover:bg-rose-50 font-semibold mt-0.5"
-                        >
-                          <span className="material-symbols-outlined text-[16px] text-rose-700">
-                            picture_as_pdf
-                          </span>
-                          <span>Arraste de Fichas PDF</span>
-                        </button>
-                      )}
+                    <div className="absolute right-0 mt-2.5 w-72 bg-white/98 backdrop-blur-2xl rounded-3xl shadow-[0_18px_48px_rgba(0,0,0,0.14)] p-2 space-y-1 z-50 animate-gentle-fade">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b] px-2.5 pt-1 pb-0.5 block">
+                        Ferramentas de Gestão
+                      </span>
+                      {adminEssentialItems.map((item) => {
+                        const IconComp = item.icon;
+                        const active = currentScreen === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => navigateTo(item.id)}
+                            className={`w-full px-2.5 py-2 rounded-2xl text-left flex items-center gap-3 transition-colors cursor-pointer ${
+                              active
+                                ? 'bg-[#1d1d1f] text-white'
+                                : 'text-[#1d1d1f] hover:bg-[#f5f5f7]'
+                            }`}
+                          >
+                            <div
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                active ? 'bg-white/15 text-white' : item.tintClass
+                              }`}
+                            >
+                              <IconComp className="w-4 h-4 stroke-[2]" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-semibold block truncate">
+                                {item.label}
+                              </span>
+                              <span
+                                className={`text-[11px] block truncate ${
+                                  active ? 'text-white/75' : 'text-[#6e6e73]'
+                                }`}
+                              >
+                                {item.subtitle}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -409,76 +402,62 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
           )}
 
-          {/* Zona 3: Ações Rápidas & Perfil */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {/* Busca Rápida (Estilo Apple Spotlight) */}
+          {/* Zona 3: Ações Essenciais & Perfil */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Busca Rápida */}
             {onOpenSpotlightSearch && (
               <button
                 type="button"
                 onClick={onOpenSpotlightSearch}
-                aria-label="Buscar Aluno ou Turma"
-                className="h-8 w-8 sm:w-auto px-0 sm:px-2.5 rounded-xl bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                aria-label="Buscar aluno ou turma"
+                title="Buscar aluno ou turma (⌘K)"
+                className="h-8 w-8 sm:w-auto sm:px-3 rounded-full sm:rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1d1d1f] font-medium text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[16px] text-[#3c3c43]">search</span>
-                <span className="hidden sm:inline text-xs text-[#111827]">Buscar</span>
-                <kbd className="hidden md:inline-flex px-1.5 py-0.5 text-[10px] font-sans text-[#48484a] bg-white rounded shadow-2xs">⌘K</kbd>
+                <Search className="w-3.5 h-3.5 text-[#48484a] stroke-[2.1]" />
+                <span className="hidden sm:inline text-xs font-medium text-[#1d1d1f]">Buscar</span>
               </button>
             )}
 
-            {/* Sincronização Unificada em Botão Discreto */}
+            {/* Status da Nuvem */}
             <button
               type="button"
-              onClick={handleDriveSyncButtonClick}
-              disabled={isSyncingDrive}
+              onClick={handleCloudFlushClick}
+              disabled={isFlushingCloud}
+              aria-label="Status de sincronização na nuvem"
               title={
                 syncSnapshot.pendingCount > 0
-                  ? `${syncSnapshot.pendingCount} alteração(ões) pendente(s). Clique para salvar na nuvem agora.`
-                  : hasDriveToken
-                  ? 'Nuvem conectada e sincronizada. Clique para atualizar fotos e planilha.'
-                  : 'Conectar ao Google Drive institucional'
+                  ? `${syncSnapshot.pendingCount} pendente(s). Toque para sincronizar.`
+                  : 'Dados sincronizados automaticamente na nuvem'
               }
-              className={`relative h-8 w-8 sm:w-auto px-0 sm:px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-xs font-medium transition-colors cursor-pointer ${
+              className={`h-8 rounded-full sm:rounded-xl flex items-center justify-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                 syncSnapshot.pendingCount > 0
-                  ? 'bg-amber-50 text-amber-900 hover:bg-amber-100'
-                  : 'bg-slate-100/90 text-slate-700 hover:bg-slate-200/80'
+                  ? 'px-2.5 bg-[#fef3c7] text-[#92400e] hover:bg-[#fde68a]'
+                  : 'w-8 sm:w-auto sm:px-2.5 bg-[#eaf6ef] text-[#005035] hover:bg-[#d5efe0]'
               }`}
             >
-              <span
-                className={`material-symbols-outlined text-[16px] ${
-                  isSyncingDrive || syncSnapshot.status === 'syncing'
-                    ? 'animate-spin text-blue-600'
-                    : syncSnapshot.pendingCount > 0
-                    ? 'text-amber-600'
-                    : hasDriveToken
-                    ? 'text-emerald-600'
-                    : 'text-slate-500'
-                }`}
-              >
-                {syncSnapshot.pendingCount > 0
-                  ? 'cloud_upload'
-                  : hasDriveToken
-                  ? 'cloud_done'
-                  : 'cloud'}
-              </span>
-              {syncSnapshot.pendingCount > 0 && (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  <span className="hidden sm:inline font-sans text-[11px] tabular-nums font-semibold">
-                    {syncSnapshot.pendingCount} pendente(s)
-                  </span>
-                </>
+              {isFlushingCloud || syncSnapshot.status === 'syncing' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0071e3]" />
+              ) : syncSnapshot.pendingCount > 0 ? (
+                <CloudUpload className="w-3.5 h-3.5 text-[#b45309]" />
+              ) : (
+                <CloudCheck className="w-3.5 h-3.5 text-[#047857]" />
               )}
-              {syncSnapshot.pendingCount === 0 && (
-                <span className="hidden lg:inline text-[11px] text-slate-600">Drive</span>
+              {syncSnapshot.pendingCount > 0 ? (
+                <span className="text-[11px] tabular-nums">{syncSnapshot.pendingCount}</span>
+              ) : (
+                <span className="hidden xl:inline text-[11px]">Sincronizado</span>
               )}
             </button>
 
-            {/* Notificações Push */}
+            {/* Notificações Push (FCM) */}
             <PushNotificationCenter
               visibleClasses={visibleClasses}
               allClasses={allClasses}
               userRole={userRole}
+              userEmail={userEmail}
               userName={userName}
+              assignedClassIds={assignedClassIds}
+              attendanceWindowConfig={attendanceWindowConfig}
               onNavigateScreen={(targetScreen, targetClassId) => {
                 if (targetClassId && onSelectClassById) {
                   onSelectClassById(targetClassId);
@@ -491,21 +470,19 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                onClick={() => setShowProfileMenu((prev) => !prev)}
                 aria-label="Menu do perfil e sair"
-                className="h-8 pl-1 pr-1 sm:pr-2 rounded-xl bg-slate-100/90 hover:bg-slate-200/80 flex items-center gap-1 sm:gap-1.5 cursor-pointer transition-colors"
+                className="h-8 pl-1 pr-1.5 sm:pr-2.5 rounded-full sm:rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 <StudentAvatar
                   name={userName || userEmail || 'Educador'}
                   size="sm"
                   className="w-6 h-6 text-[10px]"
                 />
-                <span className="hidden sm:inline text-xs font-semibold text-slate-800 max-w-[90px] truncate">
-                  {userRole === 'admin' ? 'Admin' : userRole === 'usuario' ? 'PEB I' : 'PEB II'}
+                <span className="hidden sm:inline text-xs font-semibold text-[#1d1d1f] max-w-[90px] truncate">
+                  {roleShortLabel}
                 </span>
-                <span className="hidden sm:inline-flex material-symbols-outlined text-[15px] text-slate-500">
-                  expand_more
-                </span>
+                <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-[#6e6e73]" />
               </button>
 
               {showProfileMenu && (
@@ -514,45 +491,33 @@ export const Header: React.FC<HeaderProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setShowProfileMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-3xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="p-3 rounded-2xl bg-slate-100 flex items-center gap-3">
+                  <div className="absolute right-0 mt-2.5 w-72 bg-white/98 backdrop-blur-2xl rounded-3xl shadow-[0_18px_48px_rgba(0,0,0,0.16)] p-2.5 z-50 animate-gentle-fade space-y-1.5">
+                    <div className="p-3 rounded-2xl bg-[#f5f5f7] flex items-center gap-3">
                       <StudentAvatar
                         name={userName || userEmail || 'Educador'}
                         size="md"
                         className="w-10 h-10 text-sm shrink-0"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-slate-900 truncate">
+                        <p className="text-xs font-semibold text-[#1d1d1f] truncate">
                           {userName || 'Professor(a)'}
                         </p>
-                        <p className="text-[11px] font-mono text-blue-700 truncate">
-                          {userEmail || 'emebjfreitas@educacao.jundiai.sp.gov.br'}
+                        <p className="text-[11px] text-[#0071e3] truncate">
+                          {userEmail || 'emebjfreitas@jundiai.sp.gov.br'}
                         </p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">
-                          {userRole === 'admin'
+                        <p className="text-[10px] text-[#6e6e73] mt-0.5">
+                          {isAdmin
                             ? 'Direção / Administração'
+                            : teacherRoleType === 'aee'
+                            ? 'Educação Especial (AEE)'
+                            : teacherRoleType === 'apoio'
+                            ? 'Apoio Pedagógico'
                             : userRole === 'usuario'
                             ? 'Docente Regente (PEB I)'
                             : 'Docente Especialista (PEB II)'}
                         </p>
                       </div>
                     </div>
-
-                    <div className="px-3 py-2 flex items-center justify-between text-xs text-slate-600">
-                      <span>Status da Nuvem</span>
-                      <span className="font-semibold text-slate-900 flex items-center gap-1.5">
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            syncSnapshot.pendingCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`}
-                        />
-                        {syncSnapshot.pendingCount > 0
-                          ? `${syncSnapshot.pendingCount} pendente(s)`
-                          : 'Sincronizado'}
-                      </span>
-                    </div>
-
-                    <div className="my-1.5 h-px bg-slate-100" />
 
                     {!isAdmin &&
                       onRestoreAdminRole &&
@@ -563,11 +528,9 @@ export const Header: React.FC<HeaderProps> = ({
                             setShowProfileMenu(false);
                             onRestoreAdminRole();
                           }}
-                          className="w-full text-left px-3 py-2 rounded-xl text-xs text-blue-700 hover:bg-blue-50 flex items-center gap-2 cursor-pointer font-semibold transition-colors"
+                          className="w-full text-left px-3 py-2 rounded-2xl text-xs text-[#0071e3] hover:bg-[#e8f0fe] flex items-center gap-2.5 cursor-pointer font-semibold transition-colors"
                         >
-                          <span className="material-symbols-outlined text-[17px]">
-                            admin_panel_settings
-                          </span>
+                          <UserCog className="w-4 h-4 shrink-0" />
                           <span>Voltar ao Perfil Administrador</span>
                         </button>
                       )}
@@ -576,22 +539,12 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         type="button"
                         onClick={() => navigateTo('usuarios_acesso')}
-                        className="w-full text-left px-3 py-2 rounded-xl text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-2xl text-xs text-[#1d1d1f] hover:bg-[#f5f5f7] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[17px] text-slate-500">
-                          manage_accounts
-                        </span>
-                        <span>Professores &amp; Acessos</span>
+                        <ShieldCheck className="w-4 h-4 text-[#48484a] shrink-0" />
+                        <span>Acessos &amp; Segurança</span>
                       </button>
                     )}
-
-
-
-                    <div className="my-1.5 h-px bg-slate-100" />
-
-
-
-                    <div className="my-1.5 h-px bg-slate-100" />
 
                     <button
                       type="button"
@@ -599,257 +552,30 @@ export const Header: React.FC<HeaderProps> = ({
                         setShowProfileMenu(false);
                         setShowLogoutSheet(true);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-xl text-xs text-rose-700 hover:bg-rose-50 flex items-center gap-2 cursor-pointer font-semibold transition-colors mt-0.5"
+                      className="w-full text-left px-3 py-2 rounded-2xl text-xs text-[#b91c1c] hover:bg-[#fee2e2]/70 flex items-center gap-2.5 cursor-pointer font-semibold transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[17px]">logout</span>
+                      <LogOut className="w-4 h-4 shrink-0" />
                       <span>Encerrar Sessão</span>
                     </button>
                   </div>
                 </>
               )}
             </div>
-
-            {/* Botão Hambúrguer Mobile/Tablet */}
-            <button
-              type="button"
-              onClick={() => setIsMobileDrawerOpen(true)}
-              aria-label="Abrir menu de navegação"
-              className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 flex items-center justify-center cursor-pointer transition-colors xl:hidden shadow-2xs"
-              title="Abrir Menu"
-            >
-              <span className="material-symbols-outlined text-[18px]">menu</span>
-            </button>
           </div>
         </div>
       </header>
 
-      {/* Drawer Lateral Mobile & Tablet (Zero corte, zero sobreposição) */}
-      {isMobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 xl:hidden animate-in fade-in duration-150">
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
-            onClick={() => setIsMobileDrawerOpen(false)}
-          />
-          <div className="fixed top-0 right-0 bottom-0 w-full max-w-xs bg-white shadow-2xl p-4 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-100">
-            <div className="space-y-4">
-              {/* Header do Drawer */}
-              <div className="flex items-center justify-between pb-3">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={APP_LOGO_URL}
-                    alt="Logo"
-                    className="w-7 h-7 object-contain"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-                    }}
-                  />
-                  <span className="font-bold text-sm text-slate-900">Navegação Principal</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileDrawerOpen(false)}
-                  className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">close</span>
-                </button>
-              </div>
-
-              {/* Links Principais */}
-              <div className="space-y-1">
-                <span className="text-[11px] font-semibold text-[#48484a] uppercase tracking-wider block px-2 py-1">
-                  Módulos
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => navigateTo('home')}
-                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm flex items-center gap-3 transition-colors ${
-                    currentScreen === 'home'
-                      ? 'bg-[#1d1d1f] text-white font-semibold'
-                      : 'text-[#111827] hover:bg-[#f2f2f7] font-medium'
-                  }`}
-                >
-                  <span className={`material-symbols-outlined text-[18px] ${currentScreen === 'home' ? 'text-white' : 'text-[#48484a]'}`}>
-                    grid_view
-                  </span>
-                  <span>Início (Painel Geral)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => navigateTo('turmas')}
-                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm flex items-center gap-3 transition-colors ${
-                    currentScreen === 'turmas' || currentScreen === 'detalhes'
-                      ? 'bg-[#1d1d1f] text-white font-semibold'
-                      : 'text-[#111827] hover:bg-[#f2f2f7] font-medium'
-                  }`}
-                >
-                  <span className={`material-symbols-outlined text-[18px] ${currentScreen === 'turmas' || currentScreen === 'detalhes' ? 'text-white' : 'text-[#48484a]'}`}>
-                    groups
-                  </span>
-                  <span>Turmas &amp; Alunos</span>
-                </button>
-
-                {userRole !== 'peb2' && (
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('frequencia_mensal')}
-                    className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm flex items-center gap-3 transition-colors ${
-                      currentScreen === 'frequencia_mensal'
-                        ? 'bg-[#1d1d1f] text-white font-semibold'
-                        : 'text-[#111827] hover:bg-[#f2f2f7] font-medium'
-                    }`}
-                  >
-                    <span className={`material-symbols-outlined text-[18px] ${currentScreen === 'frequencia_mensal' ? 'text-white' : 'text-[#48484a]'}`}>
-                      event_available
-                    </span>
-                    <span>Informar Faltas do Mês</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => navigateTo('faltas_consecutivas')}
-                  className={`w-full px-3 py-2.5 rounded-xl text-left text-xs sm:text-sm flex items-center gap-3 transition-colors ${
-                    currentScreen === 'faltas_consecutivas'
-                      ? 'bg-[#1d1d1f] text-white font-semibold'
-                      : 'text-[#111827] hover:bg-[#f2f2f7] font-medium'
-                  }`}
-                >
-                  <span className={`material-symbols-outlined text-[18px] ${currentScreen === 'faltas_consecutivas' ? 'text-white' : 'text-[#48484a]'}`}>
-                    notifications
-                  </span>
-                  <span>Busca Ativa (Alertas)</span>
-                </button>
-              </div>
-
-              {/* Seção de Gestão (Admin) */}
-              {isAdmin && (
-                <div className="space-y-1 pt-2">
-                  <span className="text-[11px] font-semibold text-[#48484a] uppercase tracking-wider block px-2 py-1">
-                    Gestão Escolar
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('bolsa_familia')}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors ${
-                      currentScreen === 'bolsa_familia'
-                        ? 'bg-[#e9e9ef] text-[#111827] font-semibold'
-                        : 'text-[#3c3c43] hover:bg-[#f2f2f7] font-medium'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[17px] text-[#48484a]">volunteer_activism</span>
-                    <span>Bolsa Família &amp; Fretado</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('dias_letivos')}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors ${
-                      currentScreen === 'dias_letivos'
-                        ? 'bg-[#e9e9ef] text-[#111827] font-semibold'
-                        : 'text-[#3c3c43] hover:bg-[#f2f2f7] font-medium'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[17px] text-[#48484a]">calendar_month</span>
-                    <span>200 Dias Letivos</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => navigateTo('usuarios_acesso')}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs flex items-center gap-2.5 transition-colors ${
-                      currentScreen === 'usuarios_acesso'
-                        ? 'bg-[#e9e9ef] text-[#111827] font-semibold'
-                        : 'text-[#3c3c43] hover:bg-[#f2f2f7] font-medium'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[17px] text-[#48484a]">group_add</span>
-                    <span>Professores &amp; Acessos</span>
-                  </button>
-
-                  {onOpenJsonImportModal && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileDrawerOpen(false);
-                        onOpenJsonImportModal();
-                      }}
-                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-blue-800 hover:bg-blue-100 flex items-center gap-2.5 transition-colors bg-blue-50 mt-1"
-                    >
-                      <span className="material-symbols-outlined text-[17px] text-blue-700">upload_file</span>
-                      <span>Atualizar Dados via JSON</span>
-                    </button>
-                  )}
-
-                  {onOpenAdminPhotosModal && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileDrawerOpen(false);
-                        onOpenAdminPhotosModal();
-                      }}
-                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-emerald-900 hover:bg-emerald-100 flex items-center gap-2.5 transition-colors bg-emerald-50 mt-1"
-                    >
-                      <span className="material-symbols-outlined text-[17px] text-emerald-700">add_photo_alternate</span>
-                      <span>Arraste de Fotos Nomeadas</span>
-                    </button>
-                  )}
-
-                  {onOpenAdminPdfsModal && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMobileDrawerOpen(false);
-                        onOpenAdminPdfsModal();
-                      }}
-                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-rose-900 hover:bg-rose-100 flex items-center gap-2.5 transition-colors bg-rose-50 mt-1"
-                    >
-                      <span className="material-symbols-outlined text-[17px] text-rose-700">picture_as_pdf</span>
-                      <span>Arraste de Fichas PDF</span>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Rodapé do Drawer */}
-            <div className="pt-4 space-y-2">
-              <div className="px-2 py-1 flex items-center justify-between text-xs text-[#48484a]">
-                <span>{userName}</span>
-                <span className="font-semibold text-[#111827]">
-                  {userRole === 'admin' ? 'Admin' : userRole === 'usuario' ? 'PEB I' : 'PEB II'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileDrawerOpen(false);
-                  setShowLogoutSheet(true);
-                }}
-                className="w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">logout</span>
-                <span>Encerrar Sessão</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal de Saída Segura */}
       {showLogoutSheet && (
         <div
-          className="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-gentle-fade"
           onClick={() => !isLoggingOut && setShowLogoutSheet(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[380px] bg-white rounded-2xl shadow-xl overflow-hidden text-center p-6 space-y-4 animate-in zoom-in-95 duration-150"
+            className="w-full max-w-[380px] bg-white rounded-3xl shadow-2xl overflow-hidden text-center p-6 space-y-4"
           >
-            <div className="mx-auto w-12 h-12 rounded-full bg-[#e9e9ef] flex items-center justify-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-[#f2f2f7] flex items-center justify-center">
               <StudentAvatar
                 name={userName || userEmail || 'Educador'}
                 size="md"
@@ -858,29 +584,26 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-base font-semibold text-[#111827]">
+              <h2 className="text-base font-semibold text-[#1d1d1f]">
                 Encerrar Sessão Institucional?
               </h2>
-              <p className="text-xs text-[#48484a]">
+              <p className="text-xs text-[#6e6e73]">
                 {userName || userEmail} · {SCHOOL_NAME}
               </p>
             </div>
 
-            {/* Verificador de sincronização pendente */}
             <div
-              className={`p-3 rounded-2xl text-left flex items-center gap-2.5 shadow-2xs ${
+              className={`p-3 rounded-2xl text-left flex items-center gap-2.5 ${
                 syncSnapshot.pendingCount > 0
-                  ? 'bg-amber-100 text-amber-950'
-                  : 'bg-slate-100 text-slate-950'
+                  ? 'bg-[#fef3c7] text-[#92400e]'
+                  : 'bg-[#f5f5f7] text-[#1d1d1f]'
               }`}
             >
-              <span
-                className={`material-symbols-outlined text-[20px] shrink-0 ${
-                  syncSnapshot.pendingCount > 0 ? 'text-amber-600' : 'text-emerald-600'
-                }`}
-              >
-                {syncSnapshot.pendingCount > 0 ? 'cloud_upload' : 'check_circle'}
-              </span>
+              {syncSnapshot.pendingCount > 0 ? (
+                <CloudUpload className="w-4 h-4 text-[#b45309] shrink-0" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 text-[#047857] shrink-0" />
+              )}
               <div className="min-w-0 text-xs">
                 {syncSnapshot.pendingCount > 0 ? (
                   <span>
@@ -898,9 +621,9 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 disabled={isLoggingOut}
                 onClick={handleConfirmLogoutWithFlush}
-                className="w-full h-11 text-xs sm:text-sm font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
+                className="w-full h-11 text-xs sm:text-sm font-semibold rounded-2xl bg-[#dc2626] hover:bg-[#b91c1c] text-white transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                <span className="material-symbols-outlined text-[18px]">logout</span>
+                <LogOut className="w-4 h-4" />
                 <span>{isLoggingOut ? 'Salvando e Saindo...' : 'Sim, Encerrar Sessão'}</span>
               </button>
 
@@ -908,7 +631,7 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 disabled={isLoggingOut}
                 onClick={() => setShowLogoutSheet(false)}
-                className="w-full h-10 text-xs sm:text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="w-full h-10 text-xs sm:text-sm font-medium rounded-2xl text-[#48484a] hover:bg-[#f5f5f7] transition-colors cursor-pointer"
               >
                 Continuar Conectado
               </button>

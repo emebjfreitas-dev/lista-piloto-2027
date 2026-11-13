@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
-import { ScreenType, UserRole } from '../types';
+import { AuthorizedUser, ScreenType, UserRole } from '../types';
 import {
   Home,
   Users,
-  CalendarCheck,
-  AlertCircle,
-  MapPin,
-  BarChart2,
+  CalendarCheck2,
+  ShieldAlert,
   HeartHandshake,
-  Cloud,
   ShieldCheck,
-  MoreHorizontal,
+  SlidersHorizontal,
   X,
   ChevronRight,
   LogOut,
   LucideIcon,
+  Database,
+  FileCode2,
+  BarChart3,
+  CalendarDays,
 } from 'lucide-react';
 
 interface BottomNavProps {
   currentScreen: ScreenType;
   userRole?: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
   selectedClassName?: string;
   onChangeScreen: (screen: ScreenType) => void;
   onLogout?: () => void;
@@ -28,7 +30,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({
   currentScreen,
   userRole = 'admin',
-  selectedClassName,
+  teacherRoleType,
   onChangeScreen,
   onLogout,
 }) => {
@@ -38,9 +40,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     return null;
   }
 
-  const isAdmin = userRole === 'admin';
+  const isAdmin =
+    userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
 
-  // Core mobile navigation items (max 5 items)
   const coreNavItems: Array<{
     id: ScreenType;
     label: string;
@@ -60,15 +62,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       ? [
           {
             id: 'frequencia_mensal' as ScreenType,
-            label: 'Faltas do Mês',
-            icon: CalendarCheck,
+            label: 'Faltas',
+            icon: CalendarCheck2,
           },
         ]
       : []),
     {
       id: 'faltas_consecutivas',
       label: 'Busca Ativa',
-      icon: AlertCircle,
+      icon: ShieldAlert,
     },
   ];
 
@@ -77,24 +79,49 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     label: string;
     description: string;
     icon: LucideIcon;
+    tintClass: string;
   }> = [
+    {
+      id: 'resumo',
+      label: 'Resumo & Mapa',
+      description: 'Frequência mensal e mapa de ausências',
+      icon: BarChart3,
+      tintClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
+    },
     {
       id: 'bolsa_familia',
       label: 'Bolsa Família & Fretado',
       description: 'Acompanhamento de condicionalidades sociais',
       icon: HeartHandshake,
+      tintClass: 'bg-[#fef3c7] text-[#92400e]',
     },
     {
       id: 'dias_letivos',
       label: '200 Dias Letivos',
-      description: 'Calendário escolar oficial e feriados municipais',
-      icon: CalendarCheck,
+      description: 'Calendário oficial e feriados 2027',
+      icon: CalendarDays,
+      tintClass: 'bg-[#eaf6ef] text-[#005035]',
     },
     {
       id: 'usuarios_acesso',
-      label: 'Controle de Acessos',
-      description: 'Permissões, auditoria e contas educacionais',
+      label: 'Acessos & Segurança',
+      description: 'Permissões, auditoria e alertas FCM',
       icon: ShieldCheck,
+      tintClass: 'bg-[#f2f2f7] text-[#1d1d1f]',
+    },
+    {
+      id: 'diagnostico_bd',
+      label: 'Diagnóstico do Banco',
+      description: 'Consistência cadastral e nuvem',
+      icon: Database,
+      tintClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
+    },
+    {
+      id: 'importar_deficiencias_htm',
+      label: 'Deficiências (.HTM)',
+      description: 'Importar registros SED para AEE',
+      icon: FileCode2,
+      tintClass: 'bg-[#eaf6ef] text-[#005035]',
     },
   ];
 
@@ -107,18 +134,23 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   const isMoreActive =
     isAdmin &&
-    ['bolsa_familia', 'dias_letivos', 'usuarios_acesso'].includes(
-      currentScreen
-    );
+    [
+      'resumo',
+      'bolsa_familia',
+      'dias_letivos',
+      'usuarios_acesso',
+      'diagnostico_bd',
+      'importar_deficiencias_htm',
+    ].includes(currentScreen);
 
   return (
     <>
-      {/* Barra de Navegação Inferior (Mobile/Tablet) */}
+      {/* Barra de Navegação Inferior Enxuta (Mobile & Tablet) */}
       <nav
         aria-label="Barra de Navegação Inferior"
-        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-md lg:hidden shadow-lg"
+        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-xl shadow-[0_-1px_12px_rgba(0,0,0,0.06)] lg:hidden"
       >
-        <div className="flex items-center justify-around h-[64px] px-1 max-w-lg mx-auto">
+        <div className="flex items-center justify-around h-[62px] px-2 max-w-lg mx-auto gap-1">
           {coreNavItems.map((item) => {
             const isActive = getIsActive(item.id);
             const IconComp = item.icon;
@@ -131,16 +163,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   onChangeScreen(item.id);
                 }}
                 aria-current={isActive ? 'page' : undefined}
-                className={`group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95 ${
-                  isActive ? 'text-slate-950 font-bold' : 'text-slate-800 hover:text-black font-semibold'
-                }`}
+                className="group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95"
               >
-                <div className="flex items-center justify-center w-7 h-7">
-                  <IconComp className={`w-5 h-5 transition-colors ${isActive ? 'text-[#111827] stroke-[2.2]' : 'text-[#48484a] stroke-[1.85]'}`} />
+                <div
+                  className={`flex items-center justify-center px-3 h-7 rounded-xl transition-colors ${
+                    isActive ? 'bg-[#e8f0fe] text-[#0071e3]' : 'text-[#6e6e73]'
+                  }`}
+                >
+                  <IconComp
+                    className={`w-[18px] h-[18px] transition-colors ${
+                      isActive ? 'stroke-[2.25]' : 'stroke-[1.85]'
+                    }`}
+                  />
                 </div>
                 <span
                   className={`text-[11px] tracking-tight leading-none mt-1 truncate transition-colors ${
-                    isActive ? 'font-semibold text-[#111827]' : 'font-medium text-[#48484a]'
+                    isActive ? 'font-semibold text-[#1d1d1f]' : 'font-medium text-[#6e6e73]'
                   }`}
                 >
                   {item.label}
@@ -149,39 +187,48 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             );
           })}
 
-          {/* Botão "Mais" para Gestão / Admin */}
           {isAdmin && (
             <button
               type="button"
               onClick={() => setShowMoreMenu((prev) => !prev)}
+              aria-expanded={showMoreMenu}
               className="group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95"
             >
-              <div className="flex items-center justify-center w-7 h-7">
-                <MoreHorizontal className={`w-5 h-5 transition-colors ${isMoreActive || showMoreMenu ? 'text-[#111827] stroke-[2.2]' : 'text-[#48484a] stroke-[1.85]'}`} />
+              <div
+                className={`flex items-center justify-center px-3 h-7 rounded-xl transition-colors ${
+                  isMoreActive || showMoreMenu
+                    ? 'bg-[#e8f0fe] text-[#0071e3]'
+                    : 'text-[#6e6e73]'
+                }`}
+              >
+                <SlidersHorizontal
+                  className={`w-[18px] h-[18px] transition-colors ${
+                    isMoreActive || showMoreMenu ? 'stroke-[2.25]' : 'stroke-[1.85]'
+                  }`}
+                />
               </div>
               <span
                 className={`text-[11px] tracking-tight leading-none mt-1 truncate transition-colors ${
                   isMoreActive || showMoreMenu
-                    ? 'font-semibold text-[#111827]'
-                    : 'font-medium text-[#48484a]'
+                    ? 'font-semibold text-[#1d1d1f]'
+                    : 'font-medium text-[#6e6e73]'
                 }`}
               >
-                Mais
+                Gestão
               </span>
             </button>
           )}
 
-          {/* Botão Sair para professores */}
           {onLogout && !isAdmin && (
             <button
               type="button"
               onClick={onLogout}
-              className="group flex flex-col items-center justify-center flex-1 h-full py-1.5 transition-all cursor-pointer select-none active:scale-95 text-slate-700 hover:text-rose-700"
+              className="group flex flex-col items-center justify-center flex-1 h-full py-1 transition-all cursor-pointer select-none active:scale-95 text-[#6e6e73] hover:text-[#dc2626]"
             >
-              <div className="flex items-center justify-center w-10 h-8 rounded-2xl">
-                <LogOut className="w-5 h-5 sm:w-6 sm:h-6 text-rose-600" />
+              <div className="flex items-center justify-center px-3 h-7 rounded-xl">
+                <LogOut className="w-[18px] h-[18px] text-[#dc2626] stroke-[1.9]" />
               </div>
-              <span className="text-xs font-bold tracking-tight leading-none mt-1 truncate text-slate-700">
+              <span className="text-[11px] font-medium tracking-tight leading-none mt-1 truncate text-[#6e6e73]">
                 Sair
               </span>
             </button>
@@ -189,24 +236,24 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         </div>
       </nav>
 
-      {/* Sheet Modal Minimalista de "Mais Ferramentas" para Gestão */}
+      {/* Sheet Modal de Gestão (Mobile/Tablet) */}
       {showMoreMenu && isAdmin && (
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
           <div
             className="fixed inset-0 bg-black/30 backdrop-blur-xs transition-opacity"
             onClick={() => setShowMoreMenu(false)}
           />
-          <div className="relative bg-white rounded-t-3xl shadow-2xl p-5 pb-8 space-y-4 max-h-[80vh] overflow-y-auto animate-ios-sheet">
-            <div className="flex items-center justify-between pb-3">
+          <div className="relative bg-white rounded-t-3xl shadow-2xl p-5 pb-8 space-y-3 max-h-[82vh] overflow-y-auto animate-ios-sheet">
+            <div className="flex items-center justify-between pb-1">
               <div>
-                <h3 className="text-base font-bold text-slate-950">Módulos Adicionais</h3>
-                <p className="text-xs text-slate-700 font-medium">Ferramentas executivas e de auditoria</p>
+                <h3 className="text-base font-semibold text-[#1d1d1f]">Ferramentas de Gestão</h3>
+                <p className="text-xs text-[#6e6e73]">Acesso direto aos módulos administrativos</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowMoreMenu(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-800 hover:text-black cursor-pointer transition-colors"
-                aria-label="Fechar menu de módulos"
+                className="w-8 h-8 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] flex items-center justify-center text-[#1d1d1f] cursor-pointer transition-colors"
+                aria-label="Fechar menu de gestão"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -226,47 +273,53 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                     }}
                     className={`w-full p-3 rounded-2xl flex items-center justify-between gap-3 text-left transition-colors cursor-pointer ${
                       isActive
-                        ? 'bg-slate-950 text-white font-bold'
-                        : 'hover:bg-slate-100 text-slate-950 font-semibold'
+                        ? 'bg-[#1d1d1f] text-white'
+                        : 'bg-[#f8f8fb] hover:bg-[#f2f2f7] text-[#1d1d1f]'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                          isActive
-                            ? 'bg-white text-slate-950'
-                            : 'bg-slate-200 text-slate-900'
+                          isActive ? 'bg-white/15 text-white' : item.tintClass
                         }`}
                       >
-                        <IconComp className="w-4 h-4" />
+                        <IconComp className="w-4 h-4 stroke-[2]" />
                       </div>
                       <div className="min-w-0">
-                        <span className="font-bold text-xs sm:text-sm block truncate">
+                        <span className="font-semibold text-xs sm:text-sm block truncate">
                           {item.label}
                         </span>
-                        <span className={`text-xs block truncate ${isActive ? 'text-slate-300' : 'text-slate-700 font-medium'}`}>
+                        <span
+                          className={`text-[11px] block truncate ${
+                            isActive ? 'text-white/75' : 'text-[#6e6e73]'
+                          }`}
+                        >
                           {item.description}
                         </span>
                       </div>
                     </div>
-                    <ChevronRight className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-300' : 'text-slate-700'}`} />
+                    <ChevronRight
+                      className={`w-4 h-4 shrink-0 ${
+                        isActive ? 'text-white/75' : 'text-[#86868b]'
+                      }`}
+                    />
                   </button>
                 );
               })}
             </div>
 
             {onLogout && (
-              <div className="pt-2">
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setShowMoreMenu(false);
                     onLogout();
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl text-rose-800 bg-rose-50 hover:bg-rose-100 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-2xl text-[#b91c1c] bg-[#fee2e2]/70 hover:bg-[#fee2e2] font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4 text-rose-800" />
-                  <span>Sair da Conta Institucional</span>
+                  <LogOut className="w-4 h-4" />
+                  <span>Encerrar Sessão</span>
                 </button>
               </div>
             )}

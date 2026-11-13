@@ -33,6 +33,8 @@ import {
 } from './services/db';
 import {
   subscribeToFirestoreRealtimeState,
+  subscribeToSyncStatus,
+  SyncStatusSnapshot,
   saveClassesToFirestoreCloud,
 } from './services/firebaseSync';
 import {
@@ -71,6 +73,8 @@ import { MapaEstudantesScreen } from './components/MapaEstudantesScreen';
 import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
 import { UsuariosAcessoScreen } from './components/UsuariosAcessoScreen';
 import { ListasNominaisScreen } from './components/ListasNominaisScreen';
+import { DiagnosticoBancoDadosScreen } from './components/DiagnosticoBancoDadosScreen';
+import { ImportarDeficienciasHtmScreen } from './components/ImportarDeficienciasHtmScreen';
 import { AlunosModal } from './components/AlunosModal';
 import { RelatorioImpressaoModal } from './components/RelatorioImpressaoModal';
 import { AnotacoesModal } from './components/AnotacoesModal';
@@ -82,6 +86,16 @@ import { AtualizarDadosJsonModal } from './components/AtualizarDadosJsonModal';
 import { AdminArrasteFotosModal } from './components/AdminArrasteFotosModal';
 import { AdminArrastePdfsModal } from './components/AdminArrastePdfsModal';
 import { Toaster, toast } from 'sonner';
+
+const ADMIN_ONLY_SCREENS: ScreenType[] = [
+  'dias_letivos',
+  'usuarios_acesso',
+  'diagnostico_bd',
+  'importar_deficiencias_htm',
+  'resumo',
+  'bolsa_familia',
+  'planilha',
+];
 
 const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
 
@@ -144,15 +158,23 @@ export default function App() {
   const effectiveInitialAssignedClassId: string =
     effectiveInitialAssignedClassIds[0] || initialClasses[0]?.id || 'g04a';
 
+  const effectiveInitialIsStrictAdmin =
+    effectiveInitialRole === 'admin' &&
+    matchedInitialUser?.teacherRoleType !== 'apoio' &&
+    matchedInitialUser?.teacherRoleType !== 'aee';
+
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
     if (!initialSavedSession || (matchedInitialUser && !matchedInitialUser.active)) {
-      return 'dias_letivos';
+      return effectiveInitialIsStrictAdmin ? 'home' : 'home';
     }
     const savedScreen = initialSavedSession.screen;
     if (savedScreen && savedScreen !== 'login') {
+      if (!effectiveInitialIsStrictAdmin && ADMIN_ONLY_SCREENS.includes(savedScreen)) {
+        return 'home';
+      }
       return savedScreen;
     }
-    return 'dias_letivos';
+    return 'home';
   });
 
   const [navigationHistory, setNavigationHistory] = useState<ScreenType[]>([]);
@@ -208,28 +230,43 @@ export default function App() {
     message: string;
   } | null>(null);
 
+  const activeAccountEmail = (simulatedTeacherEmail || currentUserEmail).trim().toLowerCase();
+  const activeAuthorizedUser = authorizedUsers.find(
+    (u) => u.email.trim().toLowerCase() === activeAccountEmail
+  );
+  const activeTeacherRoleType = activeAuthorizedUser?.teacherRoleType;
+  const isStrictAdmin =
+    userRole === 'admin' &&
+    activeTeacherRoleType !== 'apoio' &&
+    activeTeacherRoleType !== 'aee';
+
   const navigateToScreen = (nextScreen: ScreenType) => {
     if (nextScreen === currentScreen) return;
 
-    // Princípio do Menor Privilégio (PoLP): Telas de gestão e infraestrutura restritas a Admin
-    const adminOnlyScreens: ScreenType[] = ['dias_letivos', 'usuarios_acesso'];
-    if (userRole !== 'admin' && adminOnlyScreens.includes(nextScreen)) {
+    // Princípio do Menor Privilégio (PoLP): Telas administrativas restritas exclusivamente ao Admin (nunca PEB I, PEB II ou AEE)
+    if (!isStrictAdmin && ADMIN_ONLY_SCREENS.includes(nextScreen)) {
+      const roleDesc =
+        activeTeacherRoleType === 'aee'
+          ? 'Professora de AEE'
+          : activeTeacherRoleType === 'apoio'
+          ? 'Apoio Pedagógico'
+          : userRole === 'usuario'
+          ? 'PEB I (Professor Regente)'
+          : 'PEB II (Professor Especialista)';
       addSecurityAuditLog({
         userEmail: currentUserEmail,
         userName: currentUserName,
         userRole: userRole,
         eventType: 'UNAUTHORIZED_ACCESS_BLOCKED',
         actionTitle: 'Tentativa de Acesso Bloqueada (Menor Privilégio)',
-        details: `Servidor com credencial "${userRole.toUpperCase()}" tentou navegar para o módulo restrito "${nextScreen}". Bloqueio preventivo automático conforme política RBAC/LGPD.`,
+        details: `Servidor com perfil "${roleDesc}" tentou navegar para o módulo restrito "${nextScreen}". Bloqueio preventivo automático conforme política RBAC/LGPD.`,
         targetResource: nextScreen,
         severity: 'security_alert',
       });
       setSecurityBlockNotice({
         targetScreen: nextScreen,
         requiredRole: 'ADMINISTRADOR / GESTÃO ESCOLAR',
-        message: `O módulo "${nextScreen.toUpperCase().replace('_', ' ')}" é restrito à Direção e Secretaria Escolar. Seu perfil atual é "${
-          userRole === 'usuario' ? 'PEB I (Professor Regente)' : 'PEB II (Professor Especialista)'
-        }".`,
+        message: `O módulo "${nextScreen.toUpperCase().replace(/_/g, ' ')}" é exclusivo da Administração Escolar. Seu perfil atual é "${roleDesc}".`,
       });
       return;
     }
@@ -316,6 +353,21 @@ export default function App() {
     saveStoredSchoolNotices(updatedNotices);
     pushSchoolNoticesToServer(updatedNotices);
   };
+
+  const [cloudSyncSnapshot, setCloudSyncSnapshot] = useState<SyncStatusSnapshot>({
+    status: 'synced',
+    pendingCount: 0,
+    lastSyncedAtISO: null,
+    lastError: null,
+    queue: [],
+  });
+
+  useEffect(() => {
+    const unsubCloud = subscribeToSyncStatus((snap) => {
+      setCloudSyncSnapshot(snap);
+    });
+    return () => unsubCloud();
+  }, []);
 
   // Subscribe to centralized SyncQueueManager and resume any persisted tasks recovered from a previous tab close
   useEffect(() => {
@@ -998,6 +1050,8 @@ export default function App() {
       usuarios_acesso: '5. Acessos',
       resumo: 'Resumo Mensal',
       mapa_estudantes: 'Mapa de Trajetos & KM',
+      diagnostico_bd: 'Diagnóstico do Banco',
+      importar_deficiencias_htm: 'Subir Deficiências (.HTM)',
     };
 
     const currentLog = accessSessionLogs.find((l) => l.id === activeSessionIdRef.current);
@@ -1249,14 +1303,20 @@ export default function App() {
             ? 'Planilha Oficial'
             : currentScreen === 'usuarios_acesso'
             ? 'Professores & Acessos'
+            : currentScreen === 'diagnostico_bd'
+            ? 'Diagnóstico do Banco'
+            : currentScreen === 'importar_deficiencias_htm'
+            ? 'Subir Deficiências (.HTM)'
             : undefined
         }
         subtitle={
           currentScreen === 'frequencia_mensal'
             ? `${selectedClass.shift} • ${simulatedTeacherEmail || currentUserEmail}`
             : `${simulatedTeacherEmail || currentUserEmail} • ${
-                userRole === 'admin'
+                isStrictAdmin
                   ? 'ADMIN (Acesso Pleno)'
+                  : activeTeacherRoleType === 'aee'
+                  ? 'AEE (Educação Especial)'
                   : userRole === 'usuario'
                   ? 'PEB I (Sua Turma)'
                   : 'PEB II (Só Visualização)'
@@ -1265,6 +1325,9 @@ export default function App() {
         userEmail={simulatedTeacherEmail || currentUserEmail}
         userName={currentUserName}
         userRole={userRole}
+        teacherRoleType={activeTeacherRoleType}
+        assignedClassIds={assignedClassIds}
+        attendanceWindowConfig={attendanceWindowConfig}
         visibleClasses={visibleClasses}
         allClasses={classes}
         onSelectClassById={(classId) => {
@@ -1282,13 +1345,8 @@ export default function App() {
           if (userRole === 'peb2' && screen === 'frequencia_mensal') {
             return;
           }
-          if (
-            userRole !== 'admin' &&
-            (screen === 'bolsa_familia' ||
-              screen === 'planilha' ||
-              screen === 'dias_letivos' ||
-              screen === 'usuarios_acesso')
-          ) {
+          if (!isStrictAdmin && ADMIN_ONLY_SCREENS.includes(screen)) {
+            navigateToScreen(screen);
             return;
           }
           if (userRole === 'usuario' && screen === 'turmas') {
@@ -1298,14 +1356,14 @@ export default function App() {
           navigateToScreen(screen);
         }}
         onNavigatePlanilha={() => {
-          if (userRole === 'admin') navigateToScreen('planilha');
+          if (isStrictAdmin) navigateToScreen('planilha');
         }}
         onQuickSyncDriveNow={handleQuickSyncDriveNow}
         onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
-        onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
-        onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
-        onOpenAdminPhotosModal={() => setIsAdminPhotosModalOpen(true)}
-        onOpenAdminPdfsModal={() => setIsAdminPdfsModalOpen(true)}
+        onOpenConfigDaysModal={() => navigateToScreen('dias_letivos')}
+        onOpenJsonImportModal={() => isStrictAdmin && setIsJsonImportModalOpen(true)}
+        onOpenAdminPhotosModal={() => isStrictAdmin && setIsAdminPhotosModalOpen(true)}
+        onOpenAdminPdfsModal={() => isStrictAdmin && setIsAdminPdfsModalOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -1359,6 +1417,7 @@ export default function App() {
         {currentScreen === 'home' && (
           <HomeScreen
             userRole={userRole}
+            teacherRoleType={activeTeacherRoleType}
             userEmail={simulatedTeacherEmail || currentUserEmail}
             userName={currentUserName}
             classes={classes}
@@ -1415,7 +1474,7 @@ export default function App() {
           />
         )}
 
-        {currentScreen === 'usuarios_acesso' && (
+        {currentScreen === 'usuarios_acesso' && isStrictAdmin && (
           <UsuariosAcessoScreen
             authorizedUsers={authorizedUsers}
             accessSessionLogs={accessSessionLogs}
@@ -1464,7 +1523,8 @@ export default function App() {
               setCurrentScreen(teacher.role === 'usuario' ? 'detalhes' : 'turmas');
               window.scrollTo(0, 0);
             }}
-            onNavigateToDatabaseEmailsTab={() => setCurrentScreen('planilha')}
+            onNavigateToDatabaseEmailsTab={() => navigateToScreen('planilha')}
+            onNavigateScreen={navigateToScreen}
             onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
             onBack={handleBack}
           />
@@ -1750,7 +1810,46 @@ export default function App() {
           />
         )}
 
-        {currentScreen === 'planilha' && (
+        {currentScreen === 'diagnostico_bd' && (
+          <DiagnosticoBancoDadosScreen
+            classes={classes}
+            authorizedUsers={authorizedUsers}
+            syncSnapshot={cloudSyncSnapshot}
+            userRole={userRole}
+            userEmail={currentUserEmail}
+            teacherRoleType={activeTeacherRoleType}
+            onUpdateClasses={(updatedClasses) => {
+              setClasses(updatedClasses);
+              saveStoredClasses(updatedClasses);
+              const found = updatedClasses.find((c) => c.id === selectedClass.id);
+              if (found) setSelectedClass(found);
+            }}
+            onOpenClassDetails={(cls) => {
+              setSelectedClass(cls);
+              navigateToScreen('detalhes');
+            }}
+            onNavigateScreen={navigateToScreen}
+            onBack={handleBack}
+          />
+        )}
+
+        {currentScreen === 'importar_deficiencias_htm' && (
+          <ImportarDeficienciasHtmScreen
+            classes={classes}
+            userRole={userRole}
+            userEmail={currentUserEmail}
+            teacherRoleType={activeTeacherRoleType}
+            onUpdateClasses={(updatedClasses) => {
+              setClasses(updatedClasses);
+              saveStoredClasses(updatedClasses);
+              const found = updatedClasses.find((c) => c.id === selectedClass.id);
+              if (found) setSelectedClass(found);
+            }}
+            onBack={handleBack}
+          />
+        )}
+
+        {currentScreen === 'planilha' && isStrictAdmin && (
           <div className="max-w-xl mx-auto py-16 px-4 text-center space-y-4">
             <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-xs">
               <span className="material-symbols-outlined text-3xl">verified</span>
@@ -1761,7 +1860,7 @@ export default function App() {
             </p>
             <button
               type="button"
-              onClick={() => setCurrentScreen('home')}
+              onClick={() => navigateToScreen('home')}
               className="h-11 px-6 bg-slate-950 hover:bg-black text-white rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition-colors shadow-xs"
             >
               Ir para Painel de Turmas
@@ -1774,28 +1873,22 @@ export default function App() {
       <BottomNav
         currentScreen={currentScreen}
         userRole={userRole}
+        teacherRoleType={activeTeacherRoleType}
         selectedClassName={selectedClass?.name}
         onLogout={handleLogout}
         onChangeScreen={(screen) => {
           if (userRole === 'peb2' && screen === 'frequencia_mensal') {
             return;
           }
-          if (
-            userRole !== 'admin' &&
-            (screen === 'bolsa_familia' ||
-              screen === 'planilha' ||
-              screen === 'dias_letivos' ||
-              screen === 'usuarios_acesso')
-          ) {
+          if (!isStrictAdmin && ADMIN_ONLY_SCREENS.includes(screen)) {
+            navigateToScreen(screen);
             return;
           }
           if (userRole === 'usuario' && screen === 'turmas') {
-            setCurrentScreen('detalhes');
-            window.scrollTo(0, 0);
+            navigateToScreen('detalhes');
             return;
           }
-          setCurrentScreen(screen);
-          window.scrollTo(0, 0);
+          navigateToScreen(screen);
         }}
       />
 
@@ -1920,8 +2013,7 @@ export default function App() {
           setPdfModalData({ student, className });
         }}
         onNavigateToScreen={(screen) => {
-          setCurrentScreen(screen);
-          window.scrollTo(0, 0);
+          navigateToScreen(screen);
         }}
       />
 

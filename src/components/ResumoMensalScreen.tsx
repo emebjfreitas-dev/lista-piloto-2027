@@ -8,6 +8,7 @@ import {
 } from '../utils/attendanceRules';
 import { StudentAvatar } from './StudentAvatar';
 import { StudentDataExpansionPanel } from './StudentDataExpansionPanel';
+import { AttendanceDailyHeatmap } from './AttendanceDailyHeatmap';
 
 export interface ResumoMensalScreenProps {
   currentClass: ClassGroup;
@@ -375,28 +376,28 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   }, [kpiData.evaluatedStudents, alertFilterMode, searchQuery]);
 
   return (
-    <div className="flex flex-col w-full space-y-5 pb-16 animate-gentle-fade text-slate-900">
+    <div className="flex flex-col w-full space-y-5 pb-16 animate-gentle-fade text-[#111827]">
       {/* Breadcrumb Limpo */}
-      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
+      <div className="flex items-center justify-between text-xs text-[#48484a] py-0.5">
         <div className="flex items-center gap-1.5">
           {onBack && (
             <>
               <button
                 type="button"
                 onClick={onBack}
-                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                className="text-[#374151] hover:text-[#111827] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[15px]">arrow_back</span>
                 <span>Voltar</span>
               </button>
-              <span className="text-slate-300">/</span>
+              <span className="text-[#6e6e73]">/</span>
             </>
           )}
-          <span className="font-semibold text-slate-800">Resumo Mensal MEC</span>
-          <span className="text-slate-400">·</span>
+          <span className="font-semibold text-[#111827]">Resumo Mensal MEC</span>
+          <span className="text-[#48484a]">·</span>
           <span>{selectedMonthName}/2027</span>
         </div>
-        <span className="text-slate-400 text-xs hidden sm:inline">
+        <span className="text-[#48484a] text-xs hidden sm:inline">
           Painel Executivo de Frequência Escolar
         </span>
       </div>
@@ -477,13 +478,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Slicer: Mês Letivo */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-[#374151] block mb-1">
               Mês Letivo (2027)
             </label>
             <select
               value={selectedMonthName}
               onChange={(e) => setSelectedMonthName(e.target.value)}
-              className="w-full h-11 px-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-600 cursor-pointer transition-all shadow-2xs"
+              className="w-full h-11 px-3 bg-[#e9e9ef] hover:bg-[#dfe0e6] text-[#111827] font-semibold text-xs rounded-2xl focus:outline-none cursor-pointer transition-all"
             >
               {MONTHLY_SCHOOL_DAYS_2027.map((m) => (
                 <option key={m.month} value={m.month}>
@@ -495,13 +496,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Segmento & Metas MEC */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
-              Segmento • Metas MEC
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-[#374151] block mb-1">
+              Segmento · Metas MEC
             </label>
             <select
               value={segmentFilter}
-              onChange={(e) => setSegmentFilter(e.target.value as any)}
-              className="w-full h-11 px-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-600 cursor-pointer transition-all shadow-2xs"
+              onChange={(e) => setSegmentFilter(e.target.value as 'all' | 'infantil' | 'fundamental')}
+              className="w-full h-11 px-3 bg-[#e9e9ef] hover:bg-[#dfe0e6] text-[#111827] font-semibold text-xs rounded-2xl focus:outline-none cursor-pointer transition-all"
             >
               <option value="all">Todos os Segmentos (Infantil + Fundamental)</option>
               <option value="fundamental">Ensino Fundamental (Piso Legal LDB ≥ 75%)</option>
@@ -511,13 +512,13 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Turno */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-[#374151] block mb-1">
               Turno Escolar
             </label>
             <select
               value={shiftFilter}
-              onChange={(e) => setShiftFilter(e.target.value as any)}
-              className="w-full h-11 px-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-600 cursor-pointer transition-all shadow-2xs"
+              onChange={(e) => setShiftFilter(e.target.value as 'all' | 'MANHÃ' | 'TARDE')}
+              className="w-full h-11 px-3 bg-[#e9e9ef] hover:bg-[#dfe0e6] text-[#111827] font-semibold text-xs rounded-2xl focus:outline-none cursor-pointer transition-all"
             >
               <option value="all">Todos os Turnos (Manhã + Tarde)</option>
               <option value="MANHÃ">Período Manhã</option>
@@ -527,7 +528,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
 
           {/* Slicer: Turma */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-[#374151] block mb-1">
               Recorte de Turma
             </label>
             <select
@@ -540,7 +541,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   if (found) onSelectClass(found);
                 }
               }}
-              className="w-full h-11 px-3 bg-slate-100 hover:bg-slate-200 text-slate-950 font-bold text-xs rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-600 cursor-pointer transition-all shadow-2xs"
+              className="w-full h-11 px-3 bg-[#e9e9ef] hover:bg-[#dfe0e6] text-[#111827] font-semibold text-xs rounded-2xl focus:outline-none cursor-pointer transition-all"
             >
               <option value="all_classes">
                 Todas as Turmas ({allClasses.length} turmas consolidadas)
@@ -792,6 +793,20 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         </div>
       </section>
 
+      {/* MAPA DE CALOR DA FREQUÊNCIA DIÁRIA (RECHARTS) */}
+      <AttendanceDailyHeatmap
+        selectedMonthName={selectedMonthName}
+        monthNumber={monthDef.monthNumber}
+        defaultSchoolDays={monthDef.schoolDays}
+        filteredClasses={filteredClasses}
+        evaluatedStudents={kpiData.evaluatedStudents}
+        onSelectClass={(cls) => {
+          setScopeFilter((prev) => (prev === cls.id ? 'all_classes' : cls.id));
+          onSelectClass(cls);
+        }}
+        onOpenStudentGrid={onOpenStudentGrid}
+      />
+
       {/* PAINEL CENTRAL: GRÁFICO POR TURMA & MATRIZ EXECUTIVA */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Gráfico de Colunas Power BI */}
@@ -885,7 +900,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                     <div className="w-full max-w-[32px] h-full flex items-end justify-center">
                       <div
                         className={`w-full rounded-t-md transition-all duration-100 ${
-                          isSelected ? 'ring-2 ring-slate-900 ring-offset-1' : ''
+                          isSelected ? 'shadow-md scale-x-105' : ''
                         }`}
                         style={{
                           height: `${Math.max(8, Math.min(100, entry.frequencyRate))}%`,
@@ -959,7 +974,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   <th className="py-2.5 px-3 text-center">Risco MEC</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="bg-white">
                 {kpiData.classMetrics.map((row) => {
                   const isSelected = scopeFilter === row.classId;
                   const isCompliant = row.frequencyRate >= row.minLegalPercent;
@@ -972,7 +987,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                         onSelectClass(row.cls);
                       }}
                       className={`cursor-pointer transition-colors ${
-                        isSelected ? 'bg-sky-50' : 'hover:bg-slate-50'
+                        isSelected ? 'bg-[#e8f0fe]' : 'odd:bg-[#f8f8fb] hover:bg-[#e9e9ef]'
                       }`}
                     >
                       <td className="py-2.5 px-3">
@@ -1055,9 +1070,9 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar aluno ou RA..."
-                  className="w-full sm:w-48 h-10 pl-9 pr-3 bg-slate-100 rounded-xl text-xs text-slate-950 font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-600 shadow-2xs"
+                  className="w-full sm:w-48 h-10 pl-9 pr-3 bg-[#e9e9ef] focus:bg-white rounded-xl text-xs text-[#111827] font-medium placeholder-[#5c5c60] focus:outline-none transition-all"
                 />
-                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[18px]">
+                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#48484a] text-[18px]">
                   search
                 </span>
               </div>
@@ -1193,7 +1208,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                     <th className="py-2.5 px-2 text-center w-10"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="bg-white">
                   {filteredStudents.map((item) => {
                     const isExpanded = expandedStudentId === item.student.id;
                     return (
@@ -1201,7 +1216,7 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                         <tr
                           onClick={() => setExpandedStudentId(isExpanded ? null : item.student.id)}
                           className={`cursor-pointer transition-colors ${
-                            isExpanded ? 'bg-sky-50 font-medium' : 'hover:bg-slate-50'
+                            isExpanded ? 'bg-[#e8f0fe] font-medium' : 'odd:bg-[#f8f8fb] hover:bg-[#e9e9ef]'
                           }`}
                         >
                           <td className="py-2.5 px-3">
@@ -1336,10 +1351,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               setNotesSavedFeedback(true);
             }}
             placeholder="Registre aqui as providências da gestão, contatos com famílias, encaminhamentos ao Conselho Tutelar ou justificativas administrativas..."
-            className="w-full p-3.5 rounded-2xl bg-slate-100 text-slate-950 text-sm focus:bg-white focus:ring-2 focus:ring-sky-600 focus:outline-none resize-none leading-relaxed transition-all shadow-2xs"
+            className="w-full p-3.5 rounded-2xl bg-[#e9e9ef] text-[#111827] text-sm focus:bg-white focus:outline-none resize-none leading-relaxed transition-all"
           />
 
-          <div className="pt-2 flex items-center justify-between text-xs text-slate-600 font-semibold">
+          <div className="pt-2 flex items-center justify-between text-xs text-[#48484a] font-medium">
             <span>
               Regente: {currentClass.teacherFirstName || currentClass.teacherName || 'Não atribuído'}
             </span>
@@ -1351,10 +1366,10 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
       {/* Rodapé com Navegação entre Períodos e Retorno */}
       <section className="bg-white rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold text-slate-950">
+          <h3 className="text-base font-semibold text-[#111827]">
             Fechamento de {selectedMonthName}/2027
           </h3>
-          <p className="text-xs text-slate-600 font-medium mt-0.5">
+          <p className="text-xs text-[#48484a] font-medium mt-0.5">
             Relatório gerado a partir da base oficial do SED da EMEB Prof. Joaquim Candelário de Freitas (1.237 alunos)
           </p>
         </div>
@@ -1365,12 +1380,12 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
               type="button"
               onClick={() => {
                 setSelectedMonthName(previousPeriodName);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo(0, 0);
               }}
-              className="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+              className="h-10 px-4 rounded-xl bg-[#e9e9ef] hover:bg-[#dfe0e6] text-[#111827] font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
               title={`Ir para ${previousPeriodName}`}
             >
-              <span className="material-symbols-outlined text-[16px] text-slate-600">history</span>
+              <span className="material-symbols-outlined text-[16px] text-[#374151]">history</span>
               <span>Período Anterior ({previousPeriodName})</span>
             </button>
           )}

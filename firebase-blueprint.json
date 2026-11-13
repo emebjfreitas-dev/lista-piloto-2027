@@ -51,6 +51,40 @@
         "schoolNotices": { "type": "array" }
       },
       "required": ["updatedAtMs"]
+    },
+    "FcmDeviceToken": {
+      "title": "FcmDeviceToken",
+      "description": "FCM Web Push device subscription metadata per institutional teacher/staff member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 160 },
+        "userName": { "type": "string", "maxLength": 160 },
+        "userRole": { "type": "string", "maxLength": 30 },
+        "fcmToken": { "type": "string", "maxLength": 512 },
+        "channel": { "type": "string", "maxLength": 30 },
+        "active": { "type": "boolean" },
+        "updatedAtMs": { "type": "number" }
+      },
+      "required": ["id", "userEmail", "channel", "active", "updatedAtMs"]
+    },
+    "FcmWindowAlert": {
+      "title": "FcmWindowAlert",
+      "description": "Attendance launch window closing push alert broadcast",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 180 },
+        "body": { "type": "string", "maxLength": 600 },
+        "category": { "type": "string", "maxLength": 30 },
+        "urgency": { "type": "string", "maxLength": 20 },
+        "targetScreen": { "type": "string", "maxLength": 50 },
+        "targetAudience": { "type": "string", "maxLength": 30 },
+        "closingDateFormatted": { "type": "string", "maxLength": 30 },
+        "createdAtMs": { "type": "number" },
+        "createdByEmail": { "type": "string", "maxLength": 160 }
+      },
+      "required": ["id", "title", "body", "category", "urgency", "createdAtMs", "createdByEmail"]
     }
   },
   "firestore": {
@@ -61,6 +95,14 @@
     "/school_meta_2027/{docId}": {
       "schema": "SchoolMeta",
       "description": "School operational metadata, calendar config, users, and audit state"
+    },
+    "/school_fcm_tokens_2027/{subscriptionId}": {
+      "schema": "FcmDeviceToken",
+      "description": "Registered FCM Web Push tokens and notification channel state per user device"
+    },
+    "/school_fcm_alerts_2027/{alertId}": {
+      "schema": "FcmWindowAlert",
+      "description": "Attendance closing window FCM push alerts dispatched to teachers"
     }
   }
 }

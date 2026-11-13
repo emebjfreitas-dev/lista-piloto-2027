@@ -304,13 +304,20 @@ export interface AuthorizedUser {
     | 'peb2'
     | 'admin'
     | 'apoio'
+    | 'aee'
     | 'arte'
     | 'regente'
     | 'especialista'
     | 'gestao';
   pronoun?: string;
   firstName?: string;
-  subjectName?: 'ARTE' | 'EDUCAÇÃO FÍSICA' | 'LÍNGUA INGLESA' | 'REGENTE PEB I' | 'GESTÃO / ADMIN';
+  subjectName?:
+    | 'ARTE'
+    | 'EDUCAÇÃO FÍSICA'
+    | 'LÍNGUA INGLESA'
+    | 'REGENTE PEB I'
+    | 'EDUCAÇÃO ESPECIAL (AEE)'
+    | 'GESTÃO / ADMIN';
   active: boolean;
   createdAt: string;
   updatedAtMs?: number;
@@ -341,7 +348,9 @@ export type ScreenType =
   | 'resumo'
   | 'mapa_estudantes'
   | 'planilha'
-  | 'usuarios_acesso';
+  | 'usuarios_acesso'
+  | 'diagnostico_bd'
+  | 'importar_deficiencias_htm';
 
 export type HolidayScopeType = 'nacional' | 'estadual' | 'municipal' | 'recesso' | 'ponto_facultativo';
 
@@ -451,4 +460,58 @@ export interface LgpdProtectionConfig {
   complianceOfficer: string;
   anonymizeExportedSpreadsheets: boolean;
 }
+
+export interface FcmDeviceSubscription {
+  id: string;
+  userEmail: string;
+  userName: string;
+  userRole: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
+  assignedClassIds: string[];
+  fcmToken?: string;
+  pushSubscription?: {
+    endpoint: string;
+    expirationTime?: number | null;
+    keys: {
+      p256dh: string;
+      auth: string;
+    };
+  };
+  channel: 'fcm_push' | 'sw_realtime';
+  permission: NotificationPermission | 'unsupported';
+  deviceLabel: string;
+  active: boolean;
+  createdAtISO: string;
+  updatedAtMs: number;
+  lastAlertReceivedAtISO?: string;
+}
+
+export interface FcmWindowAlert {
+  id: string;
+  title: string;
+  body: string;
+  category: 'prazo' | 'aviso' | 'busca_ativa';
+  urgency: 'info' | 'warning' | 'urgent';
+  targetScreen: ScreenType;
+  targetClassIds: string[];
+  targetAudience: 'all' | 'pending_only' | 'peb1';
+  closingDateFormatted: string;
+  windowPhase: string;
+  createdAtMs: number;
+  createdAtISO: string;
+  createdByEmail: string;
+  createdByName: string;
+  deliveredFcmCount?: number;
+  pendingClassesCount?: number;
+}
+
+export interface FcmSystemConfig {
+  vapidPublicKey?: string;
+  autoWindowAlertsEnabled: boolean;
+  notifyDaysBeforeClose: number;
+  remindPendingTeachersOnly: boolean;
+  updatedAtMs?: number;
+  updatedByEmail?: string;
+}
+
 

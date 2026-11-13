@@ -1,4 +1,7 @@
+import 'dotenv/config';
 import express from 'express';
+import crypto from 'crypto';
+import * as webpush from 'web-push';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -255,6 +258,23 @@ interface SharedSchoolState {
   calendarAuditLogs?: any[];
   securityAuditLogs?: any[];
   lgpdConfig?: any;
+  fcmTokens?: any[];
+  fcmConfig?: {
+    vapidPublicKey?: string;
+    autoWindowAlertsEnabled?: boolean;
+    notifyDaysBeforeClose?: number;
+    remindPendingTeachersOnly?: boolean;
+    updatedAtMs?: number;
+    updatedByEmail?: string;
+  };
+  fcmAlerts?: any[];
+  lastAutoFcmWindowKey?: string;
+  webPushVapidKeys?: {
+    publicKey: string;
+    privateKey: string;
+    subject: string;
+    createdAtISO: string;
+  };
   cloudLinks?: {
     spreadsheetId?: string;
     spreadsheetTitle?: string;
@@ -642,7 +662,12 @@ async function startServer() {
   // API: Obter estado compartilhado (Usuários Autorizados, Turmas, Estudantes, Fotos, PDFs Escaneados, Links Drive/Sheets e Logs)
   app.get('/api/school-state', (_req, res) => {
     const state = readSharedState();
-    const { adminDriveToken: _hiddenToken, ...publicState } = state;
+    const {
+      adminDriveToken: _hiddenToken,
+      fcmTokens: _hiddenFcmTokens,
+      webPushVapidKeys: _hiddenVapidKeys,
+      ...publicState
+    } = state;
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json(publicState);
   });
@@ -1869,9 +1894,680 @@ async function startServer() {
     res.json({ ok: true, entry: enrichedEntry });
   });
 
+  // =========================================================================
+  // FIREBASE CLOUD MESSAGING (FCM) & AUTO-CONFIGURED WEB PUSH (ZERO SETUP)
+  // =========================================================================
+  let cachedFcmAccessToken: { token: string; expiresAtMs: number; projectId: string } | null = null;
+
+  const ensureAutoWebPushVapidKeys = (): {
+    publicKey: string;
+    privateKey: string;
+    subject: string;
+  } => {
+    const state = readSharedState();
+    if (
+      state.webPushVapidKeys?.publicKey &&
+      state.webPushVapidKeys?.privateKey
+    ) {
+      const subject =
+        state.webPushVapidKeys.subject || 'mailto:emebjfreitas@jundiai.sp.gov.br';
+      try {
+        webpush.setVapidDetails(
+          subject,
+          state.webPushVapidKeys.publicKey,
+          state.webPushVapidKeys.privateKey
+        );
+      } catch {
+        // ignore duplicate initialization error
+      }
+      return {
+        publicKey: state.webPushVapidKeys.publicKey,
+        privateKey: state.webPushVapidKeys.privateKey,
+        subject,
+      };
+    }
+
+    const generated = webpush.generateVAPIDKeys();
+    const subject = 'mailto:emebjfreitas@jundiai.sp.gov.br';
+    writeSharedState({
+      webPushVapidKeys: {
+        publicKey: generated.publicKey,
+        privateKey: generated.privateKey,
+        subject,
+        createdAtISO: new Date().toISOString(),
+      },
+    });
+    webpush.setVapidDetails(subject, generated.publicKey, generated.privateKey);
+    return {
+      publicKey: generated.publicKey,
+      privateKey: generated.privateKey,
+      subject,
+    };
+  };
+
+  // Inicializa chaves VAPID automaticamente no boot do servidor
+  try {
+    ensureAutoWebPushVapidKeys();
+  } catch (err) {
+    console.warn('Aviso ao inicializar VAPID Web Push automático:', err);
+  }
+
+  const parseFirebaseServiceAccount = (): {
+    project_id: string;
+    client_email: string;
+    private_key: string;
+  } | null => {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (!raw || !raw.trim()) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.project_id && parsed?.client_email && parsed?.private_key) {
+        return {
+          project_id: String(parsed.project_id),
+          client_email: String(parsed.client_email),
+          private_key: String(parsed.private_key).replace(/\\n/g, '\n'),
+        };
+      }
+    } catch {
+      console.warn('FIREBASE_SERVICE_ACCOUNT_JSON inválido no ambiente.');
+    }
+    return null;
+  };
+
+  const getFcmOAuthAccessToken = async (): Promise<{
+    accessToken: string;
+    projectId: string;
+  } | null> => {
+    if (
+      cachedFcmAccessToken &&
+      cachedFcmAccessToken.expiresAtMs > Date.now() + 60_000
+    ) {
+      return {
+        accessToken: cachedFcmAccessToken.token,
+        projectId: cachedFcmAccessToken.projectId,
+      };
+    }
+
+    const sa = parseFirebaseServiceAccount();
+    if (!sa) return null;
+
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const headerB64 = Buffer.from(
+        JSON.stringify({ alg: 'RS256', typ: 'JWT' })
+      ).toString('base64url');
+      const claimSetB64 = Buffer.from(
+        JSON.stringify({
+          iss: sa.client_email,
+          scope: 'https://www.googleapis.com/auth/firebase.messaging',
+          aud: 'https://oauth2.googleapis.com/token',
+          iat: nowSec,
+          exp: nowSec + 3600,
+        })
+      ).toString('base64url');
+
+      const signingInput = `${headerB64}.${claimSetB64}`;
+      const signer = crypto.createSign('RSA-SHA256');
+      signer.update(signingInput);
+      const signatureB64 = signer.sign(sa.private_key, 'base64url');
+      const jwtAssertion = `${signingInput}.${signatureB64}`;
+
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+          assertion: jwtAssertion,
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        console.warn('Falha ao obter token OAuth2 para FCM HTTP v1:', tokenRes.status);
+        return null;
+      }
+
+      const tokenData = await tokenRes.json();
+      if (tokenData?.access_token) {
+        cachedFcmAccessToken = {
+          token: tokenData.access_token,
+          expiresAtMs: Date.now() + Number(tokenData.expires_in || 3500) * 1000,
+          projectId: sa.project_id,
+        };
+        return {
+          accessToken: tokenData.access_token,
+          projectId: sa.project_id,
+        };
+      }
+    } catch (err) {
+      console.warn('Erro ao autenticar Service Account FCM:', err);
+    }
+    return null;
+  };
+
+  const dispatchFcmHttpV1ToTargets = async (alert: any): Promise<{
+    deliveredFcmCount: number;
+    failedFcmCount: number;
+    invalidTokenIds: string[];
+  }> => {
+    const state = readSharedState();
+    const allTokens = Array.isArray(state.fcmTokens) ? state.fcmTokens : [];
+    const activeEntries = allTokens.filter((t: any) => t && t.active);
+
+    const targetClassSet = new Set<string>(
+      Array.isArray(alert.targetClassIds) ? alert.targetClassIds : []
+    );
+    const sendToAllClasses =
+      targetClassSet.size === 0 || targetClassSet.has('all');
+
+    const matchingEntries = activeEntries.filter((entry: any) => {
+      if (alert.targetAudience === 'peb1' && entry.userRole !== 'usuario') {
+        return false;
+      }
+      if (!sendToAllClasses && entry.userRole !== 'admin') {
+        const userCls = Array.isArray(entry.assignedClassIds)
+          ? entry.assignedClassIds
+          : [];
+        return userCls.some((cid: string) => targetClassSet.has(cid));
+      }
+      return true;
+    });
+
+    if (matchingEntries.length === 0) {
+      return { deliveredFcmCount: 0, failedFcmCount: 0, invalidTokenIds: [] };
+    }
+
+    const vapid = ensureAutoWebPushVapidKeys();
+    const oauth = await getFcmOAuthAccessToken();
+
+    let deliveredFcmCount = 0;
+    let failedFcmCount = 0;
+    const invalidTokenIds: string[] = [];
+
+    const webPushPayloadStr = JSON.stringify({
+      notification: {
+        title: alert.title,
+        body: alert.body,
+        icon: '/pwa-192x192.png',
+        badge: '/favicon-32x32.png',
+      },
+      data: {
+        alertId: String(alert.id || ''),
+        category: String(alert.category || 'prazo'),
+        urgency: String(alert.urgency || 'warning'),
+        targetScreen: String(alert.targetScreen || 'frequencia_mensal'),
+        targetClassId: String(
+          Array.isArray(alert.targetClassIds) && alert.targetClassIds.length === 1
+            ? alert.targetClassIds[0]
+            : 'all'
+        ),
+        closingDateFormatted: String(alert.closingDateFormatted || ''),
+        authorName: String(alert.createdByName || 'EMEB Candelário'),
+        url: '/?screen=frequencia_mensal',
+      },
+    });
+
+    for (const entry of matchingEntries) {
+      let sentForEntry = false;
+
+      // 1. Entrega direta criptografada via RFC 8291 Web Push (fcm.googleapis.com / Mozilla / Apple Push)
+      if (
+        entry.pushSubscription &&
+        typeof entry.pushSubscription.endpoint === 'string' &&
+        entry.pushSubscription.keys?.p256dh &&
+        entry.pushSubscription.keys?.auth
+      ) {
+        try {
+          await webpush.sendNotification(
+            entry.pushSubscription,
+            webPushPayloadStr,
+            {
+              vapidDetails: {
+                subject: vapid.subject,
+                publicKey: vapid.publicKey,
+                privateKey: vapid.privateKey,
+              },
+              TTL: 60 * 60 * 12,
+              urgency: alert.urgency === 'urgent' ? 'high' : 'normal',
+            }
+          );
+          deliveredFcmCount++;
+          sentForEntry = true;
+        } catch (err: any) {
+          if (err?.statusCode === 404 || err?.statusCode === 410) {
+            invalidTokenIds.push(entry.id);
+          } else {
+            failedFcmCount++;
+          }
+        }
+      }
+
+      // 2. Entrega complementar via FCM HTTP v1 caso Service Account esteja configurado
+      if (
+        !sentForEntry &&
+        oauth &&
+        typeof entry.fcmToken === 'string' &&
+        entry.fcmToken.length > 20
+      ) {
+        try {
+          const res = await fetch(
+            `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(
+              oauth.projectId
+            )}/messages:send`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${oauth.accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                message: {
+                  token: entry.fcmToken,
+                  notification: {
+                    title: alert.title,
+                    body: alert.body,
+                  },
+                  data: {
+                    alertId: String(alert.id || ''),
+                    category: String(alert.category || 'prazo'),
+                    urgency: String(alert.urgency || 'warning'),
+                    targetScreen: String(alert.targetScreen || 'frequencia_mensal'),
+                    targetClassId: String(
+                      Array.isArray(alert.targetClassIds) && alert.targetClassIds.length === 1
+                        ? alert.targetClassIds[0]
+                        : 'all'
+                    ),
+                    closingDateFormatted: String(alert.closingDateFormatted || ''),
+                    authorName: String(alert.createdByName || 'EMEB Candelário'),
+                  },
+                  webpush: {
+                    headers: {
+                      Urgency: alert.urgency === 'urgent' ? 'high' : 'normal',
+                    },
+                    fcm_options: {
+                      link: '/?screen=frequencia_mensal',
+                    },
+                  },
+                },
+              }),
+            }
+          );
+
+          if (res.ok) {
+            deliveredFcmCount++;
+          } else {
+            failedFcmCount++;
+            const errBody = await res.json().catch(() => ({}));
+            const statusStr = JSON.stringify(errBody);
+            if (res.status === 404 || statusStr.includes('UNREGISTERED')) {
+              invalidTokenIds.push(entry.id);
+            }
+          }
+        } catch {
+          failedFcmCount++;
+        }
+      }
+    }
+
+    if (invalidTokenIds.length > 0) {
+      const cleaned = allTokens.map((t: any) =>
+        invalidTokenIds.includes(t.id) ? { ...t, active: false } : t
+      );
+      writeSharedState({ fcmTokens: cleaned });
+    }
+
+    return { deliveredFcmCount, failedFcmCount, invalidTokenIds };
+  };
+
+  // API: Obter chave pública VAPID configurada automaticamente (para qualquer docente autenticado)
+  app.get('/api/fcm/vapid-public-key', requireInstitutionalAuth, (_req, res) => {
+    const state = readSharedState();
+    const autoKeys = ensureAutoWebPushVapidKeys();
+    const customVapid = state.fcmConfig?.vapidPublicKey?.trim();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.json({
+      publicKey: autoKeys.publicKey,
+      firebaseVapidKey: customVapid || process.env.VITE_FIREBASE_VAPID_KEY || '',
+      autoConfigured: true,
+    });
+  });
+
+  // API: Registrar Token FCM / Web Push Subscription do dispositivo do professor
+  app.post('/api/fcm/register-token', requireInstitutionalAuth, (req, res) => {
+    const sub = req.body;
+    if (!sub || !sub.id || !sub.userEmail) {
+      res.status(400).json({ error: 'Dados de inscrição Push inválidos.' });
+      return;
+    }
+
+    const reqUser = extractRequestUser(req);
+    const incomingEmail = String(sub.userEmail).trim().toLowerCase();
+    if (!reqUser.isAdmin && incomingEmail !== reqUser.email) {
+      res.status(403).json({ error: 'Você só pode registrar o dispositivo da sua própria conta.' });
+      return;
+    }
+
+    const cleanPushSub =
+      sub.pushSubscription &&
+      typeof sub.pushSubscription.endpoint === 'string' &&
+      sub.pushSubscription.keys?.p256dh &&
+      sub.pushSubscription.keys?.auth
+        ? {
+            endpoint: String(sub.pushSubscription.endpoint).slice(0, 1024),
+            expirationTime: sub.pushSubscription.expirationTime ?? null,
+            keys: {
+              p256dh: String(sub.pushSubscription.keys.p256dh).slice(0, 256),
+              auth: String(sub.pushSubscription.keys.auth).slice(0, 128),
+            },
+          }
+        : undefined;
+
+    const state = readSharedState();
+    const existing = Array.isArray(state.fcmTokens) ? state.fcmTokens : [];
+    const hasPushChannel = Boolean(sub.fcmToken || cleanPushSub);
+    const cleanSub = {
+      id: String(sub.id).slice(0, 128),
+      userEmail: incomingEmail,
+      userName: String(sub.userName || incomingEmail.split('@')[0]).slice(0, 160),
+      userRole: String(sub.userRole || reqUser.role || 'usuario').slice(0, 30),
+      teacherRoleType: sub.teacherRoleType || undefined,
+      assignedClassIds: Array.isArray(sub.assignedClassIds) ? sub.assignedClassIds.slice(0, 50) : [],
+      fcmToken: typeof sub.fcmToken === 'string' ? sub.fcmToken.slice(0, 512) : undefined,
+      ...(cleanPushSub ? { pushSubscription: cleanPushSub } : {}),
+      channel: hasPushChannel ? 'fcm_push' : 'sw_realtime',
+      permission: sub.permission || 'granted',
+      deviceLabel: String(sub.deviceLabel || 'Navegador Web').slice(0, 80),
+      active: sub.active !== false,
+      createdAtISO: sub.createdAtISO || new Date().toISOString(),
+      updatedAtMs: Date.now(),
+    };
+
+    const nextTokens = [
+      cleanSub,
+      ...existing.filter((t: any) => t && t.id !== cleanSub.id),
+    ].slice(0, 200);
+
+    writeSharedState({ fcmTokens: nextTokens });
+    res.json({ ok: true, id: cleanSub.id, channel: cleanSub.channel });
+  });
+
+  // API: Desativar Token FCM / Web Push do dispositivo
+  app.post('/api/fcm/unregister-token', requireInstitutionalAuth, (req, res) => {
+    const { id, userEmail } = req.body || {};
+    const reqUser = extractRequestUser(req);
+    const targetEmail = String(userEmail || reqUser.email).trim().toLowerCase();
+    if (!reqUser.isAdmin && targetEmail !== reqUser.email) {
+      res.status(403).json({ error: 'Operação não autorizada para outro usuário.' });
+      return;
+    }
+
+    const state = readSharedState();
+    const existing = Array.isArray(state.fcmTokens) ? state.fcmTokens : [];
+    const nextTokens = existing.map((t: any) =>
+      t && (t.id === id || t.userEmail === targetEmail)
+        ? {
+            ...t,
+            active: false,
+            fcmToken: undefined,
+            pushSubscription: undefined,
+            updatedAtMs: Date.now(),
+          }
+        : t
+    );
+    writeSharedState({ fcmTokens: nextTokens });
+    res.json({ ok: true });
+  });
+
+  // API: Obter Status e Cobertura FCM / Web Push
+  app.get('/api/fcm/status', requireInstitutionalAuth, (req, res) => {
+    const reqUser = extractRequestUser(req);
+    const autoKeys = ensureAutoWebPushVapidKeys();
+    const state = readSharedState();
+    const tokens = Array.isArray(state.fcmTokens) ? state.fcmTokens : [];
+    const activeTokens = tokens.filter((t: any) => t && t.active);
+    const sa = parseFirebaseServiceAccount();
+    const fcmConfig = {
+      vapidPublicKey: state.fcmConfig?.vapidPublicKey || '',
+      autoWindowAlertsEnabled: state.fcmConfig?.autoWindowAlertsEnabled ?? true,
+      notifyDaysBeforeClose: state.fcmConfig?.notifyDaysBeforeClose ?? 2,
+      remindPendingTeachersOnly: state.fcmConfig?.remindPendingTeachersOnly ?? true,
+      updatedAtMs: state.fcmConfig?.updatedAtMs,
+    };
+
+    const visibleSummaries = (reqUser.isAdmin
+      ? activeTokens
+      : activeTokens.filter((t: any) => t.userEmail === reqUser.email)
+    ).map((t: any) => ({
+      id: t.id,
+      userEmail: t.userEmail,
+      userName: t.userName,
+      userRole: t.userRole,
+      assignedClassIds: Array.isArray(t.assignedClassIds) ? t.assignedClassIds : [],
+      channel: t.channel,
+      deviceLabel: t.deviceLabel,
+      active: Boolean(t.active),
+      updatedAtMs: t.updatedAtMs,
+      hasFcmToken: Boolean(t.fcmToken || t.pushSubscription?.endpoint),
+    }));
+
+    const pushCapableCount = activeTokens.filter(
+      (t: any) => Boolean(t.fcmToken || t.pushSubscription?.endpoint)
+    ).length;
+
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.json({
+      autoConfigured: true,
+      hasServiceAccountConfigured: Boolean(sa) || Boolean(autoKeys.publicKey),
+      hasFirebaseAdminAccount: Boolean(sa),
+      hasVapidKey: true,
+      autoVapidPublicKey: autoKeys.publicKey,
+      totalRegisteredDevices: activeTokens.length,
+      activeFcmTokensCount: pushCapableCount,
+      teachersCoveredEmails: reqUser.isAdmin
+        ? Array.from(new Set(activeTokens.map((t: any) => t.userEmail)))
+        : [reqUser.email],
+      recentDispatches: (state.fcmAlerts || []).slice(0, 20),
+      fcmConfig,
+      tokensSummary: visibleSummaries,
+    });
+  });
+
+  // API: Configurar parâmetros do sistema FCM (Admin Only)
+  app.post('/api/fcm/config', requireAdminAuth, (req, res) => {
+    const { fcmConfig } = req.body || {};
+    if (!fcmConfig || typeof fcmConfig !== 'object') {
+      res.status(400).json({ error: 'Configuração FCM inválida.' });
+      return;
+    }
+    const reqUser = extractRequestUser(req);
+    const cleanConfig = {
+      vapidPublicKey: String(fcmConfig.vapidPublicKey || '').trim().slice(0, 256),
+      autoWindowAlertsEnabled: Boolean(fcmConfig.autoWindowAlertsEnabled),
+      notifyDaysBeforeClose: Math.max(1, Math.min(5, Number(fcmConfig.notifyDaysBeforeClose || 2))),
+      remindPendingTeachersOnly: fcmConfig.remindPendingTeachersOnly !== false,
+      updatedAtMs: Date.now(),
+      updatedByEmail: reqUser.email,
+    };
+
+    writeSharedState({ fcmConfig: cleanConfig });
+    recordSecurityAuditLog(
+      'FCM_CONFIG_UPDATED',
+      `Configuração de notificações push atualizada: alertas automáticos=${cleanConfig.autoWindowAlertsEnabled ? 'ATIVOS' : 'INATIVOS'}.`,
+      req
+    );
+    res.json({ ok: true, fcmConfig: cleanConfig });
+  });
+
+  // API: Disparar Alerta Push sobre Fechamento da Janela de Lançamento (Admin Only)
+  app.post('/api/fcm/send-window-alert', requireAdminAuth, async (req, res) => {
+    const { alert } = req.body || {};
+    if (!alert || !alert.title || !alert.body) {
+      res.status(400).json({ error: 'Payload do alerta Push inválido.' });
+      return;
+    }
+
+    const reqUser = extractRequestUser(req);
+    const nowMs = Date.now();
+    const enrichedAlert = {
+      id: String(alert.id || `fcm_win_${nowMs}`).slice(0, 128),
+      title: String(alert.title).slice(0, 180),
+      body: String(alert.body).slice(0, 600),
+      category: alert.category || 'prazo',
+      urgency: alert.urgency || 'warning',
+      targetScreen: alert.targetScreen || 'frequencia_mensal',
+      targetClassIds: Array.isArray(alert.targetClassIds) ? alert.targetClassIds : ['all'],
+      targetAudience: alert.targetAudience || 'pending_only',
+      closingDateFormatted: String(alert.closingDateFormatted || ''),
+      windowPhase: String(alert.windowPhase || 'closing_soon'),
+      createdAtMs: alert.createdAtMs || nowMs,
+      createdAtISO: alert.createdAtISO || new Date(nowMs).toISOString(),
+      createdByEmail: reqUser.email || alert.createdByEmail || 'emebjfreitas@jundiai.sp.gov.br',
+      createdByName: reqUser.name || alert.createdByName || 'Gestão Escolar',
+      pendingClassesCount: Number(alert.pendingClassesCount || 0),
+    };
+
+    const dispatchResult = await dispatchFcmHttpV1ToTargets(enrichedAlert);
+    const savedAlert = {
+      ...enrichedAlert,
+      deliveredFcmCount: dispatchResult.deliveredFcmCount,
+    };
+
+    const state = readSharedState();
+    const nextAlerts = [savedAlert, ...(state.fcmAlerts || [])].slice(0, 40);
+    writeSharedState({ fcmAlerts: nextAlerts });
+
+    recordSecurityAuditLog(
+      'FCM_WINDOW_ALERT_DISPATCHED',
+      `Alerta Push disparado: "${savedAlert.title}" (${dispatchResult.deliveredFcmCount} entrega(s) em segundo plano + broadcast em tempo real).`,
+      req
+    );
+
+    const message =
+      dispatchResult.deliveredFcmCount > 0
+        ? `Alerta entregue via Push para ${dispatchResult.deliveredFcmCount} dispositivo(s) e publicado em tempo real.`
+        : 'Alerta publicado em tempo real para todos os professores conectados. Novos dispositivos passarão a receber em segundo plano assim que ativarem o sininho.';
+
+    res.json({
+      ok: true,
+      alert: savedAlert,
+      deliveredFcmCount: dispatchResult.deliveredFcmCount,
+      failedFcmCount: dispatchResult.failedFcmCount,
+      message,
+    });
+  });
+
+  // API: Listar alertas Push recentes para entrega em tempo real aos professores
+  app.get('/api/fcm/alerts', requireInstitutionalAuth, (req, res) => {
+    const state = readSharedState();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.json({
+      alerts: (state.fcmAlerts || []).slice(0, 20),
+    });
+  });
+
+  // Monitor Automático Server-Side de Fechamento da Janela de Lançamento (a cada 15 min)
+  const checkServerSideWindowClosingAlert = async () => {
+    try {
+      const state = readSharedState();
+      const autoEnabled = state.fcmConfig?.autoWindowAlertsEnabled ?? true;
+      if (!autoEnabled) return;
+
+      const winCfg = state.attendanceWindowConfig || { exceptionalOverrideOpen: false };
+      const refDate = winCfg.simulatedDateISO
+        ? new Date(`${winCfg.simulatedDateISO}T12:00:00`)
+        : new Date();
+      const y = refDate.getFullYear();
+      const m = refDate.getMonth();
+      const d = refDate.getDate();
+      const daysInM = new Date(y, m + 1, 0).getDate();
+      const weekdays: number[] = [];
+      for (let i = 1; i <= daysInM; i++) {
+        const dow = new Date(y, m, i).getDay();
+        if (dow >= 1 && dow <= 5) weekdays.push(i);
+      }
+      const firstTwo = weekdays.slice(0, 2);
+      const lastDay = weekdays[weekdays.length - 1] || daysInM;
+      const isSecondClosingDay = d === firstTwo[1];
+      const isFirstClosingDay = d === firstTwo[0];
+      const isLastMonthSchoolDay = d === lastDay;
+
+      if (!isSecondClosingDay && !isFirstClosingDay && !isLastMonthSchoolDay) {
+        return;
+      }
+
+      const pendingClasses = Array.isArray(state.classes)
+        ? state.classes.filter((c: any) => c && c.isPending)
+        : [];
+      if (pendingClasses.length === 0) return;
+
+      const todayISO = refDate.toISOString().slice(0, 10);
+      const phaseTag = isSecondClosingDay
+        ? 'final_day'
+        : isFirstClosingDay
+        ? 'first_closing_day'
+        : 'last_month_day';
+      const windowKey = `${todayISO}|${phaseTag}`;
+      if (state.lastAutoFcmWindowKey === windowKey) return;
+
+      const nextMonthIdx = (m + 1) % 12;
+      const nextMonthYear = m === 11 ? y + 1 : y;
+      const nextWeekdays: number[] = [];
+      const daysInNext = new Date(nextMonthYear, nextMonthIdx + 1, 0).getDate();
+      for (let i = 1; i <= daysInNext; i++) {
+        const dow = new Date(nextMonthYear, nextMonthIdx, i).getDay();
+        if (dow >= 1 && dow <= 5) nextWeekdays.push(i);
+      }
+      const deadlineDate = isFirstClosingDay || isSecondClosingDay
+        ? new Date(y, m, firstTwo[1] || 2)
+        : new Date(nextMonthYear, nextMonthIdx, nextWeekdays[1] || 2);
+      const deadlineStr = deadlineDate.toLocaleDateString('pt-BR');
+
+      const autoAlert = {
+        id: `fcm_auto_${todayISO.replace(/-/g, '')}_${phaseTag}`,
+        title: isSecondClosingDay
+          ? `ÚLTIMO DIA: Fechamento de Frequência Hoje (${deadlineStr})`
+          : isFirstClosingDay
+          ? `Janela de Frequência Fecha Amanhã (${deadlineStr})`
+          : `Janela de Lançamento Aberta Hoje (${MONTH_NAMES_PT[m]})`,
+        body: `${pendingClasses.length} turma(s) com lançamento pendente. Conclua a conferência de faltas e atestados até ${deadlineStr} para evitar pendências no fechamento mensal.`,
+        category: 'prazo',
+        urgency: isSecondClosingDay ? 'urgent' : 'warning',
+        targetScreen: 'frequencia_mensal',
+        targetClassIds: pendingClasses.map((c: any) => c.id),
+        targetAudience: 'pending_only',
+        closingDateFormatted: deadlineStr,
+        windowPhase: phaseTag,
+        createdAtMs: Date.now(),
+        createdAtISO: new Date().toISOString(),
+        createdByEmail: 'emebjfreitas@jundiai.sp.gov.br',
+        createdByName: 'Monitor Automático FCM',
+        pendingClassesCount: pendingClasses.length,
+      };
+
+      const dispatchRes = await dispatchFcmHttpV1ToTargets(autoAlert);
+      const savedAlert = { ...autoAlert, deliveredFcmCount: dispatchRes.deliveredFcmCount };
+      writeSharedState({
+        lastAutoFcmWindowKey: windowKey,
+        fcmAlerts: [savedAlert, ...(state.fcmAlerts || [])].slice(0, 40),
+      });
+    } catch {
+      // ignore scheduler error
+    }
+  };
+
+  setInterval(() => {
+    void checkServerSideWindowClosingAlert();
+  }, 15 * 60 * 1000);
 
   app.get('/health', (_req, res) => {
     res.status(200).send('OK');
+  });
+
+  app.use((req, res, next) => {
+    if (/^\/(\.env|service-account|firebase-adminsdk|credentials)/i.test(req.path)) {
+      res.status(403).end();
+      return;
+    }
+    next();
   });
 
   if (process.env.NODE_ENV !== 'production') {

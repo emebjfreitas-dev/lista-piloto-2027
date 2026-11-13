@@ -55,6 +55,32 @@ service cloud.firestore {
       return data.updatedAtMs is number;
     }
 
+    function isValidFcmToken(data) {
+      return data.id is string &&
+        data.id.size() <= 128 &&
+        data.userEmail is string &&
+        data.userEmail.size() >= 5 &&
+        data.userEmail.size() <= 160 &&
+        data.channel in ['fcm_push', 'sw_realtime'] &&
+        data.active is bool &&
+        data.updatedAtMs is number &&
+        (!('fcmToken' in data) || (data.fcmToken is string && data.fcmToken.size() <= 512));
+    }
+
+    function isValidFcmAlert(data) {
+      return data.id is string &&
+        data.id.size() <= 128 &&
+        data.title is string &&
+        data.title.size() <= 180 &&
+        data.body is string &&
+        data.body.size() <= 600 &&
+        data.category in ['prazo', 'aviso', 'busca_ativa'] &&
+        data.urgency in ['info', 'warning', 'urgent'] &&
+        data.createdAtMs is number &&
+        data.createdByEmail is string &&
+        data.createdByEmail.size() <= 160;
+    }
+
     // Classes collection (1 document per class, max 60 students per class, <1MB each)
     match /school_classes_2027/{classId} {
       allow get, list: if isInstitutionalUser();
@@ -76,6 +102,34 @@ service cloud.firestore {
         docId in ['state', 'config'] &&
         isValidMeta(incoming());
       allow delete: if isAdmin();
+    }
+
+    // FCM Push Device Tokens (PII-isolated: teachers only read/manage their own token; admins inspect coverage)
+    match /school_fcm_tokens_2027/{subscriptionId} {
+      allow get, list: if isAdmin() || (
+        isInstitutionalUser() &&
+        resource.data.userEmail == request.auth.token.email
+      );
+      allow create, update: if isInstitutionalUser() &&
+        isValidId(subscriptionId) &&
+        incoming().id == subscriptionId &&
+        isValidFcmToken(incoming()) &&
+        (isAdmin() || incoming().userEmail == request.auth.token.email);
+      allow delete: if isAdmin() || (
+        isInstitutionalUser() &&
+        isValidId(subscriptionId) &&
+        existing().userEmail == request.auth.token.email
+      );
+    }
+
+    // FCM Attendance Closing Alerts broadcast feed
+    match /school_fcm_alerts_2027/{alertId} {
+      allow get, list: if isInstitutionalUser();
+      allow create, update: if isAdmin() &&
+        isValidId(alertId) &&
+        incoming().id == alertId &&
+        isValidFcmAlert(incoming());
+      allow delete: if isAdmin() && isValidId(alertId);
     }
   }
 }

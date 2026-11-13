@@ -2,19 +2,28 @@ import React, { useState } from 'react';
 import { AttendanceWindowConfig, ClassGroup, UserRole } from '../types';
 import { evaluateAttendanceLaunchWindow } from '../services/db';
 import {
+  dispatchWindowClosingFcmAlert,
+  getFcmCapabilitySnapshot,
+  registerDeviceForFcm,
+} from '../services/fcmService';
+import { getPushPermissionState } from '../services/pushNotificationService';
+import {
   Clock,
   LockOpen,
   CalendarCheck,
   AlertTriangle,
-  Calendar,
   Settings,
   Bell,
+  BellRing,
+  Send,
   X,
 } from 'lucide-react';
 
 interface LembretePrazoFrequenciaCardProps {
   attendanceWindowConfig: AttendanceWindowConfig;
   userRole?: UserRole;
+  userEmail?: string;
+  userName?: string;
   classes?: ClassGroup[];
   assignedClassId?: string;
   assignedClassIds?: string[];
@@ -25,6 +34,8 @@ interface LembretePrazoFrequenciaCardProps {
 export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardProps> = ({
   attendanceWindowConfig,
   userRole = 'usuario',
+  userEmail = 'emebjfreitas@jundiai.sp.gov.br',
+  userName,
   classes = [],
   assignedClassId,
   assignedClassIds = [],
@@ -32,9 +43,17 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
   onNavigateToAcessos,
 }) => {
   const [isDismissed, setIsDismissed] = useState(false);
+  const [fcmPermission, setFcmPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    getPushPermissionState()
+  );
+  const [hasFcmToken, setHasFcmToken] = useState<boolean>(() =>
+    getFcmCapabilitySnapshot().hasFcmToken
+  );
+  const [fcmActionLoading, setFcmActionLoading] = useState(false);
+  const [fcmToastMsg, setFcmToastMsg] = useState<string | null>(null);
+
   const win = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
 
-  // Find user's assigned class for quick 1-touch navigation
   const targetClass = React.useMemo(() => {
     if (assignedClassId) {
       const found = classes.find((c) => c.id === assignedClassId);
@@ -47,7 +66,6 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     return classes[0];
   }, [classes, assignedClassId, assignedClassIds]);
 
-  // Compute pending classes count for Admin or User
   const pendingSummary = React.useMemo(() => {
     const list =
       userRole === 'usuario'
@@ -60,6 +78,48 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
       firstPendingClass: pending[0] || list[0],
     };
   }, [classes, userRole, assignedClassId, assignedClassIds]);
+
+  const handleActivateTeacherFcm = async () => {
+    if (fcmActionLoading) return;
+    setFcmActionLoading(true);
+    setFcmToastMsg(null);
+    try {
+      const res = await registerDeviceForFcm({
+        userEmail,
+        userName: userName || userEmail.split('@')[0],
+        userRole,
+        assignedClassIds:
+          assignedClassIds.length > 0
+            ? assignedClassIds
+            : assignedClassId
+            ? [assignedClassId]
+            : [],
+      });
+      setFcmPermission(res.permission);
+      setHasFcmToken(Boolean(res.fcmToken));
+      setFcmToastMsg(res.message);
+    } finally {
+      setFcmActionLoading(false);
+    }
+  };
+
+  const handleAdminNotifyPendingViaFcm = async () => {
+    if (fcmActionLoading) return;
+    setFcmActionLoading(true);
+    setFcmToastMsg(null);
+    try {
+      const res = await dispatchWindowClosingFcmAlert({
+        targetAudience: 'pending_only',
+        attendanceWindowConfig,
+        classes,
+        senderEmail: userEmail,
+        senderName: userName || 'Gestão Escolar',
+      });
+      setFcmToastMsg(res.message);
+    } finally {
+      setFcmActionLoading(false);
+    }
+  };
 
   if (isDismissed) {
     return (
@@ -79,18 +139,17 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     );
   }
 
-  // Determine styles and texts based on window status & urgency
   const isUrgent = win.urgencyLevel === 'urgent';
   const isWarning = win.urgencyLevel === 'warning';
   const isOpen = win.isAllowedToLaunch;
 
   const bgClass = isUrgent
-    ? 'bg-rose-50 border-rose-300 shadow-xs'
+    ? 'bg-rose-50 shadow-xs'
     : isOpen
-    ? 'bg-emerald-50 border-emerald-300 shadow-xs'
+    ? 'bg-emerald-50 shadow-xs'
     : isWarning
-    ? 'bg-amber-50 border-amber-300 shadow-xs'
-    : 'bg-slate-100 border-slate-300 shadow-xs';
+    ? 'bg-amber-50 shadow-xs'
+    : 'bg-[#f2f2f7] shadow-xs';
 
   const badgeBg = isUrgent
     ? 'bg-rose-800 text-white font-bold'
@@ -98,7 +157,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     ? 'bg-emerald-800 text-white font-bold'
     : isWarning
     ? 'bg-amber-800 text-white font-bold'
-    : 'bg-blue-800 text-white font-bold';
+    : 'bg-[#1a4fa3] text-white font-bold';
 
   const titleColor = isUrgent
     ? 'text-rose-950 font-bold'
@@ -106,12 +165,12 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     ? 'text-emerald-950 font-bold'
     : isWarning
     ? 'text-amber-950 font-bold'
-    : 'text-slate-950 font-bold';
+    : 'text-[#111827] font-bold';
 
   return (
     <aside
       aria-label="Lembrete Oficial de Prazo de Fechamento da Frequência"
-      className={`rounded-3xl p-4 sm:p-5 border transition-all ${bgClass}`}
+      className={`rounded-3xl p-4 sm:p-5 transition-all space-y-2.5 ${bgClass}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Left Side: Icon + Message */}
@@ -139,17 +198,17 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`px-2.5 py-0.5 rounded-full text-xs uppercase tracking-wider ${badgeBg}`}
+                className={`px-2.5 py-0.5 rounded-md text-xs uppercase tracking-wider ${badgeBg}`}
               >
                 {isOpen ? 'Janela Aberta' : 'Lembrete de Prazo'}
               </span>
 
-              <span className="text-xs text-slate-700 font-bold">
+              <span className="text-xs text-[#374151] font-bold">
                 {win.currentDateFormatted} · Mês de {win.targetMonthName}
               </span>
 
               {pendingSummary.pendingCount > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full bg-white text-slate-900 text-xs font-bold tabular-nums border border-slate-300">
+                <span className="px-2.5 py-0.5 rounded-md bg-white text-[#111827] text-xs font-bold tabular-nums">
                   {pendingSummary.pendingCount} fechamento(s) pendente(s)
                 </span>
               )}
@@ -167,10 +226,10 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               )}
             </h2>
 
-            <p className="text-xs sm:text-sm text-slate-800 font-medium leading-normal mt-0.5">
+            <p className="text-xs sm:text-sm text-[#374151] font-medium leading-normal mt-0.5">
               {isOpen ? (
                 <span>
-                  Os educadores devem concluir o lançamento de faltas e atestados antes do prazo final ({win.closingDateFormatted}, 2º dia letivo). A sincronização com a SED e Google Sheets ocorre automaticamente.
+                  Os educadores devem concluir o lançamento de faltas e atestados antes do prazo final ({win.closingDateFormatted}, 2º dia letivo).
                 </span>
               ) : (
                 <span>
@@ -187,11 +246,51 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             <button
               type="button"
               onClick={() => onOpenMonthlyAttendance(pendingSummary.firstPendingClass || targetClass)}
-              className="h-8 px-3.5 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              className="min-h-[38px] px-3.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <CalendarCheck className="w-3.5 h-3.5 text-white" />
               <span>
                 {userRole === 'usuario' ? 'Lançar Minhas Faltas' : 'Conferir Fechamentos'}
+              </span>
+            </button>
+          )}
+
+          {userRole === 'admin' ? (
+            <button
+              type="button"
+              disabled={fcmActionLoading}
+              onClick={handleAdminNotifyPendingViaFcm}
+              title="Enviar alerta Firebase Cloud Messaging (FCM) para professores com turmas pendentes"
+              className="min-h-[38px] px-3.5 rounded-xl bg-[#111827] hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>
+                {fcmActionLoading
+                  ? 'Enviando...'
+                  : `Alertar Pendentes (FCM)`}
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={fcmActionLoading}
+              onClick={handleActivateTeacherFcm}
+              title="Ativar notificações push Firebase Cloud Messaging para não esquecer o fechamento"
+              className={`min-h-[38px] px-3.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60 ${
+                fcmPermission === 'granted'
+                  ? 'bg-[#eaf6ef] text-[#005035]'
+                  : 'bg-[#0071e3] hover:bg-[#0077ed] text-white'
+              }`}
+            >
+              <BellRing className="w-3.5 h-3.5" />
+              <span>
+                {fcmActionLoading
+                  ? 'Conectando...'
+                  : fcmPermission === 'granted'
+                  ? hasFcmToken
+                    ? 'Alerta FCM Ativo'
+                    : 'Notificações Ativas'
+                  : 'Ativar Alerta FCM'}
               </span>
             </button>
           )}
@@ -201,9 +300,9 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               type="button"
               onClick={onNavigateToAcessos}
               title="Configurar Janela de Lançamento e Prazos"
-              className="h-[38px] px-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center gap-1.5 border border-slate-300 transition-all cursor-pointer shadow-2xs"
+              className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-slate-100 text-[#111827] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
-              <Settings className="w-3.5 h-3.5 text-slate-700" />
+              <Settings className="w-3.5 h-3.5 text-[#48484a]" />
               <span>Ajustar Prazos</span>
             </button>
           )}
@@ -212,13 +311,26 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             type="button"
             onClick={() => setIsDismissed(true)}
             title="Dispensar lembrete temporariamente"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-700 hover:text-black hover:bg-black/10 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#48484a] hover:text-black hover:bg-black/10 transition-colors cursor-pointer"
             aria-label="Dispensar lembrete temporariamente"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      {fcmToastMsg && (
+        <div className="px-3 py-2 rounded-xl bg-white/90 text-xs font-medium text-[#111827] flex items-center justify-between gap-2">
+          <span>{fcmToastMsg}</span>
+          <button
+            type="button"
+            onClick={() => setFcmToastMsg(null)}
+            className="text-xs font-semibold text-[#6e6e73] hover:text-[#111827] cursor-pointer"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
     </aside>
   );
 };
