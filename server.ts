@@ -2326,7 +2326,8 @@ async function startServer() {
     const activeTokens = tokens.filter((t: any) => t && t.active);
     const sa = parseFirebaseServiceAccount();
     const fcmConfig = {
-      vapidPublicKey: state.fcmConfig?.vapidPublicKey || '',
+      vapidPublicKey:
+        state.fcmConfig?.vapidPublicKey || process.env.VITE_FIREBASE_VAPID_KEY || '',
       autoWindowAlertsEnabled: state.fcmConfig?.autoWindowAlertsEnabled ?? true,
       notifyDaysBeforeClose: state.fcmConfig?.notifyDaysBeforeClose ?? 2,
       remindPendingTeachersOnly: state.fcmConfig?.remindPendingTeachersOnly ?? true,
