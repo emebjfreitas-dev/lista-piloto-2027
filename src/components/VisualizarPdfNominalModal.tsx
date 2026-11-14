@@ -120,11 +120,11 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
   const whatsappRequestFichaLinks = buildWhatsAppLinksFromPhoneString(
     rawPhoneText,
     student.name,
-    `Olá, família de ${student.name}! Por gentileza, pedimos que enviem a Ficha Informativa / Cadastral atualizada da criança para a secretaria da EMEB Prof. Joaquim Candelário de Freitas. Muito obrigado(a)!`
+    `Olá, família de ${student.name}! Por gentileza, pedimos que enviem a Ficha Informativa do Estudante atualizada para a secretaria da EMEB Prof. Joaquim Candelário de Freitas. Muito obrigado(a)!`
   );
 
   const handleRemovePdf = () => {
-    if (!confirm(`Deseja desvincular a Ficha PDF de ${student.name}?`)) return;
+    if (!confirm(`Deseja desvincular a Ficha Informativa do Estudante de ${student.name}?`)) return;
     if (onUpdateAllClasses && allClasses.length > 0) {
       const updated = allClasses.map((cls) => {
         const sIdx = cls.students.findIndex((s) => s.id === student.id);
@@ -147,31 +147,31 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
     onClose();
   };
 
-  // CASO 1: ESTUDANTE SEM FICHA PDF -> Direciona exclusivamente para o Arraste & Solte em Lote
+  // CASO 1: ESTUDANTE SEM FICHA INFORMATIVA DO ESTUDANTE
   if (!hasPdf) {
     return (
       <div
         onClick={onClose}
-        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/40 backdrop-blur-xs animate-gentle-fade"
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/55 backdrop-blur-xs animate-gentle-fade"
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="bg-white w-full max-w-lg rounded-3xl shadow-2xl p-6 sm:p-7 space-y-5 max-h-[92vh] overflow-y-auto"
+          className="bg-white border border-slate-300 w-full max-w-lg rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4 max-h-[88dvh] overflow-y-auto"
         >
           {/* Header */}
-          <div className="flex items-start justify-between gap-3 pb-3">
+          <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[26px]">picture_as_pdf</span>
+              <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-200 text-[#be123c] flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[24px]">picture_as_pdf</span>
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-medium uppercase tracking-wider text-rose-600 block">
-                  Ficha PDF Pendente · {className}
+                <span className="text-xs font-bold uppercase tracking-wider text-[#be123c] block">
+                  Ficha Informativa do Estudante · Pendente · {className}
                 </span>
-                <h3 className="text-base sm:text-lg font-bold text-slate-950 truncate">
+                <h3 className="text-base sm:text-lg font-bold text-slate-950 break-words leading-snug">
                   {student.name}
                 </h3>
-                <p className="text-xs text-slate-500 font-normal">
+                <p className="text-xs text-slate-600 font-medium break-words">
                   Nº {student.number.toString().padStart(2, '0')} · RA {student.ra || '—'}-{student.digRa || ''}
                 </p>
               </div>
@@ -180,25 +180,25 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
 
           {/* Aviso de Método Único (Arraste em Lote) */}
-          <div className="p-5 rounded-2xl bg-slate-50 space-y-3">
-            <div className="flex items-center gap-2 text-slate-900">
-              <span className="material-symbols-outlined text-[20px] text-rose-600">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center gap-2 text-slate-950">
+              <span className="material-symbols-outlined text-[20px] text-[#be123c]">
                 folder_zip
               </span>
               <h4 className="text-sm font-bold">
-                Nenhuma Ficha PDF vinculada a este estudante
+                Nenhuma Ficha Informativa do Estudante vinculada
               </h4>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              As fichas PDF dos alunos são vinculadas exclusivamente por meio do{' '}
-              <strong className="font-semibold text-slate-900">
+            <p className="text-xs text-slate-700 leading-relaxed font-normal">
+              As Fichas Informativas dos Estudantes em PDF são vinculadas exclusivamente por meio do{' '}
+              <strong className="font-bold text-slate-950">
                 Arraste &amp; Solte em Lote
               </strong>{' '}
               (por RA, Nome Completo ou Turma + Nº de Chamada).
@@ -211,19 +211,19 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                   onClose();
                   onOpenAdminPdfsModal();
                 }}
-                className="w-full h-11 px-4 rounded-xl bg-slate-950 hover:bg-black text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-xs"
+                className="w-full h-11 px-4 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors shadow-xs"
               >
                 <span className="material-symbols-outlined text-[18px]">upload_file</span>
-                <span>Abrir Arraste &amp; Solte em Lote de PDFs</span>
+                <span>Abrir Arraste &amp; Solte de Fichas Informativas</span>
               </button>
             )}
           </div>
 
           {/* Notificação à família no WhatsApp */}
           {whatsappRequestFichaLinks.length > 0 && (
-            <div className="p-4 rounded-2xl bg-slate-50 space-y-2.5">
-              <p className="text-xs font-medium text-slate-700">
-                Solicitar Ficha Cadastral atualizada à família:
+            <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-2.5">
+              <p className="text-xs font-bold text-slate-800">
+                Solicitar Ficha Informativa do Estudante à família:
               </p>
               <div className="flex flex-wrap gap-2">
                 {whatsappRequestFichaLinks.map((ph, idx) => (
@@ -232,10 +232,10 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                     href={ph.waUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366] text-[#128C7E] hover:text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="min-h-[38px] px-3.5 py-2 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-normal text-center shadow-xs"
                   >
-                    <span className="material-symbols-outlined text-[16px]">chat</span>
-                    <span>Pedir no WhatsApp ({ph.display})</span>
+                    <span className="material-symbols-outlined text-[16px] shrink-0">chat</span>
+                    <span className="break-words">Pedir no WhatsApp ({ph.display})</span>
                   </a>
                 ))}
               </div>
@@ -246,7 +246,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             <button
               type="button"
               onClick={onClose}
-              className="h-10 px-5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs cursor-pointer transition-colors"
+              className="h-10 px-5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 font-bold text-xs cursor-pointer transition-colors"
             >
               Fechar
             </button>
@@ -256,18 +256,18 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
     );
   }
 
-  // CASO 2: ESTUDANTE COM FICHA PDF -> Exibe o PDF diretamente em tela limpa sem contornos
+  // CASO 2: ESTUDANTE COM FICHA INFORMATIVA DO ESTUDANTE -> Exibe o PDF diretamente
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/40 backdrop-blur-xs animate-gentle-fade"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/55 backdrop-blur-xs animate-gentle-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-white border border-slate-300 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]"
       >
         {/* Cabeçalho */}
-        <div className="bg-white px-5 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="bg-white px-4 sm:px-6 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <StudentAvatar
               student={student}
@@ -276,29 +276,29 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider font-mono tabular-nums">
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider font-mono tabular-nums">
                   {className} · Nº {student.number.toString().padStart(2, '0')}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase bg-emerald-50 text-emerald-800">
-                  Ficha Digitalizada
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-emerald-50 border border-emerald-200 text-[#047857]">
+                  Ficha Informativa do Estudante
                 </span>
               </div>
 
-              <h3 className="text-sm sm:text-base font-bold text-slate-950 truncate leading-tight mt-0.5">
+              <h3 className="text-sm sm:text-base font-bold text-slate-950 break-words leading-snug mt-0.5">
                 {student.name}
               </h3>
             </div>
           </div>
 
           {/* Ações */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {embedUrl && (
               <a
                 href={embedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="h-10 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Abrir PDF em nova aba / tela cheia"
+                className="h-10 px-3.5 rounded-xl bg-[#0052cc] hover:bg-[#0b3b8c] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Abrir Ficha Informativa do Estudante em nova aba / tela cheia"
               >
                 <span className="material-symbols-outlined text-[17px]">open_in_new</span>
                 <span>Tela Cheia</span>
@@ -312,10 +312,10 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                   onClose();
                   onOpenAdminPdfsModal();
                 }}
-                className="h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                 title="Atualizar via Arraste & Solte em Lote"
               >
-                <span className="material-symbols-outlined text-[17px] text-rose-600">upload_file</span>
+                <span className="material-symbols-outlined text-[17px] text-[#be123c]">upload_file</span>
                 <span className="hidden sm:inline">Substituir em Lote</span>
               </button>
             )}
@@ -324,8 +324,8 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               <button
                 type="button"
                 onClick={handleRemovePdf}
-                className="h-10 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs flex items-center gap-1 cursor-pointer transition-colors"
-                title="Remover Ficha PDF vinculada"
+                className="h-10 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-300 text-[#be123c] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                title="Remover Ficha Informativa vinculada"
               >
                 <span className="material-symbols-outlined text-[17px]">delete</span>
                 <span className="hidden sm:inline">Remover</span>
@@ -336,7 +336,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
+              className="h-10 px-4 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
             >
               <span className="material-symbols-outlined text-[17px]">close</span>
               <span>Fechar</span>
@@ -344,24 +344,24 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
           </div>
         </div>
 
-        {/* Visualização Direta do PDF */}
+        {/* Visualização Direta da Ficha Informativa do Estudante */}
         <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-3 flex flex-col">
-          <div className="w-full h-[62vh] sm:h-[68vh] bg-white rounded-2xl overflow-hidden flex flex-col shadow-xs">
+          <div className="w-full h-[62vh] sm:h-[68vh] bg-white border border-slate-200 rounded-xl overflow-hidden flex flex-col shadow-xs">
             <iframe
               src={embedUrl}
-              title={`Ficha de ${student.name}`}
+              title={`Ficha Informativa do Estudante — ${student.name}`}
               className="w-full flex-1 border-0"
               allow="autoplay"
             />
           </div>
-          <div className="pt-2 px-1 flex items-center justify-between text-xs text-slate-500 font-normal">
-            <span>Ficha Oficial Digitalizada · SME Jundiaí</span>
+          <div className="pt-2 px-1 flex items-center justify-between text-xs text-slate-600 font-medium">
+            <span>Ficha Informativa do Estudante · SME Jundiaí</span>
             {embedUrl && (
               <a
                 href={embedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1"
+                className="text-[#0052cc] hover:text-[#0b3b8c] font-bold flex items-center gap-1"
               >
                 <span>Download / Imprimir</span>
                 <span className="material-symbols-outlined text-[14px]">arrow_outward</span>

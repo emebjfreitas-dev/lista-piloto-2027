@@ -108,8 +108,8 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   };
 
   const sizeMap: Record<string, string> = {
-    xs: 'w-7 h-7 text-[10px] rounded-lg',
-    sm: 'w-8 h-8 text-[11px] rounded-lg',
+    xs: 'w-7 h-7 text-[11px] rounded-lg',
+    sm: 'w-8 h-8 text-xs rounded-lg',
     md: 'w-10 h-10 text-xs rounded-xl',
     lg: 'w-12 h-12 text-sm rounded-xl',
     xl: 'w-14 h-14 text-base rounded-2xl',

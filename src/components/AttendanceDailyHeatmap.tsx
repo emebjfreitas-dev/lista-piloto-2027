@@ -197,11 +197,11 @@ const HeatmapTooltipCard: React.FC<HeatmapTooltipCardProps> = ({
     >
       {/* Cabeçalho: Data Exata + Tipo de Dia */}
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-semibold text-white text-[13px] leading-snug tabular-nums">
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-white text-sm leading-snug tabular-nums break-words">
             {cell.brDate} · {cell.weekdayFull}
           </div>
-          <div className="text-[#d1d5db] text-[11px] truncate">{cell.dayTypeLabel}</div>
+          <div className="text-[#d1d5db] text-xs break-words">{cell.dayTypeLabel}</div>
         </div>
         {interactive && onClose && (
           <button
@@ -210,7 +210,7 @@ const HeatmapTooltipCard: React.FC<HeatmapTooltipCardProps> = ({
               e.stopPropagation();
               onClose();
             }}
-            className="px-2 py-0.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11px] font-semibold shrink-0"
+            className="min-h-[34px] px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold shrink-0 cursor-pointer"
             aria-label="Fechar tooltip"
           >
             Fechar
@@ -222,24 +222,24 @@ const HeatmapTooltipCard: React.FC<HeatmapTooltipCardProps> = ({
         <>
           {/* Totais de Presentes e Faltantes */}
           <div className="grid grid-cols-2 gap-1.5 bg-white/10 rounded-xl p-2 tabular-nums">
-            <div>
-              <span className="text-[10px] uppercase tracking-wider text-[#d1d5db] block">
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-[#d1d5db] block">
                 Presentes
               </span>
               <span className="text-sm font-semibold text-emerald-300">
                 {cell.presences}{' '}
-                <span className="text-[11px] font-normal text-[#d1d5db]">
+                <span className="text-xs font-normal text-[#d1d5db]">
                   / {cell.enrolledCount} ({cell.attendanceRate}%)
                 </span>
               </span>
             </div>
-            <div>
-              <span className="text-[10px] uppercase tracking-wider text-[#d1d5db] block">
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-[#d1d5db] block">
                 Faltantes
               </span>
               <span className="text-sm font-semibold text-rose-300">
                 {cell.absencesTotal}{' '}
-                <span className="text-[11px] font-normal text-[#d1d5db]">
+                <span className="text-xs font-normal text-[#d1d5db]">
                   ({cell.unjustifiedAbsences} s/ atest.)
                 </span>
               </span>
@@ -248,15 +248,15 @@ const HeatmapTooltipCard: React.FC<HeatmapTooltipCardProps> = ({
 
           {/* Lista Nominal de Faltantes */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-[#d1d5db]">
-              <span>Lista de Faltantes ({cell.absentStudents.length})</span>
+            <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-[#d1d5db]">
+              <span>Faltantes ({cell.absentStudents.length})</span>
               {cell.justifiedAbsences > 0 && (
                 <span>{cell.justifiedAbsences} c/ atestado</span>
               )}
             </div>
 
             {cell.absentStudents.length === 0 ? (
-              <p className="text-[11px] text-emerald-300 font-medium py-0.5">
+              <p className="text-xs text-emerald-300 font-medium py-0.5">
                 100% de presença — nenhum estudante faltante nesta data.
               </p>
             ) : (
@@ -268,20 +268,20 @@ const HeatmapTooltipCard: React.FC<HeatmapTooltipCardProps> = ({
                 {previewStudents.map((entry) => {
                   const classShort = entry.cls.turmaAbrev || entry.cls.name.replace('GRUPO ', 'G');
                   const rowContent = (
-                    <div className="flex items-center justify-between gap-2 text-[11px] py-0.5 px-1.5 rounded-lg bg-white/5">
-                      <span className="text-white font-medium truncate">
+                    <div className="flex items-start justify-between gap-2 text-xs py-1 px-2 rounded-lg bg-white/5 min-w-0">
+                      <span className="text-white font-medium break-words leading-snug min-w-0 flex-1">
                         {entry.student.name}
                       </span>
                       <span className="flex items-center gap-1.5 shrink-0 tabular-nums">
-                        <span className="text-[#d1d5db] text-[10px]">{classShort}</span>
+                        <span className="text-[#d1d5db] text-xs">{classShort}</span>
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                          className={`px-1.5 py-0.5 rounded text-xs font-semibold ${
                             entry.justified
                               ? 'bg-emerald-500/25 text-emerald-200'
                               : 'bg-rose-500/30 text-rose-200'
                           }`}
                         >
-                          {entry.justified ? 'Atestado' : 'S/ Atest.'}
+                          {entry.justified ? 'Atest.' : 'S/ Atest.'}
                         </span>
                       </span>
                     </div>
@@ -296,7 +296,7 @@ const HeatmapTooltipCard: React.FC<HeatmapTooltipCardProps> = ({
                           e.stopPropagation();
                           onOpenStudentGrid(entry.student);
                         }}
-                        className="w-full text-left hover:bg-white/10 rounded-lg transition-colors"
+                        className="w-full text-left hover:bg-white/10 rounded-lg transition-colors duration-100 cursor-pointer"
                       >
                         {rowContent}
                       </button>
@@ -313,7 +313,7 @@ const HeatmapTooltipCard: React.FC<HeatmapTooltipCardProps> = ({
             )}
 
             {remainingCount > 0 && (
-              <div className="text-[10px] text-[#9ca3af] pt-0.5 tabular-nums">
+              <div className="text-xs text-[#9ca3af] pt-0.5 tabular-nums">
                 + {remainingCount} outro(s) faltante(s) ·{' '}
                 {interactive ? 'consulte a lista ao lado' : 'clique para ver todos'}
               </div>
@@ -321,7 +321,7 @@ const HeatmapTooltipCard: React.FC<HeatmapTooltipCardProps> = ({
           </div>
         </>
       ) : (
-        <div className="bg-white/10 rounded-xl p-2 text-[11px] text-[#d1d5db]">
+        <div className="bg-white/10 rounded-xl p-2 text-xs text-[#d1d5db]">
           <div className="font-semibold text-white">Presentes: 0 (Dia não letivo)</div>
           <div className="text-[#9ca3af] mt-0.5">
             Sem registro de faltantes nesta data.
@@ -925,7 +925,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
             y={14}
             textAnchor="end"
             fill={palette.subtext}
-            fontSize={9}
+            fontSize={10}
             fontWeight={600}
             style={{ pointerEvents: 'none' }}
           >
@@ -1019,18 +1019,18 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
       </div>
 
       {/* Destaques de Padrão (Resumo Executivo Imediato) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-[#f2f2f7] rounded-2xl p-3.5 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#48484a] block">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-[#f2f2f7] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#48484a] block">
               Dia com Maior Ausência
             </span>
             {peakAbsenceDay ? (
               <>
-                <span className="text-base font-semibold text-[#111827] tabular-nums block mt-0.5 truncate">
+                <span className="text-base sm:text-lg font-semibold text-[#111827] tabular-nums block mt-0.5 break-words">
                   {peakAbsenceDay.shortDate} · {peakAbsenceDay.weekdayFull.replace('-feira', '')}
                 </span>
-                <span className="text-xs text-[#b42318] font-medium tabular-nums">
+                <span className="text-xs text-[#b42318] font-medium tabular-nums break-words">
                   {peakAbsenceDay.absencesTotal} faltas ({peakAbsenceDay.attendanceRate}% presença)
                 </span>
               </>
@@ -1045,24 +1045,24 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                 setSelectedDayNum(peakAbsenceDay.dayNumber);
                 setShowAllAbsentStudents(false);
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-[#e9e9ef] text-[#111827] text-xs font-semibold shrink-0 shadow-2xs"
+              className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#e9e9ef] text-[#111827] text-xs font-semibold shrink-0 shadow-2xs cursor-pointer"
             >
               Inspecionar
             </button>
           )}
         </div>
 
-        <div className="bg-[#f2f2f7] rounded-2xl p-3.5 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#48484a] block">
+        <div className="bg-[#f2f2f7] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#48484a] block">
               Dia da Semana Mais Crítico
             </span>
             {worstWeekday ? (
               <>
-                <span className="text-base font-semibold text-[#111827] block mt-0.5 truncate">
+                <span className="text-base sm:text-lg font-semibold text-[#111827] block mt-0.5 break-words">
                   {worstWeekday.weekdayFull}
                 </span>
-                <span className="text-xs text-[#374151] font-medium tabular-nums">
+                <span className="text-xs text-[#374151] font-medium tabular-nums break-words">
                   Média {worstWeekday.avgAbsencesPerDay} faltas/dia ({worstWeekday.avgAttendanceRate}% freq.)
                 </span>
               </>
@@ -1075,17 +1075,17 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
           </span>
         </div>
 
-        <div className="bg-[#f2f2f7] rounded-2xl p-3.5 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#48484a] block">
+        <div className="bg-[#f2f2f7] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#48484a] block">
               Origem das Datas no Mês
             </span>
-            <span className="text-base font-semibold text-[#111827] tabular-nums block mt-0.5">
+            <span className="text-base sm:text-lg font-semibold text-[#111827] tabular-nums block mt-0.5 break-words">
               {totalExplicitEntries > 0
                 ? `${totalExplicitEntries} datas nominais ECA`
                 : 'Matriz mensal consolidada'}
             </span>
-            <span className="text-xs text-[#48484a] block truncate">
+            <span className="text-xs text-[#48484a] block break-words">
               {totalExplicitEntries > 0
                 ? 'Datas da Busca Ativa + apuração mensal'
                 : 'Base oficial dos 200 dias letivos 2027'}
@@ -1196,7 +1196,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
           </div>
 
           {/* Legenda Explícita de Cores e Significado */}
-          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-[#374151]">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-[#374151]">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="font-semibold text-[#111827]">Legenda:</span>
               <span className="inline-flex items-center gap-1">
@@ -1237,11 +1237,11 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-[#111827]">
                   Padrão de Ausências por Dia da Semana
                 </h3>
-                <p className="text-[11px] text-[#48484a]">
+                <p className="text-xs text-[#48484a]">
                   Média de faltas por dia letivo em {selectedMonthName}/2027
                 </p>
               </div>
-              <span className="text-[11px] font-semibold text-[#374151] tabular-nums">
+              <span className="text-xs font-semibold text-[#374151] tabular-nums shrink-0">
                 Seg → Sáb
               </span>
             </div>
@@ -1257,12 +1257,12 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                     dataKey="weekdayShort"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fontWeight: 600, fill: '#374151' }}
+                    tick={{ fontSize: 12, fontWeight: 600, fill: '#374151' }}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 10, fill: '#48484a' }}
+                    tick={{ fontSize: 11, fill: '#48484a' }}
                     allowDecimals={false}
                   />
                   <Tooltip
@@ -1306,13 +1306,13 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
           {activeDayCell && (
             <div className="bg-[#f2f2f7] rounded-2xl p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-[#48484a]">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[#48484a]">
                     <span>DIA SELECIONADO</span>
                     <span>·</span>
-                    <span className="text-[#111827]">{activeDayCell.dayTypeLabel}</span>
+                    <span className="text-[#111827] break-words">{activeDayCell.dayTypeLabel}</span>
                   </div>
-                  <h3 className="text-base font-semibold text-[#111827] mt-0.5">
+                  <h3 className="text-base font-semibold text-[#111827] mt-0.5 break-words">
                     {activeDayCell.brDate} ({activeDayCell.weekdayFull})
                   </h3>
                 </div>
@@ -1330,22 +1330,22 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
               </div>
 
               {/* Resumo Numérico do Dia */}
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 text-center">
                 <div className="bg-white rounded-xl p-2.5">
-                  <span className="text-[11px] text-[#48484a] block">Presentes</span>
-                  <span className="text-sm font-semibold text-[#006644] tabular-nums">
+                  <span className="text-xs text-[#48484a] block">Presentes</span>
+                  <span className="text-base font-semibold text-[#006644] tabular-nums">
                     {activeDayCell.presences}/{activeDayCell.enrolledCount}
                   </span>
                 </div>
                 <div className="bg-white rounded-xl p-2.5">
-                  <span className="text-[11px] text-[#48484a] block">C/ Atestado</span>
-                  <span className="text-sm font-semibold text-[#111827] tabular-nums">
+                  <span className="text-xs text-[#48484a] block">C/ Atestado</span>
+                  <span className="text-base font-semibold text-[#111827] tabular-nums">
                     {activeDayCell.justifiedAbsences}
                   </span>
                 </div>
                 <div className="bg-white rounded-xl p-2.5">
-                  <span className="text-[11px] text-[#48484a] block">S/ Atestado</span>
-                  <span className="text-sm font-semibold text-[#b42318] tabular-nums">
+                  <span className="text-xs text-[#48484a] block">S/ Atestado</span>
+                  <span className="text-base font-semibold text-[#b42318] tabular-nums">
                     {activeDayCell.unjustifiedAbsences}
                   </span>
                 </div>
@@ -1354,7 +1354,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
               {/* Turmas mais impactadas no dia */}
               {activeDayCell.classBreakdown.length > 0 && (
                 <div className="space-y-1.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#48484a] block">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#48484a] block">
                     Turmas com mais ausências neste dia
                   </span>
                   <div className="flex flex-wrap gap-1.5">
@@ -1363,7 +1363,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                         key={cb.cls.id}
                         type="button"
                         onClick={() => onSelectClass?.(cb.cls)}
-                        className="px-2.5 py-1 rounded-xl bg-white hover:bg-[#e9e9ef] text-xs font-medium text-[#111827] tabular-nums transition-colors"
+                        className="min-h-[36px] px-3 py-1 rounded-xl bg-white hover:bg-[#e9e9ef] text-xs font-medium text-[#111827] tabular-nums transition-colors duration-100 cursor-pointer"
                         title={`Selecionar turma ${cb.className} (${cb.ratePercent}% neste dia)`}
                       >
                         {cb.shortName} · <strong className="text-[#b42318]">{cb.absences}f</strong>
@@ -1375,15 +1375,15 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
 
               {/* Lista nominal de ausentes no dia */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#48484a]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#48484a]">
                     Estudantes ausentes ({activeDayCell.absentStudents.length})
                   </span>
                   {activeDayCell.absentStudents.length > 6 && (
                     <button
                       type="button"
                       onClick={() => setShowAllAbsentStudents((prev) => !prev)}
-                      className="text-[11px] font-semibold text-[#0066cc] hover:underline"
+                      className="text-xs font-semibold text-[#0066cc] hover:underline cursor-pointer"
                     >
                       {showAllAbsentStudents
                         ? 'Mostrar menos'
@@ -1397,25 +1397,25 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                     Nenhuma ausência registrada neste dia para o recorte atual.
                   </p>
                 ) : (
-                  <div className="bg-white rounded-xl overflow-hidden max-h-[190px] overflow-y-auto">
+                  <div className="bg-white rounded-xl overflow-hidden max-h-[210px] overflow-y-auto">
                     {displayedAbsentStudents.map((item) => (
                       <button
                         key={`${item.cls.id}-${item.student.id}`}
                         type="button"
                         onClick={() => onOpenStudentGrid?.(item.student)}
-                        className="w-full text-left px-3 py-2 odd:bg-[#f8f8fb] hover:bg-[#e9e9ef] flex items-center justify-between gap-2 transition-colors"
+                        className="w-full text-left px-3 py-2.5 odd:bg-[#f8f8fb] hover:bg-[#e9e9ef] flex items-center justify-between gap-2 transition-colors duration-100 cursor-pointer"
                       >
-                        <div className="min-w-0">
-                          <span className="text-xs font-semibold text-[#111827] block truncate">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs sm:text-sm font-semibold text-[#111827] block break-words leading-snug">
                             {item.student.name}
                           </span>
-                          <span className="text-[11px] text-[#48484a] block truncate">
+                          <span className="text-xs text-[#48484a] block break-words">
                             {item.cls.name}
                             {item.isExplicitDate ? ' · Data nominal Busca Ativa' : ''}
                           </span>
                         </div>
                         <span
-                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg shrink-0 ${
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-lg shrink-0 ${
                             item.justified
                               ? 'bg-[#d1fae5] text-[#064e3b]'
                               : item.isConsecutiveAlert

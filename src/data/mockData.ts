@@ -1295,8 +1295,64 @@ export const OFFICIAL_2027_CLASSES_CONFIG = OFFICIAL_SCHOOL_MATRIX_2027.map((row
 
 export const INITIAL_CLASSES: ClassGroup[] = OFFICIAL_SCHOOL_MATRIX_2027.map((cfg) => {
   const realSedStudents = OFFICIAL_SED_STUDENTS_MAP[cfg.id];
-  const students = (realSedStudents && realSedStudents.length > 0)
-    ? realSedStudents
+  const mergedRealG4a =
+    cfg.id === 'g04a' && realSedStudents && realSedStudents.length > 0
+      ? realSedStudents.map((sedSt) => {
+          const normSedName = (sedSt.name || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase()
+            .trim();
+          const richMatch = REAL_G4A_STUDENTS.find((r) => {
+            const normRichName = (r.name || '')
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .toUpperCase()
+              .trim();
+            return (
+              (sedSt.ra && r.ra && r.ra === sedSt.ra) ||
+              (normRichName && normRichName === normSedName)
+            );
+          });
+          if (!richMatch) return sedSt;
+          return {
+            ...richMatch,
+            ...sedSt,
+            ra: richMatch.ra || sedSt.ra,
+            digRa: richMatch.digRa || sedSt.digRa,
+            dataNascimento: richMatch.dataNascimento || sedSt.dataNascimento,
+            cpf: richMatch.cpf || sedSt.cpf,
+            tipoSanguineo: richMatch.tipoSanguineo || sedSt.tipoSanguineo,
+            filiacao1: richMatch.filiacao1 || sedSt.filiacao1,
+            filiacao2: richMatch.filiacao2 || sedSt.filiacao2,
+            telefones: richMatch.telefones || richMatch.guardianPhone || sedSt.telefones,
+            guardianName: richMatch.guardianName || sedSt.guardianName,
+            guardianPhone: richMatch.guardianPhone || sedSt.guardianPhone,
+            logradouro: richMatch.logradouro || sedSt.logradouro,
+            numeroResidencia: richMatch.numeroResidencia || sedSt.numeroResidencia,
+            complemento: richMatch.complemento || sedSt.complemento,
+            bairro: richMatch.bairro || sedSt.bairro,
+            cidade: richMatch.cidade || sedSt.cidade,
+            uf: richMatch.uf || sedSt.uf,
+            cep: richMatch.cep || sedSt.cep,
+            emailMunicipal: richMatch.emailMunicipal || sedSt.emailMunicipal,
+            procedenciaEscolar: richMatch.procedenciaEscolar || sedSt.procedenciaEscolar,
+            idade: richMatch.idade || sedSt.idade,
+            arquivo: richMatch.arquivo || sedSt.arquivo,
+            racaCor: richMatch.racaCor || sedSt.racaCor,
+            nacionalidade: richMatch.nacionalidade || sedSt.nacionalidade,
+            municipioNascimento: richMatch.municipioNascimento || sedSt.municipioNascimento,
+            deficiencia: richMatch.deficiencia || sedSt.deficiencia,
+            rg: richMatch.rg || sedSt.rg,
+            nis: richMatch.nis || sedSt.nis,
+            cartaoSus: richMatch.cartaoSus || sedSt.cartaoSus,
+            initials: richMatch.initials || sedSt.initials,
+          };
+        })
+      : realSedStudents;
+
+  const students = (mergedRealG4a && mergedRealG4a.length > 0)
+    ? mergedRealG4a
     : generateSedStudentsForClass(
         cfg.id,
         cfg.name,

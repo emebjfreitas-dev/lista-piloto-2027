@@ -1372,26 +1372,26 @@ export default function App() {
         className={
           currentScreen === 'login'
             ? 'w-full min-h-screen p-0 m-0'
-            : 'flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 pt-[64px] sm:pt-[72px] pb-24 lg:pb-12'
+            : 'flex-1 w-full min-w-0 max-w-[1600px] mx-auto px-3.5 sm:px-6 lg:px-8 pt-[76px] sm:pt-[84px] pb-28 lg:pb-14'
         }
       >
         {/* Banner de Aviso de Menor Privilégio e Segurança LGPD */}
         {securityBlockNotice && (
-          <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-100">
-            <div className="flex items-start gap-3">
+          <div className="mb-5 w-full min-w-0 p-4 sm:p-5 rounded-2xl bg-amber-50 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 shadow-sm animate-gentle-fade">
+            <div className="flex items-start gap-3 min-w-0 flex-1 w-full">
               <span className="material-symbols-outlined text-amber-700 text-[24px] shrink-0 mt-0.5">
                 security
               </span>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs uppercase tracking-wide text-amber-900">
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <span className="font-bold text-xs sm:text-[13px] uppercase tracking-wide text-amber-900 break-words">
                     Acesso Restrito · Princípio do Menor Privilégio
                   </span>
-                  <span className="px-2 py-0.2 rounded-full bg-amber-200/80 text-[10px] font-mono font-bold">
+                  <span className="px-2.5 py-0.5 rounded-lg bg-amber-200/80 text-xs font-mono font-bold shrink-0">
                     LGPD Art. 14 / RBAC
                   </span>
                 </div>
-                <p className="text-xs text-amber-900 font-medium leading-relaxed">
+                <p className="text-xs sm:text-sm text-amber-900 font-medium leading-relaxed break-words">
                   {securityBlockNotice.message}
                 </p>
               </div>
@@ -1399,7 +1399,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setSecurityBlockNotice(null)}
-              className="px-3 py-1.5 rounded-xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 text-xs font-bold shrink-0 cursor-pointer transition-colors"
+              className="w-full sm:w-auto min-h-[42px] text-center whitespace-normal px-4 py-2 rounded-xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 text-xs sm:text-sm font-bold shrink-0 cursor-pointer transition-colors duration-100"
             >
               Compreendi
             </button>
@@ -1759,24 +1759,24 @@ export default function App() {
               onBack={handleBack}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs max-w-lg mx-auto my-12 space-y-4 animate-gentle-fade">
-              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700">
-                <span className="material-symbols-outlined text-[34px]">
+            <div className="w-full min-w-0 break-words flex flex-col items-center justify-center p-6 sm:p-12 text-center bg-white rounded-3xl shadow-xs max-w-lg mx-auto my-8 sm:my-12 space-y-4 animate-gentle-fade">
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-700 shrink-0">
+                <span className="material-symbols-outlined text-[36px]">
                   lock
                 </span>
               </div>
-              <div className="space-y-1">
-                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+              <div className="space-y-1.5 min-w-0 w-full">
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight break-words">
                   Acesso Restrito à Gestão Escolar
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 max-w-sm">
+                <p className="text-sm sm:text-base text-slate-600 max-w-sm mx-auto break-words leading-relaxed">
                   O painel analítico Power BI (Resumo Mensal) é de uso exclusivo da Direção e Coordenação da EMEB.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-xs"
+                className="w-full sm:w-auto min-h-[46px] text-center whitespace-normal px-6 py-2.5 rounded-2xl bg-slate-900 hover:bg-black text-white text-sm font-semibold transition-all cursor-pointer shadow-xs"
               >
                 Voltar à Página Principal
               </button>
@@ -1850,18 +1850,18 @@ export default function App() {
         )}
 
         {currentScreen === 'planilha' && isStrictAdmin && (
-          <div className="max-w-xl mx-auto py-16 px-4 text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-xs">
-              <span className="material-symbols-outlined text-3xl">verified</span>
+          <div className="w-full min-w-0 break-words max-w-xl mx-auto py-12 sm:py-16 px-4 text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-xs shrink-0">
+              <span className="material-symbols-outlined text-[34px]">verified</span>
             </div>
-            <h2 className="text-lg font-bold text-slate-950">Base Oficial SED 100% Integrada</h2>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              O Diário e a Lista Piloto operam diretamente na base institucional da escola, com 1.237 alunos e 40 turmas carregadas com segurança máxima. O uso de planilhas externas foi descontinuado.
+            <h2 className="text-xl font-bold text-slate-950 break-words">Base Oficial SED 100% Integrada</h2>
+            <p className="text-sm text-slate-600 leading-relaxed break-words">
+              O portal Candelário Gestão opera diretamente na base institucional da escola, com turmas e estudantes carregados com segurança máxima.
             </p>
             <button
               type="button"
               onClick={() => navigateToScreen('home')}
-              className="h-11 px-6 bg-slate-950 hover:bg-black text-white rounded-xl text-xs sm:text-sm font-bold cursor-pointer transition-colors shadow-xs"
+              className="w-full sm:w-auto min-h-[46px] py-2.5 px-6 bg-slate-950 hover:bg-black text-white rounded-2xl text-sm font-bold text-center whitespace-normal cursor-pointer transition-colors shadow-xs"
             >
               Ir para Painel de Turmas
             </button>
@@ -2073,7 +2073,7 @@ export default function App() {
                 next,
                 'pdf',
                 studentId,
-                `Ficha PDF do Aluno (${studentId})`
+                `Ficha Informativa do Estudante (${studentId})`
               );
             }
             return next;

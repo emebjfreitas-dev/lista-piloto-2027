@@ -139,24 +139,34 @@ export function buildOfficialSedStudentsMap(): Record<string, Student[]> {
     result[classId] = sorted.map((item, index) => {
       const studentName = (item.ESTUDANTE || '').trim().toUpperCase();
       const rawRa = (item.RA || '').trim();
-      const cleanedRa = rawRa.replace(/\D/g, '');
-      const digRa = cleanedRa.length > 0 ? cleanedRa.slice(-1) : '0';
-      const cleanRaOnly = cleanedRa.length > 1 ? cleanedRa.slice(0, -1) : cleanedRa;
+      let cleanRaOnly = rawRa.replace(/\D/g, '');
+      let digRa = '';
+      if (rawRa.includes('-')) {
+        const [basePart, digPart] = rawRa.split('-');
+        cleanRaOnly = (basePart || '').replace(/\D/g, '');
+        digRa = (digPart || '').trim();
+      }
       const isAtivo = (item.SITUAÇÃO || '').toUpperCase() === 'ATIVO';
+      const nameParts = studentName.split(/\s+/).filter(Boolean);
+      const initials =
+        nameParts.length >= 2
+          ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`
+          : studentName.slice(0, 2);
 
       return {
-        id: `sed-${classId}-${cleanedRa || index + 1}`,
+        id: `sed-${classId}-${cleanRaOnly || index + 1}`,
         number: index + 1,
         numeroChamada: index + 1,
         name: studentName,
         estudante: studentName,
-        ra: cleanRaOnly || cleanedRa,
-        digRa: digRa,
+        ra: cleanRaOnly,
+        digRa,
         ufRa: 'SP',
-        dataNascimento: '01/01/2018',
+        dataNascimento: '',
         cpf: item.CPF || '',
         tipoSanguineo: item['TIPO SANGUÍNEO'] || '',
         dataMatriculaSed: item['DATA MATRÍCULA'] || '03/02/2026',
+        procedenciaEscolar: item.ESCOLA || '',
         situacao: (item.SITUAÇÃO || 'ATIVO').toUpperCase(),
         status: isAtivo ? ('present' as const) : ('absent' as const),
         turma: matrixRow.turmaAbrev,
@@ -171,6 +181,7 @@ export function buildOfficialSedStudentsMap(): Record<string, Student[]> {
         consecutiveAbsences: 0,
         active: isAtivo,
         genero: resolveStudentGender({ name: studentName, estudante: studentName }),
+        initials,
         schoolDaysCount: 20,
         hasPhoto: false,
         hasScannedPdf: false,

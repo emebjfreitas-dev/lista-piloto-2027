@@ -240,23 +240,23 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             </span>
             <span>Quadro de Avisos da Gestão</span>
           </div>
-          <span className="text-[11px] text-[#86868b] tabular-nums">
+          <span className="text-xs text-[#86868b] tabular-nums">
             {visibleNotices.length}{' '}
             {visibleNotices.length === 1 ? 'comunicado' : 'comunicados'}
           </span>
         </div>
 
-        <div className="space-y-2 max-h-[185px] overflow-y-auto pr-0.5">
+        <div className="space-y-2 max-h-[210px] overflow-y-auto pr-0.5">
           {visibleNotices.slice(0, 3).map((notice) => {
             const vis = getPriorityVisuals(notice.priority);
             return (
               <article
                 key={notice.id}
-                className={`p-3 rounded-2xl ${vis.bgTint} transition-all space-y-1`}
+                className={`p-3.5 rounded-2xl ${vis.bgTint} transition-colors duration-100 space-y-1 min-w-0`}
               >
-                <div className="flex items-center justify-between gap-2 text-[11px] text-[#6e6e73]">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#6e6e73]">
                   <div className="flex items-center gap-1.5 font-semibold">
-                    <span className={`w-1.5 h-1.5 rounded-full ${vis.dotColor}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${vis.dotColor}`} />
                     <span className={vis.textColor}>{vis.label}</span>
                     {notice.pinned && (
                       <>
@@ -265,13 +265,13 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                       </>
                     )}
                   </div>
-                  <span className="tabular-nums">{formatNoticeDate(notice.createdAtISO)}</span>
+                  <span className="tabular-nums shrink-0">{formatNoticeDate(notice.createdAtISO)}</span>
                 </div>
 
-                <h3 className="text-sm font-bold text-[#1d1d1f] leading-snug">
+                <h3 className="text-sm font-bold text-[#1d1d1f] leading-snug break-words">
                   {notice.title}
                 </h3>
-                <p className="text-xs text-[#6e6e73] leading-relaxed">
+                <p className="text-xs text-[#6e6e73] leading-relaxed break-words">
                   {notice.content}
                 </p>
               </article>
@@ -323,9 +323,9 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="h-8 px-3 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              className="min-h-[40px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
-              <span className="material-symbols-outlined text-[15px] text-[#1d8338]">
+              <span className="material-symbols-outlined text-[16px] text-[#1d8338] shrink-0">
                 done_all
               </span>
               <span>Marcar como ciente</span>
@@ -336,9 +336,9 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={handleOpenNewNotice}
-              className="h-8 px-3.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold flex items-center gap-1 cursor-pointer ios-spring-btn shadow-2xs"
+              className="min-h-[40px] px-4 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors duration-100 shadow-2xs whitespace-normal text-center"
             >
-              <span className="material-symbols-outlined text-[16px]">add_comment</span>
+              <span className="material-symbols-outlined text-[16px] shrink-0">add_comment</span>
               <span>Publicar Aviso</span>
             </button>
           )}
@@ -347,10 +347,10 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="h-8 px-2.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#6e6e73] hover:text-[#1d1d1f] text-xs font-semibold flex items-center gap-0.5 cursor-pointer transition-colors"
+              className="min-h-[40px] px-3 py-1.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#6e6e73] hover:text-[#1d1d1f] text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
               <span>{isCollapsed ? `Expandir (${visibleNotices.length})` : 'Recolher'}</span>
-              <span className="material-symbols-outlined text-[16px]">
+              <span className="material-symbols-outlined text-[17px] shrink-0">
                 {isCollapsed ? 'expand_more' : 'expand_less'}
               </span>
             </button>
@@ -441,7 +441,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                 onChange={(e) =>
                   setTargetAudience(e.target.value as 'all' | 'peb1' | 'peb2')
                 }
-                className="h-8 px-2.5 rounded-lg bg-white text-[#1d1d1f] text-xs font-medium"
+                className="min-h-[40px] px-3 rounded-xl bg-white text-[#1d1d1f] text-xs font-medium"
               >
                 <option value="all">Público: Todos os Educadores</option>
                 <option value="peb1">Apenas Regentes PEB I</option>
@@ -451,7 +451,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
 
             <button
               type="submit"
-              className="h-9 px-4 rounded-full bg-[#1d1d1f] hover:bg-black text-white text-xs font-semibold cursor-pointer ios-spring-btn"
+              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-full bg-[#1d1d1f] hover:bg-black text-white text-xs sm:text-sm font-semibold cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
               {editingNoticeId ? 'Salvar Alterações' : 'Publicar Agora'}
             </button>
@@ -469,12 +469,12 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             return (
               <article
                 key={notice.id}
-                className={`p-3.5 sm:p-4 rounded-2xl ${vis.bgTint} flex flex-col justify-between gap-2.5 transition-all`}
+                className={`p-4 rounded-2xl ${vis.bgTint} flex flex-col justify-between gap-2.5 transition-colors duration-100 min-w-0`}
               >
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2 text-xs text-slate-700 font-semibold">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`w-2.5 h-2.5 rounded-full ${vis.dotColor}`} />
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 font-semibold">
+                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${vis.dotColor}`} />
                       <span className={vis.textColor}>{vis.label}</span>
                       {notice.pinned && (
                         <>
@@ -491,7 +491,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                         </>
                       )}
                       <span aria-hidden="true">·</span>
-                      <span className="text-slate-800">{notice.authorName}</span>
+                      <span className="text-slate-800 break-words">{notice.authorName}</span>
                     </div>
 
                     <span className="tabular-nums font-bold text-slate-800 shrink-0">
@@ -499,11 +499,11 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-slate-950 leading-snug">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-950 leading-snug break-words">
                     {notice.title}
                   </h3>
 
-                  <p className="text-sm text-slate-900 leading-relaxed whitespace-pre-line font-medium">
+                  <p className="text-sm text-slate-900 leading-relaxed whitespace-pre-line font-medium break-words">
                     {notice.content}
                   </p>
                 </div>

@@ -333,14 +333,16 @@ const sanitizeAndDeduplicateClasses = (classes?: any[]): any[] | undefined => {
     const cleanStudents: any[] = [];
 
     rawStudents.forEach((st: any, idx: number) => {
-      if (!st || !st.name) return;
-      const normName = String(st.name)
+      if (!st || typeof st !== 'object') return;
+      const resolvedName = String(st.name || st.estudante || st.ESTUDANTE || st.nome || '').trim();
+      if (!resolvedName) return;
+      const normName = resolvedName
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toUpperCase()
         .replace(/\s+/g, ' ')
         .trim();
-      const raKey = String(st.ra || '').trim();
+      const raKey = String(st.ra || st.RA || '').trim();
       const dedupKey = raKey ? `ra:${raKey}|name:${normName}` : `name:${normName}`;
       if (seenKeys.has(dedupKey)) return;
       seenKeys.add(dedupKey);
@@ -355,6 +357,7 @@ const sanitizeAndDeduplicateClasses = (classes?: any[]): any[] | undefined => {
       cleanStudents.push({
         ...st,
         id: studentId,
+        name: resolvedName,
         number: num,
       });
     });

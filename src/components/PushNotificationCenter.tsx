@@ -399,20 +399,20 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
           onClick={() => setIsOpen((prev) => !prev)}
           aria-label="Central de Notificações FCM e Prazos"
           title="Avisos e Prazos da Janela de Frequência (FCM)"
-          className={`relative w-8 h-8 rounded-full sm:rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+          className={`relative w-10 h-10 rounded-full sm:rounded-xl flex items-center justify-center transition-colors cursor-pointer active:scale-95 ${
             isOpen
               ? 'bg-[#1d1d1f] text-white'
               : 'bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1d1d1f]'
           }`}
         >
           {unreadCount > 0 ? (
-            <BellRing className="w-4 h-4 stroke-[2.1]" />
+            <BellRing className="w-[18px] h-[18px] stroke-[2.1]" />
           ) : (
-            <Bell className="w-4 h-4 stroke-[2]" />
+            <Bell className="w-[18px] h-[18px] stroke-[2]" />
           )}
 
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-semibold flex items-center justify-center tabular-nums">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-[20px] px-1 rounded-full bg-rose-600 text-white text-xs font-semibold flex items-center justify-center tabular-nums">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -420,16 +420,16 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
 
         {/* Popover Notification Center */}
         {isOpen && (
-          <div className="fixed sm:absolute right-3 sm:right-0 top-[60px] sm:top-auto sm:mt-2.5 w-[calc(100vw-24px)] max-w-[390px] bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_22px_54px_rgba(0,0,0,0.16)] p-4 z-50 space-y-3 animate-gentle-fade">
+          <div className="fixed sm:absolute right-3 sm:right-0 top-[68px] sm:top-auto sm:mt-2.5 w-[calc(100vw-24px)] max-w-[410px] bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_22px_54px_rgba(0,0,0,0.16)] p-4 z-50 space-y-3 animate-gentle-fade">
             {/* Cabeçalho */}
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h3 className="text-sm font-bold text-[#1d1d1f]">
+                  <h3 className="text-sm sm:text-base font-bold text-[#1d1d1f]">
                     Avisos &amp; Prazos
                   </h3>
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${
                       hasFcmToken
                         ? 'bg-[#eaf6ef] text-[#005035]'
                         : swActive
@@ -458,17 +458,17 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
             </div>
 
             {/* Barra de Ativação FCM / Teste Rápido */}
-            <div className="p-2.5 rounded-2xl bg-[#f5f5f7] space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="text-xs font-bold text-[#1d1d1f] block truncate">
+            <div className="p-3 rounded-2xl bg-[#f5f5f7] space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-bold text-[#1d1d1f] block break-words leading-snug">
                     {permission === 'granted'
                       ? hasFcmToken
                         ? 'Dispositivo Conectado ao FCM'
                         : 'Alertas de Prazo Habilitados'
                       : 'Receber Alertas de Fechamento (FCM)'}
                   </span>
-                  <span className="text-[11px] text-[#6e6e73] block truncate">
+                  <span className="text-xs text-[#6e6e73] block break-words leading-snug">
                     {permission === 'granted'
                       ? 'Lembra automaticamente antes do encerramento da janela'
                       : 'Ative para evitar esquecimento no lançamento mensal'}
@@ -480,7 +480,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                     type="button"
                     disabled={isRegisteringFcm}
                     onClick={handleEnableOrTestPush}
-                    className={`h-[30px] px-3 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-all active:scale-95 disabled:opacity-60 ${
+                    className={`min-h-[38px] px-3.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-colors duration-100 active:scale-95 disabled:opacity-60 ${
                       permission === 'granted'
                         ? 'bg-[#1d1d1f] text-white hover:bg-black'
                         : 'bg-[#0071e3] text-white hover:bg-[#0077ed]'
@@ -497,7 +497,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                       type="button"
                       onClick={handleDisableFcmDevice}
                       title="Pausar inscrição FCM neste dispositivo"
-                      className="h-[30px] px-2 rounded-xl bg-white hover:bg-[#fee2e2] text-[#6e6e73] hover:text-[#991b1b] text-[11px] font-semibold cursor-pointer"
+                      className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#fee2e2] text-[#6e6e73] hover:text-[#991b1b] text-xs font-semibold cursor-pointer transition-colors duration-100"
                     >
                       Pausar
                     </button>
@@ -506,7 +506,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
               </div>
 
               {fcmFeedbackMsg && (
-                <p className="text-[11px] font-medium text-[#374151] bg-white/80 rounded-xl px-2.5 py-1.5">
+                <p className="text-xs font-medium text-[#374151] bg-white/80 rounded-xl px-3 py-2 break-words">
                   {fcmFeedbackMsg}
                 </p>
               )}
@@ -589,7 +589,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1.5">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6e6e73]">
+                          <span className="text-xs font-bold uppercase tracking-wider text-[#6e6e73]">
                             {meta.label} • {notice.createdAt}
                           </span>
                           {!notice.read && (
@@ -598,10 +598,10 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                             />
                           )}
                         </div>
-                        <p className="text-xs font-bold text-[#1d1d1f] leading-snug mt-0.5">
+                        <p className="text-[13px] font-bold text-[#1d1d1f] leading-snug mt-0.5 break-words">
                           {notice.title}
                         </p>
-                        <p className="text-xs text-[#6e6e73] leading-snug mt-0.5 line-clamp-2">
+                        <p className="text-xs text-[#6e6e73] leading-snug mt-0.5 break-words">
                           {notice.body}
                         </p>
                       </div>
@@ -738,7 +738,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-white/65">
+                <span className="text-xs font-bold uppercase tracking-wider text-white/70">
                   FCM Push • Agora
                 </span>
                 <button
@@ -747,17 +747,18 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                     e.stopPropagation();
                     setActiveBanner(null);
                   }}
-                  className="text-white/60 hover:text-white cursor-pointer"
+                  aria-label="Fechar aviso"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[15px]">
+                  <span className="material-symbols-outlined text-[16px]">
                     close
                   </span>
                 </button>
               </div>
-              <p className="text-sm font-bold text-white leading-snug mt-0.5">
+              <p className="text-sm font-bold text-white leading-snug mt-0.5 break-words">
                 {activeBanner.title}
               </p>
-              <p className="text-xs text-white/80 leading-snug mt-0.5 line-clamp-2">
+              <p className="text-xs text-white/85 leading-snug mt-0.5 break-words">
                 {activeBanner.body}
               </p>
             </div>

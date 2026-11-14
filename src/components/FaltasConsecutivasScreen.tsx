@@ -30,7 +30,7 @@ export interface SchoolDayOption {
 }
 
 /**
- * Gera os últimos 8 dias letivos (segunda a sexta-feira) em ordem cronológica
+ * Gera os últimos dias letivos (segunda a sexta-feira) em ordem cronológica
  * para que a professora PEB I possa selecionar facilmente 3 ou mais dias seguidos.
  */
 export function getRecentSchoolDays(referenceDate: Date = new Date(), count = 12): SchoolDayOption[] {
@@ -143,18 +143,29 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     userRole !== 'usuario' && availableClasses.length > 1
   );
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>({});
+  const [showRecentStrip, setShowRecentStrip] = useState(true);
 
-  // Modal de leitura calma da ocorrência (para ler em detalhes durante o ano todo)
+  // Modal direto de leitura (sem scroll excessivo)
   const [readingOccurrenceModal, setReadingOccurrenceModal] = useState<{
     cls: ClassGroup;
     student: Student;
     occurrenceId: string;
   } | null>(null);
+  const [isEditingModalFeedback, setIsEditingModalFeedback] = useState(false);
 
   const canReportDays = userRole === 'usuario' || userRole === 'admin';
   const canEditFamilyFeedback = userRole === 'admin';
 
   const recentSchoolDays = useMemo(() => getRecentSchoolDays(new Date(), 12), []);
+
+  const openOccurrencePopup = (
+    cls: ClassGroup,
+    student: Student,
+    occurrenceId: string
+  ) => {
+    setIsEditingModalFeedback(false);
+    setReadingOccurrenceModal({ cls, student, occurrenceId });
+  };
 
   // Lista unificada de estudantes (por turma ou todas as turmas para PEB II / Admin)
   const scopedEntries = useMemo(() => {
@@ -233,7 +244,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
   const filteredEntries = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    return scopedEntries.filter(({ cls, student, occurrences }) => {
+    const list = scopedEntries.filter(({ cls, student, occurrences }) => {
       if (filterMode === 'com_ocorrencia' && occurrences.length === 0) return false;
       if (
         filterMode === 'com_feedback' &&
@@ -255,6 +266,17 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
         student.number.toString().padStart(2, '0') === q
       );
     });
+
+    // Prioriza estudantes com ocorrências ativas no topo para evitar scroll longo
+    if (filterMode === 'all' && !q) {
+      return [...list].sort((a, b) => {
+        const aHas = a.occurrences.length > 0 ? 1 : 0;
+        const bHas = b.occurrences.length > 0 ? 1 : 0;
+        if (aHas !== bHas) return bHas - aHas;
+        return 0;
+      });
+    }
+    return list;
   }, [scopedEntries, searchQuery, filterMode]);
 
   const handleToggleDraftDay = (compositeKey: string, dayKey: string) => {
@@ -281,10 +303,6 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     }));
   };
 
-  /**
-   * Registra uma nova sequência acumulativa de 3+ dias seguidos de falta para a criança
-   * e alimenta imediatamente a aba Busca_Ativa_Faltas_Consecutivas_2027 na planilha.
-   */
   const handleRegisterNewOccurrence = (cls: ClassGroup, student: Student) => {
     const compositeKey = `${cls.id}_${student.id}`;
     const selectedRaw = draftSelectedDaysByStudent[compositeKey] || [];
@@ -333,13 +351,11 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
     onUpdateStudent(cls.id, updatedStudent);
 
-    // Limpa o rascunho de dias selecionados após gravar a ocorrência
     setDraftSelectedDaysByStudent((prev) => ({
       ...prev,
       [compositeKey]: [],
     }));
 
-    // Dispara confirmação Push instantânea
     triggerPushNotification(
       {
         title: `${nextSequenceNumber}ª Ocorrência Registrada • ${student.name.split(' ')[0]}`,
@@ -353,10 +369,6 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     );
   };
 
-  /**
-   * Salva o feedback da família (Secretaria / Admin) em uma ocorrência específica
-   * e dispara um Resumo Push para a professora.
-   */
   const handleSaveOccurrenceFeedback = (
     cls: ClassGroup,
     student: Student,
@@ -408,7 +420,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
           title: `Feedback da Família • ${student.name.split(' ')[0]} (${
             targetOcc?.sequenceNumber || 1
           }ª Ocorrência)`,
-          body: `Retorno da Secretaria: "${feedbackText.trim()}" — Toque para ler com calma.`,
+          body: `Retorno da Secretaria: "${feedbackText.trim()}" — Toque para ler.`,
           category: 'busca_ativa',
           targetClassId: cls.id,
           targetScreen: 'faltas_consecutivas',
@@ -453,7 +465,6 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     }
   };
 
-  // Resolve dados atualizados para o modal de leitura calma
   const activeModalData = useMemo(() => {
     if (!readingOccurrenceModal) return null;
     const foundEntry = scopedEntries.find(
@@ -472,273 +483,195 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   }, [readingOccurrenceModal, scopedEntries]);
 
   return (
-    <div className="flex flex-col w-full space-y-5 pb-16 animate-gentle-fade">
-      {/* Breadcrumb Limpo */}
-      <div className="flex items-center justify-between text-xs text-slate-500 py-0.5">
-        <div className="flex items-center gap-1.5">
-          {onBack && (
-            <>
-              <button
-                type="button"
-                onClick={onBack}
-                className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-                <span>Voltar</span>
-              </button>
-              <span className="text-slate-300">/</span>
-            </>
-          )}
-          <span className="font-semibold text-slate-800">Busca Ativa</span>
-          <span className="text-slate-400">·</span>
-          <span>Alertas de Faltas Consecutivas</span>
-        </div>
-        <span className="text-slate-400 text-xs hidden sm:inline">
-          {availableClasses.length} turmas monitoradas
-        </span>
-      </div>
-
-      {/* Seletor de Escopo */}
-      {availableClasses.length > 1 && onSelectClass && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-800 pl-1">
-              Escopo:
-            </span>
-            {userRole !== 'usuario' && (
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setViewAllClassesMode(true)}
-                  className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer ${
-                    viewAllClassesMode
-                      ? 'bg-slate-950 text-white shadow-xs font-bold'
-                      : 'text-slate-700 hover:text-slate-950 font-bold'
-                  }`}
-                >
-                  Todas ({availableClasses.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewAllClassesMode(false)}
-                  className={`h-8 px-3 rounded-lg text-xs transition-colors cursor-pointer ${
-                    !viewAllClassesMode
-                      ? 'bg-slate-950 text-white shadow-xs font-bold'
-                      : 'text-slate-700 hover:text-slate-950 font-bold'
-                  }`}
-                >
-                  Por Turma ({classGroup.name})
-                </button>
-              </div>
-            )}
-          </div>
-
-          {(!viewAllClassesMode || userRole === 'usuario') && (
-            <select
-              value={classGroup.id}
-              onChange={(e) => {
-                const target = availableClasses.find((c) => c.id === e.target.value);
-                if (target) onSelectClass(target);
-              }}
-              className="w-full sm:w-auto min-w-0 h-10 px-3.5 rounded-xl bg-slate-100 text-slate-950 text-sm font-bold cursor-pointer focus:outline-none shadow-xs"
-            >
-              {availableClasses.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  Turma {cls.name} — {cls.shift.replace('Turno ', '')} ({cls.teacherName || 'PEB I'})
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
-
-      {/* Resumo Push de Retornos da Família (Aparece em destaque para leitura rápida ou detalhada) */}
-      {summaryStats.recentFeedbacks.length > 0 && (
-        <section className="card-welcoming bg-white p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-[#28cd41]/15 text-[#1d8338] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px]">
-                  notifications_active
-                </span>
-              </span>
-              <div>
-                <h2 className="text-sm font-bold text-[#1d1d1f] leading-tight">
-                  Resumo Push • Devolutivas da Família (Secretaria)
-                </h2>
-                <p className="text-xs text-[#6e6e73]">
-                  Toque em qualquer ocorrência abaixo para abrir e ler o retorno completo com calma durante todo o ano letivo
-                </p>
-              </div>
-            </div>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-medium shrink-0">
-              {summaryStats.recentFeedbacks.length} retorno(s)
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {summaryStats.recentFeedbacks.slice(0, 6).map(({ cls, student, occ }) => (
-              <button
-                key={occ.id}
-                type="button"
-                onClick={() =>
-                  setReadingOccurrenceModal({
-                    cls,
-                    student,
-                    occurrenceId: occ.id,
-                  })
-                }
-                className="text-left p-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#e8e8ed]/80 transition-all cursor-pointer flex flex-col justify-between gap-2 group"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-700 text-white text-[11px] font-semibold uppercase">
-                      {occ.sequenceNumber}ª Ocorrência • Turma {cls.name}
-                    </span>
-                    <span className="text-[11px] font-semibold text-[#6e6e73]">
-                      {occ.feedbackUpdatedAt || occ.reportedAt}
-                    </span>
-                  </div>
-                  <p className="text-sm font-bold text-[#1d1d1f] mt-1.5 truncate">
-                    {student.name}
-                  </p>
-                  <p className="text-xs text-[#ff3b30] font-semibold mt-0.5">
-                    Dias faltosos: {occ.selectedDates.join(', ')} ({occ.selectedDates.length} dias)
-                  </p>
-                  <p className="text-xs text-[#1d8338] font-semibold mt-1 line-clamp-2">
-                    “{occ.familyFeedback}”
-                  </p>
-                </div>
-
-                <span className="text-xs font-bold text-[#0066cc] group-hover:underline inline-flex items-center gap-1">
-                  <span>Ler ocorrência completa</span>
-                  <span className="material-symbols-outlined text-[14px]">
-                    open_in_new
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Cabeçalho Principal: Faltas Seguidas, Acúmulo & Feedback da Família */}
-      <section className="card-welcoming bg-white p-4 sm:p-6 space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#ff3b30]">
-                Histórico Acumulativo no Ano •{' '}
-                {viewAllClassesMode
-                  ? 'Todas as Turmas'
-                  : `Turma ${classGroup.name} (${classGroup.shift.replace('Turno ', '')})`}
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-[11px] font-bold">
-                Regra: 3 ou mais dias letivos seguidos
+    <div className="flex flex-col w-full min-w-0 space-y-3 pb-20 animate-gentle-fade">
+      {/* Cabeçalho Compacto Institucional */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-5 shadow-xs space-y-3 min-w-0">
+        {/* Linha 1: Breadcrumb + Título + Escopo */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 min-w-0">
+          <div className="min-w-0 space-y-0.5">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 min-w-0">
+              {onBack && (
+                <>
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="text-[#0b3b8c] hover:underline font-bold inline-flex items-center gap-1 cursor-pointer shrink-0"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                    <span>Voltar</span>
+                  </button>
+                  <span className="text-slate-300">/</span>
+                </>
+              )}
+              <span className="font-bold text-[#be123c] uppercase tracking-wider">
+                Busca Ativa · Regra 3+ Faltas Seguidas
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#1d1d1f] tracking-tight leading-tight">
-              Faltas Consecutivas, Acúmulo &amp; Feedback da Família
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-950 tracking-tight leading-snug break-words">
+              Faltas Consecutivas &amp; Retorno da Família
             </h1>
-            <p className="text-sm text-[#6e6e73]">
-              O(A) mesmo(a) estudante pode registrar inúmeras sequências de 3+ faltas seguidas ao longo do ano. Cada sequência é salva na base oficial da Busca Ativa e pode ser consultada a qualquer momento com o feedback da família.
-            </p>
           </div>
 
-          {/* Filtros Rápidos */}
-          <div className="ios-segmented self-start lg:self-center">
-            <button
-              type="button"
-              onClick={() => setFilterMode('all')}
-              className={`ios-segmented-item px-3 py-1.5 text-xs ${
-                filterMode === 'all' ? 'ios-segmented-item-active' : ''
-              }`}
-            >
-              Todos ({scopedEntries.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterMode('com_ocorrencia')}
-              className={`ios-segmented-item px-3 py-1.5 text-xs ${
-                filterMode === 'com_ocorrencia' ? 'ios-segmented-item-active' : ''
-              }`}
-            >
-              Com Ocorrências ({summaryStats.studentsWithAnyOccurrence})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterMode('com_feedback')}
-              className={`ios-segmented-item px-3 py-1.5 text-xs ${
-                filterMode === 'com_feedback' ? 'ios-segmented-item-active' : ''
-              }`}
-            >
-              Com Feedback ({summaryStats.totalWithFeedback})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterMode('aguardando_feedback')}
-              className={`ios-segmented-item px-3 py-1.5 text-xs ${
-                filterMode === 'aguardando_feedback' ? 'ios-segmented-item-active' : ''
-              }`}
-            >
-              Aguardando ({summaryStats.totalWaitingFeedback})
-            </button>
-          </div>
+          {/* Seletor de Escopo Compacto */}
+          {availableClasses.length > 1 && onSelectClass && (
+            <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+              {userRole !== 'usuario' && (
+                <div className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setViewAllClassesMode(true)}
+                    className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      viewAllClassesMode
+                        ? 'bg-[#0b3b8c] text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-950'
+                    }`}
+                  >
+                    Todas ({availableClasses.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewAllClassesMode(false)}
+                    className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      !viewAllClassesMode
+                        ? 'bg-[#0b3b8c] text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-950'
+                    }`}
+                  >
+                    {classGroup.name}
+                  </button>
+                </div>
+              )}
+
+              {(!viewAllClassesMode || userRole === 'usuario') && (
+                <select
+                  value={classGroup.id}
+                  onChange={(e) => {
+                    const target = availableClasses.find((c) => c.id === e.target.value);
+                    if (target) onSelectClass(target);
+                  }}
+                  className="min-w-0 h-9 px-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-950 text-xs font-bold cursor-pointer focus:outline-none focus:border-[#0052cc]"
+                >
+                  {availableClasses.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name} — {cls.shift.replace('Turno ', '')}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* 4 Indicadores de Acúmulo */}
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-4 rounded-2xl bg-rose-100/80 shadow-xs flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-950 block">
-              Sequências no Ano
+        {/* Linha 2: 4 KPIs Clicáveis Ultra-Compactos (Atalhos de Filtro) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => setFilterMode('com_ocorrencia')}
+            className={`text-left px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+              filterMode === 'com_ocorrencia'
+                ? 'bg-[#be123c] border-[#be123c] text-white shadow-xs'
+                : 'bg-rose-50/70 border-rose-200 text-rose-950 hover:bg-rose-100/70'
+            }`}
+          >
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-wide block truncate">
+                Ocorrências
+              </span>
+              <span className="text-lg sm:text-xl font-bold tabular-nums leading-tight">
+                {summaryStats.totalOccurrencesCount}
+              </span>
+            </div>
+            <span className="material-symbols-outlined text-[20px] opacity-80 shrink-0">
+              event_busy
             </span>
-            <span className="text-2xl font-bold text-rose-950 tabular-nums tracking-tight mt-1">
-              {summaryStats.totalOccurrencesCount}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode('all')}
+            className={`text-left px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+              filterMode === 'all'
+                ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white shadow-xs'
+                : 'bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-wide block truncate">
+                Com Registro / Todos
+              </span>
+              <span className="text-lg sm:text-xl font-bold tabular-nums leading-tight">
+                {summaryStats.studentsWithAnyOccurrence}{' '}
+                <span className="text-xs font-medium opacity-75">/ {scopedEntries.length}</span>
+              </span>
+            </div>
+            <span className="material-symbols-outlined text-[20px] opacity-80 shrink-0">
+              groups
             </span>
-          </div>
-          <div className="p-4 rounded-2xl bg-slate-100 shadow-xs flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
-              Estudantes
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode('com_feedback')}
+            className={`text-left px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+              filterMode === 'com_feedback'
+                ? 'bg-[#047857] border-[#047857] text-white shadow-xs'
+                : 'bg-emerald-50/70 border-emerald-200 text-emerald-950 hover:bg-emerald-100/70'
+            }`}
+          >
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-wide block truncate">
+                Com Retorno
+              </span>
+              <span className="text-lg sm:text-xl font-bold tabular-nums leading-tight">
+                {summaryStats.totalWithFeedback}
+              </span>
+            </div>
+            <span className="material-symbols-outlined text-[20px] opacity-80 shrink-0">
+              mark_chat_read
             </span>
-            <span className="text-2xl font-bold text-slate-950 tabular-nums tracking-tight mt-1">
-              {summaryStats.studentsWithAnyOccurrence}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode('aguardando_feedback')}
+            className={`text-left px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+              filterMode === 'aguardando_feedback'
+                ? 'bg-[#b45309] border-[#b45309] text-white shadow-xs'
+                : 'bg-amber-50/70 border-amber-200 text-amber-950 hover:bg-amber-100/70'
+            }`}
+          >
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-wide block truncate">
+                Aguardando
+              </span>
+              <span className="text-lg sm:text-xl font-bold tabular-nums leading-tight">
+                {summaryStats.totalWaitingFeedback}
+              </span>
+            </div>
+            <span className="material-symbols-outlined text-[20px] opacity-80 shrink-0">
+              schedule
             </span>
-          </div>
-          <div className="p-4 rounded-2xl bg-emerald-100/80 shadow-xs flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-950 block">
-              Feedbacks Recebidos
-            </span>
-            <span className="text-2xl font-bold text-emerald-950 tabular-nums tracking-tight mt-1">
-              {summaryStats.totalWithFeedback}
-            </span>
-          </div>
-          <div className="p-4 rounded-2xl bg-amber-100/80 shadow-xs flex flex-col justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-950 block">
-              Aguardando
-            </span>
-            <span className="text-2xl font-bold text-amber-950 tabular-nums tracking-tight mt-1">
-              {summaryStats.totalWaitingFeedback}
-            </span>
-          </div>
+          </button>
         </div>
 
-        {/* Busca Simples */}
+        {/* Linha 3: Busca Rápida */}
         <div className="relative">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b] text-[19px]">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[19px]">
             search
           </span>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar estudante por nome, número de chamada ou turma..."
-            className="w-full min-h-[42px] pl-10 pr-8 bg-[#f5f5f7] text-[#1d1d1f] text-sm rounded-2xl focus:bg-white focus:outline-none"
+            placeholder="Buscar estudante por nome, número ou turma..."
+            className="w-full h-10 pl-10 pr-9 bg-slate-100 text-slate-950 text-sm rounded-xl focus:bg-slate-200/70 focus:outline-none transition-colors"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 cursor-pointer"
+              aria-label="Limpar busca"
             >
               <span className="material-symbols-outlined text-[18px]">cancel</span>
             </button>
@@ -746,15 +679,68 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
         </div>
       </section>
 
-      {/* Lista de Estudantes e Suas Sequências Acumuladas de Ocorrências */}
-      <div className="space-y-3">
+      {/* Faixa Horizontal Compacta de Retornos Recentes (Zero Scroll Vertical Longo) */}
+      {summaryStats.recentFeedbacks.length > 0 && (
+        <section className="bg-white border border-emerald-200 rounded-2xl p-3 sm:px-4 shadow-xs space-y-2 min-w-0">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-6 h-6 rounded-lg bg-emerald-100 text-[#047857] flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[15px]">
+                  notifications_active
+                </span>
+              </span>
+              <h2 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                Retornos da Família ({summaryStats.recentFeedbacks.length}) — toque para abrir direto
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowRecentStrip((v) => !v)}
+              className="text-xs font-bold text-[#0052cc] hover:underline shrink-0 cursor-pointer"
+            >
+              {showRecentStrip ? 'Ocultar' : 'Mostrar'}
+            </button>
+          </div>
+
+          {showRecentStrip && (
+            <div className="flex overflow-x-auto gap-2 pb-1 snap-x no-scrollbar">
+              {summaryStats.recentFeedbacks.slice(0, 8).map(({ cls, student, occ }) => (
+                <button
+                  key={occ.id}
+                  type="button"
+                  onClick={() => openOccurrencePopup(cls, student, occ.id)}
+                  className="snap-start shrink-0 w-[235px] sm:w-[260px] text-left p-2.5 rounded-xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200 transition-colors cursor-pointer flex flex-col justify-between gap-1"
+                >
+                  <div className="flex items-center justify-between gap-1.5 min-w-0">
+                    <span className="px-2 py-0.5 rounded-md bg-[#047857] text-white text-[10px] font-bold uppercase truncate">
+                      {occ.sequenceNumber}ª · {cls.name}
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-600 shrink-0 tabular-nums">
+                      {occ.selectedDates.length}d
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-950 truncate">
+                    {student.name}
+                  </p>
+                  <p className="text-[11px] text-[#047857] font-semibold line-clamp-1">
+                    “{occ.familyFeedback}”
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Lista Compacta de Estudantes */}
+      <div className="space-y-2">
         {filteredEntries.length === 0 ? (
-          <div className="p-10 text-center space-y-1 bg-white rounded-2xl shadow-sm">
-            <p className="text-base font-bold text-slate-950">
+          <div className="p-8 text-center space-y-1 bg-white border border-slate-200 rounded-2xl shadow-xs">
+            <p className="text-sm font-bold text-slate-950">
               Nenhum estudante encontrado neste filtro
             </p>
-            <p className="text-sm font-semibold text-slate-700">
-              Altere o filtro acima para visualizar todos os estudantes.
+            <p className="text-xs font-medium text-slate-600">
+              Selecione outro indicador acima para visualizar os demais estudantes.
             </p>
           </div>
         ) : (
@@ -776,57 +762,51 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             return (
               <div
                 key={compositeKey}
-                className={`rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden ${
-                  hasOccurrences ? 'bg-rose-50/80 text-slate-950' : 'bg-white hover:bg-slate-50 text-slate-950'
+                className={`rounded-xl border transition-all overflow-hidden ${
+                  hasOccurrences
+                    ? 'bg-white border-rose-300 shadow-xs'
+                    : 'bg-white border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {/* Linha Principal do Estudante */}
+                {/* Linha Compacta do Estudante */}
                 <div
                   onClick={() =>
                     setExpandedStudentKey(isExpanded ? null : compositeKey)
                   }
-                  className="p-4 sm:px-6 flex flex-col lg:flex-row lg:items-center justify-between gap-3 cursor-pointer select-none"
+                  className={`p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer select-none ${
+                    hasOccurrences ? 'bg-rose-50/40' : ''
+                  }`}
                 >
-                  <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+                  <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
                     <span
-                      className={`w-8 h-8 rounded-xl font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums mt-0.5 sm:mt-0 ${
+                      className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 tabular-nums mt-0.5 sm:mt-0 ${
                         hasOccurrences
-                          ? 'bg-[#ff3b30] text-white'
-                          : 'bg-[#f5f5f7] text-[#1d1d1f]'
+                          ? 'bg-[#be123c] text-white'
+                          : 'bg-slate-100 border border-slate-200 text-slate-800'
                       }`}
                     >
                       {student.number.toString().padStart(2, '0')}
                     </span>
 
-                    <StudentAvatar student={student} size="md" />
+                    <StudentAvatar student={student} size="sm" />
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        <h3 className="font-semibold text-base text-[#1d1d1f] truncate">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
+                        <h3 className="font-bold text-sm sm:text-[15px] text-slate-950 break-words leading-snug">
                           {student.name}
                         </h3>
                         {viewAllClassesMode && (
-                          <span className="text-xs font-medium text-slate-500">
-                            · Turma {cls.name}
+                          <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700">
+                            {cls.name}
                           </span>
                         )}
-                        {hasOccurrences && (
-                          <span className="text-xs font-semibold text-rose-700">
-                            · {occurrences.length}{' '}
-                            {occurrences.length === 1
-                              ? 'ocorrência no ano'
-                              : 'ocorrências no ano'}{' '}
-                            ({totalConsecutiveDaysYear}d)
-                          </span>
-                        )}
+                        <span className="text-xs font-semibold text-slate-600 tabular-nums">
+                          · {accumulatedMonthAbsences} falta(s) no mês
+                        </span>
                       </div>
 
-                      {/* Resumo direto de faltas seguidas */}
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
-                        <span className="text-slate-700 font-medium tabular-nums">
-                          Total de faltas no mês: <strong>{accumulatedMonthAbsences}</strong>
-                        </span>
-
+                      {/* Botões Diretos de Pop-up para cada Ocorrência */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5 min-w-0">
                         {occurrences.map((occ) => {
                           const hasFeedback = Boolean(
                             (occ.familyFeedback || '').trim()
@@ -837,51 +817,52 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setReadingOccurrenceModal({
-                                  cls,
-                                  student,
-                                  occurrenceId: occ.id,
-                                });
+                                openOccurrencePopup(cls, student, occ.id);
                               }}
-                              title="Clique para abrir e ler esta ocorrência com calma"
-                              className={`min-h-[34px] inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
+                              className={`min-h-[30px] max-w-full inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold text-left transition-all cursor-pointer active:scale-95 ${
                                 hasFeedback
-                                  ? 'bg-[#28cd41]/15 text-[#1d8338] hover:bg-[#28cd41]/25'
-                                  : 'bg-[#ff3b30]/12 text-[#d70015] hover:bg-[#ff3b30]/20'
+                                  ? 'bg-emerald-50 border-emerald-300 text-[#047857] hover:bg-emerald-100'
+                                  : 'bg-rose-50 border-rose-300 text-[#be123c] hover:bg-rose-100'
                               }`}
                             >
-                              <span className="material-symbols-outlined text-[14px]">
+                              <span className="material-symbols-outlined text-[14px] shrink-0">
                                 {hasFeedback ? 'mark_chat_read' : 'event_busy'}
                               </span>
-                              <span>
-                                {occ.sequenceNumber}ª sequência ({occ.selectedDates.length} dias:{' '}
+                              <span className="truncate">
+                                {occ.sequenceNumber}ª ({occ.selectedDates.length}d:{' '}
                                 {occ.selectedDates.join(', ')})
                               </span>
-                              {hasFeedback && (
-                                <span className="underline ml-0.5 whitespace-nowrap">Ver resposta</span>
-                              )}
+                              <span className="underline ml-0.5 shrink-0">
+                                {hasFeedback ? 'Ver retorno' : 'Abrir'}
+                              </span>
                             </button>
                           );
                         })}
 
                         {!hasOccurrences && (
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-slate-500 font-medium">
                             {canReportDays
-                              ? 'Toque para marcar 3 ou mais dias seguidos de falta'
-                              : 'Nenhuma falta seguida registrada no ano'}
+                              ? 'Toque para marcar 3+ dias seguidos de falta'
+                              : 'Sem faltas consecutivas no ano'}
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Ação Direita */}
+                  {/* Botão Expandir / Registrar */}
                   <div className="flex items-center justify-end gap-2 shrink-0">
-                    <span className="min-h-[38px] px-3.5 rounded-xl bg-slate-100 text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap">
-                      <span>{isExpanded ? 'Fechar' : canReportDays ? 'Registrar / Ver' : 'Ver Histórico'}</span>
+                    <span
+                      className={`min-h-[34px] py-1 px-3 rounded-lg border text-xs font-bold inline-flex items-center justify-center gap-1 ${
+                        isExpanded
+                          ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
+                          : 'bg-slate-100 border-slate-300 text-slate-900 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{isExpanded ? 'Fechar' : canReportDays ? 'Registrar / Histórico' : 'Histórico'}</span>
                       <span
-                        className={`material-symbols-outlined text-[18px] text-slate-500 transition-transform ${
-                          isExpanded ? 'rotate-180 text-[#0071e3]' : ''
+                        className={`material-symbols-outlined text-[17px] shrink-0 transition-transform ${
+                          isExpanded ? 'rotate-180' : ''
                         }`}
                       >
                         expand_more
@@ -890,20 +871,17 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   </div>
                 </div>
 
-                {/* Painel Expansível: 1) O que já foi registrado no ano + 2) Novo registro */}
+                {/* Painel Expansível Fluido */}
                 {isExpanded && (
-                  <div className="px-4 sm:px-6 pb-5 pt-2 bg-[#f5f5f7] space-y-4 animate-gentle-fade">
-                    {/* 1. Linha do Tempo Acumulativa de Todas as Ocorrências da Criança no Ano */}
+                  <div className="px-3 sm:px-5 pb-4 pt-3 bg-slate-50 border-t border-slate-200 space-y-3 animate-gentle-fade">
                     {occurrences.length > 0 && (
-                      <div className="space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-slate-600">
-                            Histórico de faltas seguidas neste ano ({occurrences.length}{' '}
-                            {occurrences.length === 1 ? 'registro' : 'registros'})
-                          </span>
-                        </div>
+                      <div className="space-y-2">
+                        <span className="text-xs font-bold text-slate-700 block">
+                          Histórico no ano ({occurrences.length}{' '}
+                          {occurrences.length === 1 ? 'registro' : 'registros'})
+                        </span>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                           {occurrences.map((occ) => {
                             const hasFeedback = Boolean(
                               (occ.familyFeedback || '').trim()
@@ -913,35 +891,28 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             return (
                               <div
                                 key={occ.id}
-                                className="bg-white rounded-2xl p-4 sm:p-5 space-y-3 shadow-2xs"
+                                className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 shadow-2xs min-w-0"
                               >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <span className="text-xs font-semibold text-rose-700 block">
-                                      {occ.sequenceNumber}ª vez com faltas seguidas ({occ.selectedDates.length} dias)
+                                <div className="flex items-start justify-between gap-2 min-w-0">
+                                  <div className="min-w-0 flex-1 break-words">
+                                    <span className="text-xs font-bold text-[#be123c] block">
+                                      {occ.sequenceNumber}ª ocorrência · {occ.selectedDates.length} dias
                                     </span>
-                                    <p className="text-sm font-bold text-[#1d1d1f] mt-0.5 tabular-nums">
-                                      Dias: {occ.selectedDates.join(' · ')}
+                                    <p className="text-xs sm:text-sm font-bold text-slate-950 mt-0.5 tabular-nums break-words">
+                                      {occ.selectedDates.join(' · ')}
                                     </p>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                      Informado em {occ.reportedAt || 'Outubro/2027'} por{' '}
-                                      {occ.reportedByTeacher || cls.teacherName || 'Professora'}
+                                    <p className="text-[11px] text-slate-600 mt-0.5 break-words">
+                                      {occ.reportedAt || '2027'} · {occ.reportedByTeacher || cls.teacherName || 'PEB I'}
                                     </p>
                                   </div>
 
-                                  <div className="flex items-center gap-1.5 shrink-0">
+                                  <div className="flex items-center gap-1 shrink-0">
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        setReadingOccurrenceModal({
-                                          cls,
-                                          student,
-                                          occurrenceId: occ.id,
-                                        })
-                                      }
-                                      className="min-h-[34px] px-3 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/20 text-[#0066cc] text-xs font-semibold cursor-pointer whitespace-nowrap"
+                                      onClick={() => openOccurrencePopup(cls, student, occ.id)}
+                                      className="h-8 px-2.5 rounded-lg bg-[#0052cc] hover:bg-[#0b3b8c] text-white text-xs font-bold cursor-pointer"
                                     >
-                                      Abrir leitura
+                                      Pop-up
                                     </button>
                                     {canReportDays && (
                                       <button
@@ -950,9 +921,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                           handleRemoveOccurrence(cls, student, occ.id)
                                         }
                                         title="Excluir este registro"
-                                        className="w-8 h-8 rounded-xl hover:bg-[#ff3b30]/10 text-[#86868b] hover:text-[#ff3b30] flex items-center justify-center cursor-pointer"
+                                        aria-label="Excluir este registro"
+                                        className="w-8 h-8 rounded-lg hover:bg-rose-50 text-slate-500 hover:text-[#be123c] flex items-center justify-center cursor-pointer"
                                       >
-                                        <span className="material-symbols-outlined text-[16px]">
+                                        <span className="material-symbols-outlined text-[17px]">
                                           delete
                                         </span>
                                       </button>
@@ -960,42 +932,34 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                   </div>
                                 </div>
 
-                                {/* Exibição do Feedback da Família */}
                                 {hasFeedback ? (
                                   <div
-                                    onClick={() =>
-                                      setReadingOccurrenceModal({
-                                        cls,
-                                        student,
-                                        occurrenceId: occ.id,
-                                      })
-                                    }
-                                    className="p-3 rounded-xl bg-[#28cd41]/12 text-[#1d8338] cursor-pointer hover:bg-[#28cd41]/18 transition-colors"
+                                    onClick={() => openOccurrencePopup(cls, student, occ.id)}
+                                    className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 cursor-pointer hover:bg-emerald-100/70 transition-colors min-w-0 break-words"
                                   >
-                                    <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider opacity-85">
-                                      <span>Feedback da Família (Secretaria)</span>
+                                    <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-bold uppercase text-[#047857]">
+                                      <span>Retorno da Família</span>
                                       <span>{occ.feedbackUpdatedAt}</span>
                                     </div>
-                                    <p className="text-sm font-semibold leading-snug mt-0.5">
+                                    <p className="text-xs sm:text-sm font-bold leading-snug mt-0.5 break-words">
                                       “{occ.familyFeedback}”
                                     </p>
                                   </div>
                                 ) : (
-                                  <div className="p-2.5 rounded-xl bg-[#f5f5f7] text-[#6e6e73] text-xs font-medium flex items-center justify-between">
-                                    <span>
-                                      Na planilha da secretaria • Aguardando contato com a família
+                                  <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-950 text-xs font-semibold flex items-center justify-between gap-2">
+                                    <span className="truncate">
+                                      Aguardando contato da secretaria
                                     </span>
-                                    <span className="material-symbols-outlined text-[16px] text-[#ff9500]">
+                                    <span className="material-symbols-outlined text-[16px] text-[#b45309] shrink-0">
                                       schedule
                                     </span>
                                   </div>
                                 )}
 
-                                {/* Campo rápido para Admin/Secretaria responder esta ocorrência específica + Pílulas de 1 Toque */}
                                 {canEditFamilyFeedback && (
                                   <div className="pt-1 space-y-1.5">
                                     <div className="flex flex-wrap items-center gap-1">
-                                      {QUICK_FAMILY_FEEDBACK_CHIPS.map((chip) => (
+                                      {QUICK_FAMILY_FEEDBACK_CHIPS.slice(0, 3).map((chip) => (
                                         <button
                                           key={chip}
                                           type="button"
@@ -1005,7 +969,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                               [draftKey]: chip,
                                             }))
                                           }
-                                          className="px-2 py-0.5 rounded-lg bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#6e6e73] hover:text-white text-[11px] font-bold transition-colors cursor-pointer"
+                                          className="px-2 py-1 rounded-md bg-slate-100 hover:bg-[#0b3b8c] border border-slate-200 text-slate-800 hover:text-white text-[11px] font-bold transition-colors cursor-pointer"
                                         >
                                           + {chip}
                                         </button>
@@ -1025,8 +989,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                             [draftKey]: e.target.value,
                                           }))
                                         }
-                                        placeholder="Devolutiva da família para esta ocorrência..."
-                                        className="flex-1 min-h-[36px] px-3 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-xs focus:bg-white focus:outline-none"
+                                        placeholder="Devolutiva da família..."
+                                        className="flex-1 h-9 px-3 rounded-lg bg-slate-50 border border-slate-300 text-slate-950 text-xs focus:bg-white focus:border-[#0052cc] focus:outline-none"
                                       />
                                       <button
                                         type="button"
@@ -1042,9 +1006,9 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                             text
                                           );
                                         }}
-                                        className="min-h-[36px] px-3.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-xs cursor-pointer shrink-0"
+                                        className="h-9 px-3 rounded-lg bg-[#0052cc] hover:bg-[#0b3b8c] text-white font-bold text-xs cursor-pointer shrink-0"
                                       >
-                                        Salvar &amp; Enviar Push
+                                        Salvar &amp; Push
                                       </button>
                                     </div>
                                   </div>
@@ -1056,16 +1020,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       </div>
                     )}
 
-                    {/* 2. Seletor Intuitivo para Registrar Nova Sequência de 3 ou Mais Dias Seguidos */}
+                    {/* Registrar Nova Sequência */}
                     {canReportDays && (
-                      <div className="bg-white rounded-2xl p-4 space-y-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <span className="text-sm font-bold text-[#1d1d1f] block">
-                              Registrar {occurrences.length + 1}ª Ocorrência de Faltas Seguidas (Mínimo 3 dias seguidos):
-                            </span>
-                            <span className="text-xs text-[#6e6e73]">
-                              Selecione 3 ou mais dias letivos consecutivos abaixo. Ao confirmar, a ocorrência cai direto na planilha da secretaria.
+                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+                          <div className="min-w-0 break-words flex-1">
+                            <span className="text-xs sm:text-sm font-bold text-slate-950 block">
+                              Registrar {occurrences.length + 1}ª Ocorrência (mín. 3 dias seguidos):
                             </span>
                           </div>
 
@@ -1075,9 +1036,9 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                               onClick={() =>
                                 handleSelectLastThreeDaysShortcut(compositeKey)
                               }
-                              className="px-3 py-1.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-bold cursor-pointer"
+                              className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 text-xs font-bold cursor-pointer"
                             >
-                              Selecionar últimos 3 dias
+                              Últimos 3 dias
                             </button>
                             {draftDays.length > 0 && (
                               <button
@@ -1088,7 +1049,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                     [compositeKey]: [],
                                   }))
                                 }
-                                className="text-xs font-semibold text-[#6e6e73] hover:text-[#ff3b30] cursor-pointer"
+                                className="text-xs font-bold text-slate-600 hover:text-[#be123c] cursor-pointer"
                               >
                                 Limpar
                               </button>
@@ -1096,7 +1057,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-1.5">
                           {recentSchoolDays.map((day) => {
                             const isSelected = draftDays.includes(day.key);
                             return (
@@ -1106,14 +1067,14 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                 onClick={() =>
                                   handleToggleDraftDay(compositeKey, day.key)
                                 }
-                                className={`min-h-[44px] px-3 py-2 rounded-2xl font-semibold text-xs flex items-center justify-between gap-1.5 cursor-pointer transition-all active:scale-95 ${
+                                className={`min-h-[38px] px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 ${
                                   isSelected
-                                    ? 'bg-[#ff3b30] text-white shadow-2xs'
-                                    : 'bg-[#f5f5f7] text-[#1d1d1f] hover:bg-[#e8e8ed]'
+                                    ? 'bg-[#be123c] text-white shadow-2xs'
+                                    : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
                                 }`}
                               >
                                 <span>{day.fullLabel}</span>
-                                <span className="material-symbols-outlined text-[16px]">
+                                <span className="material-symbols-outlined text-[15px]">
                                   {isSelected
                                     ? 'check_circle'
                                     : 'radio_button_unchecked'}
@@ -1125,32 +1086,32 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
                           <span
-                            className={`text-xs font-semibold ${
+                            className={`text-xs font-bold ${
                               draftValidation.isValid
-                                ? 'text-[#1d8338]'
+                                ? 'text-[#047857]'
                                 : draftDays.length > 0
-                                ? 'text-[#ff9500]'
-                                : 'text-[#86868b]'
+                                ? 'text-[#b45309]'
+                                : 'text-slate-600'
                             }`}
                           >
                             {draftValidation.isValid
-                              ? `✓ ${draftValidation.sortedKeys.length} dias selecionados (${draftValidation.maxConsecutive} seguidos: ${draftValidation.sortedKeys.join(', ')}) — Pronto para enviar à planilha!`
+                              ? `✓ ${draftValidation.sortedKeys.length} dias (${draftValidation.maxConsecutive} seguidos) — Pronto para registrar`
                               : draftDays.length > 0
-                              ? `Selecione pelo menos 3 dias letivos seguidos (atual: ${draftValidation.maxConsecutive} seguido(s)).`
-                              : 'Toque nos dias acima para selecionar uma sequência de 3 ou mais faltas seguidas.'}
+                              ? `Selecione pelo menos 3 dias seguidos (atual: ${draftValidation.maxConsecutive}).`
+                              : 'Toque nos dias letivos acima.'}
                           </span>
 
                           <button
                             type="button"
                             disabled={!draftValidation.isValid}
                             onClick={() => handleRegisterNewOccurrence(cls, student)}
-                            className="min-h-[42px] px-5 rounded-full bg-[#ff3b30] hover:bg-[#d70015] text-white font-bold text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-35 disabled:pointer-events-none shrink-0"
+                            className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-xl bg-[#be123c] hover:bg-[#9f1239] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none shrink-0"
                           >
-                            <span className="material-symbols-outlined text-[18px]">
+                            <span className="material-symbols-outlined text-[18px] shrink-0">
                               cloud_upload
                             </span>
                             <span>
-                              Registrar {occurrences.length + 1}ª Ocorrência na Planilha
+                              Registrar {occurrences.length + 1}ª Ocorrência
                             </span>
                           </button>
                         </div>
@@ -1165,55 +1126,56 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       </div>
 
       {/* ===================================================================== */}
-      {/* MODAL DE LEITURA CALMA DA OCORRÊNCIA (ACESSÍVEL O ANO INTEIRO)        */}
+      {/* POP-UP DIRETO SEM SCROLL (OCUPAÇÃO COMPACTA E ALTA LEITURA)           */}
       {/* ===================================================================== */}
       {activeModalData && (
         <div
           onClick={() => setReadingOccurrenceModal(null)}
-          className="fixed inset-0 z-[85] flex items-center justify-center p-2 sm:p-4 bg-slate-900/35 backdrop-blur-xs animate-gentle-fade"
+          className="fixed inset-0 z-[85] flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[90vh]"
+            className="bg-white border border-slate-300 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[84dvh] min-w-0"
           >
-            {/* Topo do Modal */}
-            <div className="p-5 sm:p-6 pb-4 border-b border-slate-100 flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <StudentAvatar student={activeModalData.student} size="lg" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-semibold text-slate-700 tabular-nums">
-                      Turma {activeModalData.cls.name} · Nº{' '}
+            {/* Topo Institucional Compacto */}
+            <div className="px-4 py-3 bg-[#0b3b8c] text-white flex items-center justify-between gap-2.5 min-w-0 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <StudentAvatar student={activeModalData.student} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-blue-100 font-mono tabular-nums">
+                    <span>
+                      {activeModalData.cls.name} · Nº{' '}
                       {activeModalData.student.number.toString().padStart(2, '0')}
                     </span>
+                    <span>·</span>
+                    <span>
+                      {activeModalData.occurrences.length}{' '}
+                      {activeModalData.occurrences.length === 1
+                        ? 'ocorrência'
+                        : 'ocorrências'}
+                    </span>
                   </div>
-                  <h2 className="text-base sm:text-lg font-semibold text-slate-900 truncate mt-0.5">
+                  <h2 className="text-sm sm:text-base font-bold text-white truncate leading-snug">
                     {activeModalData.student.name}
                   </h2>
-                  <p className="text-xs text-[#6e6e73]">
-                    Histórico anual: {activeModalData.occurrences.length}{' '}
-                    {activeModalData.occurrences.length === 1
-                      ? 'sequência de faltas seguidas registrada'
-                      : 'sequências de faltas seguidas registradas'}
-                  </p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setReadingOccurrenceModal(null)}
-                aria-label="Fechar leitura da ocorrência"
-                className="w-9 h-9 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center cursor-pointer shrink-0"
+                aria-label="Fechar pop-up"
+                className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer shrink-0 transition-colors"
               >
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                <span className="material-symbols-outlined text-[19px]">close</span>
               </button>
             </div>
 
-            {/* Seletor entre as Inúmeras Sequências do Ano da Mesma Criança */}
+            {/* Seletor Inline entre Sequências (se houver mais de 1) */}
             {activeModalData.occurrences.length > 1 && (
-              <div className="px-5 sm:px-6 py-3 bg-[#f5f5f7] flex items-center gap-2 overflow-x-auto no-scrollbar">
-                <span className="text-xs font-bold text-[#6e6e73] shrink-0">
-                  Sequências no ano:
+              <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+                <span className="text-[11px] font-bold text-slate-600 shrink-0 mr-1">
+                  Sequências:
                 </span>
                 {activeModalData.occurrences.map((occ) => {
                   const isCurrent = occ.id === activeModalData.activeOcc.id;
@@ -1221,94 +1183,96 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                     <button
                       key={occ.id}
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        setIsEditingModalFeedback(false);
                         setReadingOccurrenceModal({
                           cls: activeModalData.cls,
                           student: activeModalData.student,
                           occurrenceId: occ.id,
-                        })
-                      }
-                      className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 cursor-pointer transition-all ${
+                        });
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0 border ${
                         isCurrent
-                          ? 'bg-[#1d1d1f] text-white'
-                          : 'bg-white text-[#1d1d1f] hover:bg-[#e8e8ed]'
+                          ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
+                          : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50'
                       }`}
                     >
-                      {occ.sequenceNumber}ª Ocorrência ({occ.selectedDates.length}d)
+                      {occ.sequenceNumber}ª ({occ.selectedDates.length}d)
                     </button>
                   );
                 })}
               </div>
             )}
 
-            {/* Corpo de Leitura Calma e Detalhada */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-4">
+            {/* Corpo Direto Sem Scroll */}
+            <div className="p-3.5 sm:p-4 overflow-y-auto space-y-2.5 min-w-0">
               {/* Bloco 1: Dias Seguidos Faltosos */}
-              <div className="p-4 rounded-2xl bg-[#fff5f5] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wider text-rose-700">
-                    {activeModalData.activeOcc.sequenceNumber}ª Ocorrência do Ano Letivo
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 space-y-1.5 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+                  <span className="font-bold uppercase tracking-wider text-[#be123c]">
+                    {activeModalData.activeOcc.sequenceNumber}ª Ocorrência ·{' '}
+                    {activeModalData.activeOcc.selectedDates.length} dias seguidos
                   </span>
-                  <span className="text-xs font-normal text-slate-500">
-                    Aviso em: {activeModalData.activeOcc.reportedAt || 'Outubro/2027'}
+                  <span className="font-semibold text-slate-600">
+                    {activeModalData.activeOcc.reportedAt || '2027'} ·{' '}
+                    {activeModalData.activeOcc.reportedByTeacher ||
+                      activeModalData.cls.teacherName ||
+                      'PEB I'}
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-slate-900">
-                  {activeModalData.activeOcc.selectedDates.length} dias letivos seguidos de ausência:
-                </p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                <div className="flex flex-wrap gap-1.5">
                   {activeModalData.activeOcc.selectedDates.map((d) => (
                     <span
                       key={d}
-                      className="px-3 py-1 rounded-xl bg-[#ff3b30] text-white font-bold text-sm"
+                      className="px-2.5 py-0.5 rounded-lg bg-[#be123c] text-white font-bold text-xs tabular-nums"
                     >
                       {d}
                     </span>
                   ))}
                 </div>
-                <p className="text-xs text-[#6e6e73] pt-1">
-                  Sinalizado por:{' '}
-                  <strong className="text-[#1d1d1f]">
-                    {activeModalData.activeOcc.reportedByTeacher ||
-                      activeModalData.cls.teacherName ||
-                      'Docente PEB I'}
-                  </strong>
-                </p>
               </div>
 
-              {/* Bloco 2: Leitura Calma do Feedback da Família / Devolutiva da Secretaria */}
-              <div className="p-5 rounded-2xl bg-[#f5f5f7] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[17px]">
+              {/* Bloco 2: Devolutiva da Secretaria / Feedback da Família */}
+              <div
+                className={`p-3 rounded-xl border space-y-1 min-w-0 ${
+                  (activeModalData.activeOcc.familyFeedback || '').trim()
+                    ? 'bg-emerald-50/70 border-emerald-200'
+                    : 'bg-amber-50/70 border-amber-200'
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <span
+                    className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                      (activeModalData.activeOcc.familyFeedback || '').trim()
+                        ? 'text-[#047857]'
+                        : 'text-[#b45309]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[15px] shrink-0">
                       forum
                     </span>
-                    <span>Devolutiva da Secretaria / Feedback da Família</span>
+                    <span>Devolutiva da Família / Secretaria</span>
                   </span>
                   {activeModalData.activeOcc.feedbackUpdatedAt && (
-                    <span className="text-xs font-semibold text-[#6e6e73]">
-                      Atualizado em {activeModalData.activeOcc.feedbackUpdatedAt}
+                    <span className="text-[11px] font-semibold text-slate-600 tabular-nums">
+                      {activeModalData.activeOcc.feedbackUpdatedAt}
                     </span>
                   )}
                 </div>
 
                 {(activeModalData.activeOcc.familyFeedback || '').trim() ? (
-                  <p className="text-base font-semibold text-[#1d1d1f] leading-relaxed pt-1">
+                  <p className="text-sm sm:text-base font-bold text-slate-950 leading-snug break-words">
                     “{activeModalData.activeOcc.familyFeedback}”
                   </p>
                 ) : (
-                  <p className="text-sm text-[#6e6e73] leading-relaxed pt-1">
-                    Esta ocorrência já foi enviada para a aba{' '}
-                    <span className="font-mono font-semibold text-[#1d1d1f]">
-                      Busca_Ativa_Faltas_Consecutivas_2027
-                    </span>{' '}
-                    na planilha da secretaria e aguarda o registro do contato com a família.
+                  <p className="text-xs sm:text-sm font-medium text-amber-950 leading-snug break-words">
+                    Ocorrência registrada na planilha da secretaria · Aguardando contato com a família.
                   </p>
                 )}
               </div>
 
-              {/* Dados de Contato da Família (Com Hyperlink Direto para WhatsApp) */}
-              <div className="p-4 rounded-2xl bg-[#f5f5f7]/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm">
+              {/* Bloco 3: Responsável & WhatsApp Compacto */}
+              <div className="p-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2 min-w-0">
                 {(() => {
                   const gInfo = resolveGuardianRelationshipInfo(
                     activeModalData.student.filiacao1 ||
@@ -1317,16 +1281,17 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                     activeModalData.student.notes
                   );
                   return (
-                    <div>
-                      <span className="text-[11px] font-bold uppercase text-[#6e6e73] block">
-                        {gInfo.roleLabel} · Contato Familiar ({gInfo.gender})
+                    <div className="min-w-0 flex-1 break-words">
+                      <span className="text-[10px] font-bold uppercase text-slate-600 block">
+                        {gInfo.roleLabel}
                       </span>
-                      <span className="font-bold text-[#1d1d1f]">
+                      <span className="text-xs sm:text-sm font-bold text-slate-950 break-words">
                         {gInfo.cleanName || 'Responsável Legal'}
                       </span>
                     </div>
                   );
                 })()}
+
                 {(activeModalData.student.telefones ||
                   activeModalData.student.guardianPhone) && (
                   <a
@@ -1339,12 +1304,12 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       .replace(/\D/g, '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#28cd41]/15 text-[#1d8338] font-bold text-xs hover:bg-[#28cd41]/25"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white font-bold text-xs shrink-0 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[16px]">
+                    <span className="material-symbols-outlined text-[15px] shrink-0">
                       chat
                     </span>
-                    <span>
+                    <span className="tabular-nums">
                       {activeModalData.student.telefones ||
                         activeModalData.student.guardianPhone}
                     </span>
@@ -1352,13 +1317,22 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 )}
               </div>
 
-              {/* Edição rápida caso seja Admin/Secretaria */}
-              {canEditFamilyFeedback && (
-                <div className="pt-2 space-y-2">
-                  <label className="text-xs font-bold text-[#1d1d1f] block">
-                    Registrar ou Atualizar Devolutiva da Família (Secretaria):
-                  </label>
-                  <div className="flex flex-wrap items-center gap-1.5">
+              {/* Edição Sob Demanda para Admin (mantém pop-up compacto até tocar em Editar) */}
+              {canEditFamilyFeedback && isEditingModalFeedback && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-300 space-y-2 animate-gentle-fade">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-900">
+                      Atualizar Devolutiva da Secretaria:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingModalFeedback(false)}
+                      className="text-xs font-bold text-slate-600 hover:text-slate-950 cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1">
                     {QUICK_FAMILY_FEEDBACK_CHIPS.map((chip) => (
                       <button
                         key={chip}
@@ -1369,14 +1343,14 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             [`modal_${activeModalData.activeOcc.id}`]: chip,
                           }))
                         }
-                        className="px-2.5 py-1 rounded-full bg-[#f5f5f7] hover:bg-[#1d1d1f] text-[#1d1d1f] hover:text-white text-xs font-bold transition-colors cursor-pointer"
+                        className="px-2 py-1 rounded-md bg-white hover:bg-[#0b3b8c] border border-slate-300 text-slate-800 hover:text-white text-[11px] font-bold transition-colors cursor-pointer"
                       >
                         + {chip}
                       </button>
                     ))}
                   </div>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={
                       feedbackDrafts[
                         `modal_${activeModalData.activeOcc.id}`
@@ -1390,8 +1364,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         [`modal_${activeModalData.activeOcc.id}`]: e.target.value,
                       }))
                     }
-                    placeholder="Descreva o retorno dado pela família no contato da secretaria..."
-                    className="w-full p-3 rounded-2xl bg-[#f5f5f7] text-[#1d1d1f] text-sm focus:bg-white focus:outline-none resize-none"
+                    placeholder="Retorno dado pela família..."
+                    className="w-full p-2.5 rounded-lg bg-white border border-slate-300 text-slate-950 text-xs sm:text-sm focus:border-[#0052cc] focus:outline-none resize-none"
                   />
                   <button
                     type="button"
@@ -1408,22 +1382,43 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         activeModalData.activeOcc.id,
                         text
                       );
+                      setIsEditingModalFeedback(false);
                     }}
-                    className="w-full min-h-[44px] rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-sm cursor-pointer"
+                    className="w-full min-h-[38px] rounded-xl bg-[#0052cc] hover:bg-[#0b3b8c] text-white font-bold text-xs sm:text-sm cursor-pointer"
                   >
-                    Salvar Devolutiva na Planilha &amp; Disparar Resumo Push
+                    Salvar Devolutiva &amp; Enviar Push
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="p-4 bg-[#f5f5f7] flex justify-end">
+            {/* Rodapé Compacto */}
+            <div className="px-4 py-2.5 bg-slate-100 flex items-center justify-between gap-2 shrink-0">
+              {canEditFamilyFeedback && !isEditingModalFeedback ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingModalFeedback(true)}
+                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-blue-50 text-[#0b3b8c] font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                  <span>
+                    {(activeModalData.activeOcc.familyFeedback || '').trim()
+                      ? 'Editar Devolutiva'
+                      : 'Registrar Devolutiva'}
+                  </span>
+                </button>
+              ) : (
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Leitura rápida · Busca Ativa
+                </span>
+              )}
+
               <button
                 type="button"
                 onClick={() => setReadingOccurrenceModal(null)}
-                className="min-h-[40px] px-6 rounded-full bg-[#1d1d1f] text-white font-bold text-sm cursor-pointer"
+                className="min-h-[38px] px-5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs sm:text-sm cursor-pointer"
               >
-                Fechar Leitura
+                Fechar
               </button>
             </div>
           </div>

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { motion } from 'motion/react';
 import { ClassGroup, Student, UserRole } from '../types';
 import { SCHOOL_NAME } from '../data/mockData';
 import {
@@ -351,21 +350,21 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   }
 
   return (
-    <div className="flex flex-col w-full max-w-[1600px] mx-auto space-y-4 pb-12 animate-gentle-fade">
+    <div className="flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-12 animate-gentle-fade">
       {toastMsg && (
         <div className="fixed bottom-20 left-4 right-4 z-50 max-w-lg mx-auto animate-in fade-in duration-100">
-          <div className="bg-[#1d1d1f] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
-            <span className="material-symbols-outlined text-[20px] text-[#28cd41]">
+          <div className="bg-[#1d1d1f] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 min-w-0">
+            <span className="material-symbols-outlined text-[20px] text-[#28cd41] shrink-0">
               check_circle
             </span>
-            <p className="text-sm font-semibold leading-snug">{toastMsg}</p>
+            <p className="text-sm font-semibold leading-snug break-words min-w-0">{toastMsg}</p>
           </div>
         </div>
       )}
 
       {/* Breadcrumb Limpo */}
-      <div className="flex items-center justify-between text-xs text-[#48484a] py-0.5">
-        <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#48484a] py-0.5 min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           {onBack && (
             <>
               <button
@@ -387,40 +386,40 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       </div>
 
       {/* CABEÇALHO SIMPLIFICADO & EXPORTAÇÃO */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-          <div className="space-y-1.5 min-w-0">
+      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4 min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 min-w-0">
+          <div className="space-y-1.5 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-[#48484a]">
               <span className="font-semibold text-[#111827]">Busca Ativa Bimestral</span>
               <span aria-hidden="true">·</span>
-              <span className="truncate">{SCHOOL_NAME}</span>
+              <span className="break-words">{SCHOOL_NAME}</span>
             </div>
-            <h1 className="text-[21px] sm:text-2xl font-semibold text-[#111827] tracking-tight leading-snug">
+            <h1 className="text-[21px] sm:text-2xl font-semibold text-[#111827] tracking-tight leading-snug break-words">
               Abaixo da Meta — {currentBimester.shortLabel}
             </h1>
-            <p className="text-[13px] sm:text-sm text-[#3c3c43] leading-relaxed">
+            <p className="text-[13px] sm:text-sm text-[#3c3c43] leading-relaxed break-words">
               Lista em <strong>ordem alfabética (A–Z)</strong> para Bolsa Família e Transporte Fretado.
               <span className="text-[#b42318] font-semibold"> Fundamental &lt; 75% · Infantil &lt; 60%</span>.
             </p>
           </div>
 
-          {/* Ações de Exportação Proporcionais (lado a lado no mobile) */}
-          <div className="grid grid-cols-2 sm:inline-flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+          {/* Ações de Exportação Proporcionais */}
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 sm:inline-flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
             <button
               type="button"
               onClick={handleExportXLS}
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98]"
+              className="min-w-0 min-h-[44px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98] whitespace-normal text-center"
             >
-              <span className="material-symbols-outlined text-[18px]">download</span>
+              <span className="material-symbols-outlined text-[18px] shrink-0">download</span>
               <span>Exportar Excel</span>
             </button>
 
             <button
               type="button"
               onClick={() => window.print()}
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-[0.98]"
+              className="min-w-0 min-h-[44px] px-4 py-2 rounded-xl bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-[0.98] whitespace-normal text-center"
             >
-              <span className="material-symbols-outlined text-[18px]">print</span>
+              <span className="material-symbols-outlined text-[18px] shrink-0">print</span>
               <span>Imprimir / PDF</span>
             </button>
           </div>
@@ -471,13 +470,13 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                   }`}
                 >
                   <span
-                    className={`text-[11px] font-semibold block ${
-                      isSelected ? 'text-white/80' : 'text-[#48484a]'
+                    className={`text-xs font-semibold block ${
+                      isSelected ? 'text-white/85' : 'text-[#48484a]'
                     }`}
                   >
                     {bim.id === 'anual' ? 'Consolidado' : `${bim.id.replace('bim', 'º Bimestre')}`}
                   </span>
-                  <span className="text-[13px] font-semibold block mt-0.5 tabular-nums">
+                  <span className="text-sm font-semibold block mt-0.5 tabular-nums">
                     {bim.shortLabel}
                   </span>
                 </button>
@@ -496,7 +495,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               setSelectedSegmentFilter('all');
               setSelectedAtestadoFilter('all');
             }}
-            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer ${
+            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer min-w-0 break-words ${
               onlyBelowTarget &&
               selectedSegmentFilter === 'all' &&
               selectedAtestadoFilter === 'all'
@@ -504,11 +503,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 : 'bg-rose-100/90 hover:bg-rose-200/80 text-rose-950'
             }`}
           >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-semibold text-rose-900">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="text-xs font-semibold text-rose-900">
                 Abaixo da Meta
               </span>
-              <span className="material-symbols-outlined text-[18px] text-rose-800">
+              <span className="material-symbols-outlined text-[18px] text-rose-800 shrink-0">
                 warning
               </span>
             </div>
@@ -529,17 +528,17 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 selectedSegmentFilter === 'fundamental' ? 'all' : 'fundamental'
               );
             }}
-            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer ${
+            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer min-w-0 break-words ${
               selectedSegmentFilter === 'fundamental'
                 ? 'bg-sky-200 text-sky-950 shadow-sm'
                 : 'bg-sky-100/90 hover:bg-sky-200/80 text-sky-950'
             }`}
           >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-semibold text-sky-900">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="text-xs font-semibold text-sky-900">
                 Fundamental (&lt; 75%)
               </span>
-              <span className="material-symbols-outlined text-[18px] text-sky-800">
+              <span className="material-symbols-outlined text-[18px] text-sky-800 shrink-0">
                 menu_book
               </span>
             </div>
@@ -560,17 +559,17 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 selectedSegmentFilter === 'infantil' ? 'all' : 'infantil'
               );
             }}
-            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer ${
+            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer min-w-0 break-words ${
               selectedSegmentFilter === 'infantil'
                 ? 'bg-amber-200 text-amber-950 shadow-sm'
                 : 'bg-amber-100/90 hover:bg-amber-200/80 text-amber-950'
             }`}
           >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-semibold text-amber-950">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="text-xs font-semibold text-amber-950">
                 Infantil (&lt; 60%)
               </span>
-              <span className="material-symbols-outlined text-[18px] text-amber-800">
+              <span className="material-symbols-outlined text-[18px] text-amber-800 shrink-0">
                 child_care
               </span>
             </div>
@@ -583,8 +582,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           </button>
 
           {/* Card 4: Com Atestado vs Sem Atestado */}
-          <div className="rounded-2xl sm:rounded-3xl bg-[#e9e9ef] p-3.5 sm:p-4 flex flex-col justify-between col-span-2 sm:col-span-1">
-            <span className="text-[11px] font-semibold text-[#3c3c43] block">
+          <div className="rounded-2xl sm:rounded-3xl bg-[#e9e9ef] p-3.5 sm:p-4 flex flex-col justify-between col-span-2 sm:col-span-1 min-w-0 break-words">
+            <span className="text-xs font-semibold text-[#3c3c43] block">
               Justificativa Médica
             </span>
             <div className="grid grid-cols-2 gap-2 mt-2">
@@ -595,7 +594,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     selectedAtestadoFilter === 'com_atestado' ? 'all' : 'com_atestado'
                   )
                 }
-                className={`p-2 rounded-xl text-center cursor-pointer transition-all ${
+                className={`p-2 rounded-xl text-center cursor-pointer transition-all min-w-0 ${
                   selectedAtestadoFilter === 'com_atestado'
                     ? 'bg-emerald-800 text-white font-semibold'
                     : 'bg-emerald-100 text-emerald-950 hover:bg-emerald-200/80 font-semibold'
@@ -604,7 +603,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 <span className="text-lg font-semibold tabular-nums block leading-none">
                   {kpiStats.belowWithAtestadoCount}
                 </span>
-                <span className="text-[11px] font-medium block mt-1">
+                <span className="text-xs font-medium block mt-1 break-words leading-tight">
                   Com Atestado
                 </span>
               </button>
@@ -615,7 +614,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     selectedAtestadoFilter === 'sem_atestado' ? 'all' : 'sem_atestado'
                   )
                 }
-                className={`p-2 rounded-xl text-center cursor-pointer transition-all ${
+                className={`p-2 rounded-xl text-center cursor-pointer transition-all min-w-0 ${
                   selectedAtestadoFilter === 'sem_atestado'
                     ? 'bg-rose-800 text-white font-semibold'
                     : 'bg-rose-100 text-rose-950 hover:bg-rose-200/80 font-semibold'
@@ -624,7 +623,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 <span className="text-lg font-semibold tabular-nums block leading-none">
                   {kpiStats.belowWithoutAtestadoCount}
                 </span>
-                <span className="text-[11px] font-medium block mt-1">
+                <span className="text-xs font-medium block mt-1 break-words leading-tight">
                   Sem Atestado
                 </span>
               </button>
@@ -761,15 +760,15 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                         cls.classesHeld || 20
                       )
                     }
-                    className={`w-full text-left p-3.5 rounded-2xl transition-colors cursor-pointer space-y-2.5 ${
+                    className={`w-full min-w-0 text-left p-3.5 rounded-2xl transition-colors cursor-pointer space-y-2.5 ${
                       isBelowTarget
                         ? 'bg-rose-50/90 hover:bg-rose-100/80'
                         : 'bg-[#f4f4f8] hover:bg-[#ebebf0]'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2.5">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="text-xs font-semibold text-[#48484a] tabular-nums w-5 shrink-0">
+                    <div className="flex items-start justify-between gap-2.5 min-w-0">
+                      <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                        <span className="text-xs font-semibold text-[#48484a] tabular-nums w-5 shrink-0 pt-0.5 sm:pt-0">
                           {(idx + 1).toString().padStart(2, '0')}
                         </span>
                         <StudentAvatar
@@ -777,11 +776,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                           size="sm"
                           expandableOnClick={false}
                         />
-                        <div className="min-w-0">
-                          <span className="font-semibold text-[#111827] block truncate text-[14px]">
+                        <div className="min-w-0 flex-1">
+                          <span className="font-semibold text-[#111827] block break-words leading-snug text-[14px]">
                             {student.name}
                           </span>
-                          <span className="text-xs text-[#48484a] block truncate">
+                          <span className="text-xs text-[#48484a] block break-words leading-snug">
                             {cls.name} · RA {student.ra}-{student.digRa}
                             {student.nis ? ` · NIS ${student.nis}` : ''}
                           </span>
@@ -797,7 +796,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-0.5">
-                      <span className="text-[#3c3c43] tabular-nums font-medium">
+                      <span className="text-[#3c3c43] tabular-nums font-medium break-words">
                         <strong className="text-[#b42318]">{rep.totalFaltasBimestre} faltas</strong> em {rep.totalDiasBimestre}d · Meta {rep.minLegalPresencePercent}%
                       </span>
                       <span
@@ -848,11 +847,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                   {filteredRows.map((row, idx) => {
                     const { student, cls, rep, hasAtestado, isBelowTarget } = row;
                     return (
-                      <motion.tr
+                      <tr
                         key={`${cls.id}-${student.id}`}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.14, delay: Math.min(idx * 0.012, 0.25) }}
                         onClick={() =>
                           onOpenStudentGrid(
                             student,
@@ -861,7 +857,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                             cls.classesHeld || 20
                           )
                         }
-                        className={`cursor-pointer transition-colors ${
+                        className={`cursor-pointer transition-colors duration-100 ${
                           isBelowTarget
                             ? 'bg-rose-50/70 hover:bg-rose-100/75 odd:bg-rose-50'
                             : 'hover:bg-[#ebebf0] odd:bg-[#f8f8fb]'
@@ -880,7 +876,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                               expandableOnClick={false}
                             />
                             <div className="min-w-0">
-                              <span className="font-semibold text-[#111827] block truncate text-sm">
+                              <span className="font-semibold text-[#111827] block break-words leading-snug text-sm sm:text-[15px]">
                                 {student.name}
                               </span>
                               <div className="flex items-center gap-1.5 text-xs text-[#48484a]">
@@ -999,7 +995,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                             </div>
                           </div>
                         </td>
-                      </motion.tr>
+                      </tr>
                     );
                   })}
                 </tbody>

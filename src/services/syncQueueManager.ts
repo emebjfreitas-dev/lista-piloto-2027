@@ -293,7 +293,7 @@ class CentralizedSyncQueueManager {
     const categoryLabels: Record<SyncQueueTaskCategory, string> = {
       attendance: 'Faltas e Frequência',
       photo: 'Vínculo de Foto',
-      pdf: 'Vínculo de Ficha PDF',
+      pdf: 'Vínculo de Ficha Informativa',
       student_data: 'Dados Cadastrais / Busca Ativa',
       users_access: 'Controle de Acessos',
       gender_dictionary: 'Consulta de Gênero M/F',

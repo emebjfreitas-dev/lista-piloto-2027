@@ -29,6 +29,7 @@ import {
   INSTITUTIONAL_EMAIL_DOMAIN,
 } from '../data/mockData';
 import { sortClassesInOfficialOrder } from '../data/officialMatrix2027';
+import { resolveCanonicalClassId } from '../data/officialSedStudents';
 import {
   getStudentAttendanceMetrics,
   getClassAttendanceMetrics,
@@ -1243,17 +1244,33 @@ export const restoreStudent = (
 
 const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGroup[] => {
   const loadedMap = new Map<string, ClassGroup>();
+  const normalizeClassLookupKey = (val: string) =>
+    (val || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+
   (loadedClasses || []).forEach((c) => {
-    if (c.id) loadedMap.set(c.id.toLowerCase(), c);
-    if (c.turmaAbrev) loadedMap.set(c.turmaAbrev.toLowerCase(), c);
+    if (!c) return;
+    if (c.id) loadedMap.set(normalizeClassLookupKey(c.id), c);
+    if (c.turmaAbrev) loadedMap.set(normalizeClassLookupKey(c.turmaAbrev), c);
+    if (c.sedClassName) loadedMap.set(normalizeClassLookupKey(c.sedClassName), c);
+    if (c.name) loadedMap.set(normalizeClassLookupKey(c.name), c);
   });
 
   return INITIAL_CLASSES.map((off) => {
-    const loaded = loadedMap.get(off.id.toLowerCase()) || (off.turmaAbrev ? loadedMap.get(off.turmaAbrev.toLowerCase()) : undefined);
+    const loaded =
+      loadedMap.get(normalizeClassLookupKey(off.id)) ||
+      (off.turmaAbrev ? loadedMap.get(normalizeClassLookupKey(off.turmaAbrev)) : undefined) ||
+      (off.sedClassName ? loadedMap.get(normalizeClassLookupKey(off.sedClassName)) : undefined) ||
+      loadedMap.get(normalizeClassLookupKey(off.name));
     if (!loaded) return off;
 
-    const hasSedStudents = loaded.students && loaded.students.some((s: any) => s.id && s.id.startsWith('sed-'));
-    const baseStudents = (hasSedStudents && loaded.students.length > 0) ? loaded.students : off.students;
+    // Preserva integralmente os estudantes carregados/importados (independentemente do prefixo do ID)
+    const baseStudents =
+      Array.isArray(loaded.students) && loaded.students.length > 0 ? loaded.students : off.students;
     const seenStudentKeysInClass = new Set<string>();
     const deduplicatedBaseStudents: Student[] = [];
     baseStudents.forEach((st) => {
@@ -1271,6 +1288,15 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
       deduplicatedBaseStudents.push(st);
     });
 
+    const offStudentByRa = new Map<string, Student>();
+    const offStudentByName = new Map<string, Student>();
+    off.students.forEach((ost) => {
+      if (ost.ra) offStudentByRa.set(String(ost.ra).trim(), ost);
+      if (ost.name) {
+        offStudentByName.set(normalizeClassLookupKey(ost.name), ost);
+      }
+    });
+
     const seenStudentIdsInClass = new Set<string>();
     const enrichedStudents = deduplicatedBaseStudents.map((st, idx) => {
       const num = st.number || idx + 1;
@@ -1280,24 +1306,42 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
       }
       seenStudentIdsInClass.add(cleanStudentId);
 
+      const officialFallback =
+        (st.ra ? offStudentByRa.get(String(st.ra).trim()) : undefined) ||
+        offStudentByName.get(normalizeClassLookupKey(st.name));
+
+      const studentNameClean = String(st.name || st.estudante || '').trim();
+      const nameParts = studentNameClean.split(/\s+/).filter(Boolean);
+      const computedInitials =
+        nameParts.length >= 2
+          ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+          : studentNameClean.slice(0, 2).toUpperCase();
+
       const defaultNis =
-        st.nis !== undefined
+        st.nis !== undefined && st.nis !== ''
           ? st.nis
-          : num % 3 === 0 || num === 2 || num === 7 || num === 11
-          ? `207.${41000 + num * 17}.${80 + (num % 19)}-${num % 9}`
-          : '';
+          : officialFallback?.nis ||
+            (num % 3 === 0 || num === 2 || num === 7 || num === 11
+              ? `207.${41000 + num * 17}.${80 + (num % 19)}-${num % 9}`
+              : '');
       const defaultRota =
-        st.rotaOnibus !== undefined
+        st.rotaOnibus !== undefined && st.rotaOnibus !== ''
           ? st.rotaOnibus
-          : num % 4 === 0 || num === 1 || num === 7 || num === 9 || num === 11
-          ? num % 2 === 0
-            ? 'ROTA 01 - RESIDENCIAL TERRA DA UVA / SANTOS DUMONT'
-            : 'ROTA 02 - JARDIM BÚFALO / CIDADE LUIZA / VILA HORTOLÂNDIA'
-          : '';
+          : officialFallback?.rotaOnibus ||
+            (num % 4 === 0 || num === 1 || num === 7 || num === 9 || num === 11
+              ? num % 2 === 0
+                ? 'ROTA 01 - RESIDENCIAL TERRA DA UVA / SANTOS DUMONT'
+                : 'ROTA 02 - JARDIM BÚFALO / CIDADE LUIZA / VILA HORTOLÂNDIA'
+              : '');
+
       return {
+        ...(officialFallback || {}),
         ...st,
         id: cleanStudentId,
         number: num,
+        numeroChamada: st.numeroChamada || num,
+        initials: st.initials || officialFallback?.initials || computedInitials,
+        genero: st.genero || officialFallback?.genero || resolveStudentGender(st),
         nis: defaultNis || undefined,
         rotaOnibus: defaultRota || undefined,
       };
@@ -3530,7 +3574,7 @@ export const exportSchoolDataToJsonFile = (
   const totalStudents = classes.reduce((acc, c) => acc + (c.students?.length || 0), 0);
   const backup: SchoolJsonBackup = {
     version: 1,
-    app: 'Lista Piloto 2027 · EMEB Prof. Joaquim Candelário de Freitas',
+    app: 'Candelário Gestão · EMEB Prof. Joaquim Candelário de Freitas',
     school: 'EMEB Prof. Joaquim Candelário de Freitas (SME Jundiaí)',
     exportedAtISO: new Date().toISOString(),
     exportedBy: userEmail,
@@ -3563,8 +3607,227 @@ export const exportSchoolDataToJsonFile = (
   });
 };
 
+const stripScriptTags = (value: string): string =>
+  value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').trim();
+
+const normalizeJsonKey = (key: string): string =>
+  key
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+const buildNormalizedKeyLookup = (rawObj: Record<string, any>): Map<string, any> => {
+  const map = new Map<string, any>();
+  Object.entries(rawObj || {}).forEach(([k, v]) => {
+    if (v === undefined || v === null) return;
+    const nk = normalizeJsonKey(k);
+    if (!map.has(nk) || (String(map.get(nk)).trim() === '' && String(v).trim() !== '')) {
+      map.set(nk, v);
+    }
+  });
+  return map;
+};
+
+const pickJsonValue = (lookup: Map<string, any>, aliases: string[]): string => {
+  for (const alias of aliases) {
+    const val = lookup.get(normalizeJsonKey(alias));
+    if (val !== undefined && val !== null && String(val).trim() !== '') {
+      return stripScriptTags(String(val));
+    }
+  }
+  return '';
+};
+
+const normalizeRawJsonStudentRow = (
+  rawSt: any,
+  clsId: string,
+  sIdx: number
+): Student => {
+  const lookup = buildNormalizedKeyLookup(rawSt || {});
+
+  const studentName =
+    pickJsonValue(lookup, [
+      'name',
+      'estudante',
+      'nome',
+      'nome_estudante',
+      'nome_do_estudante',
+      'nome_aluno',
+      'nome_do_aluno',
+      'aluno',
+      'nomeoficial',
+      'nomecompleto',
+    ]) || `Estudante ${sIdx + 1}`;
+
+  const rawNum = pickJsonValue(lookup, [
+    'number',
+    'numeroChamada',
+    'numero_chamada',
+    'numero_de_chamada',
+    'num_chamada',
+    'chamada',
+    'nro',
+  ]);
+  const studentNumber = Number(rawNum) || sIdx + 1;
+
+  const rawRa = pickJsonValue(lookup, ['ra', 'registro_estudante', 'registro_do_estudante', 'registroaluno']);
+  let cleanRa = rawRa;
+  let digRa = pickJsonValue(lookup, ['digRa', 'dig_ra', 'digito_ra', 'digito_do_ra', 'digito', 'dv_ra']);
+  if (!digRa && rawRa.includes('-')) {
+    const [base, dv] = rawRa.split('-');
+    cleanRa = (base || '').trim();
+    digRa = (dv || '').trim();
+  }
+
+  const situacaoRaw =
+    pickJsonValue(lookup, ['situacao', 'situacao_matricula', 'situacao_da_matricula', 'status_matricula']) || 'ATIVO';
+  const situacaoUpper = situacaoRaw.toUpperCase();
+  const isInactive =
+    situacaoUpper.includes('BXTR') ||
+    situacaoUpper.includes('TRANSF') ||
+    situacaoUpper.includes('REMA');
+
+  const filiacao1 = pickJsonValue(lookup, [
+    'filiacao1',
+    'filiacao_1',
+    'mae',
+    'nome_mae',
+    'nome_da_mae',
+    'responsavel_1',
+    'responsavel1',
+    'guardianName',
+  ]);
+  const filiacao2 = pickJsonValue(lookup, [
+    'filiacao2',
+    'filiacao_2',
+    'pai',
+    'nome_pai',
+    'nome_do_pai',
+    'responsavel_2',
+    'responsavel2',
+  ]);
+  const telefones = pickJsonValue(lookup, [
+    'telefones',
+    'telefone',
+    'celular',
+    'whatsapp',
+    'fone',
+    'contato',
+    'guardianPhone',
+  ]);
+
+  const absencesVal = Number(
+    pickJsonValue(lookup, ['totalAbsencesMonth', 'faltas', 'faltas_mes', 'total_faltas']) ||
+      rawSt.totalAbsencesMonth ||
+      0
+  );
+  const justifiedVal = Number(
+    pickJsonValue(lookup, ['justifiedAbsences', 'faltas_justificadas', 'atestados']) ||
+      rawSt.justifiedAbsences ||
+      0
+  );
+
+  const nameParts = studentName.split(/\s+/).filter(Boolean);
+  const computedInitials =
+    pickJsonValue(lookup, ['initials', 'iniciais']) ||
+    (nameParts.length >= 2
+      ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+      : studentName.slice(0, 2).toUpperCase());
+
+  const generoVal = pickJsonValue(lookup, ['genero', 'sexo']);
+
+  const safeStudent: Student = {
+    ...rawSt,
+    id: String(rawSt.id || `sed-${clsId}-${cleanRa.replace(/\D/g, '') || studentNumber}`),
+    number: studentNumber,
+    numeroChamada: studentNumber,
+    name: studentName,
+    estudante: studentName,
+    ra: cleanRa,
+    digRa: digRa || '',
+    ufRa: pickJsonValue(lookup, ['ufRa', 'uf_ra']) || 'SP',
+    dataNascimento: pickJsonValue(lookup, ['dataNascimento', 'data_nascimento', 'data_de_nascimento', 'nascimento', 'dt_nasc']),
+    tipoEnsino: pickJsonValue(lookup, ['tipoEnsino', 'tipo_ensino', 'tipo_de_ensino', 'etapa_ensino', 'etapa_de_ensino', 'etapa']),
+    serie: pickJsonValue(lookup, ['serie', 'ano_escolar', 'ano']),
+    tipoAlocacao: pickJsonValue(lookup, ['tipoAlocacao', 'tipo_alocacao', 'tipo_de_alocacao']),
+    situacao: situacaoUpper,
+    dataMovimentacao: pickJsonValue(lookup, ['dataMovimentacao', 'data_movimentacao', 'data_de_movimentacao', 'data_saida']),
+    categoriaProfissionalCenso: pickJsonValue(lookup, ['categoriaProfissionalCenso', 'categoria_profissional']),
+    deficiencia: pickJsonValue(lookup, ['deficiencia', 'aee', 'educacao_especial', 'necessidade_especial']),
+    posDataCenso: pickJsonValue(lookup, ['posDataCenso', 'pos_data_censo']),
+    turma: pickJsonValue(lookup, ['turma', 'turma_abrev']) || rawSt.turma || '',
+    periodo: pickJsonValue(lookup, ['periodo', 'turno']),
+    dataMatriculaSed: pickJsonValue(lookup, ['dataMatriculaSed', 'data_matricula', 'data_de_matricula', 'dt_matricula']),
+    procedenciaEscolar: pickJsonValue(lookup, ['procedenciaEscolar', 'procedencia_escolar', 'escola_origem', 'escola_de_origem', 'escola']),
+    irmaos: pickJsonValue(lookup, ['irmaos']),
+    idade: pickJsonValue(lookup, ['idade']),
+    arquivo: pickJsonValue(lookup, ['arquivo', 'pasta']),
+    filiacao1: filiacao1 || rawSt.filiacao1 || undefined,
+    filiacao2: filiacao2 || rawSt.filiacao2 || undefined,
+    nomeSocial: pickJsonValue(lookup, ['nomeSocial', 'nome_social']) || undefined,
+    genero: generoVal || resolveStudentGender({ name: studentName, estudante: studentName }),
+    tipoSanguineo: pickJsonValue(lookup, ['tipoSanguineo', 'tipo_sanguineo', 'sangue', 'fator_rh']) || undefined,
+    racaCor: pickJsonValue(lookup, ['racaCor', 'raca_cor', 'raca', 'cor']) || undefined,
+    nacionalidade: pickJsonValue(lookup, ['nacionalidade']) || undefined,
+    paisOrigem: pickJsonValue(lookup, ['paisOrigem', 'pais_origem', 'pais_de_origem']) || undefined,
+    municipioNascimento: pickJsonValue(lookup, ['municipioNascimento', 'municipio_nascimento', 'municipio_de_nascimento', 'naturalidade']) || undefined,
+    cpf: pickJsonValue(lookup, ['cpf', 'num_cpf', 'numero_do_cpf']) || undefined,
+    rg: pickJsonValue(lookup, ['rg', 'num_rg', 'numero_do_rg']) || undefined,
+    dataEmissaoRg: pickJsonValue(lookup, ['dataEmissaoRg', 'data_emissao_rg', 'data_de_emissao_rg']) || undefined,
+    cartaoSus: pickJsonValue(lookup, ['cartaoSus', 'cartao_sus', 'sus', 'cns']) || undefined,
+    nis: pickJsonValue(lookup, ['nis', 'num_nis', 'bolsa_familia']) || undefined,
+    cep: pickJsonValue(lookup, ['cep']) || undefined,
+    logradouro: pickJsonValue(lookup, ['logradouro', 'endereco', 'rua']) || undefined,
+    numeroResidencia: pickJsonValue(lookup, ['numeroResidencia', 'numero_residencia', 'numero_da_residencia', 'numero', 'nro_casa']) || undefined,
+    complemento: pickJsonValue(lookup, ['complemento']) || undefined,
+    bairro: pickJsonValue(lookup, ['bairro']) || undefined,
+    cidade: pickJsonValue(lookup, ['cidade', 'municipio']) || undefined,
+    uf: pickJsonValue(lookup, ['uf', 'estado']) || undefined,
+    telefones: telefones || undefined,
+    emailGoogle: pickJsonValue(lookup, ['emailGoogle', 'email_google']) || undefined,
+    emailMicrosoft: pickJsonValue(lookup, ['emailMicrosoft', 'email_microsoft']) || undefined,
+    emailMunicipal: pickJsonValue(lookup, ['emailMunicipal', 'email_municipal', 'email']) || undefined,
+    rotaOnibus: pickJsonValue(lookup, ['rotaOnibus', 'rota_onibus', 'rota_de_onibus', 'rota', 'transporte', 'transporte_escolar']) || undefined,
+    sucessaoEscolar: pickJsonValue(lookup, ['sucessaoEscolar', 'sucessao_escolar']) || undefined,
+    guardianName: filiacao1 || rawSt.guardianName || undefined,
+    guardianPhone: telefones || rawSt.guardianPhone || undefined,
+    notes: pickJsonValue(lookup, ['notes', 'observacoes', 'observacao']) || rawSt.notes || undefined,
+    initials: computedInitials,
+    active: !isInactive,
+    status: rawSt.status || (isInactive || absencesVal > 0 ? 'absent' : 'present'),
+    totalAbsencesMonth: absencesVal,
+    justifiedAbsences: justifiedVal,
+    consecutiveDays: Number(rawSt.consecutiveDays) || 0,
+    consecutiveTier: rawSt.consecutiveTier || 'none',
+    consecutiveSelectedDates: Array.isArray(rawSt.consecutiveSelectedDates)
+      ? rawSt.consecutiveSelectedDates
+      : [],
+    presenceDates: Array.isArray(rawSt.presenceDates) ? rawSt.presenceDates : [],
+    absentDates: Array.isArray(rawSt.absentDates) ? rawSt.absentDates : [],
+    justifiedAbsenceDates: Array.isArray(rawSt.justifiedAbsenceDates)
+      ? rawSt.justifiedAbsenceDates
+      : [],
+  };
+
+  return safeStudent;
+};
+
+const isClassObjectShape = (item: any): boolean => {
+  if (!item || typeof item !== 'object') return false;
+  return (
+    Array.isArray(item.students) ||
+    Array.isArray(item.estudantes) ||
+    Array.isArray(item.alunos)
+  );
+};
+
 /**
  * Validação rigorosa e sanitização do JSON fornecido por arraste e solte
+ * Suporta:
+ *  - Backup completo `{ classes: [...] }` ou `[ { id, name, students: [...] } ]`
+ *  - Planilhas/Listas SED em JSON plano `[ { TURMA, ESTUDANTE, RA, FILIAÇÃO 1, CPF, ... } ]`
+ *  - Objetos encapsulados `{ estudantes: [...] }`, `{ alunos: [...] }`, `{ students: [...] }`, `{ data: [...] }`, `{ rows: [...] }`
  */
 export const validateAndSanitizeJsonPayload = (
   rawJson: any
@@ -3573,6 +3836,8 @@ export const validateAndSanitizeJsonPayload = (
   error?: string;
   classes?: ClassGroup[];
   totalStudents?: number;
+  importedClassesCount?: number;
+  importedStudentsCount?: number;
   backupMeta?: {
     version?: number;
     exportedAtISO?: string;
@@ -3585,68 +3850,179 @@ export const validateAndSanitizeJsonPayload = (
   }
 
   let rawClasses: any[] | null = null;
+  let flatStudentRows: any[] | null = null;
   const backupMeta: any = {};
 
   if (Array.isArray(rawJson)) {
-    rawClasses = rawJson;
+    if (rawJson.length > 0 && rawJson.some(isClassObjectShape)) {
+      rawClasses = rawJson;
+    } else {
+      flatStudentRows = rawJson;
+    }
   } else if (typeof rawJson === 'object') {
+    backupMeta.version = rawJson.version;
+    backupMeta.exportedAtISO = rawJson.exportedAtISO;
+    backupMeta.exportedBy = rawJson.exportedBy;
+    backupMeta.school = rawJson.school;
+
     if (Array.isArray(rawJson.classes)) {
       rawClasses = rawJson.classes;
-      backupMeta.version = rawJson.version;
-      backupMeta.exportedAtISO = rawJson.exportedAtISO;
-      backupMeta.exportedBy = rawJson.exportedBy;
-      backupMeta.school = rawJson.school;
     } else if (Array.isArray(rawJson.turmas)) {
       rawClasses = rawJson.turmas;
-      backupMeta.version = rawJson.version;
-      backupMeta.exportedAtISO = rawJson.exportedAtISO;
-      backupMeta.exportedBy = rawJson.exportedBy;
+    } else if (Array.isArray(rawJson.students)) {
+      flatStudentRows = rawJson.students;
+    } else if (Array.isArray(rawJson.estudantes)) {
+      flatStudentRows = rawJson.estudantes;
+    } else if (Array.isArray(rawJson.alunos)) {
+      flatStudentRows = rawJson.alunos;
+    } else if (Array.isArray(rawJson.registros)) {
+      flatStudentRows = rawJson.registros;
+    } else if (Array.isArray(rawJson.rows)) {
+      flatStudentRows = rawJson.rows;
+    } else if (Array.isArray(rawJson.data)) {
+      if (rawJson.data.some(isClassObjectShape)) {
+        rawClasses = rawJson.data;
+      } else {
+        flatStudentRows = rawJson.data;
+      }
+    }
+  }
+
+  // Caso 1: Lista plana de estudantes (ex: exportação direta da SED em JSON)
+  if (flatStudentRows && flatStudentRows.length > 0) {
+    try {
+      const groupedByClassId = new Map<string, any[]>();
+      flatStudentRows.forEach((row) => {
+        if (!row || typeof row !== 'object') return;
+        const lookup = buildNormalizedKeyLookup(row);
+        const turmaLabel =
+          pickJsonValue(lookup, [
+            'turma',
+            'turma_sed',
+            'sedClassName',
+            'classe',
+            'classId',
+            'turma_abrev',
+            'turmaAbrev',
+            'serie',
+          ]) || '1A';
+        const directMatch = INITIAL_CLASSES.find(
+          (c) =>
+            normalizeJsonKey(c.id) === normalizeJsonKey(turmaLabel) ||
+            normalizeJsonKey(c.turmaAbrev || '') === normalizeJsonKey(turmaLabel) ||
+            normalizeJsonKey(c.name) === normalizeJsonKey(turmaLabel) ||
+            normalizeJsonKey(c.sedClassName || '') === normalizeJsonKey(turmaLabel)
+        );
+        const canonicalId = directMatch?.id || resolveCanonicalClassId(turmaLabel);
+        if (!groupedByClassId.has(canonicalId)) {
+          groupedByClassId.set(canonicalId, []);
+        }
+        groupedByClassId.get(canonicalId)!.push(row);
+      });
+
+      const baseClasses = getStoredClasses();
+      const cleanPartialClasses: ClassGroup[] = Array.from(groupedByClassId.entries()).map(
+        ([clsId, rows]) => {
+          const refCls =
+            baseClasses.find((c) => c.id === clsId) ||
+            INITIAL_CLASSES.find((c) => c.id === clsId);
+          const sortedRows = [...rows].sort((a, b) => {
+            const la = buildNormalizedKeyLookup(a);
+            const lb = buildNormalizedKeyLookup(b);
+            const na = pickJsonValue(la, ['name', 'estudante', 'nome', 'aluno']);
+            const nb = pickJsonValue(lb, ['name', 'estudante', 'nome', 'aluno']);
+            return na.localeCompare(nb, 'pt-BR');
+          });
+          const normalizedStudents = sortedRows.map((row, idx) =>
+            normalizeRawJsonStudentRow(row, clsId, idx)
+          );
+          return {
+            ...(refCls || {
+              id: clsId,
+              name: clsId.toUpperCase(),
+              grade: 'Ensino Fundamental I',
+              shift: 'Turno Manhã' as const,
+              room: 'Sala Oficial',
+              teacherName: '',
+              presenceRate: 95,
+              statusText: '',
+              isPending: false,
+              monthlyAbsences: 0,
+              classesHeld: 20,
+              classesPlanned: 20,
+              weeklyPerformance: [],
+              pedagogicalNotes: '',
+            }),
+            students: normalizedStudents,
+            totalStudents: normalizedStudents.length,
+          };
+        }
+      );
+
+      // Se o JSON contiver um subconjunto das turmas (ex: apenas 1 turma), preserva as demais turmas atuais em vez de zerá-las
+      const mergedWithCurrent = baseClasses.map((curr) => {
+        const updated = cleanPartialClasses.find((u) => u.id === curr.id);
+        return updated || curr;
+      });
+
+      const enriched = enrichClassesWithOfficialMatrix(mergedWithCurrent);
+      const totalStudents = enriched.reduce((acc, c) => acc + c.students.length, 0);
+      const importedStudentsCount = cleanPartialClasses.reduce(
+        (acc, c) => acc + c.students.length,
+        0
+      );
+
+      return {
+        isValid: true,
+        classes: enriched,
+        totalStudents,
+        importedClassesCount: cleanPartialClasses.length,
+        importedStudentsCount,
+        backupMeta,
+      };
+    } catch (err: any) {
+      return {
+        isValid: false,
+        error: `Erro ao converter registros de estudantes do JSON: ${err?.message || 'Formato incompatível'}`,
+      };
     }
   }
 
   if (!rawClasses || !Array.isArray(rawClasses) || rawClasses.length === 0) {
     return {
       isValid: false,
-      error: 'Formato inválido. O arquivo JSON deve conter uma lista de turmas (propriedade "classes" ou array de turmas).',
+      error:
+        'Estrutura JSON não reconhecida. Envie um backup com "classes"/"turmas" ou uma lista de estudantes da SED (com "ESTUDANTE" e "TURMA").',
     };
   }
 
-  // Validação e higienização profunda de cada turma e estudante
+  // Caso 2: Estrutura agrupada por turmas (`classes` ou `turmas`)
   try {
     const cleanClasses: ClassGroup[] = rawClasses.map((rawCls, cIdx) => {
-      const clsId = String(rawCls.id || `turma-${cIdx + 1}`).trim();
-      const clsName = String(rawCls.name || `Turma ${cIdx + 1}`).trim().replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-      const rawStudents = Array.isArray(rawCls.students) ? rawCls.students : [];
+      const lookupCls = buildNormalizedKeyLookup(rawCls || {});
+      const rawIdOrName =
+        pickJsonValue(lookupCls, ['id', 'classId', 'turmaAbrev', 'sedClassName', 'name', 'turma']) ||
+        `turma-${cIdx + 1}`;
+      const matchedOfficial = INITIAL_CLASSES.find(
+        (c) =>
+          normalizeJsonKey(c.id) === normalizeJsonKey(rawIdOrName) ||
+          normalizeJsonKey(c.turmaAbrev || '') === normalizeJsonKey(rawIdOrName) ||
+          normalizeJsonKey(c.sedClassName || '') === normalizeJsonKey(rawIdOrName) ||
+          normalizeJsonKey(c.name) === normalizeJsonKey(rawIdOrName)
+      );
+      const clsId = matchedOfficial?.id || String(rawCls.id || resolveCanonicalClassId(rawIdOrName) || `turma-${cIdx + 1}`).trim();
+      const clsName = stripScriptTags(String(rawCls.name || matchedOfficial?.name || `Turma ${cIdx + 1}`));
+      const rawStudents = Array.isArray(rawCls.students)
+        ? rawCls.students
+        : Array.isArray(rawCls.estudantes)
+        ? rawCls.estudantes
+        : Array.isArray(rawCls.alunos)
+        ? rawCls.alunos
+        : [];
 
-      const cleanStudents: Student[] = rawStudents.map((rawSt: any, sIdx: number) => {
-        const studentNumber = Number(rawSt.number) || sIdx + 1;
-        const studentName = String(rawSt.name || rawSt.estudante || `Estudante ${studentNumber}`)
-          .trim()
-          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-
-        const safeStudent: Student = {
-          ...rawSt,
-          id: String(rawSt.id || `${clsId}-st-${studentNumber}`),
-          number: studentNumber,
-          name: studentName,
-          estudante: studentName,
-          ra: String(rawSt.ra || '').trim(),
-          digRa: String(rawSt.digRa || '').trim(),
-          ufRa: String(rawSt.ufRa || 'SP').trim(),
-          totalAbsencesMonth: Number(rawSt.totalAbsencesMonth) || 0,
-          consecutiveDays: Number(rawSt.consecutiveDays) || 0,
-          consecutiveTier: rawSt.consecutiveTier || 'none',
-          consecutiveSelectedDates: Array.isArray(rawSt.consecutiveSelectedDates)
-            ? rawSt.consecutiveSelectedDates
-            : [],
-          presenceDates: Array.isArray(rawSt.presenceDates) ? rawSt.presenceDates : [],
-          absentDates: Array.isArray(rawSt.absentDates) ? rawSt.absentDates : [],
-          justifiedAbsenceDates: Array.isArray(rawSt.justifiedAbsenceDates)
-            ? rawSt.justifiedAbsenceDates
-            : [],
-        };
-        return safeStudent;
-      });
+      const cleanStudents: Student[] = rawStudents.map((rawSt: any, sIdx: number) =>
+        normalizeRawJsonStudentRow(rawSt, clsId, sIdx)
+      );
 
       const totalAbsences = cleanStudents.reduce((acc, s) => acc + (s.totalAbsencesMonth || 0), 0);
       const classesHeld = Number(rawCls.classesHeld) || 20;
@@ -3660,20 +4036,31 @@ export const validateAndSanitizeJsonPayload = (
         monthlyAbsences: totalAbsences,
         classesHeld,
         presenceRate: Number(rawCls.presenceRate) || 95,
-        shift: rawCls.shift || 'Turno Manhã',
-        grade: rawCls.grade || 'Ensino Fundamental I',
-        room: rawCls.room || 'Sala Oficial',
+        shift: rawCls.shift || matchedOfficial?.shift || 'Turno Manhã',
+        grade: rawCls.grade || matchedOfficial?.grade || 'Ensino Fundamental I',
+        room: rawCls.room || matchedOfficial?.room || 'Sala Oficial',
       };
       return safeClass;
     });
 
-    const enriched = enrichClassesWithOfficialMatrix(cleanClasses);
+    // Preserva turmas não incluídas caso seja uma importação parcial de turmas
+    const baseClasses = getStoredClasses();
+    const cleanMap = new Map(cleanClasses.map((c) => [c.id, c]));
+    const combinedClasses =
+      cleanClasses.length < 40
+        ? baseClasses.map((curr) => cleanMap.get(curr.id) || curr)
+        : cleanClasses;
+
+    const enriched = enrichClassesWithOfficialMatrix(combinedClasses);
     const totalStudents = enriched.reduce((acc, c) => acc + c.students.length, 0);
+    const importedStudentsCount = cleanClasses.reduce((acc, c) => acc + c.students.length, 0);
 
     return {
       isValid: true,
       classes: enriched,
       totalStudents,
+      importedClassesCount: cleanClasses.length,
+      importedStudentsCount,
       backupMeta,
     };
   } catch (err: any) {

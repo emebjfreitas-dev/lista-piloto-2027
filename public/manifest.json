@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "EMEB Candelário de Freitas — Frequência 2027",
-  "short_name": "Candelário",
-  "description": "Gestão de Frequência Escolar, Busca Ativa e Fechamento Mensal — EMEB Prof. Joaquim Candelário de Freitas.",
+  "name": "Candelário Gestão — EMEB Prof. Joaquim Candelário de Freitas",
+  "short_name": "Candelário Gestão",
+  "description": "Gestão de Frequência Escolar, Busca Ativa e Fichas Informativas — EMEB Prof. Joaquim Candelário de Freitas.",
   "theme_color": "#f5f5f7",
   "background_color": "#f5f5f7",
   "display": "standalone",

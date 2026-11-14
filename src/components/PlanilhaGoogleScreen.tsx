@@ -1732,7 +1732,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     Auditoria Integral &amp; Protocolo SED
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#a4f3ca] text-[#005035] text-xs font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#005035] animate-pulse"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#005035] shrink-0"></span>
                     Firebase Firestore &amp; Sheets Sincronizados
                   </span>
                 </div>
@@ -2795,7 +2795,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 {activeTab === 'frequencia' && (
                   <>
                     <span className="px-2.5 py-0.5 rounded-full bg-[#166534] text-white text-xs font-semibold uppercase flex items-center gap-1.5 shadow-xs">
-                      <span className="w-2 h-2 rounded-full bg-[#4ade80] animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-[#4ade80] shrink-0" />
                       Importação de Outra Planilha SED
                     </span>
                     <span className="px-2.5 py-0.5 rounded-full bg-white text-[#166534] text-xs font-semibold border border-[#86efac] flex items-center gap-1">
@@ -2833,7 +2833,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     Sincronização 100% Automática da SED com o Firebase & Proteção Ativa
                   </h3>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase bg-[#15803d] text-white">
-                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-white shrink-0" />
                     Auto-Sync Ativo
                   </span>
                 </div>
@@ -4272,7 +4272,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 </p>
                 <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
                   Conta vinculada:{' '}
-                  <span className="font-bold text-slate-950 block truncate mt-0.5">
+                  <span className="font-bold text-slate-950 block break-all mt-0.5">
                     {googleUserEmail || OFFICIAL_ADMIN_EMAIL}
                   </span>
                 </p>
@@ -4286,7 +4286,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 </p>
                 <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
                   Conta vinculada:{' '}
-                  <span className="font-bold text-slate-950 block truncate mt-0.5">
+                  <span className="font-bold text-slate-950 block break-all mt-0.5">
                     {googleUserEmail || OFFICIAL_ADMIN_EMAIL}
                   </span>
                 </p>
@@ -4346,23 +4346,23 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
       {/* 3. RODAPÉ DE AÇÃO FIXO (STICKY FOOTER SHRINK-0) — SEMPRE VISÍVEL */}
       <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 text-xs text-slate-600">
-          <span className="font-mono font-bold text-slate-900 truncate max-w-[260px] sm:max-w-none">
+        <div className="flex items-center gap-2.5 text-xs text-slate-600 min-w-0">
+          <span className="font-mono font-bold text-slate-900 break-all">
             {spreadsheetInput ? `Planilha: ${extractSpreadsheetId(spreadsheetInput)?.substring(0, 16)}...` : 'Planilha Oficial Google Sheets'}
           </span>
-          <span className="text-slate-300">·</span>
-          <span className="text-slate-500 hidden sm:inline">
+          <span className="text-slate-300 shrink-0">·</span>
+          <span className="text-slate-500 hidden sm:inline shrink-0">
             {classesToSync.length} turmas mapeadas · {totalStudentsToSync} estudantes
           </span>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 ml-auto">
           <button
             type="button"
             onClick={handleDownloadExcel}
-            className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
+            className="min-h-[38px] px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors border border-slate-200 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[15px]">download</span>
+            <span className="material-symbols-outlined text-[15px] shrink-0">download</span>
             <span>Baixar XLSX</span>
           </button>
 
@@ -4370,9 +4370,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             type="button"
             onClick={handleSyncAllCloudAndFoldersNow}
             disabled={isSyncingCloud}
-            className="h-8 px-4 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            className="min-h-[38px] px-4 rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
           >
-            <span className={`material-symbols-outlined text-[15px] ${isSyncingCloud ? 'animate-spin' : ''}`}>
+            <span className={`material-symbols-outlined text-[15px] shrink-0 ${isSyncingCloud ? 'animate-spin' : ''}`}>
               sync
             </span>
             <span>{isSyncingCloud ? 'Sincronizando...' : 'Sincronizar Nuvem'}</span>
@@ -4382,9 +4382,9 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             href={currentSheetFullUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="h-8 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+            className="min-h-[38px] px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+            <span className="material-symbols-outlined text-[14px] shrink-0">open_in_new</span>
             <span>Abrir Planilha ↗</span>
           </a>
         </div>

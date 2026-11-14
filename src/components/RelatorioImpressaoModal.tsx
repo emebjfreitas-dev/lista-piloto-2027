@@ -95,7 +95,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               <select
                 value={selectedBimesterId}
                 onChange={(e) => setSelectedBimesterId(e.target.value)}
-                className="h-9 px-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-xs cursor-pointer focus:outline-none"
+                className="min-h-[38px] px-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-xs cursor-pointer focus:outline-none"
               >
                 {OFFICIAL_BIMESTERS_2027.map((bim) => (
                   <option key={bim.id} value={bim.id}>
@@ -108,7 +108,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <button
               onClick={handlePrint}
               type="button"
-              className="h-9 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+              className="min-h-[38px] px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">print</span>
               <span>Imprimir / PDF</span>
@@ -116,7 +116,8 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <button
               onClick={onClose}
               type="button"
-              className="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+              aria-label="Fechar"
+              className="w-9 h-9 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
@@ -188,8 +189,8 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           </div>
 
           {reportMode === 'bimestral' ? (
-            <div className="border border-[#c0c8cb] rounded-xl overflow-hidden">
-              <table className="w-full text-left text-sm border-collapse">
+            <div className="border border-[#c0c8cb] rounded-xl overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse min-w-[680px]">
                 <thead>
                   <tr className="bg-[#003440] text-white font-bold">
                     <th className="py-2 px-2.5 w-10 text-center">Nº</th>
@@ -197,7 +198,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                     {currentBimester.months.map((mObj) => (
                       <th key={mObj.name} className="py-2 px-2 text-center bg-[#004632] border-x border-white/15">
                         {mObj.name.slice(0, 3)}. / 27
-                        <span className="block text-[11px] font-normal opacity-85">Faltas | Atest.</span>
+                        <span className="block text-xs font-normal opacity-85">Faltas | Atest.</span>
                       </th>
                     ))}
                     <th className="py-2 px-2 text-center">Total Faltas</th>
@@ -222,8 +223,8 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                         {r.student.number.toString().padStart(2, '0')}
                       </td>
                       <td className="py-2 px-3">
-                        <span className="font-bold text-[#191c1b] block">{r.student.name}</span>
-                        <span className="text-[11px] font-mono text-[#71787b]">
+                        <span className="font-bold text-[#191c1b] block break-words">{r.student.name}</span>
+                        <span className="text-xs font-mono text-[#71787b]">
                           RA: {r.student.ra}-{r.student.digRa} • NIS: {r.student.nis || '—'}
                         </span>
                       </td>
@@ -236,7 +237,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                           <span className={`font-semibold ${mb.atestados > 0 ? 'text-[#005035]' : 'text-[#71787b]'}`}>
                             {mb.atestados}A
                           </span>
-                          <span className="block text-[11px] text-[#71787b]">
+                          <span className="block text-xs text-[#71787b]">
                             ({mb.frequenciaPercent}% em {mb.diasLetivos}d)
                           </span>
                         </td>
@@ -268,8 +269,8 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             </div>
           ) : (
             /* Compact Monthly Students Table */
-            <div className="border border-[#c0c8cb] rounded-xl overflow-hidden">
-              <table className="w-full text-left text-sm border-collapse">
+            <div className="border border-[#c0c8cb] rounded-xl overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse min-w-[600px]">
                 <thead>
                   <tr className="bg-[#edeeec] text-[#003440] font-bold border-b border-[#c0c8cb]">
                     <th className="py-2 px-3 w-12 text-center">Nº</th>

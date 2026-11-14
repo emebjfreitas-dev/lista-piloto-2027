@@ -514,16 +514,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
+        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] min-w-0"
       >
         {/* Top Clean Header + Navegação */}
-        <div className="px-5 sm:px-6 py-3.5 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs font-semibold text-slate-900 tabular-nums">
+        <div className="px-4 sm:px-6 py-3.5 bg-[#fafafc] flex flex-wrap items-center justify-between gap-2.5 shrink-0 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+            <span className="text-xs font-semibold text-slate-900 tabular-nums shrink-0">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
             </span>
             <span className="text-slate-300" aria-hidden="true">·</span>
-            <span className="text-xs font-medium text-slate-600 truncate">
+            <span className="text-xs font-medium text-slate-600 break-words">
               {className}
             </span>
             {orderedList.length > 1 && currentStudentIdx >= 0 && (
@@ -629,29 +629,29 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               </div>
 
               {/* Informações Resumidas do Contato */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
-                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs min-w-0">
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words">
                   <span className="text-[11px] font-bold uppercase text-slate-600 block">Datas de Ausência</span>
-                  <span className="font-semibold text-slate-950 block mt-0.5 truncate tabular-nums" title={datesList}>
+                  <span className="font-semibold text-slate-950 block mt-0.5 break-words tabular-nums" title={datesList}>
                     {datesList}
                   </span>
                 </div>
-                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words">
                   <span className="text-[11px] font-medium uppercase text-slate-500 block">Responsável Principal</span>
-                  <span className="font-semibold text-slate-900 block mt-0.5 truncate" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
+                  <span className="font-semibold text-slate-900 block mt-0.5 break-words" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
                     {guardian1Info.parentesco}: {guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}
                   </span>
                 </div>
-                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs">
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words">
                   <span className="text-[11px] font-medium uppercase text-slate-500 block">Status do Acompanhamento</span>
-                  <span className={`font-semibold block mt-0.5 truncate ${hasFamilyFeedback ? 'text-emerald-900' : 'text-orange-950'}`}>
+                  <span className={`font-semibold block mt-0.5 break-words ${hasFamilyFeedback ? 'text-emerald-900' : 'text-orange-950'}`}>
                     {hasFamilyFeedback ? `Feedback: "${familyFeedbackText}"` : 'Pendente de contato'}
                   </span>
                 </div>
               </div>
 
               {/* Barra de Ações Rápidas de Busca Ativa */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-2 pt-1 min-w-0">
                 {buscaAtivaWaLinks.length > 0 ? (
                   buscaAtivaWaLinks.map((link, idx) => (
                     <a
@@ -659,16 +659,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       href={link.waUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-h-[40px] px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                      className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 shadow-xs transition-all cursor-pointer"
                       title={`Abrir WhatsApp com mensagem preenchida de Busca Ativa para ${link.display}`}
                     >
-                      <span className="material-symbols-outlined text-[18px]">chat</span>
+                      <span className="material-symbols-outlined text-[18px] shrink-0">chat</span>
                       <span>Contato de Busca Ativa ({link.display})</span>
                     </a>
                   ))
                 ) : (
-                  <span className="min-h-[40px] px-4 py-2 rounded-xl bg-slate-600 text-white font-bold text-xs flex items-center gap-1.5 opacity-80">
-                    <span className="material-symbols-outlined text-[17px]">chat</span>
+                  <span className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-slate-600 text-white font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 opacity-80">
+                    <span className="material-symbols-outlined text-[17px] shrink-0">chat</span>
                     <span>Sem Telefone Cadastrado</span>
                   </span>
                 )}
@@ -676,10 +676,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 {primaryPhoneDigits && (
                   <a
                     href={`tel:${primaryPhoneDigits}`}
-                    className="min-h-[40px] px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
+                    className="w-full sm:w-auto min-h-[40px] px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1 transition-all cursor-pointer shadow-xs"
                     title="Realizar ligação telefônica para o responsável"
                   >
-                    <span className="material-symbols-outlined text-[18px] text-emerald-800">call</span>
+                    <span className="material-symbols-outlined text-[18px] text-emerald-800 shrink-0">call</span>
                     <span>Ligar</span>
                   </a>
                 )}
@@ -687,14 +687,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSendPushAlert}
-                  className={`min-h-[40px] px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                  className={`w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 transition-all cursor-pointer shadow-xs ${
                     pushAlertSent
                       ? 'bg-emerald-200 text-emerald-950'
                       : 'bg-white hover:bg-slate-100 text-orange-950'
                   }`}
                   title="Disparar notificação push imediata para a equipe escolar e coordenação"
                 >
-                  <span className="material-symbols-outlined text-[18px]">
+                  <span className="material-symbols-outlined text-[18px] shrink-0">
                     {pushAlertSent ? 'check_circle' : 'notifications_active'}
                   </span>
                   <span>
@@ -711,14 +711,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       onClose();
                       onNavigateToConsecutiveAbsences();
                     }}
-                    className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ml-auto shadow-xs"
+                    className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1 transition-all cursor-pointer sm:ml-auto shadow-xs"
                     title="Ir para a aba de Faltas Seguidas para registrar ocorrência ou feedback oficial"
                   >
-                    <span className="material-symbols-outlined text-[18px] text-slate-900">
+                    <span className="material-symbols-outlined text-[18px] text-slate-900 shrink-0">
                       history_edu
                     </span>
                     <span>Ficha de Faltas Seguidas</span>
-                    <span className="material-symbols-outlined text-[16px] text-slate-500">
+                    <span className="material-symbols-outlined text-[16px] text-slate-500 shrink-0">
                       arrow_forward
                     </span>
                   </button>
@@ -774,7 +774,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 ) : (
                   <div className="flex flex-col items-center justify-center p-8 text-center text-white">
                     <span className="text-[4.8rem] font-semibold tracking-tight leading-none opacity-90 select-none">
-                      {draft.initials}
+                      {draft.initials ||
+                        (draft.name || '')
+                          .trim()
+                          .split(/\s+/)
+                          .filter(Boolean)
+                          .map((p) => p[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase() ||
+                        'AL'}
                     </span>
                     <span className="mt-3 text-sm text-white/75 font-medium">
                       Estudante sem foto cadastrada
@@ -796,11 +805,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             </div>
 
             {/* COLUNA DIREITA (7 cols): COMPOSIÇÃO ORGÂNICA E VISUAL */}
-            <div className="md:col-span-7 flex flex-col justify-between space-y-4">
+            <div className="md:col-span-7 flex flex-col justify-between space-y-4 min-w-0">
               {/* 1. Identidade Principal + Pílulas Numéricas Ultra-Legíveis (Manrope Tabular) */}
-              <div className="bg-white rounded-[24px] p-5 shadow-sm space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1.5">
+              <div className="bg-white rounded-[24px] p-5 shadow-sm space-y-4 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                     <span className="px-3 py-1 rounded-full bg-[#eaf6ef] text-[#005035] font-bold text-xs uppercase tracking-wider">
                       {draft.situacao || 'MATRÍCULA ATIVA'}
                     </span>
@@ -819,7 +828,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       );
                     })()}
                     {draft.deficiencia && (
-                      <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-950 font-bold text-xs">
+                      <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-950 font-bold text-xs break-words">
                         AEE · {draft.deficiencia}
                       </span>
                     )}
@@ -837,7 +846,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         : 'bg-slate-100 text-slate-700'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[16px]">
+                    <span className="material-symbols-outlined text-[16px] shrink-0">
                       {currentConsecutiveDaysCount >= 10
                         ? 'gpp_maybe'
                         : isConsecutiveRisk
@@ -853,22 +862,22 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   </span>
                 </div>
 
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight leading-tight">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight leading-tight break-words">
                   {draft.name}
                 </h1>
 
                 {/* Cartões Visuais de Números-Chave (RA, Nascimento, Frequência e Faltas Seguidas) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 min-w-0">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Registro (RA)
                     </span>
-                    <span className="text-base font-bold text-slate-950 tabular-nums block mt-0.5">
-                      {draft.ra ? `${draft.ra}-${draft.digRa}` : '—'}
+                    <span className="text-base font-bold text-slate-950 tabular-nums block mt-0.5 break-all">
+                      {draft.ra ? (draft.digRa ? `${draft.ra}-${draft.digRa}` : draft.ra) : '—'}
                     </span>
                   </div>
 
-                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Nascimento
                     </span>
@@ -877,11 +886,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Frequência no Mês
                     </span>
-                    <div className="flex items-baseline gap-1 mt-0.5">
+                    <div className="flex flex-wrap items-baseline gap-1 mt-0.5">
                       <span className="text-base font-bold text-emerald-900 tabular-nums">
                         {metrics.frequenciaPercent}%
                       </span>
@@ -893,7 +902,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                   {/* Card Dedicado de Faltas Consecutivas (Marcas de 3, 5 e 10 dias) */}
                   <div
-                    className={`rounded-2xl p-3 shadow-2xs ${
+                    className={`rounded-2xl p-3 shadow-2xs min-w-0 break-words ${
                       currentConsecutiveDaysCount >= 10
                         ? 'bg-rose-100 text-rose-950'
                         : currentConsecutiveDaysCount >= 5
@@ -914,12 +923,12 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           : 'text-slate-600'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[14px]">
+                      <span className="material-symbols-outlined text-[14px] shrink-0">
                         {isConsecutiveRisk ? 'notification_important' : 'event_available'}
                       </span>
                       <span>Faltas Seguidas</span>
                     </span>
-                    <div className="flex items-baseline gap-1 mt-0.5">
+                    <div className="flex flex-wrap items-baseline gap-1 mt-0.5">
                       <span
                         className={`text-base font-bold tabular-nums ${
                           currentConsecutiveDaysCount >= 10
@@ -933,7 +942,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       >
                         {currentConsecutiveDaysCount} {currentConsecutiveDaysCount === 1 ? 'dia' : 'dias'}
                       </span>
-                      <span className="text-[11px] font-bold text-slate-600 tabular-nums truncate">
+                      <span className="text-[11px] font-bold text-slate-600 tabular-nums break-words">
                         {currentConsecutiveDaysCount >= 10
                           ? 'crítico 10+d'
                           : currentConsecutiveDaysCount >= 5
@@ -990,46 +999,46 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenStudentPdf(draft)}
-                  className={`w-full p-4 rounded-3xl text-left flex items-center justify-between gap-3.5 transition-all cursor-pointer shadow-sm active:scale-[0.99] ${
+                  className={`w-full min-w-0 p-4 rounded-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
                     hasPdf
-                      ? 'bg-[#0071e3] hover:bg-[#005bb5] text-white'
-                      : 'bg-rose-100 hover:bg-rose-200 text-rose-950'
+                      ? 'bg-[#0052cc] hover:bg-[#0b3b8c] text-white'
+                      : 'bg-rose-50 hover:bg-rose-100 text-rose-950'
                   }`}
                 >
-                  <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1 w-full">
                     <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                        hasPdf ? 'bg-white/20 text-white' : 'bg-[#ff3b30] text-white'
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                        hasPdf ? 'bg-white/20 text-white' : 'bg-[#be123c] text-white'
                       }`}
                     >
                       <span className="material-symbols-outlined text-[26px]">
                         {hasPdf ? 'picture_as_pdf' : 'notification_important'}
                       </span>
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <span
-                        className={`text-[11px] font-bold uppercase tracking-wider block ${
-                          hasPdf ? 'text-white/85' : 'text-[#ff3b30]'
+                        className={`text-[11px] font-bold uppercase tracking-wider block break-words ${
+                          hasPdf ? 'text-blue-100' : 'text-[#be123c]'
                         }`}
                       >
                         {hasPdf
-                          ? 'Ficha Informativa Escaneada · Google Drive'
+                          ? 'Ficha Informativa Digitalizada · Documento Oficial'
                           : 'Documento Pendente na Pasta da Turma'}
                       </span>
-                      <span className="text-base sm:text-lg font-semibold block truncate mt-0.5">
+                      <span className="text-base sm:text-lg font-bold block break-words leading-snug mt-0.5">
                         {hasPdf
-                          ? 'Abrir PDF da Ficha Informativa'
-                          : 'Sem Ficha PDF · Solicitar à Família'}
+                          ? 'Abrir Ficha Informativa do Estudante'
+                          : 'Sem Ficha Informativa · Solicitar à Família'}
                       </span>
                     </div>
                   </div>
 
                   <div
-                    className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-1.5 shrink-0 ${
-                      hasPdf ? 'bg-white text-[#0071e3]' : 'bg-[#ff3b30] text-white'
+                    className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 shrink-0 self-end sm:self-center ${
+                      hasPdf ? 'bg-white text-[#0b3b8c]' : 'bg-[#be123c] text-white'
                     }`}
                   >
-                    <span>{hasPdf ? 'Abrir PDF' : 'Ver Aviso'}</span>
+                    <span>{hasPdf ? 'Abrir Ficha' : 'Ver Aviso'}</span>
                     <span className="material-symbols-outlined text-[17px]">open_in_new</span>
                   </div>
                 </button>
@@ -1056,10 +1065,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                             <span className="material-symbols-outlined text-[18px]">person</span>
                           </div>
                           <div className="min-w-0">
-                            <span className="text-[11px] font-semibold text-slate-500 block">
+                            <span className="text-xs font-semibold text-slate-500 block">
                               {g1.shortRoleLabel || 'Mãe / Responsável 1'}
                             </span>
-                            <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5">
+                            <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5 break-words">
                               {g1.cleanName || 'Não informado'}
                             </p>
                           </div>
@@ -1070,10 +1079,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                             <span className="material-symbols-outlined text-[18px]">person</span>
                           </div>
                           <div className="min-w-0">
-                            <span className="text-[11px] font-semibold text-slate-500 block">
+                            <span className="text-xs font-semibold text-slate-500 block">
                               {g2.shortRoleLabel || 'Pai / Responsável 2'}
                             </span>
-                            <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5">
+                            <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5 break-words">
                               {g2.cleanName || 'Não informado'}
                             </p>
                           </div>
@@ -1090,7 +1099,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       <span className="material-symbols-outlined text-[18px]">call</span>
                     </div>
                     <div>
-                      <span className="text-[11px] font-semibold text-slate-500 block">
+                      <span className="text-xs font-semibold text-slate-500 block">
                         Telefone da família
                       </span>
                       <span className="text-sm font-semibold text-slate-950 tabular-nums">
@@ -1100,16 +1109,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   </div>
 
                   {whatsappLinks.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
                       {whatsappLinks.map((ph, idx) => (
                         <a
                           key={idx}
                           href={ph.waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold text-xs tabular-nums flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                          className="w-full sm:w-auto min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold text-xs tabular-nums flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-[16px]">chat</span>
+                          <span className="material-symbols-outlined text-[16px] shrink-0">chat</span>
                           <span>WhatsApp {ph.display}</span>
                         </a>
                       ))}
@@ -1119,16 +1128,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                 {/* Endereço e Rota de Ônibus */}
                 {(fullAddress || draft.rotaOnibus) && (
-                  <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-2 min-w-0">
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
                         <span className="material-symbols-outlined text-[18px]">location_on</span>
                       </div>
-                      <div className="min-w-0">
-                        <span className="text-[11px] font-semibold text-slate-500 block">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-semibold text-slate-500 block">
                           Endereço onde mora
                         </span>
-                        <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5">
+                        <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5 break-words">
                           {fullAddress || '—'}
                         </p>
                       </div>
@@ -1147,9 +1156,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     <button
                       type="button"
                       onClick={handleSaveAll}
-                      className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors whitespace-nowrap"
+                      className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer shadow-xs transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[16px]">save</span>
+                      <span className="material-symbols-outlined text-[16px] shrink-0">save</span>
                       <span>Salvar Alterações</span>
                     </button>
                   </div>
@@ -1159,37 +1168,37 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
           </div>
 
           {/* FICHA CADASTRAL COMPLETA (48 CAMPOS OFICIAIS SED / SME JUNDIAÍ) */}
-          <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
-              <div className="flex items-center gap-2.5">
+          <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[18px]">badge</span>
                 </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-950">
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-950 break-words">
                     Todos os Dados do Estudante (48 Informações)
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-xs text-slate-500 font-medium break-words">
                     Toque em uma categoria abaixo ou pesquise um dado específico
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0">
                 <input
                   type="text"
                   value={searchField}
                   onChange={(e) => setSearchField(e.target.value)}
                   placeholder="Procurar dado (ex: CPF, SUS, CEP)..."
-                  className="min-h-[40px] px-3.5 bg-slate-100 hover:bg-slate-200/60 focus:bg-white rounded-xl text-xs font-medium focus:outline-none transition-colors w-full sm:w-60"
+                  className="min-h-[40px] px-3.5 bg-slate-100 hover:bg-slate-200/60 focus:bg-white rounded-xl text-xs font-medium focus:outline-none transition-colors flex-1 min-w-0 sm:w-60"
                 />
                 {canEdit && (
                   <button
                     type="button"
                     onClick={handleSaveAll}
-                    className="min-h-[40px] px-4 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs shrink-0 transition-colors whitespace-nowrap"
+                    className="min-h-[40px] py-2 px-4 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer shadow-xs shrink-0 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[16px]">save</span>
+                    <span className="material-symbols-outlined text-[16px] shrink-0">save</span>
                     <span>Salvar</span>
                   </button>
                 )}
@@ -1208,7 +1217,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     key={cat.id}
                     type="button"
                     onClick={() => setActiveCategory(cat.id as GridCategory)}
-                    className={`min-h-[36px] px-3.5 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-colors whitespace-nowrap ${
+                    className={`min-h-[36px] px-3.5 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-colors whitespace-normal text-center ${
                       activeCategory === cat.id
                         ? 'bg-slate-950 text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -1239,15 +1248,19 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   <button
                     type="button"
                     onClick={handleToggleLgpdReveal}
-                    className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer bg-white hover:bg-slate-50 text-slate-900 shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap"
+                    className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs ${
+                      isLgpdRevealed
+                        ? 'bg-slate-200 hover:bg-slate-300 text-slate-950'
+                        : 'bg-[#0b3b8c] hover:bg-[#082d6b] text-white'
+                    }`}
                   >
                     <span className="material-symbols-outlined text-[15px]">
                       {isLgpdRevealed ? 'visibility_off' : 'visibility'}
                     </span>
-                    <span>{isLgpdRevealed ? 'Ocultar Dados' : 'Mostrar Dados'}</span>
+                    <span>{isLgpdRevealed ? 'Ocultar Dados Protegidos' : 'Mostrar Todos os Dados'}</span>
                   </button>
                 ) : (
-                  <span className="text-[11px] font-medium text-slate-500">
+                  <span className="text-xs font-medium text-slate-500">
                     Visível apenas para a direção
                   </span>
                 )}
@@ -1291,9 +1304,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-[11px] font-medium text-slate-500 uppercase tracking-tight flex items-center gap-1">
+                        <span className="text-xs font-medium text-slate-500 uppercase tracking-tight flex items-center gap-1 break-words">
                           {isSensitiveField && (
-                            <span className="material-symbols-outlined text-[13px] text-amber-700" title="Dado Pessoal Sensível (LGPD Art. 14)">
+                            <span className="material-symbols-outlined text-[14px] text-amber-700 shrink-0" title="Dado Pessoal Sensível (LGPD Art. 14)">
                               lock
                             </span>
                           )}
@@ -1332,26 +1345,106 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   );
                 })}
               </div>
+
+              {/* Campos Complementares vindos do Arquivo JSON (quando houver propriedades extras) */}
+              {(() => {
+                const knownSedKeys = new Set<string>(SED_GRID_FIELDS.map((f) => String(f.key)));
+                const internalSkipKeys = new Set<string>([
+                  'id',
+                  'number',
+                  'name',
+                  'initials',
+                  'status',
+                  'active',
+                  'classesHeld',
+                  'classesAttended',
+                  'absences',
+                  'totalAbsencesMonth',
+                  'justifiedAbsences',
+                  'attendanceRate',
+                  'consecutiveAbsences',
+                  'consecutiveDays',
+                  'consecutiveTier',
+                  'consecutiveSelectedDates',
+                  'consecutiveAbsenceAlert',
+                  'consecutiveOccurrences',
+                  'presenceDates',
+                  'absentDates',
+                  'justifiedAbsenceDates',
+                  'schoolDaysCount',
+                  'diasLetivosRecorte',
+                  'hasPhoto',
+                  'photo',
+                  'photoDriveUrl',
+                  'hasScannedPdf',
+                  'fichaPdfDriveId',
+                  'fichaPdfDriveUrl',
+                  'fichaPdfSubfolder',
+                  'fichaPdfManualLink',
+                  'updatedAtMs',
+                  'isDeleted',
+                  'deletedAtISO',
+                  'alert',
+                  'guardianName',
+                  'guardianPhone',
+                ]);
+                const extraEntries = Object.entries(draft as Record<string, any>).filter(
+                  ([k, v]) => {
+                    if (knownSedKeys.has(k) || internalSkipKeys.has(k)) return false;
+                    if (v === undefined || v === null || typeof v === 'object') return false;
+                    const strVal = String(v).trim();
+                    if (!strVal) return false;
+                    if (searchField.trim() !== '') {
+                      const q = searchField.toLowerCase();
+                      return k.toLowerCase().includes(q) || strVal.toLowerCase().includes(q);
+                    }
+                    return activeCategory === 'todos';
+                  }
+                );
+                if (extraEntries.length === 0) return null;
+                return (
+                  <div className="pt-3 space-y-2.5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#0b3b8c]">
+                      Dados Complementares Importados do JSON ({extraEntries.length})
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5">
+                      {extraEntries.map(([extraKey, extraVal]) => (
+                        <div
+                          key={`extra-${extraKey}`}
+                          className="p-2.5 rounded-xl bg-[#eef2f7] shadow-2xs min-w-0 break-words"
+                        >
+                          <span className="text-xs font-semibold text-slate-600 uppercase tracking-tight block break-words">
+                            {extraKey}
+                          </span>
+                          <p className="text-sm font-semibold text-slate-950 tabular-nums mt-0.5 break-words">
+                            {String(extraVal)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </section>
         </div>
 
         {/* Sticky Action Footer — Sempre visível sem scroll */}
-        <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] flex flex-wrap items-center justify-between gap-2.5 z-20">
-          <div className="flex items-center gap-2 text-xs text-slate-600">
+        <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 z-20 min-w-0">
+          <div className="flex items-center gap-2 text-xs text-slate-600 min-w-0 break-words">
             {savedBanner ? (
               <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                <span className="material-symbols-outlined text-[16px] shrink-0">check_circle</span>
                 Alterações salvas com sucesso!
               </span>
             ) : (
-              <span className="tabular-nums">Chamada Nº {draft.number} · RA {draft.ra || '—'} · {className}</span>
+              <span className="tabular-nums break-words">Chamada Nº {draft.number} · RA {draft.ra || '—'} · {className}</span>
             )}
           </div>
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto sm:ml-auto">
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[40px] px-4 text-xs sm:text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl cursor-pointer transition-colors whitespace-nowrap"
+              className="flex-1 sm:flex-initial min-h-[40px] py-2 px-4 text-xs sm:text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl flex items-center justify-center text-center whitespace-normal cursor-pointer transition-colors"
             >
               Fechar
             </button>
@@ -1359,9 +1452,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <button
                 type="button"
                 onClick={handleSaveAll}
-                className="min-h-[40px] px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors shadow-xs whitespace-nowrap"
+                className="flex-1 sm:flex-initial min-h-[40px] py-2 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors shadow-xs"
               >
-                <span className="material-symbols-outlined text-[17px] text-emerald-400">save</span>
+                <span className="material-symbols-outlined text-[17px] text-emerald-400 shrink-0">save</span>
                 <span>Salvar Alterações</span>
               </button>
             )}

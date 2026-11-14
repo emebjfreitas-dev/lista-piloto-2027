@@ -515,7 +515,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
   }
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto space-y-4 pb-20 text-[#111827] animate-gentle-fade">
+    <div className="w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 text-[#111827] animate-gentle-fade">
       {feedback && (
         <div
           role="status"
@@ -545,9 +545,9 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
       )}
 
       {/* Cabeçalho Administrativo */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1 min-w-0">
+      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4 min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
+          <div className="space-y-1 min-w-0 flex-1">
             <button
               type="button"
               onClick={onBack}
@@ -557,27 +557,27 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
               <span>Voltar</span>
             </button>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#111827]">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-[#111827] break-words">
                 Diagnóstico de Consistência do Banco
               </h1>
-              <span className="px-2.5 py-0.5 rounded-lg bg-[#e9e9ef] text-[#111827] text-[11px] font-semibold">
+              <span className="px-2.5 py-0.5 rounded-lg bg-[#e9e9ef] text-[#111827] text-xs font-semibold">
                 Exclusivo Admin
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm text-[#48484a]">
+            <p className="text-xs sm:text-sm text-[#48484a] break-words leading-relaxed">
               Auditoria técnica de {classes.length} turmas, {structuralAnalysis.activeStudents} estudantes ativos ({structuralAnalysis.aeeCount} AEE) e sincronia Firebase · Atualizado às {lastAuditAt}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto">
             <button
               type="button"
               onClick={handleRerunCheck}
-              className="min-h-[40px] px-3.5 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100"
+              className="min-w-0 min-h-[44px] px-4 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs sm:text-[13px] font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="w-4 h-4 shrink-0" />
               <span>Reverificar</span>
             </button>
 
@@ -585,27 +585,31 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
               type="button"
               onClick={handleForceCloudSync}
               disabled={isSyncing}
-              className="min-h-[40px] px-3.5 rounded-xl bg-[#eaf6ef] hover:bg-[#d5efe0] text-[#005035] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100 disabled:opacity-60"
+              className="min-w-0 min-h-[44px] px-4 py-2 rounded-xl bg-[#eaf6ef] hover:bg-[#d5efe0] text-[#005035] text-xs sm:text-[13px] font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 disabled:opacity-60 whitespace-normal text-center"
             >
-              <Cloud className={`w-3.5 h-3.5 ${isSyncing ? 'animate-pulse' : ''}`} />
+              {isSyncing ? (
+                <RefreshCw className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <Cloud className="w-4 h-4 shrink-0" />
+              )}
               <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Nuvem'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => onNavigateScreen('importar_deficiencias_htm')}
-              className="min-h-[40px] px-3.5 rounded-xl bg-[#e8f0fe] hover:bg-[#d6e4fc] text-[#1a4fa3] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100"
+              className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#e8f0fe] hover:bg-[#d6e4fc] text-[#1a4fa3] text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
-              <FileCode2 className="w-3.5 h-3.5" />
+              <FileCode2 className="w-3.5 h-3.5 shrink-0" />
               <span>Subir .HTM (AEE)</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportCsv}
-              className="min-h-[40px] px-3.5 rounded-xl bg-[#111827] hover:bg-black text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100"
+              className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#111827] hover:bg-black text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 shrink-0" />
               <span>Exportar CSV</span>
             </button>
           </div>
@@ -613,10 +617,10 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
 
         {/* KPIs Estruturais e de Consistência */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          <div className="p-3.5 rounded-2xl bg-[#f2f2f7]">
-            <span className="text-[11px] font-medium text-[#48484a] block">Índice de Saúde</span>
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f2f2f7] min-w-0 break-words">
+            <span className="text-xs font-medium text-[#48484a] block">Índice de Saúde</span>
             <span
-              className={`text-2xl font-semibold tabular-nums block mt-0.5 ${
+              className={`text-2xl sm:text-3xl font-semibold tabular-nums block mt-0.5 ${
                 baseReport.scorePercentage >= 90
                   ? 'text-[#047857]'
                   : baseReport.scorePercentage >= 70
@@ -626,71 +630,71 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
             >
               {baseReport.scorePercentage}%
             </span>
-            <span className="text-[11px] text-[#48484a] block mt-0.5">Base SED + Diário</span>
+            <span className="text-xs text-[#48484a] block mt-0.5">Base SED + Diário</span>
           </div>
 
           <button
             type="button"
             onClick={() => setSeverityFilter(severityFilter === 'critical' ? 'all' : 'critical')}
-            className={`text-left p-3.5 rounded-2xl cursor-pointer transition-colors duration-100 ${
+            className={`text-left p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-colors duration-100 min-w-0 break-words ${
               severityFilter === 'critical' ? 'bg-[#fee2e2]' : 'bg-[#f2f2f7] hover:bg-[#e9e9ef]'
             }`}
           >
-            <span className="text-[11px] font-medium text-[#991b1b] block">Críticas</span>
-            <span className="text-2xl font-semibold text-[#991b1b] tabular-nums block mt-0.5">
+            <span className="text-xs font-medium text-[#991b1b] block">Críticas</span>
+            <span className="text-2xl sm:text-3xl font-semibold text-[#991b1b] tabular-nums block mt-0.5">
               {totalCritical}
             </span>
-            <span className="text-[11px] text-[#48484a] block mt-0.5">Ação imediata</span>
+            <span className="text-xs text-[#48484a] block mt-0.5">Ação imediata</span>
           </button>
 
           <button
             type="button"
             onClick={() => setSeverityFilter(severityFilter === 'warning' ? 'all' : 'warning')}
-            className={`text-left p-3.5 rounded-2xl cursor-pointer transition-colors duration-100 ${
+            className={`text-left p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-colors duration-100 min-w-0 break-words ${
               severityFilter === 'warning' ? 'bg-[#fef3c7]' : 'bg-[#f2f2f7] hover:bg-[#e9e9ef]'
             }`}
           >
-            <span className="text-[11px] font-medium text-[#92400e] block">Alertas</span>
-            <span className="text-2xl font-semibold text-[#92400e] tabular-nums block mt-0.5">
+            <span className="text-xs font-medium text-[#92400e] block">Alertas</span>
+            <span className="text-2xl sm:text-3xl font-semibold text-[#92400e] tabular-nums block mt-0.5">
               {totalWarning}
             </span>
-            <span className="text-[11px] text-[#48484a] block mt-0.5">Revisar cadastro</span>
+            <span className="text-xs text-[#48484a] block mt-0.5">Revisar cadastro</span>
           </button>
 
           <button
             type="button"
             onClick={() => setSeverityFilter(severityFilter === 'info' ? 'all' : 'info')}
-            className={`text-left p-3.5 rounded-2xl cursor-pointer transition-colors duration-100 ${
+            className={`text-left p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-colors duration-100 min-w-0 break-words ${
               severityFilter === 'info' ? 'bg-[#e8f0fe]' : 'bg-[#f2f2f7] hover:bg-[#e9e9ef]'
             }`}
           >
-            <span className="text-[11px] font-medium text-[#1a4fa3] block">Informativas</span>
-            <span className="text-2xl font-semibold text-[#1a4fa3] tabular-nums block mt-0.5">
+            <span className="text-xs font-medium text-[#1a4fa3] block">Informativas</span>
+            <span className="text-2xl sm:text-3xl font-semibold text-[#1a4fa3] tabular-nums block mt-0.5">
               {totalInfo}
             </span>
-            <span className="text-[11px] text-[#48484a] block mt-0.5">Melhorias</span>
+            <span className="text-xs text-[#48484a] block mt-0.5">Melhorias</span>
           </button>
 
-          <div className="p-3.5 rounded-2xl bg-[#f2f2f7]">
-            <span className="text-[11px] font-medium text-[#48484a] block">RAs Duplicados</span>
-            <span className="text-2xl font-semibold text-[#111827] tabular-nums block mt-0.5">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f2f2f7] min-w-0 break-words">
+            <span className="text-xs font-medium text-[#48484a] block">RAs Duplicados</span>
+            <span className="text-2xl sm:text-3xl font-semibold text-[#111827] tabular-nums block mt-0.5">
               {structuralAnalysis.duplicateRaCount}
             </span>
-            <span className="text-[11px] text-[#48484a] block mt-0.5">
+            <span className="text-xs text-[#48484a] block mt-0.5">
               {structuralAnalysis.attendanceMismatchCount} diverg. faltas
             </span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[#f2f2f7]">
-            <span className="text-[11px] font-medium text-[#48484a] block">Nuvem Firebase</span>
-            <span className="text-base font-semibold text-[#111827] block mt-1">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f2f2f7] min-w-0 break-words">
+            <span className="text-xs font-medium text-[#48484a] block">Nuvem Firebase</span>
+            <span className="text-base sm:text-lg font-semibold text-[#111827] block mt-1 break-words">
               {syncSnapshot.pendingCount > 0
                 ? `${syncSnapshot.pendingCount} pendente(s)`
                 : syncSnapshot.status === 'error'
                 ? 'Atenção'
                 : 'Sincronizado'}
             </span>
-            <span className="text-[11px] text-[#48484a] block mt-0.5">
+            <span className="text-xs text-[#48484a] block mt-0.5">
               {structuralAnalysis.aeeCount} alunos com AEE
             </span>
           </div>
@@ -719,7 +723,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
       {/* Filtros e Lista de Apontamentos */}
       <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
         {/* Categorias */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <div className="flex flex-wrap items-center gap-1.5 pb-1 min-w-0">
           {categoryCards.map((cat) => {
             const active = categoryFilter === cat.id;
             return (
@@ -730,7 +734,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                   setCategoryFilter(cat.id);
                   setVisibleLimit(40);
                 }}
-                className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors duration-100 ${
+                className={`min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-medium inline-flex items-center gap-1.5 whitespace-normal text-center cursor-pointer transition-colors duration-100 ${
                   active
                     ? 'bg-[#111827] text-white font-semibold'
                     : 'bg-[#f2f2f7] text-[#374151] hover:bg-[#e9e9ef]'
@@ -738,7 +742,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
               >
                 <span>{cat.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-md text-[11px] tabular-nums ${
+                  className={`px-1.5 py-0.5 rounded-md text-xs tabular-nums ${
                     active ? 'bg-white/15 text-white' : 'bg-white text-[#111827]'
                   }`}
                 >
@@ -761,7 +765,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                 setVisibleLimit(40);
               }}
               placeholder="Buscar por estudante, turma, campo afetado ou descrição..."
-              className="w-full min-h-[42px] pl-10 pr-9 rounded-2xl bg-[#f2f2f7] focus:bg-[#e9e9ef] text-sm text-[#111827] placeholder:text-[#6b7280] focus:outline-none"
+              className="w-full min-h-[46px] pl-10 pr-9 rounded-2xl bg-[#f2f2f7] focus:bg-[#e9e9ef] text-sm text-[#111827] placeholder:text-[#6b7280] focus:outline-none"
             />
             {searchTerm && (
               <button
@@ -832,12 +836,12 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                 return (
                   <article
                     key={issue.id}
-                    className="p-4 rounded-2xl bg-[#f2f2f7] space-y-2.5 flex flex-col justify-between"
+                    className="p-4 rounded-2xl bg-[#f2f2f7] space-y-2.5 flex flex-col justify-between min-w-0 break-words"
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <span
-                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 ${
+                          className={`px-2 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1 shrink-0 ${
                             isCrit
                               ? 'bg-[#fee2e2] text-[#991b1b]'
                               : isWarn
@@ -846,24 +850,24 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                           }`}
                         >
                           {isCrit ? (
-                            <AlertCircle className="w-3 h-3" />
+                            <AlertCircle className="w-3.5 h-3.5" />
                           ) : isWarn ? (
-                            <AlertTriangle className="w-3 h-3" />
+                            <AlertTriangle className="w-3.5 h-3.5" />
                           ) : (
-                            <Info className="w-3 h-3" />
+                            <Info className="w-3.5 h-3.5" />
                           )}
                           <span>{isCrit ? 'Crítica' : isWarn ? 'Alerta' : 'Info'}</span>
                         </span>
-                        <span className="text-[11px] font-semibold text-[#374151] truncate">
+                        <span className="text-xs font-semibold text-[#374151] break-words text-right min-w-0">
                           {issue.categoryLabel}
                         </span>
                       </div>
 
-                      <div>
-                        <h3 className="text-xs sm:text-sm font-semibold text-[#111827]">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-[#111827] break-words">
                           {issue.affectedField}
                         </h3>
-                        <p className="text-xs text-[#374151] mt-0.5">
+                        <p className="text-xs text-[#374151] mt-0.5 break-words">
                           {issue.className ? `${issue.className} · ` : ''}
                           {issue.studentName
                             ? `${issue.studentNumber ? `Nº ${issue.studentNumber} ` : ''}${issue.studentName}`
@@ -871,16 +875,16 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                         </p>
                       </div>
 
-                      <div className="bg-white rounded-xl p-2.5 text-[11px] space-y-1">
-                        <p className="text-[#991b1b]">
+                      <div className="bg-white rounded-xl p-2.5 text-xs space-y-1 min-w-0 break-words">
+                        <p className="text-[#991b1b] break-words">
                           <strong className="font-semibold">Atual:</strong> {issue.currentValue}
                         </p>
-                        <p className="text-[#005035]">
+                        <p className="text-[#005035] break-words">
                           <strong className="font-semibold">Esperado:</strong> {issue.expectedValue}
                         </p>
                       </div>
 
-                      <p className="text-xs text-[#374151] leading-relaxed">
+                      <p className="text-xs text-[#374151] leading-relaxed break-words">
                         {issue.description}
                       </p>
                     </div>
@@ -889,7 +893,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                       <button
                         type="button"
                         onClick={() => onOpenClassDetails(targetCls)}
-                        className="w-full min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold cursor-pointer transition-colors duration-100"
+                        className="w-full min-h-[42px] px-3 py-2 rounded-xl bg-white hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold cursor-pointer transition-colors duration-100 whitespace-normal text-center"
                       >
                         Abrir Turma {targetCls.turmaAbrev || targetCls.name}
                       </button>
@@ -901,8 +905,8 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
 
             {/* Tabela Desktop com Zebra Striping (Sem divide-y, Sem contornos) */}
             <div className="hidden lg:block overflow-x-auto rounded-2xl">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#f2f2f7] text-[#374151] font-semibold text-[11px]">
+              <table className="w-full text-left text-xs sm:text-[13px] border-collapse">
+                <thead className="bg-[#f2f2f7] text-[#374151] font-semibold text-xs">
                   <tr>
                     <th className="py-3 px-3 rounded-tl-xl">Gravidade</th>
                     <th className="py-3 px-3">Categoria</th>
@@ -928,7 +932,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                       >
                         <td className="py-3 px-3 align-top whitespace-nowrap">
                           <span
-                            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 ${
+                            className={`px-2 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1 ${
                               isCrit
                                 ? 'bg-[#fee2e2] text-[#991b1b]'
                                 : isWarn
@@ -947,16 +951,16 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                             {issue.className || 'EMEB Geral'}
                           </span>
                           {issue.studentName && (
-                            <span className="text-[11px] text-[#374151] block">
+                            <span className="text-xs text-[#374151] block break-words">
                               {issue.studentNumber ? `Nº ${issue.studentNumber} · ` : ''}
                               {issue.studentName}
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-3 align-top font-semibold text-[#111827]">
+                        <td className="py-3 px-3 align-top font-semibold text-[#111827] break-words">
                           {issue.affectedField}
                         </td>
-                        <td className="py-3 px-3 align-top text-[11px]">
+                        <td className="py-3 px-3 align-top text-xs break-words">
                           <span className="text-[#991b1b] block">
                             Atual: <strong>{issue.currentValue}</strong>
                           </span>
@@ -964,9 +968,9 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                             Esperado: {issue.expectedValue}
                           </span>
                         </td>
-                        <td className="py-3 px-3 align-top text-[#374151] max-w-md">
+                        <td className="py-3 px-3 align-top text-[#374151] max-w-md break-words">
                           <span className="block">{issue.description}</span>
-                          <span className="text-[11px] text-[#48484a] block mt-0.5">
+                          <span className="text-xs text-[#48484a] block mt-0.5">
                             Sugestão: {issue.suggestedAction}
                           </span>
                         </td>
@@ -975,12 +979,12 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                             <button
                               type="button"
                               onClick={() => onOpenClassDetails(targetCls)}
-                              className="px-2.5 py-1.5 rounded-lg bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] text-xs font-semibold cursor-pointer"
+                              className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] text-xs font-semibold cursor-pointer"
                             >
                               Abrir Turma
                             </button>
                           ) : (
-                            <span className="text-[11px] text-[#6b7280]">—</span>
+                            <span className="text-xs text-[#6b7280]">—</span>
                           )}
                         </td>
                       </tr>
@@ -995,14 +999,14 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                 <button
                   type="button"
                   onClick={() => setVisibleLimit((prev) => prev + 60)}
-                  className="min-h-[40px] px-4 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold cursor-pointer"
+                  className="min-h-[42px] px-4 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs sm:text-[13px] font-semibold cursor-pointer"
                 >
                   Carregar mais (+60 de {filteredIssues.length - visibleLimit} restantes)
                 </button>
                 <button
                   type="button"
                   onClick={() => setVisibleLimit(filteredIssues.length)}
-                  className="min-h-[40px] px-4 rounded-xl bg-white text-[#48484a] hover:text-[#111827] text-xs font-semibold cursor-pointer"
+                  className="min-h-[42px] px-4 rounded-xl bg-white text-[#48484a] hover:text-[#111827] text-xs sm:text-[13px] font-semibold cursor-pointer"
                 >
                   Exibir todos ({filteredIssues.length})
                 </button>
@@ -1012,13 +1016,13 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
         )}
       </section>
 
-      <div className="flex items-center justify-between px-2 text-[11px] text-[#48484a]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-xs text-[#48484a]">
         <span className="inline-flex items-center gap-1.5">
-          <Database className="w-3.5 h-3.5" />
+          <Database className="w-4 h-4 shrink-0" />
           <span>Auditoria local + Firestore em tempo real</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Activity className="w-3.5 h-3.5" />
+          <Activity className="w-4 h-4 shrink-0" />
           <span>{allIssues.length} apontamento(s) totais</span>
         </span>
       </div>

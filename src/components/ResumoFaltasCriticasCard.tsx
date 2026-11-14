@@ -188,7 +188,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
           {/* Controles: Seletor de Limiar Configurado (3+, 5+, 10+ dias) & Filtros Rápidos */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1 bg-[#f5f5f7] p-1 rounded-xl">
+            <div className="flex flex-wrap items-center gap-1 bg-[#f5f5f7] p-1 rounded-xl">
               <span className="text-xs font-semibold text-[#6e6e73] px-2">
                 Limiar:
               </span>
@@ -197,7 +197,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   key={val}
                   type="button"
                   onClick={() => handleUpdateThreshold(val)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold font-mono tabular-nums transition-colors cursor-pointer ${
+                  className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold font-mono tabular-nums transition-colors duration-100 cursor-pointer whitespace-normal text-center ${
                     threshold === val
                       ? val === 10
                         ? 'bg-[#be123c] text-white shadow-2xs'
@@ -301,11 +301,11 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   }}
                   className={`group rounded-2xl p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 border h-full min-h-[118px] ${cardTierColor}`}
                 >
-                  <div className="flex items-start justify-between gap-2.5">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-start justify-between gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <StudentAvatar student={student} size="sm" />
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors truncate">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm sm:text-base font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors duration-100 break-words leading-snug">
                           {student.name}
                         </h3>
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#6e6e73] font-medium">
@@ -317,7 +317,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                           {cls.teacherFirstName && (
                             <>
                               <span aria-hidden="true">·</span>
-                              <span>Prof(a). {cls.teacherFirstName}</span>
+                              <span className="break-words">Prof(a). {cls.teacherFirstName}</span>
                             </>
                           )}
                         </div>
@@ -334,17 +334,17 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                           ? `5+ DIAS (${consecutiveDaysCount}d)`
                           : `3+ DIAS (${consecutiveDaysCount}d)`}
                       </span>
-                      <span className="text-[11px] text-[#6e6e73] font-mono tabular-nums block mt-0.5">
+                      <span className="text-xs text-[#6e6e73] font-mono tabular-nums block mt-0.5">
                         Ano: {totalConsecutiveDaysYear}d ({occurrences.length || 1}x)
                       </span>
                     </div>
                   </div>
 
                   {/* Linha de Datas e Status do Retorno da Família */}
-                  <div className="pt-2 border-t border-black/[0.05] flex items-center justify-between gap-2 text-xs">
-                    <div className="min-w-0 flex-1 truncate">
+                  <div className="pt-2 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-2 text-xs min-w-0">
+                    <div className="min-w-0 flex-1 break-words">
                       <span className="text-[#6e6e73]">Datas: </span>
-                      <span className="font-mono font-semibold text-[#1d1d1f]">
+                      <span className="font-mono font-semibold text-[#1d1d1f] break-words">
                         {datesList}
                       </span>
                     </div>
@@ -357,14 +357,14 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       <span>
                         {hasFamilyFeedback ? 'Feedback recebido' : 'Aguardando contato'}
                       </span>
-                      <span className="material-symbols-outlined text-[15px]">
+                      <span className="material-symbols-outlined text-[16px]">
                         chevron_right
                       </span>
                     </span>
                   </div>
 
                   {hasFamilyFeedback && (
-                    <p className="text-xs text-[#1d1d1f] bg-white/90 px-2.5 py-1.5 rounded-xl line-clamp-1 font-medium">
+                    <p className="text-xs text-[#1d1d1f] bg-white/90 px-3 py-2 rounded-xl font-medium break-words leading-relaxed">
                       “{familyFeedbackText}”
                     </p>
                   )}
@@ -429,16 +429,16 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
           >
             {/* Cabeçalho do Modal */}
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-black/[0.06]">
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <StudentAvatar student={selectedDetailItem.student} size="md" />
-                <div className="min-w-0">
-                  <span className="text-xs font-semibold text-[#ff3b30] block">
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-semibold text-[#ff3b30] block break-words">
                     Alerta de Faltas Críticas · Turma {selectedDetailItem.cls.name}
                   </span>
-                  <h3 className="text-lg sm:text-lg font-bold text-[#1d1d1f] truncate">
+                  <h3 className="text-lg font-bold text-[#1d1d1f] break-words leading-snug">
                     {selectedDetailItem.student.name}
                   </h3>
-                  <p className="text-xs text-[#6e6e73] font-mono tabular-nums">
+                  <p className="text-xs text-[#6e6e73] font-mono tabular-nums break-words">
                     Nº {selectedDetailItem.student.number.toString().padStart(2, '0')} · RA{' '}
                     {selectedDetailItem.student.ra || '—'} · Regente:{' '}
                     {selectedDetailItem.cls.teacherName || 'PEB I'}
@@ -450,16 +450,16 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 type="button"
                 onClick={() => setSelectedDetailItem(null)}
                 aria-label="Fechar detalhes"
-                className="w-9 h-9 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center shrink-0 cursor-pointer"
+                className="w-10 h-10 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center shrink-0 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             {/* Resumo Numérico do Estudante */}
-            <div className="grid grid-cols-3 gap-2.5 text-center">
-              <div className="bg-[#fff8f7] rounded-2xl p-3 border border-[#ff3b30]/20">
-                <span className="text-[11px] font-semibold text-[#6e6e73] block">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2.5 text-center">
+              <div className="bg-[#fff8f7] rounded-2xl p-3.5 border border-[#ff3b30]/20 min-w-0">
+                <span className="text-xs font-semibold text-[#6e6e73] block">
                   Sequência Atual
                 </span>
                 <span className="text-xl font-bold text-[#ff3b30] font-mono tabular-nums">
@@ -467,8 +467,8 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 </span>
               </div>
 
-              <div className="bg-[#f5f5f7] rounded-2xl p-3">
-                <span className="text-[11px] font-semibold text-[#6e6e73] block">
+              <div className="bg-[#f5f5f7] rounded-2xl p-3.5 min-w-0">
+                <span className="text-xs font-semibold text-[#6e6e73] block">
                   Ocorrências no Ano
                 </span>
                 <span className="text-lg font-bold text-[#1d1d1f] font-mono tabular-nums">
@@ -476,8 +476,8 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 </span>
               </div>
 
-              <div className="bg-[#f5f5f7] rounded-2xl p-3">
-                <span className="text-[11px] font-semibold text-[#6e6e73] block">
+              <div className="bg-[#f5f5f7] rounded-2xl p-3.5 min-w-0">
+                <span className="text-xs font-semibold text-[#6e6e73] block">
                   Faltas no Mês
                 </span>
                 <span className="text-lg font-bold text-[#1d1d1f] font-mono tabular-nums">
@@ -601,7 +601,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       item.cls.classesHeld || 20
                     );
                   }}
-                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-sm cursor-pointer transition-colors"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-sm cursor-pointer transition-colors duration-100 whitespace-normal text-center"
                 >
                   Ficha Completa (48 Dados)
                 </button>
@@ -615,9 +615,9 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     setSelectedDetailItem(null);
                     onOpenStudentPdf(item.student, item.cls.name);
                   }}
-                  className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-sm cursor-pointer transition-colors"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 font-bold text-sm cursor-pointer transition-colors duration-100 whitespace-normal text-center"
                 >
-                  Ficha PDF Escaneada
+                  Ficha Informativa do Estudante
                 </button>
               )}
 
@@ -629,9 +629,9 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     setSelectedDetailItem(null);
                     onSelectStudentForConsecutiveScreen(item.cls, item.student);
                   }}
-                  className="min-h-[40px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-sm flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
                 >
-                  <span className="material-symbols-outlined text-[17px]">
+                  <span className="material-symbols-outlined text-[18px] shrink-0">
                     open_in_new
                   </span>
                   <span>Gerenciar em Faltas Seguidas</span>

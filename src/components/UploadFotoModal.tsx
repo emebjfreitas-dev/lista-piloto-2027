@@ -241,10 +241,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
               <span className="material-symbols-outlined text-[22px]">photo_camera</span>
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-slate-950 truncate">
+              <h3 className="text-base font-bold text-slate-950 break-words leading-snug">
                 Foto do Estudante (PEB I)
               </h3>
-              <p className="text-xs text-slate-700 truncate font-semibold">
+              <p className="text-xs text-slate-700 break-words font-semibold">
                 {className} · EMEB Prof. Joaquim Candelário de Freitas
               </p>
             </div>
@@ -252,7 +252,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors shrink-0"
             aria-label="Fechar"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
@@ -279,7 +279,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                 </span>
                 <span>de</span>
                 <span className="font-bold text-slate-950 tabular-nums">{totalStudents}</span>
-                <span className="text-[11px] text-slate-400">alunos</span>
+                <span className="text-xs text-slate-500">alunos</span>
               </div>
 
               <button
@@ -324,10 +324,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-1 ring-white" />
                       )}
                     </div>
-                    <span className="text-[11px] font-bold tabular-nums">
+                    <span className="text-xs font-bold tabular-nums">
                       Nº {st.number.toString().padStart(2, '0')}
                     </span>
-                    <span className="text-xs font-semibold truncate max-w-[90px]">
+                    <span className="text-xs font-semibold whitespace-nowrap">
                       {st.name.split(' ')[0]}
                     </span>
                   </button>
@@ -355,16 +355,16 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                 )}
               </div>
 
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-900 tabular-nums">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-900 tabular-nums shrink-0">
                     Nº {student.number.toString().padStart(2, '0')}
                   </span>
-                  <span className="text-sm font-bold text-slate-950 truncate">
+                  <span className="text-sm font-bold text-slate-950 break-words leading-snug">
                     {student.name}
                   </span>
                 </div>
-                <span className="text-xs text-slate-600 font-medium block truncate mt-0.5">
+                <span className="text-xs text-slate-600 font-medium block break-words mt-0.5">
                   RA: {student.ra || '—'}-{student.digRa || ''} ·{' '}
                   <strong className={previewUrl ? 'text-emerald-700' : 'text-amber-700'}>
                     {previewUrl ? 'Foto Atualizada' : 'Sem foto cadastrada'}
@@ -378,7 +378,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                 type="button"
                 onClick={handleRemovePhoto}
                 disabled={isProcessing}
-                className="h-8 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-rose-200 disabled:opacity-50"
+                className="min-h-[38px] px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0 border border-rose-200 disabled:opacity-50"
                 title="Remover foto deste estudante"
               >
                 <span className="material-symbols-outlined text-[16px]">delete</span>

@@ -412,21 +412,21 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
         className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
       >
         {/* Cabeçalho do Modal */}
-        <div className="flex items-center justify-between p-4 sm:p-5 shrink-0 bg-slate-50/50">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 shrink-0 bg-slate-50/50">
+          <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[22px]">drive_folder_upload</span>
+              <span className="material-symbols-outlined text-[22px] shrink-0">drive_folder_upload</span>
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-950 truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-slate-950 break-words leading-snug">
                   Arraste &amp; Solte de Fotos Nomeadas
                 </h3>
-                <span className="px-2 py-0.5 rounded-lg bg-blue-100 text-blue-950 text-[10px] font-bold uppercase tracking-wider shrink-0">
+                <span className="px-2.5 py-0.5 rounded-lg bg-blue-100 text-blue-950 text-xs font-bold uppercase tracking-wider shrink-0">
                   Exclusivo Admin
                 </span>
               </div>
-              <p className="text-xs text-slate-500 truncate font-normal">
+              <p className="text-xs text-slate-500 break-words leading-relaxed font-normal mt-0.5">
                 Vincule fotos em massa por RA, Nome ou Turma e sincronize com todos os professores
               </p>
             </div>
@@ -434,9 +434,9 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors duration-100 shrink-0"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <span className="material-symbols-outlined text-[20px] shrink-0">close</span>
           </button>
         </div>
 
@@ -485,8 +485,8 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               <h4 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
                 Arraste as fotos dos alunos nomeadas e solte aqui
               </h4>
-              <p className="text-xs text-slate-500 max-w-md font-medium leading-relaxed">
-                Você pode soltar dezenas ou centenas de fotos de uma só vez. O sistema identifica automaticamente pelo <strong>RA</strong>, pelo <strong>Nome</strong> ou pelo padrão <strong>Turma_Nº</strong> (ex: <code className="bg-slate-200 px-1 py-0.5 rounded text-[11px]">12405139.jpg</code>, <code className="bg-slate-200 px-1 py-0.5 rounded text-[11px]">ADRYAN GABRIEL.jpg</code>, <code className="bg-slate-200 px-1 py-0.5 rounded text-[11px]">1F_01.jpg</code>).
+              <p className="text-xs text-slate-500 max-w-md font-medium leading-relaxed break-words">
+                Você pode soltar dezenas ou centenas de fotos de uma só vez. O sistema identifica automaticamente pelo <strong>RA</strong>, pelo <strong>Nome</strong> ou pelo padrão <strong>Turma_Nº</strong> (ex: <code className="bg-slate-200 px-1.5 py-0.5 rounded text-xs">12405139.jpg</code>, <code className="bg-slate-200 px-1.5 py-0.5 rounded text-xs">ADRYAN GABRIEL.jpg</code>, <code className="bg-slate-200 px-1.5 py-0.5 rounded text-xs">1F_01.jpg</code>).
               </p>
               <button
                 type="button"
@@ -494,9 +494,9 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   e.stopPropagation();
                   fileInputRef.current?.click();
                 }}
-                className="mt-2 h-9 px-4 rounded-xl bg-slate-950 hover:bg-black text-white text-xs font-bold cursor-pointer shadow-xs transition-colors flex items-center gap-2"
+                className="mt-2 min-h-[40px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-black text-white text-xs font-bold cursor-pointer shadow-xs transition-colors duration-100 flex items-center justify-center gap-2 text-center whitespace-normal"
               >
-                <span className="material-symbols-outlined text-[16px]">folder_open</span>
+                <span className="material-symbols-outlined text-[18px] shrink-0">folder_open</span>
                 <span>Ou selecione fotos do computador</span>
               </button>
             </div>
@@ -507,12 +507,12 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
             <div className="space-y-3 pt-2">
               {/* Barra de Filtros e Estatísticas */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200/80 text-xs">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
                     <button
                       type="button"
                       onClick={() => setFilterMode('all')}
-                      className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold transition-colors duration-100 cursor-pointer ${
                         filterMode === 'all'
                           ? 'bg-white text-slate-950 shadow-2xs'
                           : 'text-slate-600 hover:text-slate-950'
@@ -523,26 +523,26 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setFilterMode('matched')}
-                      className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold transition-colors duration-100 cursor-pointer flex items-center gap-1.5 ${
                         filterMode === 'matched'
                           ? 'bg-emerald-600 text-white shadow-2xs'
                           : 'text-emerald-800 hover:text-emerald-950'
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                       <span>Identificados ({matchedCount})</span>
                     </button>
                     {unmatchedCount > 0 && (
                       <button
                         type="button"
                         onClick={() => setFilterMode('unmatched')}
-                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold transition-colors duration-100 cursor-pointer flex items-center gap-1.5 ${
                           filterMode === 'unmatched'
                             ? 'bg-amber-600 text-white shadow-2xs'
                             : 'text-amber-800 hover:text-amber-950'
                         }`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                         <span>Pendentes ({unmatchedCount})</span>
                       </button>
                     )}
@@ -553,7 +553,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setItems([])}
-                    className="h-8 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+                    className="min-h-[38px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors duration-100"
                   >
                     Limpar Lista
                   </button>
@@ -567,26 +567,26 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   return (
                     <div
                       key={item.id}
-                      className={`p-3 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
+                      className={`p-3 rounded-2xl border flex items-start sm:items-center justify-between gap-3 transition-colors duration-100 ${
                         isMatched
                           ? 'bg-emerald-50/60 border-emerald-200'
                           : 'bg-amber-50/60 border-amber-200'
                       }`}
                     >
                       {/* Miniatura da Foto + Nome do Arquivo */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                         <img
                           src={item.previewUrl}
                           alt={item.filename}
                           className="w-12 h-12 rounded-xl object-cover bg-slate-200 shrink-0 border border-black/10 shadow-2xs"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-900 truncate">
+                          <p className="text-xs font-bold text-slate-900 break-all leading-snug">
                             {item.filename}
                           </p>
                           {isMatched ? (
-                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[11px]">
-                              <span className="font-bold text-emerald-950">
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs leading-snug">
+                              <span className="font-bold text-emerald-950 break-words">
                                 ✓ {item.matchedStudent?.name}
                               </span>
                               <span className="text-slate-300">·</span>
@@ -596,21 +596,21 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                               {item.matchReason && (
                                 <>
                                   <span className="text-slate-300">·</span>
-                                  <span className="text-[10px] text-slate-500 font-medium">
+                                  <span className="text-xs text-slate-500 font-medium">
                                     via {item.matchReason}
                                   </span>
                                 </>
                               )}
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[11px] font-bold text-amber-900">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1.5 min-w-0">
+                              <span className="text-xs font-bold text-amber-900 shrink-0">
                                 ⚠️ Aluno não identificado. Selecione:
                               </span>
                               <select
                                 value={item.matchedStudent?.id || ''}
                                 onChange={(e) => handleManualStudentChange(item.id, e.target.value)}
-                                className="h-7 text-xs bg-white border border-slate-300 rounded-lg px-2 text-slate-900 focus:outline-none focus:border-slate-950 max-w-[220px]"
+                                className="min-h-[38px] w-full sm:max-w-[240px] text-xs bg-white border border-slate-300 rounded-lg px-2.5 text-slate-900 focus:outline-none focus:border-slate-950"
                               >
                                 <option value="">Escolher estudante...</option>
                                 {allStudentsWithClass.map(({ student: s, classGroup: c }) => (
@@ -628,10 +628,10 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.id)}
-                        className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                        className="w-9 h-9 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center cursor-pointer transition-colors duration-100 shrink-0"
                         title="Remover este arquivo da lista"
                       >
-                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                        <span className="material-symbols-outlined text-[18px] shrink-0">delete</span>
                       </button>
                     </div>
                   );
@@ -642,11 +642,11 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
 
           {/* Opção de Reset Total das Fotos Atuais */}
           <div className="pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-4 rounded-2xl">
-            <div>
+            <div className="min-w-0 flex-1">
               <h5 className="text-xs font-bold text-slate-900">
                 Limpeza Total de Fotos Atuais
               </h5>
-              <p className="text-[11px] text-slate-500 font-medium">
+              <p className="text-xs text-slate-500 font-medium break-words leading-relaxed mt-0.5">
                 Remove todas as fotos de todos os alunos da escola para você testar ambos os métodos do zero.
               </p>
             </div>
@@ -654,9 +654,9 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               type="button"
               onClick={handleClearAllPhotos}
               disabled={isClearingAll}
-              className="h-8 px-3.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold cursor-pointer transition-colors shrink-0 flex items-center gap-1.5"
+              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold cursor-pointer transition-colors duration-100 shrink-0 flex items-center justify-center gap-1.5 text-center whitespace-normal"
             >
-              <span className="material-symbols-outlined text-[16px] text-rose-700">cleaning_services</span>
+              <span className="material-symbols-outlined text-[16px] text-rose-700 shrink-0">cleaning_services</span>
               <span>{isClearingAll ? 'Limpando...' : 'Limpar Todas as Fotos Atuais'}</span>
             </button>
           </div>

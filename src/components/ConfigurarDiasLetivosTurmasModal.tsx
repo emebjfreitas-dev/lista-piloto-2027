@@ -223,14 +223,14 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
       <div className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]">
         {/* Clean Modern Header */}
         <div className="bg-white border-b border-slate-100 px-6 py-5 flex items-start justify-between gap-4 shrink-0">
-          <div className="space-y-0.5">
-            <p className="text-[11px] font-semibold tracking-wider uppercase text-slate-500">
+          <div className="space-y-0.5 min-w-0 flex-1">
+            <p className="text-xs font-semibold tracking-wider uppercase text-slate-500">
               Painel do Administrador · Ano Letivo 2027
             </p>
-            <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900 break-words">
               Configuração dos 200 Dias Letivos por Turma
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 break-words">
               Calendário oficial sincronizado com a aba <span className="font-mono text-slate-700 font-medium">Dias_Letivos_SME_2027</span> da Planilha Oficial e Firebase Firestore.
             </p>
           </div>
@@ -238,7 +238,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+            className="w-9 h-9 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
             aria-label="Fechar modal"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -262,7 +262,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                 <p className="text-xs font-bold text-slate-900">
                   Backup Completo da Base Oficial SED Jundiaí
                 </p>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500 break-words">
                   Exporta todas as 40 turmas e 1.237 estudantes em planilha estruturada (.xlsx).
                 </p>
               </div>
@@ -329,7 +329,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               </button>
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-1.5">
+            <div className="grid grid-cols-2 min-[400px]:grid-cols-3 sm:grid-cols-6 lg:grid-cols-12 gap-1.5">
               {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
                 const isSelected = selectedMonth === m.month;
                 return (
@@ -337,19 +337,19 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                     key={m.month}
                     type="button"
                     onClick={() => setSelectedMonth(m.month)}
-                    className={`p-2 rounded-lg border text-center cursor-pointer transition-colors ${
+                    className={`p-2 rounded-lg border text-center cursor-pointer transition-colors min-w-0 ${
                       isSelected
                         ? 'bg-slate-900 text-white border-slate-900 font-semibold shadow-xs'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 font-normal'
                     }`}
                   >
-                    <span className="text-[11px] block truncate">{m.month}</span>
+                    <span className="text-xs block break-words">{m.month}</span>
                     <span className="font-mono text-sm font-semibold block tabular-nums">{m.schoolDays}d</span>
                   </button>
                 );
               })}
               <div className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-center flex flex-col justify-center">
-                <span className="text-[10px] uppercase font-medium block">Total</span>
+                <span className="text-xs uppercase font-medium block">Total</span>
                 <span className="font-mono text-sm font-semibold block tabular-nums">200d</span>
               </div>
             </div>
@@ -391,7 +391,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             </div>
 
             {/* Shift Filter (Segmented control style) */}
-            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg w-fit">
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-fit">
               {[
                 { id: 'all', label: 'Todas as Turmas (40)' },
                 { id: 'Turno Manhã', label: 'Manhã (20)' },
@@ -401,7 +401,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                   key={tab.id}
                   type="button"
                   onClick={() => setFilterShift(tab.id as any)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                  className={`min-h-[36px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer ${
                     filterShift === tab.id
                       ? 'bg-white text-slate-900 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -420,13 +420,13 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                 return (
                   <div
                     key={cls.id}
-                    className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-3 hover:border-slate-300 transition-colors"
+                    className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80 flex items-center justify-between gap-3 hover:border-slate-300 transition-colors min-w-0"
                   >
-                    <div className="min-w-0">
-                      <span className="font-medium text-slate-900 text-xs block truncate">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium text-slate-900 text-xs block break-words leading-snug">
                         {cls.name}
                       </span>
-                      <span className="text-[11px] text-slate-500 font-mono tabular-nums">
+                      <span className="text-xs text-slate-500 font-mono tabular-nums">
                         Ano: {annualTotal}/200 dias
                       </span>
                     </div>
@@ -435,18 +435,18 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                       <button
                         type="button"
                         onClick={() => handleUpdateSingleClassDays(cls.id, monthDays - 1)}
-                        className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+                        className="w-9 h-9 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
                         aria-label={`Diminuir dias letivos da turma ${cls.name}`}
                       >
                         —
                       </button>
-                      <span className="w-9 text-center font-mono font-semibold text-xs text-slate-900 tabular-nums">
+                      <span className="w-10 text-center font-mono font-semibold text-xs text-slate-900 tabular-nums">
                         {monthDays}d
                       </span>
                       <button
                         type="button"
                         onClick={() => handleUpdateSingleClassDays(cls.id, monthDays + 1)}
-                        className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center cursor-pointer transition-colors"
+                        className="w-9 h-9 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center cursor-pointer transition-colors"
                         aria-label={`Aumentar dias letivos da turma ${cls.name}`}
                       >
                         +
