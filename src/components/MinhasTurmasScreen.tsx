@@ -58,6 +58,25 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   const [selectedShift, setSelectedShift] = useState<'Todos' | 'Turno Manhã' | 'Turno Tarde'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [turmasViewMode, setTurmasViewMode] = useState<'grid' | 'table'>('grid');
+  const [isHighContrast, setIsHighContrast] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('emeb_high_contrast_v1') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleHighContrast = () => {
+    setIsHighContrast((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('emeb_high_contrast_v1', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   const manhaCount = useMemo(
     () => classes.filter((c) => c.shift === 'Turno Manhã').length,
@@ -169,7 +188,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   ]);
 
   return (
-    <div className="flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-16 animate-gentle-fade text-[#1d1d1f]">
+    <div className={`flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-16 animate-gentle-fade text-[#1d1d1f] ${isHighContrast ? 'high-contrast' : ''}`}>
       {/* Cabeçalho Institucional */}
       <section className="bg-white border border-slate-200 rounded-3xl px-5 py-5 sm:px-6 sm:py-6 shadow-xs min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
@@ -179,73 +198,102 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             </h1>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-slate-600 break-words">
               <span className="font-semibold text-slate-800">Ano Letivo 2027</span>
-              <span aria-hidden="true">·</span>
-              <span className="tabular-nums font-medium">
-                {classes.length} turmas ({manhaCount} Manhã · {tardeCount} Tarde)
-              </span>
-              {missingScannedFichasSummary.totalMissing > 0 && (
+              {userRole === 'usuario' && primaryTeacherClass ? (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span className="text-[#be123c] font-bold tabular-nums">
-                    {missingScannedFichasSummary.totalMissing} sem Ficha Informativa
+                  <span className="font-medium text-slate-700">
+                    {primaryTeacherClass.name} ({primaryTeacherClass.shift.replace('Turno ', '')})
                   </span>
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="tabular-nums font-medium">
+                    {classes.length} turmas ({manhaCount} Manhã · {tardeCount} Tarde)
+                  </span>
+                  {missingScannedFichasSummary.totalMissing > 0 && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span className="text-[#be123c] font-bold tabular-nums">
+                        {missingScannedFichasSummary.totalMissing} sem Ficha Informativa
+                      </span>
+                    </>
+                  )}
                 </>
               )}
             </div>
           </div>
 
-          {userRole === 'admin' && (
-            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto min-w-0 shrink-0">
-              <div className="flex flex-wrap sm:inline-flex items-center p-1.5 bg-slate-100 border border-slate-200 rounded-2xl text-xs sm:text-[13px] font-bold w-full sm:w-auto max-w-full gap-1">
-                <button
-                  type="button"
-                  onClick={() => onChangeRole('admin')}
-                  className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-2 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
-                    userRole === 'admin'
-                      ? 'bg-[#0b3b8c] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-slate-950'
-                  }`}
-                >
-                  Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChangeRole('usuario')}
-                  className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-2 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
-                    (userRole as string) === 'usuario'
-                      ? 'bg-[#0b3b8c] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-slate-950'
-                  }`}
-                  title="Simular visão PEB I"
-                >
-                  Regente
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChangeRole('peb2')}
-                  className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-2 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
-                    (userRole as string) === 'peb2'
-                      ? 'bg-[#0b3b8c] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-slate-950'
-                  }`}
-                  title="Simular visão PEB II"
-                >
-                  Especialista
-                </button>
-              </div>
+          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto min-w-0 shrink-0">
+            {/* Seletor Visual de Alto Contraste (Acessibilidade) */}
+            <button
+              type="button"
+              onClick={handleToggleHighContrast}
+              title={isHighContrast ? 'Desativar modo alto contraste' : 'Ativar modo alto contraste (Acessibilidade)'}
+              aria-label="Alternar modo de alto contraste"
+              className={`min-h-[40px] px-3.5 py-2 rounded-2xl border font-bold text-xs sm:text-[13px] flex items-center gap-2 cursor-pointer transition-colors shadow-2xs ${
+                isHighContrast
+                  ? 'bg-[#38bdf8] text-slate-950 border-[#38bdf8]'
+                  : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[17px]">contrast</span>
+              <span>{isHighContrast ? 'Alto Contraste: Ativo' : 'Alto Contraste'}</span>
+            </button>
 
-              {onOpenConfigDaysModal && (
-                <button
-                  onClick={onOpenConfigDaysModal}
-                  type="button"
-                  className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors duration-100"
-                >
-                  <CalendarDays className="w-4 h-4 text-[#0b3b8c] shrink-0" />
-                  <span>200 Dias Letivos</span>
-                </button>
-              )}
-            </div>
-          )}
+            {userRole === 'admin' && (
+              <>
+                <div className="flex flex-wrap sm:inline-flex items-center p-1.5 bg-slate-100 border border-slate-200 rounded-2xl text-xs sm:text-[13px] font-bold w-full sm:w-auto max-w-full gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onChangeRole('admin')}
+                    className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-2 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
+                      userRole === 'admin'
+                        ? 'bg-[#0b3b8c] text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-950'
+                    }`}
+                  >
+                    Admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChangeRole('usuario')}
+                    className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-2 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
+                      (userRole as string) === 'usuario'
+                        ? 'bg-[#0b3b8c] text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-950'
+                    }`}
+                    title="Simular visão PEB I"
+                  >
+                    Regente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChangeRole('peb2')}
+                    className={`flex-1 sm:flex-initial min-h-[40px] px-3.5 py-2 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
+                      (userRole as string) === 'peb2'
+                        ? 'bg-[#0b3b8c] text-white shadow-xs'
+                        : 'text-slate-700 hover:text-slate-950'
+                    }`}
+                    title="Simular visão PEB II"
+                  >
+                    Especialista
+                  </button>
+                </div>
+
+                {onOpenConfigDaysModal && (
+                  <button
+                    onClick={onOpenConfigDaysModal}
+                    type="button"
+                    className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors duration-100"
+                  >
+                    <CalendarDays className="w-4 h-4 text-[#0b3b8c] shrink-0" />
+                    <span>200 Dias Letivos</span>
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </section>
 
@@ -391,8 +439,8 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
         </div>
       )}
 
-      {/* Exibição: Tabela ou Cartões Minimalistas */}
-      {turmasViewMode === 'table' ? (
+      {/* Exibição: Tabela ou Cartões Minimalistas (Oculto para PEB 1 para evitar card duplicado) */}
+      {userRole !== 'usuario' && (turmasViewMode === 'table' ? (
         <div className="bg-white rounded-3xl overflow-x-auto shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <table className="w-full text-left text-xs sm:text-[13px] border-collapse min-w-[780px]">
             <thead className="bg-[#e9e9ef] text-[#3c3c43] font-semibold text-xs">
@@ -561,7 +609,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             })
           )}
         </div>
-      )}
+      ))}
     </div>
   );
 };

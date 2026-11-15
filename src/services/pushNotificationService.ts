@@ -230,7 +230,7 @@ const DEFAULT_SCHOOL_NOTICES: PushNoticeItem[] = [
   {
     id: 'aviso_busca_ativa_consecutivas',
     title: 'Busca Ativa • Faltas Seguidas (3+ Dias)',
-    body: 'Ao identificar 3 ou mais faltas consecutivas, registre os dias na aba Faltas Seguidas para contato imediato da secretaria.',
+    body: 'Ao identificar 3 ou mais faltas seguidas, o(a) docente PEB I solicita contato na aba Busca Ativa para que a secretaria contate a família e registre o feedback.',
     category: 'busca_ativa',
     targetClassId: 'all',
     targetScreen: 'faltas_consecutivas',

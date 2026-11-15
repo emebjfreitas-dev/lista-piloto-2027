@@ -1,15 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { ClassGroup, Student, UserRole } from '../types';
-import { SCHOOL_NAME } from '../data/mockData';
 import {
   BimesterId2027,
   getStudentBimesterReport,
   OFFICIAL_BIMESTERS_2027,
   StudentBimesterReportRow,
 } from '../utils/attendanceRules';
-import { getAccessToken, googleSignIn } from '../services/googleSheetsApi';
 import { StudentAvatar } from './StudentAvatar';
+import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 
 interface ListasNominaisScreenProps {
   classes: ClassGroup[];
@@ -26,10 +25,22 @@ interface ListasNominaisScreenProps {
   onBack?: () => void;
 }
 
+interface EvaluatedRow {
+  student: Student;
+  cls: ClassGroup;
+  rep: StudentBimesterReportRow;
+  hasAtestado: boolean;
+  isBelowTarget: boolean;
+  worstMonthPercent: number;
+  worstMonthName: string;
+}
+
 export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   classes,
   userRole,
   onOpenStudentGrid,
+  onOpenPhotoModal,
+  onOpenStudentPdf,
   onBack,
 }) => {
   const [selectedBimesterId, setSelectedBimesterId] = useState<BimesterId2027>('5bim');
@@ -42,13 +53,12 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   >('all');
   const [onlyBelowTarget, setOnlyBelowTarget] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isExportingGoogleSheet, setIsExportingGoogleSheet] = useState<boolean>(false);
-  const [createdSheetUrl, setCreatedSheetUrl] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
-    window.setTimeout(() => setToastMsg(null), 3800);
+    window.setTimeout(() => setToastMsg(null), 3500);
   };
 
   const currentBimester = useMemo(
@@ -59,16 +69,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   );
 
   // Avalia todos os estudantes ativos nas turmas em relação ao bimestre selecionado
-  const allEvaluatedRows = useMemo(() => {
-    const list: Array<{
-      student: Student;
-      cls: ClassGroup;
-      rep: StudentBimesterReportRow;
-      hasAtestado: boolean;
-      isBelowTarget: boolean;
-      worstMonthPercent: number;
-      worstMonthName: string;
-    }> = [];
+  const allEvaluatedRows = useMemo<EvaluatedRow[]>(() => {
+    const list: EvaluatedRow[] = [];
 
     classes.forEach((cls) => {
       cls.students.forEach((student) => {
@@ -103,34 +105,20 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       });
     });
 
-    // Ordem alfabética estrita pelo nome do estudante (A -> Z)
     return list.sort((a, b) =>
       a.student.name.localeCompare(b.student.name, 'pt-BR', { sensitivity: 'base' })
     );
   }, [classes, selectedBimesterId]);
 
-  // Destaques / KPIs do Bimestre Selecionado (respeitando filtro de Turma se selecionado)
-  const kpiStats = useMemo(() => {
-    const classScoped = allEvaluatedRows.filter((r) =>
-      selectedClassFilter === 'all' ? true : r.cls.id === selectedClassFilter
-    );
-    const belowTargetRows = classScoped.filter((r) => r.isBelowTarget);
-    const belowFundamental = belowTargetRows.filter((r) => !r.rep.isEducacaoInfantil);
-    const belowInfantil = belowTargetRows.filter((r) => r.rep.isEducacaoInfantil);
-    const belowWithAtestado = belowTargetRows.filter((r) => r.hasAtestado);
-    const belowWithoutAtestado = belowTargetRows.filter((r) => !r.hasAtestado);
-
+  const counts = useMemo(() => {
+    const belowTarget = allEvaluatedRows.filter((r) => r.isBelowTarget).length;
     return {
-      totalEvaluated: classScoped.length,
-      totalBelowTarget: belowTargetRows.length,
-      belowFundamentalCount: belowFundamental.length,
-      belowInfantilCount: belowInfantil.length,
-      belowWithAtestadoCount: belowWithAtestado.length,
-      belowWithoutAtestadoCount: belowWithoutAtestado.length,
+      totalEvaluated: allEvaluatedRows.length,
+      belowTarget,
     };
-  }, [allEvaluatedRows, selectedClassFilter]);
+  }, [allEvaluatedRows]);
 
-  // Linhas filtradas e em ordem alfabética (A -> Z)
+  // Filtra estudantes mantendo suporte a busca por nome, turma, RA, NIS e responsável
   const filteredRows = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
@@ -139,16 +127,10 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       if (selectedClassFilter !== 'all' && row.cls.id !== selectedClassFilter) {
         return false;
       }
-      if (
-        selectedSegmentFilter === 'fundamental' &&
-        row.rep.isEducacaoInfantil
-      ) {
+      if (selectedSegmentFilter === 'fundamental' && row.rep.isEducacaoInfantil) {
         return false;
       }
-      if (
-        selectedSegmentFilter === 'infantil' &&
-        !row.rep.isEducacaoInfantil
-      ) {
+      if (selectedSegmentFilter === 'infantil' && !row.rep.isEducacaoInfantil) {
         return false;
       }
       if (selectedAtestadoFilter === 'com_atestado' && !row.hasAtestado) {
@@ -159,11 +141,13 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       }
 
       if (q !== '') {
+        const guardian = `${row.student.filiacao1 || ''} ${row.student.guardianName || ''}`.toLowerCase();
         const match =
           row.student.name.toLowerCase().includes(q) ||
+          row.cls.name.toLowerCase().includes(q) ||
           (row.student.ra && row.student.ra.toLowerCase().includes(q)) ||
           (row.student.nis && row.student.nis.toLowerCase().includes(q)) ||
-          row.cls.name.toLowerCase().includes(q);
+          guardian.includes(q);
         if (!match) return false;
       }
 
@@ -178,9 +162,38 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
     searchQuery,
   ]);
 
-  // Monta os dados tabulares limpos para exportação (.XLS e Nova Google Sheet)
-  const buildExportObjects = () => {
-    return filteredRows.map((r, index) => {
+  // Agrupamento automático por turma (mantendo ordem das turmas e ordem alfabética A-Z dentro de cada turma)
+  const groupedByClass = useMemo(() => {
+    const classOrderMap = new Map<string, number>();
+    classes.forEach((c, idx) => classOrderMap.set(c.id, idx));
+
+    const groupsMap = new Map<string, { cls: ClassGroup; rows: EvaluatedRow[] }>();
+
+    filteredRows.forEach((row) => {
+      const existing = groupsMap.get(row.cls.id);
+      if (existing) {
+        existing.rows.push(row);
+      } else {
+        groupsMap.set(row.cls.id, { cls: row.cls, rows: [row] });
+      }
+    });
+
+    return Array.from(groupsMap.values()).sort((a, b) => {
+      const idxA = classOrderMap.get(a.cls.id) ?? 999;
+      const idxB = classOrderMap.get(b.cls.id) ?? 999;
+      if (idxA !== idxB) return idxA - idxB;
+      return a.cls.name.localeCompare(b.cls.name, 'pt-BR', { numeric: true });
+    });
+  }, [classes, filteredRows]);
+
+  const handleExportXLS = () => {
+    if (groupedByClass.length === 0) {
+      showToast('Nenhum estudante listado no filtro atual para exportar.');
+      return;
+    }
+
+    const orderedRows: EvaluatedRow[] = groupedByClass.flatMap((g) => g.rows);
+    const exportObjects = orderedRows.map((r, index) => {
       const monthCols: Record<string, string | number> = {};
       r.rep.monthsBreakdown.forEach((mb) => {
         const shortM = mb.monthName.slice(0, 3).toUpperCase();
@@ -189,9 +202,9 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       });
 
       return {
-        'ORDEM (A-Z)': index + 1,
-        'ESTUDANTE (ORDEM ALFABÉTICA)': r.student.name,
+        'ORDEM': index + 1,
         'TURMA': r.cls.name,
+        'ESTUDANTE (A-Z)': r.student.name,
         'PERÍODO': r.cls.shift.replace('Turno ', '').toUpperCase(),
         'ETAPA DE ENSINO': r.rep.isEducacaoInfantil
           ? 'EDUCAÇÃO INFANTIL'
@@ -206,7 +219,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           : 'NÃO (Sem atestado)',
         '% PRESENÇA BIMESTRE': `${r.rep.frequenciaBimestrePercent}%`,
         'PIOR MÊS NO BIMESTRE': `${r.worstMonthName} (${r.worstMonthPercent}%)`,
-        'STATUS META MEC / BOLSA FAMÍLIA': r.isBelowTarget
+        'STATUS META': r.isBelowTarget
           ? `ABAIXO DA META (<${r.rep.minLegalPresencePercent}%)`
           : `DENTRO DA META (≥${r.rep.minLegalPresencePercent}%)`,
         'RA': `${r.student.ra}-${r.student.digRa}`,
@@ -214,796 +227,579 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         'RESPONSÁVEL / TELEFONE': `${r.student.filiacao1 || r.student.guardianName || '—'} (${r.student.telefones || r.student.guardianPhone || '—'})`,
       };
     });
-  };
-
-  // Exportação 1: Arquivo Excel (.XLS)
-  const handleExportXLS = () => {
-    const rows = buildExportObjects();
-    if (rows.length === 0) {
-      showToast('Nenhum estudante listado no filtro atual para exportar.');
-      return;
-    }
 
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
+    const ws = XLSX.utils.json_to_sheet(exportObjects);
     const safeSheetName = `Bolsa_${currentBimester.id.toUpperCase()}`.slice(0, 31);
     XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
-    const fileName = `Bolsa_Familia_Abaixo_Meta_${currentBimester.id}_2027.xls`;
+    const fileName = `Listas_Nominais_${currentBimester.id}_2027.xls`;
     XLSX.writeFile(wb, fileName, { bookType: 'biff8' });
-    showToast(`Planilha ${fileName} exportada com ${rows.length} estudantes em ordem alfabética!`);
-  };
-
-  // Exportação 2: Criar Nova Google Sheet na Nuvem
-  const handleExportNewGoogleSheet = async () => {
-    const rows = buildExportObjects();
-    if (rows.length === 0) {
-      showToast('Nenhum estudante listado no filtro atual para exportar.');
-      return;
-    }
-
-    setIsExportingGoogleSheet(true);
-    setCreatedSheetUrl(null);
-    try {
-      let token = await getAccessToken();
-      if (!token) {
-        const authRes = await googleSignIn();
-        token = authRes?.accessToken || (await getAccessToken());
-      }
-      if (!token) {
-        showToast('Conecte sua conta Google para gerar a Nova Google Sheet.');
-        setIsExportingGoogleSheet(false);
-        return;
-      }
-
-      const classLabel =
-        selectedClassFilter === 'all'
-          ? 'Todas as Turmas'
-          : classes.find((c) => c.id === selectedClassFilter)?.name || 'Turma';
-
-      const sheetTitle = `Bolsa Família • ${currentBimester.shortLabel} • ${classLabel} (${new Date().toLocaleDateString('pt-BR')})`;
-
-      const createRes = await fetch(
-        'https://sheets.googleapis.com/v4/spreadsheets',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            properties: {
-              title: sheetTitle,
-              locale: 'pt_BR',
-            },
-            sheets: [
-              {
-                properties: {
-                  title: 'Abaixo_da_Meta_Bimestre',
-                  gridProperties: {
-                    frozenRowCount: 1,
-                  },
-                },
-              },
-            ],
-          }),
-        }
-      );
-
-      if (!createRes.ok) {
-        throw new Error('Falha ao criar nova planilha no Google Sheets.');
-      }
-
-      const createdData = await createRes.json();
-      const newSpreadsheetId = createdData.spreadsheetId;
-      const newSpreadsheetUrl =
-        createdData.spreadsheetUrl ||
-        `https://docs.google.com/spreadsheets/d/${newSpreadsheetId}/edit`;
-
-      const headers = Object.keys(rows[0]);
-      const values = [
-        headers,
-        ...rows.map((rowObj) =>
-          headers.map((h) => String((rowObj as Record<string, any>)[h] ?? ''))
-        ),
-      ];
-
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${newSpreadsheetId}/values/Abaixo_da_Meta_Bimestre!A1?valueInputOption=USER_ENTERED`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            values,
-          }),
-        }
-      );
-
-      setCreatedSheetUrl(newSpreadsheetUrl);
-      showToast(
-        `Nova Google Sheet criada com sucesso (${rows.length} estudantes em ordem alfabética)!`
-      );
-    } catch (err) {
-      console.error('Erro ao exportar para Nova Google Sheet:', err);
-      showToast('Não foi possível criar a Google Sheet agora. Verifique a conexão Google.');
-    } finally {
-      setIsExportingGoogleSheet(false);
-    }
+    showToast(`Planilha ${fileName} exportada (${exportObjects.length} estudantes por turma).`);
   };
 
   if (userRole !== 'admin') {
     return (
-      <div className="max-w-xl mx-auto my-12 p-6 bg-white rounded-3xl shadow-sm text-center space-y-2">
+      <div className="max-w-lg mx-auto my-12 p-8 bg-white rounded-3xl text-center space-y-3 shadow-2xs">
         <span className="material-symbols-outlined text-[36px] text-[#ff3b30]">
           lock
         </span>
-        <h2 className="text-lg font-bold text-[#1d1d1f]">
+        <h2 className="text-lg font-semibold text-[#111827] tracking-tight">
           Acesso Restrito à Gestão / Secretaria
         </h2>
-        <p className="text-sm text-[#6e6e73]">
-          O painel consolidado do Bolsa Família e metas bimestrais é exclusivo do perfil Administrador.
+        <p className="text-sm text-[#6e6e73] leading-relaxed">
+          As listas nominais consolidadas são exclusivas do perfil Administrador.
         </p>
       </div>
     );
   }
 
+  const hasActiveFilters =
+    selectedClassFilter !== 'all' ||
+    selectedSegmentFilter !== 'all' ||
+    selectedAtestadoFilter !== 'all' ||
+    !onlyBelowTarget ||
+    searchQuery.trim() !== '';
+
   return (
-    <div className="flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-12 animate-gentle-fade">
+    <div className="flex flex-col w-full min-w-0 max-w-6xl mx-auto space-y-5 pb-16 animate-gentle-fade">
       {toastMsg && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 max-w-lg mx-auto animate-in fade-in duration-100">
-          <div className="bg-[#1d1d1f] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 min-w-0">
-            <span className="material-symbols-outlined text-[20px] text-[#28cd41] shrink-0">
+        <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-100">
+          <div className="bg-[#1d1d1f] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 min-w-0">
+            <span className="material-symbols-outlined text-[19px] text-[#28cd41] shrink-0">
               check_circle
             </span>
-            <p className="text-sm font-semibold leading-snug break-words min-w-0">{toastMsg}</p>
+            <p className="text-sm font-medium leading-snug break-words min-w-0">{toastMsg}</p>
           </div>
         </div>
       )}
 
-      {/* Breadcrumb Limpo */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#48484a] py-0.5 min-w-0">
-        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-          {onBack && (
-            <>
+      {/* CABEÇALHO ULTRA-MINIMALISTA SEM CONTORNOS (SF PRO) */}
+      <header className="space-y-4 min-w-0">
+        <div className="flex items-center justify-between gap-3 flex-wrap min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            {onBack && (
               <button
                 type="button"
                 onClick={onBack}
-                className="text-[#3c3c43] hover:text-[#111827] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                aria-label="Voltar"
+                className="w-10 h-10 rounded-full bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] flex items-center justify-center cursor-pointer transition-colors shrink-0"
               >
-                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-                <span>Voltar</span>
+                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
               </button>
-              <span className="text-[#8e8e93]">/</span>
-            </>
-          )}
-          <span className="font-semibold text-[#111827]">Bolsa Família &amp; Fretado</span>
-        </div>
-        <span className="text-[#48484a] text-xs hidden sm:inline">
-          Listas Nominais e Condicionalidades Sociais
-        </span>
-      </div>
-
-      {/* CABEÇALHO SIMPLIFICADO & EXPORTAÇÃO */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4 min-w-0">
-        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 min-w-0">
-          <div className="space-y-1.5 min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-[#48484a]">
-              <span className="font-semibold text-[#111827]">Busca Ativa Bimestral</span>
-              <span aria-hidden="true">·</span>
-              <span className="break-words">{SCHOOL_NAME}</span>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-[#0f172a] tracking-[-0.028em] leading-tight break-words">
+                Listas Nominais
+              </h1>
+              <p className="mt-0.5 text-xs sm:text-[13px] font-medium text-[#64748b] tabular-nums tracking-[-0.008em]">
+                {currentBimester.shortLabel} · {filteredRows.length}{' '}
+                {filteredRows.length === 1 ? 'estudante' : 'estudantes'} em {groupedByClass.length}{' '}
+                {groupedByClass.length === 1 ? 'turma' : 'turmas'}
+              </p>
             </div>
-            <h1 className="text-[21px] sm:text-2xl font-semibold text-[#111827] tracking-tight leading-snug break-words">
-              Abaixo da Meta — {currentBimester.shortLabel}
-            </h1>
-            <p className="text-[13px] sm:text-sm text-[#3c3c43] leading-relaxed break-words">
-              Lista em <strong>ordem alfabética (A–Z)</strong> para Bolsa Família e Transporte Fretado.
-              <span className="text-[#b42318] font-semibold"> Fundamental &lt; 75% · Infantil &lt; 60%</span>.
-            </p>
           </div>
 
-          {/* Ações de Exportação Proporcionais */}
-          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 sm:inline-flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Seletor de Modo: Grade vs Lista */}
+            <div className="flex items-center gap-1 p-1 bg-[#f1f5f9] rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`min-h-[34px] px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                    : 'text-[#64748b] hover:text-[#0f172a]'
+                }`}
+                title="Exibir grade de cartões"
+              >
+                <span className="material-symbols-outlined text-[16px]">grid_view</span>
+                <span className="hidden sm:inline">Grade</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('compact')}
+                className={`min-h-[34px] px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  viewMode === 'compact'
+                    ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                    : 'text-[#64748b] hover:text-[#0f172a]'
+                }`}
+                title="Exibir lista compacta"
+              >
+                <span className="material-symbols-outlined text-[16px]">view_list</span>
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handleExportXLS}
-              className="min-w-0 min-h-[44px] px-4 py-2 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all active:scale-[0.98] whitespace-normal text-center"
+              className="min-h-[40px] px-3.5 rounded-2xl bg-[#0b3b8c] hover:bg-[#0052cc] text-white font-semibold text-xs sm:text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
             >
-              <span className="material-symbols-outlined text-[18px] shrink-0">download</span>
-              <span>Exportar Excel</span>
+              <span className="material-symbols-outlined text-[18px]">download</span>
+              <span>Excel</span>
             </button>
-
             <button
               type="button"
               onClick={() => window.print()}
-              className="min-w-0 min-h-[44px] px-4 py-2 rounded-xl bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] font-semibold text-[13px] flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all active:scale-[0.98] whitespace-normal text-center"
+              className="min-h-[40px] px-3.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[18px] shrink-0">print</span>
-              <span>Imprimir / PDF</span>
+              <span className="material-symbols-outlined text-[18px]">print</span>
+              <span className="hidden min-[400px]:inline">Imprimir</span>
             </button>
           </div>
         </div>
 
-        {/* Link imediato quando uma Nova Google Sheet é gerada */}
-        {createdSheetUrl && (
-          <div className="p-4 rounded-2xl bg-emerald-100 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
-            <div className="flex items-center gap-2 font-semibold text-sm">
-              <span className="material-symbols-outlined text-[20px] text-emerald-800">
-                task_alt
-              </span>
-              <span>
-                Nova planilha criada no seu Google Drive com os estudantes filtrados ({currentBimester.shortLabel}):
-              </span>
-            </div>
-            <a
-              href={createdSheetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 rounded-xl bg-emerald-800 text-white font-semibold text-xs inline-flex items-center gap-1.5 self-start sm:self-auto hover:bg-emerald-900 shadow-2xs"
-            >
-              <span>Abrir Planilha no Google Sheets</span>
-              <span className="material-symbols-outlined text-[15px]">
-                open_in_new
-              </span>
-            </a>
-          </div>
-        )}
-
-        {/* SELETOR VISUAL DE BIMESTRES */}
-        <div className="pt-1">
-          <span className="text-xs font-semibold text-[#3c3c43] block mb-2">
-            Recorte Bimestral (2027)
+        {/* BARRA DE BUSCA RÁPIDA NO TOPO (TOTALMENTE SEM CONTORNOS) */}
+        <div className="relative min-w-0">
+          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[20px]">
+            search
           </span>
-          <div className="grid grid-cols-2 min-[480px]:grid-cols-3 lg:grid-cols-6 gap-2">
-            {OFFICIAL_BIMESTERS_2027.map((bim) => {
-              const isSelected = bim.id === selectedBimesterId;
-              return (
-                <button
-                  key={bim.id}
-                  type="button"
-                  onClick={() => setSelectedBimesterId(bim.id)}
-                  className={`p-3 rounded-2xl text-left transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#1d1d1f] text-white shadow-sm'
-                      : 'bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827]'
-                  }`}
-                >
-                  <span
-                    className={`text-xs font-semibold block ${
-                      isSelected ? 'text-white/85' : 'text-[#48484a]'
-                    }`}
-                  >
-                    {bim.id === 'anual' ? 'Consolidado' : `${bim.id.replace('bim', 'º Bimestre')}`}
-                  </span>
-                  <span className="text-sm font-semibold block mt-0.5 tabular-nums">
-                    {bim.shortLabel}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar estudante por nome, turma, RA, NIS ou responsável..."
+            aria-label="Buscar estudante nas listas nominais"
+            className="w-full min-h-[48px] pl-11 pr-11 rounded-2xl bg-white text-sm sm:text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#f8fafc] shadow-2xs transition-colors"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl flex items-center justify-center text-[#64748b] hover:text-[#0f172a] cursor-pointer"
+              aria-label="Limpar busca"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          )}
         </div>
 
-        {/* DESTAQUES VISUAIS (SEM CONTORNO / ZERO RING) */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
-          {/* Card 1: Total Abaixo da Meta */}
+        {/* FILTROS DISCRETOS SEM CONTORNOS (ZERO PILLS) */}
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <select
+            value={selectedBimesterId}
+            onChange={(e) => setSelectedBimesterId(e.target.value as BimesterId2027)}
+            aria-label="Bimestre de referência"
+            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
+          >
+            {OFFICIAL_BIMESTERS_2027.map((bim) => (
+              <option key={bim.id} value={bim.id}>
+                {bim.shortLabel}
+              </option>
+            ))}
+          </select>
+
           <button
             type="button"
-            onClick={() => {
-              setOnlyBelowTarget(true);
-              setSelectedSegmentFilter('all');
-              setSelectedAtestadoFilter('all');
-            }}
-            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer min-w-0 break-words ${
-              onlyBelowTarget &&
-              selectedSegmentFilter === 'all' &&
-              selectedAtestadoFilter === 'all'
-                ? 'bg-rose-200 text-rose-950 shadow-sm'
-                : 'bg-rose-100/90 hover:bg-rose-200/80 text-rose-950'
+            onClick={() => setOnlyBelowTarget((prev) => !prev)}
+            className={`min-h-[38px] px-3.5 rounded-2xl text-xs sm:text-[13px] font-semibold cursor-pointer transition-colors tabular-nums ${
+              onlyBelowTarget
+                ? 'bg-[#fee2e2] text-[#991b1b]'
+                : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
             }`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <span className="text-xs font-semibold text-rose-900">
-                Abaixo da Meta
-              </span>
-              <span className="material-symbols-outlined text-[18px] text-rose-800 shrink-0">
-                warning
-              </span>
-            </div>
-            <span className="text-2xl sm:text-3xl font-semibold text-rose-950 tabular-nums block mt-1.5 leading-none">
-              {kpiStats.totalBelowTarget}
-            </span>
-            <span className="text-xs font-medium text-rose-900 block mt-1.5 tabular-nums">
-              de {kpiStats.totalEvaluated} ativos
-            </span>
+            {onlyBelowTarget
+              ? `Abaixo da meta (${counts.belowTarget})`
+              : `Todos ativos (${counts.totalEvaluated})`}
           </button>
 
-          {/* Card 2: Ensino Fundamental (< 75%) */}
-          <button
-            type="button"
-            onClick={() => {
-              setOnlyBelowTarget(true);
-              setSelectedSegmentFilter(
-                selectedSegmentFilter === 'fundamental' ? 'all' : 'fundamental'
-              );
-            }}
-            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer min-w-0 break-words ${
-              selectedSegmentFilter === 'fundamental'
-                ? 'bg-sky-200 text-sky-950 shadow-sm'
-                : 'bg-sky-100/90 hover:bg-sky-200/80 text-sky-950'
-            }`}
+          <select
+            value={selectedClassFilter}
+            onChange={(e) => setSelectedClassFilter(e.target.value)}
+            aria-label="Filtrar por turma"
+            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
           >
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <span className="text-xs font-semibold text-sky-900">
-                Fundamental (&lt; 75%)
-              </span>
-              <span className="material-symbols-outlined text-[18px] text-sky-800 shrink-0">
-                menu_book
-              </span>
-            </div>
-            <span className="text-2xl sm:text-3xl font-semibold text-sky-950 tabular-nums block mt-1.5 leading-none">
-              {kpiStats.belowFundamentalCount}
-            </span>
-            <span className="text-xs font-medium text-sky-900 block mt-1.5">
-              1º ao 5º Ano
-            </span>
-          </button>
+            <option value="all">Todas as turmas</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
 
-          {/* Card 3: Educação Infantil (< 60%) */}
-          <button
-            type="button"
-            onClick={() => {
-              setOnlyBelowTarget(true);
-              setSelectedSegmentFilter(
-                selectedSegmentFilter === 'infantil' ? 'all' : 'infantil'
-              );
-            }}
-            className={`text-left rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 transition-all cursor-pointer min-w-0 break-words ${
-              selectedSegmentFilter === 'infantil'
-                ? 'bg-amber-200 text-amber-950 shadow-sm'
-                : 'bg-amber-100/90 hover:bg-amber-200/80 text-amber-950'
-            }`}
+          <select
+            value={selectedSegmentFilter}
+            onChange={(e) =>
+              setSelectedSegmentFilter(e.target.value as 'all' | 'fundamental' | 'infantil')
+            }
+            aria-label="Filtrar por etapa"
+            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
           >
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <span className="text-xs font-semibold text-amber-950">
-                Infantil (&lt; 60%)
-              </span>
-              <span className="material-symbols-outlined text-[18px] text-amber-800 shrink-0">
-                child_care
-              </span>
-            </div>
-            <span className="text-2xl sm:text-3xl font-semibold text-amber-950 tabular-nums block mt-1.5 leading-none">
-              {kpiStats.belowInfantilCount}
-            </span>
-            <span className="text-xs font-medium text-amber-900 block mt-1.5">
-              G4 e G5
-            </span>
-          </button>
+            <option value="all">Todas as etapas</option>
+            <option value="fundamental">Fundamental (&lt; 75%)</option>
+            <option value="infantil">Infantil (&lt; 60%)</option>
+          </select>
 
-          {/* Card 4: Com Atestado vs Sem Atestado */}
-          <div className="rounded-2xl sm:rounded-3xl bg-[#e9e9ef] p-3.5 sm:p-4 flex flex-col justify-between col-span-2 sm:col-span-1 min-w-0 break-words">
-            <span className="text-xs font-semibold text-[#3c3c43] block">
-              Justificativa Médica
-            </span>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedAtestadoFilter(
-                    selectedAtestadoFilter === 'com_atestado' ? 'all' : 'com_atestado'
-                  )
-                }
-                className={`p-2 rounded-xl text-center cursor-pointer transition-all min-w-0 ${
-                  selectedAtestadoFilter === 'com_atestado'
-                    ? 'bg-emerald-800 text-white font-semibold'
-                    : 'bg-emerald-100 text-emerald-950 hover:bg-emerald-200/80 font-semibold'
-                }`}
-              >
-                <span className="text-lg font-semibold tabular-nums block leading-none">
-                  {kpiStats.belowWithAtestadoCount}
-                </span>
-                <span className="text-xs font-medium block mt-1 break-words leading-tight">
-                  Com Atestado
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedAtestadoFilter(
-                    selectedAtestadoFilter === 'sem_atestado' ? 'all' : 'sem_atestado'
-                  )
-                }
-                className={`p-2 rounded-xl text-center cursor-pointer transition-all min-w-0 ${
-                  selectedAtestadoFilter === 'sem_atestado'
-                    ? 'bg-rose-800 text-white font-semibold'
-                    : 'bg-rose-100 text-rose-950 hover:bg-rose-200/80 font-semibold'
-                }`}
-              >
-                <span className="text-lg font-semibold tabular-nums block leading-none">
-                  {kpiStats.belowWithoutAtestadoCount}
-                </span>
-                <span className="text-xs font-medium block mt-1 break-words leading-tight">
-                  Sem Atestado
-                </span>
-              </button>
-            </div>
-          </div>
+          <select
+            value={selectedAtestadoFilter}
+            onChange={(e) =>
+              setSelectedAtestadoFilter(
+                e.target.value as 'all' | 'com_atestado' | 'sem_atestado'
+              )
+            }
+            aria-label="Filtrar por atestado"
+            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
+          >
+            <option value="all">Atestado: todos</option>
+            <option value="com_atestado">Com atestado</option>
+            <option value="sem_atestado">Sem atestado</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedClassFilter('all');
+                setSelectedSegmentFilter('all');
+                setSelectedAtestadoFilter('all');
+                setOnlyBelowTarget(true);
+                setSearchQuery('');
+              }}
+              className="min-h-[38px] px-3 rounded-2xl text-xs font-semibold text-[#64748b] hover:text-[#0f172a] cursor-pointer transition-colors"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
+      </header>
 
-        {/* BARRA DE FILTROS SIMPLIFICADA SEM CONTORNOS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 pt-2">
-          {/* Filtro 1: Por Turma ou Todas as Turmas */}
-          <div className="lg:col-span-3">
-            <select
-              value={selectedClassFilter}
-              onChange={(e) => setSelectedClassFilter(e.target.value)}
-              className="w-full min-h-[44px] px-3.5 bg-[#e9e9ef] text-[#111827] font-semibold text-sm rounded-2xl cursor-pointer focus:outline-none"
-            >
-              <option value="all">Todas as Turmas ({classes.length} turmas)</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  Turma {c.name} ({c.shift.replace('Turno ', '')})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtro 2: Etapa (Infantil <60% vs Fundamental <75%) */}
-          <div className="lg:col-span-3">
-            <select
-              value={selectedSegmentFilter}
-              onChange={(e) => setSelectedSegmentFilter(e.target.value as any)}
-              className="w-full min-h-[44px] px-3.5 bg-[#e9e9ef] text-[#111827] font-semibold text-sm rounded-2xl cursor-pointer focus:outline-none"
-            >
-              <option value="all">Todas as Etapas (Inf. &lt;60% | Fund. &lt;75%)</option>
-              <option value="fundamental">Ensino Fundamental (Meta &lt; 75%)</option>
-              <option value="infantil">Educação Infantil (Meta &lt; 60%)</option>
-            </select>
-          </div>
-
-          {/* Filtro 3: Se tem Atestado ou Não */}
-          <div className="lg:col-span-2">
-            <select
-              value={selectedAtestadoFilter}
-              onChange={(e) => setSelectedAtestadoFilter(e.target.value as any)}
-              className="w-full min-h-[44px] px-3.5 bg-[#e9e9ef] text-[#111827] font-semibold text-sm rounded-2xl cursor-pointer focus:outline-none"
-            >
-              <option value="all">Com e Sem Atestado</option>
-              <option value="com_atestado">Com Atestado Médico</option>
-              <option value="sem_atestado">Sem Atestado (Injustificadas)</option>
-            </select>
-          </div>
-
-          {/* Filtro 4: Modo de Exibição */}
-          <div className="lg:col-span-2">
-            <select
-              value={onlyBelowTarget ? 'abaixo_meta' : 'todos'}
-              onChange={(e) => setOnlyBelowTarget(e.target.value === 'abaixo_meta')}
-              className="w-full min-h-[44px] px-3.5 bg-rose-100 text-rose-950 font-semibold text-sm rounded-2xl cursor-pointer focus:outline-none"
-            >
-              <option value="abaixo_meta">Apenas Abaixo da Meta</option>
-              <option value="todos">Todos os Estudantes (A–Z)</option>
-            </select>
-          </div>
-
-          {/* Busca Rápida por Nome */}
-          <div className="lg:col-span-2 relative">
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#48484a] text-[18px]">
-              search
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar aluno..."
-              className="w-full min-h-[44px] pl-10 pr-8 bg-[#e9e9ef] text-[#111827] text-sm rounded-2xl focus:bg-white focus:outline-none font-medium"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#48484a] hover:text-[#111827] cursor-pointer"
-                aria-label="Limpar busca"
-              >
-                <span className="material-symbols-outlined text-[16px]">cancel</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* RELAÇÃO NOMINAL RESPONSIVA (CARDS NO MOBILE + TABELA NO DESKTOP, ZERO CONTORNOS) */}
-      <div className="bg-white rounded-3xl overflow-hidden shadow-sm">
-        <div className="px-4 sm:px-5 py-3.5 sm:py-4 bg-[#f2f2f7] flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
-            <span className="material-symbols-outlined text-[20px] text-[#0066cc]">
-              sort_by_alpha
-            </span>
-            <span>
-              Ordem Alfabética (A–Z) · {filteredRows.length}{' '}
-              {filteredRows.length === 1 ? 'estudante' : 'estudantes'}
-            </span>
-          </div>
-          <span className="text-xs text-[#48484a] font-medium">
-            Toque no estudante para abrir a Ficha Individual
+      {/* ESTADO VAZIO */}
+      {groupedByClass.length === 0 ? (
+        <div className="bg-white rounded-3xl p-10 text-center space-y-2 shadow-2xs">
+          <span className="material-symbols-outlined text-[36px] text-[#047857]">
+            verified
           </span>
+          <p className="text-base font-semibold text-[#0f172a] tracking-tight">
+            Nenhum estudante encontrado para os filtros selecionados
+          </p>
+          <p className="text-xs sm:text-sm text-[#64748b]">
+            Ajuste os filtros de busca ou alterne para visualizar todos os estudantes ativos.
+          </p>
         </div>
+      ) : (
+        <div className="space-y-8">
+          {groupedByClass.map((group) => {
+            const isInfantil =
+              group.cls.name.toUpperCase().startsWith('GRUPO') ||
+              group.cls.grade.toUpperCase().includes('INFANTIL');
 
-        {filteredRows.length === 0 ? (
-          <div className="p-10 text-center space-y-2">
-            <span className="material-symbols-outlined text-[38px] text-[#047857]">
-              verified
-            </span>
-            <h3 className="text-base font-semibold text-[#111827]">
-              Nenhum estudante abaixo da meta para os filtros selecionados
-            </h3>
-            <p className="text-sm text-[#3c3c43]">
-              Altere o bimestre, a turma ou selecione &ldquo;Todos os Estudantes (A–Z)&rdquo; para visualizar toda a relação.
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Cartões Mobile / Tablet (< lg) — Zero corte ou rolagem lateral forçada */}
-            <div className="lg:hidden p-3 sm:p-4 space-y-2.5">
-              {filteredRows.map((row, idx) => {
-                const { student, cls, rep, hasAtestado, isBelowTarget } = row;
-                return (
-                  <button
-                    key={`mob-${cls.id}-${student.id}`}
-                    type="button"
-                    onClick={() =>
-                      onOpenStudentGrid(
-                        student,
-                        cls.id,
-                        cls.name,
-                        cls.classesHeld || 20
-                      )
-                    }
-                    className={`w-full min-w-0 text-left p-3.5 rounded-2xl transition-colors cursor-pointer space-y-2.5 ${
-                      isBelowTarget
-                        ? 'bg-rose-50/90 hover:bg-rose-100/80'
-                        : 'bg-[#f4f4f8] hover:bg-[#ebebf0]'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2.5 min-w-0">
-                      <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
-                        <span className="text-xs font-semibold text-[#48484a] tabular-nums w-5 shrink-0 pt-0.5 sm:pt-0">
-                          {(idx + 1).toString().padStart(2, '0')}
-                        </span>
-                        <StudentAvatar
-                          student={student}
-                          size="sm"
-                          expandableOnClick={false}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <span className="font-semibold text-[#111827] block break-words leading-snug text-[14px]">
-                            {student.name}
-                          </span>
-                          <span className="text-xs text-[#48484a] block break-words leading-snug">
-                            {cls.name} · RA {student.ra}-{student.digRa}
-                            {student.nis ? ` · NIS ${student.nis}` : ''}
-                          </span>
-                        </div>
-                      </div>
-                      <span
-                        className={`text-sm font-semibold tabular-nums shrink-0 ${
-                          isBelowTarget ? 'text-[#b42318]' : 'text-[#006644]'
-                        }`}
-                      >
-                        {rep.frequenciaBimestrePercent}%
-                      </span>
-                    </div>
+            return (
+              <section key={group.cls.id} className="space-y-3.5 min-w-0">
+                {/* Cabeçalho da Turma */}
+                <div className="flex items-baseline justify-between gap-2 px-1">
+                  <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold text-[#0f172a] tracking-[-0.024em]">
+                      {group.cls.name}
+                    </h2>
+                    <span className="text-xs font-medium text-[#64748b] tracking-[-0.006em]">
+                      {group.cls.shift.replace('Turno ', '')} ·{' '}
+                      {isInfantil ? 'Meta legal 60%' : 'Meta legal 75%'}
+                    </span>
+                  </div>
+                  <span className="text-xs font-semibold text-[#64748b] tabular-nums shrink-0">
+                    {group.rows.length}{' '}
+                    {group.rows.length === 1 ? 'estudante' : 'estudantes'}
+                  </span>
+                </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-0.5">
-                      <span className="text-[#3c3c43] tabular-nums font-medium break-words">
-                        <strong className="text-[#b42318]">{rep.totalFaltasBimestre} faltas</strong> em {rep.totalDiasBimestre}d · Meta {rep.minLegalPresencePercent}%
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-lg font-semibold ${
-                          hasAtestado
-                            ? 'bg-emerald-100 text-emerald-950'
-                            : 'bg-rose-100 text-rose-950'
-                        }`}
-                      >
-                        {hasAtestado
-                          ? `Com Atestado (${rep.totalAtestadosBimestre})`
-                          : 'Sem Atestado'}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                {/* MODO 1: GRADE DE CARTÕES DE ESTUDANTES (Foco Prioritário no Nome + SF Pro) */}
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 items-stretch min-w-0">
+                    {group.rows.map((row) => {
+                      const { student, cls, rep, hasAtestado, isBelowTarget } = row;
+                      const hasPdf = Boolean(
+                        (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+                          (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+                      );
+                      const waList = buildWhatsAppLinksFromPhoneString(
+                        student.telefones || student.guardianPhone,
+                        student.name
+                      );
+                      const guardianClean = student.filiacao1 || student.guardianName || '';
 
-            {/* Tabela Desktop (>= lg) — Zebra tonal limpa sem divisores */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse min-w-[920px]">
-                <thead className="bg-[#f2f2f7] text-[#3c3c43] font-semibold text-xs">
-                  <tr>
-                    <th className="py-3 px-4 w-12 text-center">#</th>
-                    <th className="py-3 px-4">Estudante (Ordem Alfabética A–Z)</th>
-                    <th className="py-3 px-3">Turma &amp; Etapa</th>
-                    {currentBimester.months.length <= 2 ? (
-                      currentBimester.months.map((mObj) => (
-                        <th
-                          key={mObj.name}
-                          className="py-3 px-3 text-center bg-[#e9e9ef]"
+                      return (
+                        <article
+                          key={`${cls.id}-${student.id}`}
+                          className={`rounded-3xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 min-w-0 transition-colors shadow-2xs ${
+                            isBelowTarget
+                              ? 'bg-[#fff8f8] hover:bg-[#fff2f2]'
+                              : 'bg-white hover:bg-[#fafbfd]'
+                          }`}
                         >
-                          {mObj.name.slice(0, 3)}/27
-                        </th>
-                      ))
-                    ) : (
-                      <th className="py-3 px-3 text-center bg-[#e9e9ef]">
-                        Pior Mês no Período
-                      </th>
-                    )}
-                    <th className="py-3 px-3 text-center">Faltas no Bimestre</th>
-                    <th className="py-3 px-3 text-center">Tem Atestado?</th>
-                    <th className="py-3 px-4 text-center">% Presença vs Meta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRows.map((row, idx) => {
-                    const { student, cls, rep, hasAtestado, isBelowTarget } = row;
-                    return (
-                      <tr
-                        key={`${cls.id}-${student.id}`}
-                        onClick={() =>
-                          onOpenStudentGrid(
-                            student,
-                            cls.id,
-                            cls.name,
-                            cls.classesHeld || 20
-                          )
-                        }
-                        className={`cursor-pointer transition-colors duration-100 ${
-                          isBelowTarget
-                            ? 'bg-rose-50/70 hover:bg-rose-100/75 odd:bg-rose-50'
-                            : 'hover:bg-[#ebebf0] odd:bg-[#f8f8fb]'
-                        }`}
-                      >
-                        <td className="py-3 px-4 text-center font-mono text-xs font-semibold text-[#48484a] tabular-nums">
-                          {(idx + 1).toString().padStart(2, '0')}
-                        </td>
+                          <div className="space-y-2.5 min-w-0">
+                            {/* Topo do Cartão: Nome do Estudante com PRIORIDADE MÁXIMA + Avatar */}
+                            <div className="flex items-start gap-3.5 min-w-0">
+                              <div
+                                onClick={() => onOpenPhotoModal(student, cls.name)}
+                                className="shrink-0 cursor-pointer"
+                                title="Atualizar foto"
+                              >
+                                <StudentAvatar
+                                  student={student}
+                                  size="md"
+                                  className="border-0 bg-[#f1f5f9]"
+                                  expandableOnClick={false}
+                                />
+                              </div>
 
-                        {/* Estudante em Ordem Alfabética */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <StudentAvatar
-                              student={student}
-                              size="sm"
-                              expandableOnClick={false}
-                            />
-                            <div className="min-w-0">
-                              <span className="font-semibold text-[#111827] block break-words leading-snug text-sm sm:text-[15px]">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-1.5 min-w-0">
+                                  <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#64748b] tabular-nums tracking-[-0.006em] truncate">
+                                    <span>Nº {student.number.toString().padStart(2, '0')}</span>
+                                    {student.ra && (
+                                      <>
+                                        <span aria-hidden="true" className="text-slate-300">·</span>
+                                        <span>RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`text-[13px] font-bold tabular-nums shrink-0 ${
+                                      isBelowTarget ? 'text-[#b42318]' : 'text-[#047857]'
+                                    }`}
+                                  >
+                                    {rep.frequenciaBimestrePercent}%
+                                  </span>
+                                </div>
+
+                                {/* Nome do Aluno no Topo com Maior Peso e Hierarquia SF Pro */}
+                                <h3 className="mt-0.5 text-[17px] font-semibold text-[#0f172a] tracking-[-0.024em] leading-[1.22] break-words">
+                                  {student.name}
+                                </h3>
+                              </div>
+                            </div>
+
+                            {/* Metadados SF Pro (Sem Espaços Vazios e Zero-Pills) */}
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-[#475569] tracking-[-0.008em] tabular-nums">
+                              <span
+                                className={
+                                  rep.totalFaltasBimestre > 0
+                                    ? isBelowTarget
+                                      ? 'text-[#b42318] font-semibold'
+                                      : 'text-[#0f172a] font-semibold'
+                                    : ''
+                                }
+                              >
+                                {rep.totalFaltasBimestre} {rep.totalFaltasBimestre === 1 ? 'falta' : 'faltas'}
+                              </span>
+                              <span aria-hidden="true" className="text-slate-300">·</span>
+                              <span>{hasAtestado ? `${rep.totalAtestadosBimestre} atest.` : 'Sem atestado'}</span>
+                              {student.nis && (
+                                <>
+                                  <span aria-hidden="true" className="text-slate-300">·</span>
+                                  <span>NIS {student.nis}</span>
+                                </>
+                              )}
+                              {student.rotaOnibus && (
+                                <>
+                                  <span aria-hidden="true" className="text-slate-300">·</span>
+                                  <span className="text-[#0b3b8c] font-semibold">
+                                    Rota {student.rotaOnibus.replace(/[^0-9]/g, '') || student.rotaOnibus.split('-')[0].trim()}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Responsável e Contato com Link WhatsApp */}
+                            {(guardianClean || waList.length > 0) && (
+                              <div className="flex items-center justify-between gap-2 text-[12px] text-[#64748b] min-w-0 tracking-[-0.008em]">
+                                <span className="truncate min-w-0">
+                                  {guardianClean || 'Responsável'}
+                                </span>
+                                {waList.length > 0 && (
+                                  <a
+                                    href={waList[0].waUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#047857] hover:underline tabular-nums shrink-0"
+                                  >
+                                    <span className="material-symbols-outlined text-[13px]">chat</span>
+                                    <span>{waList[0].display}</span>
+                                  </a>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Detalhamento Mensal no Bimestre */}
+                            {rep.monthsBreakdown.length > 0 && (
+                              <div className="flex items-center gap-1.5 pt-0.5 text-[11px] font-medium tabular-nums">
+                                {rep.monthsBreakdown.map((mb) => (
+                                  <span
+                                    key={mb.monthName}
+                                    className={`px-2 py-0.5 rounded-lg ${
+                                      mb.isBelowLegalThreshold
+                                        ? 'bg-rose-100/70 text-[#b42318] font-semibold'
+                                        : 'bg-slate-100 text-[#475569]'
+                                    }`}
+                                  >
+                                    {mb.monthName.slice(0, 3)}: {mb.frequenciaPercent}% ({mb.faltas}F)
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Ações Rápidas sem Contorno no Rodapé do Cartão */}
+                          <div className="grid grid-cols-3 gap-2 pt-1 mt-auto min-w-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
+                              }
+                              className="min-h-[40px] px-2 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                              title="Abrir ficha do estudante"
+                            >
+                              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
+                                grid_view
+                              </span>
+                              <span>Ficha</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => onOpenPhotoModal(student, cls.name)}
+                              className="min-h-[40px] px-2 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                              title="Atualizar foto"
+                            >
+                              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
+                                photo_camera
+                              </span>
+                              <span>Foto</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => onOpenStudentPdf(student, cls.name)}
+                              className={`min-h-[40px] px-2 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                                hasPdf
+                                  ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
+                                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+                              }`}
+                              title="Abrir PDF nominal"
+                            >
+                              <span className="material-symbols-outlined text-[16px] shrink-0">
+                                picture_as_pdf
+                              </span>
+                              <span>PDF</span>
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* MODO 2: LISTA COMPACTA SEM CONTORNOS */
+                  <div className="bg-white rounded-3xl overflow-hidden shadow-2xs divide-y divide-slate-100">
+                    {group.rows.map((row, idx) => {
+                      const { student, cls, rep, hasAtestado, isBelowTarget } = row;
+                      const hasPdf = Boolean(
+                        (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+                          (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+                      );
+
+                      return (
+                        <div
+                          key={`${cls.id}-${student.id}`}
+                          className={`w-full min-w-0 px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                            idx % 2 === 1 ? 'bg-[#fafbfd]' : 'bg-white'
+                          } hover:bg-[#f1f5f9]/70`}
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-[#94a3b8] tabular-nums w-6 text-center shrink-0">
+                              {(idx + 1).toString().padStart(2, '0')}
+                            </span>
+
+                            <div
+                              onClick={() => onOpenPhotoModal(student, cls.name)}
+                              className="shrink-0 cursor-pointer"
+                              title="Atualizar foto"
+                            >
+                              <StudentAvatar
+                                student={student}
+                                size="sm"
+                                className="border-0 bg-[#f1f5f9]"
+                                expandableOnClick={false}
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <span className="block text-[15px] sm:text-[16px] font-semibold text-[#0f172a] leading-snug break-words tracking-[-0.02em]">
                                 {student.name}
                               </span>
-                              <div className="flex items-center gap-1.5 text-xs text-[#48484a]">
-                                <span>RA {student.ra}-{student.digRa}</span>
-                                {student.nis && (
+
+                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[#64748b] tabular-nums tracking-[-0.006em]">
+                                <span>Nº {student.number.toString().padStart(2, '0')}</span>
+                                {student.ra && (
                                   <>
-                                    <span aria-hidden="true">·</span>
-                                    <span className="font-mono font-semibold text-[#006644]">
-                                      NIS {student.nis}
-                                    </span>
+                                    <span aria-hidden="true" className="text-slate-300">·</span>
+                                    <span>RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}</span>
                                   </>
                                 )}
+                                {student.nis && (
+                                  <>
+                                    <span aria-hidden="true" className="text-slate-300">·</span>
+                                    <span>NIS {student.nis}</span>
+                                  </>
+                                )}
+                                <span aria-hidden="true" className="text-slate-300">·</span>
+                                <span className={rep.totalFaltasBimestre > 0 ? 'font-semibold text-[#0f172a]' : ''}>
+                                  {rep.totalFaltasBimestre} faltas
+                                </span>
+                                <span aria-hidden="true" className="text-slate-300">·</span>
+                                <span>{hasAtestado ? `${rep.totalAtestadosBimestre} atest.` : 'sem atestado'}</span>
                               </div>
                             </div>
                           </div>
-                        </td>
 
-                        {/* Turma & Etapa (Infantil ≥60% ou Fundamental ≥75%) */}
-                        <td className="py-3 px-3">
-                          <span className="font-semibold text-[#111827] block">
-                            {cls.name}
-                          </span>
-                          <span className="text-xs text-[#48484a] block">
-                            {rep.isEducacaoInfantil
-                              ? 'Ed. Infantil (Meta ≥60%)'
-                              : 'Ens. Fundamental (Meta ≥75%)'}
-                          </span>
-                        </td>
-
-                        {/* Meses do Bimestre (Ex: Fev + Mar) */}
-                        {currentBimester.months.length <= 2 ? (
-                          rep.monthsBreakdown.map((mb) => (
-                            <td
-                              key={mb.monthName}
-                              className="py-3 px-3 text-center font-mono tabular-nums"
+                          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0">
+                            <span
+                              className={`text-base font-bold tabular-nums ${
+                                isBelowTarget ? 'text-[#b42318]' : 'text-[#047857]'
+                              }`}
                             >
-                              <span
-                                className={`font-semibold text-sm block ${
-                                  mb.isBelowLegalThreshold
-                                    ? 'text-[#b42318]'
-                                    : 'text-[#111827]'
-                                }`}
-                              >
-                                {mb.frequenciaPercent}%
-                              </span>
-                              <span className="text-xs text-[#48484a] block">
-                                {mb.faltas}F · {mb.atestados}A
-                              </span>
-                            </td>
-                          ))
-                        ) : (
-                          <td className="py-3 px-3 text-center font-mono tabular-nums">
-                            <span className="font-semibold text-sm text-[#b42318] block">
-                              {row.worstMonthName}: {row.worstMonthPercent}%
+                              {rep.frequenciaBimestrePercent}%
                             </span>
-                          </td>
-                        )}
 
-                        {/* Total de Faltas no Bimestre */}
-                        <td className="py-3 px-3 text-center font-mono tabular-nums">
-                          <span className="font-semibold text-sm text-[#b42318]">
-                            {rep.totalFaltasBimestre}
-                          </span>
-                          <span className="text-xs text-[#48484a] block">
-                            em {rep.totalDiasBimestre}d letivos
-                          </span>
-                        </td>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
+                                }
+                                className="min-h-[36px] px-3 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-[15px] text-[#475569]">
+                                  grid_view
+                                </span>
+                                <span>Ficha</span>
+                              </button>
 
-                        {/* Se Tem Atestado ou Não */}
-                        <td className="py-3 px-3 text-center">
-                          {hasAtestado ? (
-                            <div className="inline-flex flex-col items-center">
-                              <span className="text-xs font-semibold text-[#006644]">
-                                SIM ({rep.totalAtestadosBimestre} atestado{rep.totalAtestadosBimestre > 1 ? 's' : ''})
-                              </span>
-                              <span className="text-xs text-[#48484a]">
-                                {rep.totalSemAtestadoBimestre} s/ justificativa
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="inline-flex flex-col items-center">
-                              <span className="text-xs font-semibold text-[#b42318]">
-                                NÃO
-                              </span>
-                              <span className="text-xs text-[#9f1239]">
-                                100% sem atestado
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* % Presença no Bimestre e Destaque de Meta */}
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <div className="flex items-baseline gap-1.5 font-mono tabular-nums">
-                              <span
-                                className={`text-base font-semibold ${
-                                  isBelowTarget ? 'text-[#b42318]' : 'text-[#006644]'
+                              <button
+                                type="button"
+                                onClick={() => onOpenStudentPdf(student, cls.name)}
+                                className={`min-h-[36px] px-3 rounded-xl font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 transition-colors cursor-pointer ${
+                                  hasPdf
+                                    ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
+                                    : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
                                 }`}
                               >
-                                {rep.frequenciaBimestrePercent}%
-                              </span>
-                              <span className="text-xs text-[#48484a]">
-                                / meta {rep.minLegalPresencePercent}%
-                              </span>
-                            </div>
-                            <div className="w-28 h-1.5 rounded-full bg-[#dcdce4] overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  isBelowTarget ? 'bg-[#b42318]' : 'bg-[#006644]'
-                                }`}
-                                style={{
-                                  width: `${Math.min(100, Math.max(8, rep.frequenciaBimestrePercent))}%`,
-                                }}
-                              />
+                                <span className="material-symbols-outlined text-[15px]">
+                                  picture_as_pdf
+                                </span>
+                                <span>PDF</span>
+                              </button>
                             </div>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

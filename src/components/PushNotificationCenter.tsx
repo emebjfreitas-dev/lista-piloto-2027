@@ -83,10 +83,26 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
       }
     });
 
+    const effectiveAssignedIds =
+      assignedClassIds.length > 0
+        ? assignedClassIds
+        : visibleClasses.map((c) => c.id);
+
     const handleSwMessage = (event: MessageEvent) => {
       const data = event.data;
       if (data && data.type === 'PUSH_NOTIFICATION_CLICKED' && data.targetScreen) {
         onNavigateScreen?.(data.targetScreen as ScreenType, data.targetClassId);
+      } else if (
+        data &&
+        data.type === 'FCM_SUBSCRIPTION_REFRESH_NEEDED' &&
+        getPushPermissionState() === 'granted'
+      ) {
+        void registerDeviceForFcm({
+          userEmail,
+          userName: userName || userEmail.split('@')[0],
+          userRole,
+          assignedClassIds: effectiveAssignedIds,
+        });
       }
     };
 
@@ -98,11 +114,6 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
       setCustomNotices(getStoredCustomPushNotices());
       setActiveBanner(notice);
     });
-
-    const effectiveAssignedIds =
-      assignedClassIds.length > 0
-        ? assignedClassIds
-        : visibleClasses.map((c) => c.id);
 
     const unsubscribeFcm = subscribeToFcmNotifications({
       userEmail,
@@ -126,9 +137,9 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
         if (!mounted) return;
         setSwActive(res.swReady);
         setPermission(res.permission);
-        if (res.hasPushSubscription || res.fcmToken) {
+        if (res.fcmToken || res.hasPushSubscription) {
           setHasFcmToken(true);
-          setFcmChannelLabel('FCM / Push Ativo');
+          setFcmChannelLabel(res.fcmToken ? 'FCM Nativo Ativo' : 'Push Web Ativo');
         } else if (res.swReady) {
           setFcmChannelLabel('SW Push Ativo');
         }
@@ -236,11 +247,19 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
         userRole,
         assignedClassIds: effectiveAssignedIds,
       });
-      const isPushActive = Boolean(res.hasPushSubscription || res.fcmToken);
+      const isPushActive = Boolean(res.fcmToken || res.hasPushSubscription);
       setPermission(res.permission);
       setSwActive(res.swReady);
       setHasFcmToken(isPushActive);
-      setFcmChannelLabel(isPushActive ? 'FCM / Push Ativo' : res.swReady ? 'SW Push Ativo' : 'Push Web');
+      setFcmChannelLabel(
+        res.fcmToken
+          ? 'FCM Nativo Ativo'
+          : res.hasPushSubscription
+          ? 'Push Web Ativo'
+          : res.swReady
+          ? 'SW Push Ativo'
+          : 'Push Web'
+      );
       setFcmFeedbackMsg(res.message);
 
       if (res.ok) {

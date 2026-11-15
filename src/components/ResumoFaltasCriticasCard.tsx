@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
+  AuthorizedUser,
   ClassGroup,
   ConsecutiveAbsenceOccurrence,
   Student,
@@ -7,7 +8,6 @@ import {
 } from '../types';
 import { StudentAvatar } from './StudentAvatar';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
-import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 
 export interface CriticalAbsenceItem {
   cls: ClassGroup;
@@ -24,6 +24,7 @@ export interface CriticalAbsenceItem {
 interface ResumoFaltasCriticasCardProps {
   classes: ClassGroup[];
   userRole: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
   defaultThreshold?: number;
   onSelectStudentForConsecutiveScreen?: (cls: ClassGroup, student: Student) => void;
   onOpenStudentGrid?: (
@@ -40,11 +41,15 @@ const THRESHOLD_STORAGE_KEY = 'emeb_candelario_critical_absence_threshold_2027';
 export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> = ({
   classes,
   userRole,
+  teacherRoleType,
   defaultThreshold = 3,
   onSelectStudentForConsecutiveScreen,
   onOpenStudentGrid,
   onOpenStudentPdf,
 }) => {
+  const isStrictAdmin =
+    userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
+  const isPeb1 = userRole === 'usuario';
   const [threshold, setThreshold] = useState<number>(() => {
     try {
       const saved = parseInt(localStorage.getItem(THRESHOLD_STORAGE_KEY) || '', 10);
@@ -275,17 +280,17 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
               const cardTierColor =
                 consecutiveDaysCount >= 10
-                  ? 'bg-[#fff1f2] hover:bg-[#ffe4e6] border-l-4 border-l-[#e11d48] border-[#e11d48]/30'
+                  ? 'bg-[#fff1f2]/80 hover:bg-[#ffe4e6]/80 border-[#e11d48]/30'
                   : consecutiveDaysCount >= 5
-                  ? 'bg-[#fff7ed] hover:bg-[#ffedd5] border-l-4 border-l-[#ea580c] border-[#ea580c]/30'
-                  : 'bg-[#fffbeb] hover:bg-[#fef3c7] border-l-4 border-l-[#f59e0b] border-[#f59e0b]/30';
+                  ? 'bg-[#fff7ed]/80 hover:bg-[#ffedd5]/80 border-[#ea580c]/30'
+                  : 'bg-[#fffbeb]/80 hover:bg-[#fef3c7]/80 border-[#f59e0b]/30';
 
               const badgeTierColor =
                 consecutiveDaysCount >= 10
                   ? 'bg-[#be123c] text-white'
                   : consecutiveDaysCount >= 5
                   ? 'bg-[#ea580c] text-white'
-                  : 'bg-[#f59e0b] text-white';
+                  : 'bg-[#b45309] text-white';
 
               return (
                 <div
@@ -397,13 +402,14 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             </span>
           )}
 
-          {onSelectStudentForConsecutiveScreen && criticalItems.length > 0 && (
+          {onSelectStudentForConsecutiveScreen &&
+            (criticalItems.length > 0 || (classes[0] && classes[0].students[0])) && (
             <button
               type="button"
               onClick={() =>
                 onSelectStudentForConsecutiveScreen(
-                  criticalItems[0].cls,
-                  criticalItems[0].student
+                  (criticalItems[0] || { cls: classes[0], student: classes[0].students[0] }).cls,
+                  (criticalItems[0] || { cls: classes[0], student: classes[0].students[0] }).student
                 )
               }
               className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
@@ -411,7 +417,13 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
               <span className="material-symbols-outlined text-[17px] text-[#ff3b30]">
                 event_busy
               </span>
-              <span>Abrir Painel de Faltas Seguidas</span>
+              <span>
+                {isStrictAdmin
+                  ? 'Atender Contatos & Feedbacks'
+                  : isPeb1
+                  ? 'Pedir Contato à Secretaria'
+                  : 'Abrir Painel de Busca Ativa'}
+              </span>
             </button>
           )}
         </div>
@@ -543,9 +555,11 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     {selectedDetailItem.monthlyUnjustifiedAbsences} faltas não justificadas registradas no mês
                   </p>
                   <p className="text-xs text-[#6e6e73]">
-                    {userRole === 'peb2'
-                      ? 'Aguardando seleção dos dias específicos pelo(a) professor(a) regente ou retorno da secretaria.'
-                      : 'Clique em "Gerenciar em Faltas Seguidas" abaixo para apontar os dias exatos ou registrar o retorno da família.'}
+                    {isStrictAdmin
+                      ? 'Aguardando o(a) docente PEB I solicitar contato na aba Busca Ativa caso identifique 3 ou mais faltas seguidas.'
+                      : isPeb1
+                      ? 'Clique em "Pedir Contato à Secretaria" abaixo para informar os dias exatos de faltas seguidas.'
+                      : 'Aguardando solicitação de contato pelo(a) docente PEB I e devolutiva da secretaria.'}
                   </p>
                 </div>
               ) : (
@@ -560,23 +574,25 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-bold text-[#1d1d1f]">
-                            {seq}ª Sequência · {occ.selectedDates.join(', ')} (
+                            {seq}ª Solicitação · {occ.selectedDates.join(', ')} (
                             {occ.selectedDates.length} dias)
                           </span>
-                          <span className="text-xs text-[#6e6e73] font-mono">
+                          <span className="text-xs text-[#6e6e73] font-mono tabular-nums">
                             {occ.reportedAt || 'Registrado'}
                           </span>
                         </div>
                         {fb ? (
                           <div className="bg-white rounded-xl p-2.5 text-sm text-[#1d1d1f]">
                             <span className="font-semibold text-[#1d8338] block text-xs">
-                              Devolutiva da Família ({occ.feedbackUpdatedAt || 'Secretaria'}):
+                              Devolutiva da Família ({occ.feedbackByName || 'Secretaria'} · {occ.feedbackUpdatedAt || 'Recente'}):
                             </span>
                             <p className="mt-0.5 leading-relaxed">{fb}</p>
                           </div>
                         ) : (
                           <p className="text-xs text-[#ff3b30] font-medium">
-                            Aguardando contato e devolutiva da secretaria com a família.
+                            {isStrictAdmin
+                              ? 'Pendente de contato com a família e preenchimento do feedback.'
+                              : 'Aguardando contato e devolutiva da secretaria com a família.'}
                           </p>
                         )}
                       </div>
@@ -634,7 +650,13 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   <span className="material-symbols-outlined text-[18px] shrink-0">
                     open_in_new
                   </span>
-                  <span>Gerenciar em Faltas Seguidas</span>
+                  <span>
+                    {isStrictAdmin
+                      ? 'Contatar e Registrar Feedback'
+                      : isPeb1
+                      ? 'Pedir Contato à Secretaria'
+                      : 'Ver na Busca Ativa'}
+                  </span>
                 </button>
               )}
             </div>

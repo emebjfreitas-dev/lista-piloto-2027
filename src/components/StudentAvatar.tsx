@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Student } from '../types';
 import { findPhotoInDiscoveredCache } from '../services/googleSheetsApi';
 import { isBackendApiAvailable } from '../services/apiEnvironment';
@@ -64,8 +64,42 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
     extractDriveId(student?.photoDriveUrl || '') ||
     extractDriveId(cachedDriveHit?.driveLink || '');
   const [fallbackIndex, setFallbackIndex] = useState(0);
+  const [hasIntersected, setHasIntersected] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (hasIntersected) return;
+    const el = containerRef.current;
+    if (!el) {
+      setHasIntersected(true);
+      return;
+    }
+
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      setHasIntersected(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting || entry.intersectionRatio > 0) {
+            setHasIntersected(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { rootMargin: '250px 0px', threshold: 0.01 }
+    );
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasIntersected]);
 
   const candidateUrls = React.useMemo(() => {
+    if (!hasIntersected) return [];
     if (!rawPhoto) return [];
     if (rawPhoto.startsWith('data:image/') || rawPhoto.startsWith('blob:')) return [rawPhoto];
     if (rawPhoto.includes('/drive/folders/')) return [];
@@ -90,7 +124,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
       return [rawPhoto];
     }
     return [];
-  }, [rawPhoto, driveFileId]);
+  }, [hasIntersected, rawPhoto, driveFileId]);
 
   const effectivePhoto = candidateUrls[fallbackIndex] || '';
 
@@ -127,11 +161,12 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   };
 
   const hasValidPhoto = Boolean(
-    effectivePhoto && effectivePhoto.trim().length > 0 && !imageError
+    hasIntersected && effectivePhoto && effectivePhoto.trim().length > 0 && !imageError
   );
 
   return (
     <div
+      ref={containerRef}
       className={`relative shrink-0 overflow-hidden bg-slate-100 text-slate-700 font-medium flex items-center justify-center border border-slate-200/80 select-none ${
         sizeMap[size]
       } ${className}`}
@@ -143,7 +178,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={handleImageError}
-          className="w-full h-full object-cover pointer-events-none"
+          className="w-full h-full object-cover pointer-events-none animate-gentle-fade"
         />
       ) : (
         <span className="pointer-events-none tracking-tight">{getInitials(effectiveName)}</span>

@@ -10,7 +10,7 @@ import {
 } from '../types';
 import { evaluateAttendanceLaunchWindow } from '../services/db';
 import { getDefaultReferencePeriod } from '../utils/attendanceRules';
-import { QuadroAvisosCard } from './QuadroAvisosCard';
+import { QuadroAvisosDirecao } from './QuadroAvisosDirecao';
 import { LembretePrazoFrequenciaCard } from './LembretePrazoFrequenciaCard';
 import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
 import { format } from 'date-fns';
@@ -18,7 +18,6 @@ import { ptBR } from 'date-fns/locale';
 import {
   Users,
   CalendarCheck,
-  MapPin,
   AlertTriangle,
   BarChart3,
   Bell,
@@ -64,6 +63,10 @@ interface HomeScreenProps {
   onOpenStudentGrid?: (student: Student) => void;
   onOpenStudentPdf?: (student: Student, className: string) => void;
   onSaveSchoolNotices?: (updatedNotices: SchoolNotice[]) => void;
+  onMarkNoticeRead?: (
+    noticeIds: string[],
+    reader: { userEmail: string; userName: string; userRole?: string }
+  ) => void;
   onNavigateToAcessos?: () => void;
   onOpenAdminPhotosModal?: () => void;
   onOpenAdminPdfsModal?: () => void;
@@ -96,6 +99,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenStudentGrid,
   onOpenStudentPdf,
   onSaveSchoolNotices,
+  onMarkNoticeRead,
   onNavigateToAcessos,
   onOpenAdminPhotosModal,
   onOpenAdminPdfsModal,
@@ -108,7 +112,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [selectedShiftFilter, setSelectedShiftFilter] = useState<'TODOS' | 'MANHÃ' | 'TARDE'>('TODOS');
   const [turmaSearchInput, setTurmaSearchInput] = useState('');
   const [showAllClassesGrid, setShowAllClassesGrid] = useState(false);
-  const [activeHubTab, setActiveHubTab] = useState<'avisos' | 'prazos' | 'busca_ativa'>('avisos');
+  const [activeHubTab, setActiveHubTab] = useState<'prazos' | 'busca_ativa'>('prazos');
   const [chartFilterShift, setChartFilterShift] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
 
   const referencePeriod = useMemo(() => getDefaultReferencePeriod(new Date()), []);
@@ -257,17 +261,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     ? 'Especialista PEB II'
     : 'Regente PEB I';
 
+  const primaryTeacherClass = visibleBaseClasses[0];
+
   // Ações essenciais estritamente filtradas pelo perfil (nunca expõe ferramentas Admin para PEB I, PEB II ou AEE)
   const quickActions = useMemo<QuickActionItem[]>(() => {
     const items: QuickActionItem[] = [
       {
         id: 'turmas',
         title: userRole === 'usuario' ? 'Minha Turma e Alunos' : 'Turmas e Estudantes',
-        subtitle: `${schoolStats.totalClasses} turma(s) · ${schoolStats.activeStudents} ativos`,
+        subtitle:
+          userRole === 'usuario' && primaryTeacherClass
+            ? `${primaryTeacherClass.name} · ${schoolStats.activeStudents} estudantes`
+            : `${schoolStats.totalClasses} turma(s) · ${schoolStats.activeStudents} ativos`,
         icon: <Users className="w-6 h-6" />,
         accentBg: 'bg-[#111827]',
         accentText: 'text-white',
-        onClick: () => onNavigateToScreen('turmas'),
+        onClick: () =>
+          userRole === 'usuario'
+            ? onNavigateToScreen('detalhes')
+            : onNavigateToScreen('turmas'),
       },
     ];
 
@@ -355,24 +367,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     } else {
       items.push(
         {
-          id: 'mapa_estudantes',
-          title: 'Mapa de Estudantes',
-          subtitle: 'Distribuição territorial escolar',
-          icon: <MapPin className="w-6 h-6" />,
-          accentBg: 'bg-[#f2f2f7]',
-          accentText: 'text-[#111827]',
-          onClick: () => onNavigateToScreen('mapa_estudantes'),
-        },
-        {
           id: 'avisos',
-          title: 'Quadro de Avisos',
-          subtitle: `${schoolNotices.length} comunicado(s) ativo(s)`,
+          title: 'Quadro de Avisos da Direção',
+          subtitle: `${schoolNotices.filter((n) => n.active !== false).length} comunicado(s) ativo(s)`,
           icon: <Bell className="w-6 h-6" />,
           accentBg: 'bg-[#f2f2f7]',
           accentText: 'text-[#111827]',
           onClick: () => {
-            setActiveHubTab('avisos');
-            document.getElementById('central-comunicados')?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('quadro-avisos-direcao')?.scrollIntoView({ behavior: 'smooth' });
           },
         }
       );
@@ -381,6 +383,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     return items;
   }, [
     userRole,
+    primaryTeacherClass,
     isStrictAdmin,
     canLaunchAttendance,
     schoolStats,
@@ -444,15 +447,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </span>
           </div>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] min-w-0 break-words">
-            <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Turmas</span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-950 tabular-nums block mt-1">
-              {schoolStats.totalClasses}
-            </span>
-            <span className="text-xs text-slate-600 font-medium tabular-nums block mt-1">
-              {schoolStats.morningCount} manhã · {schoolStats.afternoonCount} tarde
-            </span>
-          </div>
+          {userRole === 'usuario' && primaryTeacherClass ? (
+            <button
+              type="button"
+              onClick={() => onNavigateToScreen('detalhes')}
+              className="text-left p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] hover:bg-slate-200/70 cursor-pointer transition-colors duration-100 min-w-0 break-words"
+            >
+              <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Minha Turma</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-950 block mt-1 leading-snug">
+                {primaryTeacherClass.name}
+              </span>
+              <span className="text-xs text-slate-600 font-medium block mt-1">
+                {primaryTeacherClass.shift.replace('Turno ', '')} · {primaryTeacherClass.room || 'Sala'}
+              </span>
+            </button>
+          ) : (
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] min-w-0 break-words">
+              <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Turmas</span>
+              <span className="text-2xl sm:text-3xl font-bold text-slate-950 tabular-nums block mt-1">
+                {schoolStats.totalClasses}
+              </span>
+              <span className="text-xs text-slate-600 font-medium tabular-nums block mt-1">
+                {schoolStats.morningCount} manhã · {schoolStats.afternoonCount} tarde
+              </span>
+            </div>
+          )}
 
           <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 min-w-0 break-words">
             <span className="text-xs sm:text-[13px] font-semibold text-[#047857] block">Presença Média</span>
@@ -489,6 +508,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
       </section>
+
+      {/* QUADRO DE AVISOS DA DIREÇÃO (Visível para toda a equipe escolar · Admins postam mensagens curtas) */}
+      <QuadroAvisosDirecao
+        notices={schoolNotices}
+        canManage={isStrictAdmin}
+        userEmail={userEmail}
+        userName={userName}
+        userRoleLabel={roleLabel}
+        onSaveNotices={onSaveSchoolNotices}
+        onMarkNoticesRead={onMarkNoticeRead}
+      />
 
       {/* 2. ACESSO RÁPIDO (SEM PILLS, SEM CLUTTER, COM FERRAMENTAS ESSENCIAIS POR PERFIL) */}
       <section className="space-y-4">
@@ -582,7 +612,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
       </section>
 
-      {/* 3. SELETOR DIRETO DE TURMAS */}
+      {/* 3. SELETOR DIRETO DE TURMAS (Apenas para quem gerencia múltiplas turmas) */}
+      {userRole !== 'usuario' && (
       <section className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-5 min-w-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 min-w-0">
           <div className="min-w-0">
@@ -720,8 +751,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         )}
       </section>
+      )}
 
-      {/* 4. CENTRAL DE AVISOS, PRAZOS E BUSCA ATIVA */}
+      {/* 4. PRAZOS E BUSCA ATIVA */}
       <section
         id="central-comunicados"
         className="bg-white rounded-3xl p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-5 min-w-0"
@@ -729,26 +761,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 min-w-0">
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-semibold text-[#111827] break-words">
-              Central de Informações e Prazos
+              Prazos e Busca Ativa
             </h2>
             <p className="text-xs sm:text-sm text-[#48484a] mt-0.5 break-words">
-              Recados da coordenação, calendário de chamada e casos de busca ativa
+              Calendário de chamada mensal e casos prioritários de busca ativa
             </p>
           </div>
 
           <div className="flex flex-wrap sm:inline-flex w-full sm:w-auto max-w-full min-w-0 p-1.5 bg-[#f2f2f7] rounded-2xl text-xs sm:text-[13px] font-semibold gap-1">
-            <button
-              type="button"
-              onClick={() => setActiveHubTab('avisos')}
-              className={`flex-1 sm:flex-initial min-h-[42px] px-4 py-2 rounded-xl inline-flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer ${
-                activeHubTab === 'avisos'
-                  ? 'bg-[#111827] text-white'
-                  : 'text-[#374151] hover:bg-[#e5e5ea]'
-              }`}
-            >
-              <Bell className="w-4 h-4 shrink-0" />
-              <span>Avisos ({schoolNotices.length})</span>
-            </button>
             <button
               type="button"
               onClick={() => setActiveHubTab('prazos')}
@@ -776,17 +796,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {activeHubTab === 'avisos' && (
-          <QuadroAvisosCard
-            notices={schoolNotices}
-            userRole={userRole}
-            userEmail={userEmail}
-            userName={userName}
-            variant="dashboard"
-            onSaveNotices={onSaveSchoolNotices}
-          />
-        )}
-
         {activeHubTab === 'prazos' && (
           <LembretePrazoFrequenciaCard
             attendanceWindowConfig={attendanceWindowConfig}
@@ -803,8 +812,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {activeHubTab === 'busca_ativa' && (
           <ResumoFaltasCriticasCard
-            classes={classes}
+            classes={visibleBaseClasses}
             userRole={userRole}
+            teacherRoleType={teacherRoleType}
             onSelectStudentForConsecutiveScreen={(cls, student) => {
               onSelectStudentForConsecutiveScreen?.(cls.id, student.id);
             }}
@@ -818,7 +828,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
       </section>
 
-      {/* 5. GRÁFICO COMPARATIVO POR TURMA */}
+      {/* 5. GRÁFICO COMPARATIVO POR TURMA (Exibido apenas para múltiplas turmas) */}
+      {userRole !== 'usuario' && visibleBaseClasses.length > 1 && (
       <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4 min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 min-w-0">
           <div className="min-w-0">
@@ -954,6 +965,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </span>
         </div>
       </section>
+      )}
     </div>
   );
 };

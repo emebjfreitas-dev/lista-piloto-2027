@@ -248,16 +248,6 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
               >
                 Faltas Consecutivas
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onNavigateToScreen('mapa_estudantes');
-                  onClose();
-                }}
-                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
-              >
-                Mapa de Trajetos &amp; KM
-              </button>
               {userRole === 'admin' && (
                 <button
                   type="button"

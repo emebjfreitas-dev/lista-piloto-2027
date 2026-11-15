@@ -61,9 +61,15 @@
         "userEmail": { "type": "string", "maxLength": 160 },
         "userName": { "type": "string", "maxLength": 160 },
         "userRole": { "type": "string", "maxLength": 30 },
+        "teacherRoleType": { "type": "string", "maxLength": 30 },
+        "assignedClassIds": { "type": "array" },
         "fcmToken": { "type": "string", "maxLength": 512 },
+        "vapidSource": { "type": "string", "maxLength": 30 },
         "channel": { "type": "string", "maxLength": 30 },
+        "permission": { "type": "string", "maxLength": 30 },
+        "deviceLabel": { "type": "string", "maxLength": 80 },
         "active": { "type": "boolean" },
+        "createdAtISO": { "type": "string", "maxLength": 40 },
         "updatedAtMs": { "type": "number" }
       },
       "required": ["id", "userEmail", "channel", "active", "updatedAtMs"]
@@ -79,10 +85,15 @@
         "category": { "type": "string", "maxLength": 30 },
         "urgency": { "type": "string", "maxLength": 20 },
         "targetScreen": { "type": "string", "maxLength": 50 },
+        "targetClassIds": { "type": "array" },
         "targetAudience": { "type": "string", "maxLength": 30 },
         "closingDateFormatted": { "type": "string", "maxLength": 30 },
+        "windowPhase": { "type": "string", "maxLength": 40 },
         "createdAtMs": { "type": "number" },
-        "createdByEmail": { "type": "string", "maxLength": 160 }
+        "createdAtISO": { "type": "string", "maxLength": 40 },
+        "createdByEmail": { "type": "string", "maxLength": 160 },
+        "createdByName": { "type": "string", "maxLength": 160 },
+        "pendingClassesCount": { "type": "number" }
       },
       "required": ["id", "title", "body", "category", "urgency", "createdAtMs", "createdByEmail"]
     }

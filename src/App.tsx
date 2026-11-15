@@ -69,7 +69,6 @@ import { RegistroFrequenciaMensalScreen } from './components/RegistroFrequenciaM
 import { FaltasConsecutivasScreen } from './components/FaltasConsecutivasScreen';
 import { DiasLetivosScreen } from './components/DiasLetivosScreen';
 import { ResumoMensalScreen } from './components/ResumoMensalScreen';
-import { MapaEstudantesScreen } from './components/MapaEstudantesScreen';
 import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
 import { UsuariosAcessoScreen } from './components/UsuariosAcessoScreen';
 import { ListasNominaisScreen } from './components/ListasNominaisScreen';
@@ -163,16 +162,39 @@ export default function App() {
     matchedInitialUser?.teacherRoleType !== 'apoio' &&
     matchedInitialUser?.teacherRoleType !== 'aee';
 
+  const initialUrlParams =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const requestedScreenParam = initialUrlParams?.get('screen') as ScreenType | null;
+  const requestedClassIdParam = initialUrlParams?.get('classId');
+
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
     if (!initialSavedSession || (matchedInitialUser && !matchedInitialUser.active)) {
       return effectiveInitialIsStrictAdmin ? 'home' : 'home';
     }
-    const savedScreen = initialSavedSession.screen;
+    if (requestedScreenParam && requestedScreenParam !== 'login') {
+      const canAccessRequested =
+        (effectiveInitialIsStrictAdmin || !ADMIN_ONLY_SCREENS.includes(requestedScreenParam)) &&
+        !(effectiveInitialRole === 'peb2' && requestedScreenParam === 'frequencia_mensal');
+      if (canAccessRequested) {
+        if (effectiveInitialRole === 'usuario' && requestedScreenParam === 'turmas') {
+          return 'detalhes';
+        }
+        return requestedScreenParam;
+      }
+    }
+    const savedScreen = initialSavedSession.screen as string | undefined;
     if (savedScreen && savedScreen !== 'login') {
-      if (!effectiveInitialIsStrictAdmin && ADMIN_ONLY_SCREENS.includes(savedScreen)) {
+      if (savedScreen === 'mapa_estudantes') {
         return 'home';
       }
-      return savedScreen;
+      const typedScreen = savedScreen as ScreenType;
+      if (!effectiveInitialIsStrictAdmin && ADMIN_ONLY_SCREENS.includes(typedScreen)) {
+        return 'home';
+      }
+      if (effectiveInitialRole === 'usuario' && typedScreen === 'turmas') {
+        return 'detalhes';
+      }
+      return typedScreen;
     }
     return 'home';
   });
@@ -181,6 +203,17 @@ export default function App() {
 
   const [classes, setClasses] = useState<ClassGroup[]>(() => initialClasses);
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(() => {
+    if (requestedClassIdParam) {
+      const deepLinked = initialClasses.find((c) => c.id === requestedClassIdParam);
+      if (
+        deepLinked &&
+        (effectiveInitialRole !== 'usuario' ||
+          effectiveInitialAssignedClassIds.includes(deepLinked.id) ||
+          effectiveInitialAssignedClassId === deepLinked.id)
+      ) {
+        return deepLinked;
+      }
+    }
     const targetId =
       effectiveInitialRole === 'usuario'
         ? effectiveInitialAssignedClassId
@@ -191,6 +224,16 @@ export default function App() {
     }
     return initialClasses[0];
   });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (requestedScreenParam || requestedClassIdParam)) {
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch {
+        // ignore history API restriction
+      }
+    }
+  }, [requestedScreenParam, requestedClassIdParam]);
   const [instantSheetSyncStatus, setInstantSheetSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
   const sheetWriteTimerRef = React.useRef<number | null>(null);
 
@@ -240,7 +283,9 @@ export default function App() {
     activeTeacherRoleType !== 'apoio' &&
     activeTeacherRoleType !== 'aee';
 
-  const navigateToScreen = (nextScreen: ScreenType) => {
+  const navigateToScreen = (rawNextScreen: ScreenType) => {
+    const nextScreen =
+      userRole === 'usuario' && rawNextScreen === 'turmas' ? 'detalhes' : rawNextScreen;
     if (nextScreen === currentScreen) return;
 
     // Princípio do Menor Privilégio (PoLP): Telas administrativas restritas exclusivamente ao Admin (nunca PEB I, PEB II ou AEE)
@@ -352,6 +397,45 @@ export default function App() {
     setSchoolNotices(updatedNotices);
     saveStoredSchoolNotices(updatedNotices);
     pushSchoolNoticesToServer(updatedNotices);
+  };
+
+  const handleMarkNoticeRead = (
+    noticeIds: string[],
+    reader: { userEmail: string; userName: string; userRole?: string }
+  ) => {
+    const cleanEmail = reader.userEmail.trim().toLowerCase();
+    if (!cleanEmail || noticeIds.length === 0) return;
+    const nowISO = new Date().toISOString();
+    const idSet = new Set(noticeIds);
+
+    setSchoolNotices((prev) => {
+      let changed = false;
+      const next = prev.map((notice) => {
+        if (!idSet.has(notice.id)) return notice;
+        const existingReaders = Array.isArray(notice.readBy) ? notice.readBy : [];
+        const alreadyRecorded = existingReaders.some(
+          (r) => r.userEmail.trim().toLowerCase() === cleanEmail
+        );
+        if (alreadyRecorded) return notice;
+        changed = true;
+        return {
+          ...notice,
+          readBy: [
+            {
+              userEmail: cleanEmail,
+              userName: reader.userName.trim() || cleanEmail,
+              userRole: reader.userRole,
+              readAtISO: nowISO,
+            },
+            ...existingReaders,
+          ],
+        };
+      });
+      if (!changed) return prev;
+      saveStoredSchoolNotices(next);
+      pushSchoolNoticesToServer(next);
+      return next;
+    });
   };
 
   const [cloudSyncSnapshot, setCloudSyncSnapshot] = useState<SyncStatusSnapshot>({
@@ -686,7 +770,6 @@ export default function App() {
     className: string;
     diasLetivosMes: number;
   } | null>(null);
-  const [mapTargetStudentId, setMapTargetStudentId] = useState<string | undefined>(undefined);
 
   // Permission helper (respects role AND the attendance launch window: last school day + 2 first school days of next month, or exceptional override)
   const windowStatus = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
@@ -959,7 +1042,7 @@ export default function App() {
     if (currentScreen === 'frequencia_mensal') {
       setCurrentScreen(userRole === 'usuario' ? 'detalhes' : 'turmas');
     } else if (currentScreen === 'detalhes') {
-      setCurrentScreen('turmas');
+      setCurrentScreen(userRole === 'usuario' ? 'home' : 'turmas');
     } else if (currentScreen === 'turmas') {
       setCurrentScreen('home');
     } else {
@@ -1059,7 +1142,6 @@ export default function App() {
       dias_letivos: '4. 200 Dias',
       usuarios_acesso: '5. Acessos',
       resumo: 'Resumo Mensal',
-      mapa_estudantes: 'Mapa de Trajetos & KM',
       diagnostico_bd: 'Diagnóstico do Banco',
       importar_deficiencias_htm: 'Subir Deficiências (.HTM)',
     };
@@ -1340,6 +1422,7 @@ export default function App() {
         attendanceWindowConfig={attendanceWindowConfig}
         visibleClasses={visibleClasses}
         allClasses={classes}
+        instantSheetSyncStatus={instantSheetSyncStatus}
         onSelectClassById={(classId) => {
           const found = classes.find((c) => c.id === classId);
           if (found) setSelectedClass(found);
@@ -1429,13 +1512,14 @@ export default function App() {
             userRole={userRole}
             teacherRoleType={activeTeacherRoleType}
             userEmail={simulatedTeacherEmail || currentUserEmail}
-            userName={currentUserName}
+            userName={activeAuthorizedUser?.name || currentUserName}
             classes={userRole === 'usuario' ? visibleClasses : classes}
             assignedClassId={assignedClassId}
             assignedClassIds={assignedClassIds}
             attendanceWindowConfig={attendanceWindowConfig}
             schoolNotices={schoolNotices}
             onSaveSchoolNotices={handleSaveSchoolNotices}
+            onMarkNoticeRead={handleMarkNoticeRead}
             onNavigateToScreen={(targetScreen) => {
               if (targetScreen === 'turmas' && userRole === 'usuario') {
                 const targetCls = classes.find((c) => c.id === assignedClassId) || classes[0];
@@ -1540,9 +1624,9 @@ export default function App() {
           />
         )}
 
-        {currentScreen === 'turmas' && (
+        {currentScreen === 'turmas' && userRole !== 'usuario' && (
           <MinhasTurmasScreen
-            classes={userRole === 'usuario' ? visibleClasses : classes}
+            classes={classes}
             userRole={userRole}
             userEmail={simulatedTeacherEmail || currentUserEmail}
             userName={currentUserName}
@@ -1571,7 +1655,6 @@ export default function App() {
             onSelectClassForDetails={handleSelectClassForDetails}
             onSelectClassForMonthlyAttendance={handleSelectClassForMonthlyAttendance}
             onOpenClassStudentList={(cls) => {
-              if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
               setSelectedClass(cls);
               setIsStudentListModalOpen(true);
             }}
@@ -1597,7 +1680,7 @@ export default function App() {
           />
         )}
 
-        {currentScreen === 'detalhes' && (
+        {(currentScreen === 'detalhes' || (currentScreen === 'turmas' && userRole === 'usuario')) && (
           <DetalhesTurmaScreen
             classGroup={selectedClass}
             assignedClasses={visibleClasses}
@@ -1639,10 +1722,6 @@ export default function App() {
             }}
             onNavigateToConsecutiveAbsences={() => {
               navigateToScreen('faltas_consecutivas');
-            }}
-            onNavigateToMap={(student) => {
-              setMapTargetStudentId(student.id);
-              navigateToScreen('mapa_estudantes');
             }}
             onNavigateToSheet={() => navigateToScreen('planilha')}
             onBackToClasses={() => {
@@ -1709,6 +1788,9 @@ export default function App() {
             classGroup={selectedClass}
             availableClasses={userRole === 'admin' || userRole === 'peb2' ? classes : visibleClasses}
             userRole={userRole}
+            teacherRoleType={activeTeacherRoleType}
+            userName={activeAuthorizedUser?.name || currentUserName}
+            userEmail={simulatedTeacherEmail || currentUserEmail}
             onSelectClass={(cls) => {
               setAssignedClassId(cls.id);
               setSelectedClass(cls);
@@ -1792,32 +1874,6 @@ export default function App() {
               </button>
             </div>
           )
-        )}
-
-        {currentScreen === 'mapa_estudantes' && (
-          <MapaEstudantesScreen
-            classes={userRole === 'admin' || userRole === 'peb2' ? classes : visibleClasses}
-            userRole={userRole}
-            selectedClassId={selectedClass.id}
-            initialSelectedStudentId={mapTargetStudentId}
-            onOpenStudentGrid={(student, classId, className, diasLetivosMes) =>
-              setGridModalData({
-                student,
-                classId,
-                className,
-                diasLetivosMes,
-              })
-            }
-            onOpenStudentPdf={(student, className) =>
-              setPdfModalData({ student, className })
-            }
-            onNavigateToTurma={(cls) => {
-              setSelectedClass(cls);
-              setCurrentScreen('detalhes');
-              window.scrollTo(0, 0);
-            }}
-            onBack={handleBack}
-          />
         )}
 
         {currentScreen === 'diagnostico_bd' && (
@@ -2165,7 +2221,18 @@ export default function App() {
       />
 
       {/* Global Notifications with Sonner (Open-source, light & accessible) */}
-      <Toaster position="top-right" richColors closeButton />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        gap={10}
+        visibleToasts={4}
+        offset={{ top: 16, right: 16 }}
+        mobileOffset={{ top: 12, left: 12, right: 12 }}
+        toastOptions={{
+          className: 'sonner-sf-toast',
+        }}
+      />
     </div>
   );
 }

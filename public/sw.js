@@ -1,5 +1,5 @@
 /* Service Worker Oficial — EMEB Joaquim Candelário de Freitas (FCM Web Push & Alertas de Fechamento) */
-const SW_VERSION = 'candelario-fcm-sw-v2';
+const SW_VERSION = 'candelario-fcm-sw-v3';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -10,7 +10,7 @@ self.addEventListener('activate', (event) => {
 });
 
 /**
- * Escuta eventos Web Push / Firebase Cloud Messaging (FCM) em segundo plano
+ * Escuta eventos Web Push / Firebase Cloud Messaging (FCM HTTP v1) em segundo plano
  */
 self.addEventListener('push', (event) => {
   let payload = {
@@ -31,23 +31,43 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       const raw = event.data.json();
-      const notif = raw.notification || {};
+      const notif = raw.notification || (raw.webpush && raw.webpush.notification) || {};
       const dataObj = raw.data || {};
-      const fcmLink = (raw.fcmOptions && raw.fcmOptions.link) || (raw.webpush && raw.webpush.fcm_options && raw.webpush.fcm_options.link);
+      const fcmLink =
+        (raw.fcmOptions && raw.fcmOptions.link) ||
+        (raw.webpush && raw.webpush.fcm_options && raw.webpush.fcm_options.link);
       const urgency = dataObj.urgency || raw.urgency || 'warning';
+      const targetScreen = dataObj.targetScreen || 'frequencia_mensal';
+      const targetClassId =
+        dataObj.targetClassId && dataObj.targetClassId !== 'all'
+          ? dataObj.targetClassId
+          : '';
+      const computedUrl =
+        fcmLink ||
+        dataObj.url ||
+        `/?screen=${encodeURIComponent(targetScreen)}${
+          targetClassId ? `&classId=${encodeURIComponent(targetClassId)}` : ''
+        }`;
 
       payload = {
         ...payload,
-        title: notif.title || raw.title || payload.title,
-        body: notif.body || raw.body || payload.body,
+        title: notif.title || dataObj.title || raw.title || payload.title,
+        body: notif.body || dataObj.body || raw.body || payload.body,
         icon: notif.icon || raw.icon || payload.icon,
         badge: notif.badge || raw.badge || payload.badge,
-        tag: raw.collapseKey || dataObj.alertId || raw.tag || payload.tag,
+        tag:
+          notif.tag ||
+          raw.collapseKey ||
+          dataObj.alertId ||
+          raw.tag ||
+          payload.tag,
         requireInteraction: urgency === 'urgent' || dataObj.category === 'prazo',
         data: {
           ...payload.data,
           ...dataObj,
-          url: fcmLink || dataObj.url || payload.data.url,
+          targetScreen,
+          ...(targetClassId ? { targetClassId } : {}),
+          url: computedUrl,
         },
       };
     } catch {
@@ -86,6 +106,11 @@ self.addEventListener('message', (event) => {
   if (msg.type === 'SHOW_PUSH_NOTIFICATION' && msg.notification) {
     const { title, body, tag, targetScreen, targetClassId, category, urgency } = msg.notification;
     const isUrgent = urgency === 'urgent' || category === 'prazo';
+    const resolvedScreen = targetScreen || 'turmas';
+    const classQuery =
+      targetClassId && targetClassId !== 'all'
+        ? `&classId=${encodeURIComponent(targetClassId)}`
+        : '';
     const options = {
       body: body || '',
       icon: '/pwa-192x192.png',
@@ -95,15 +120,15 @@ self.addEventListener('message', (event) => {
       requireInteraction: isUrgent,
       vibrate: [120, 60, 120],
       actions:
-        targetScreen === 'frequencia_mensal'
+        resolvedScreen === 'frequencia_mensal'
           ? [{ action: 'open_attendance', title: 'Lançar Faltas' }]
           : [],
       data: {
-        targetScreen: targetScreen || 'turmas',
+        targetScreen: resolvedScreen,
         targetClassId: targetClassId || undefined,
         category: category || 'aviso',
         urgency: urgency || 'info',
-        url: '/',
+        url: `/?screen=${encodeURIComponent(resolvedScreen)}${classQuery}`,
       },
     };
 
@@ -117,13 +142,29 @@ self.addEventListener('message', (event) => {
 });
 
 /**
+ * Notifica clientes ativos caso o navegador rotacione a assinatura Push/FCM
+ */
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({ type: 'FCM_SUBSCRIPTION_REFRESH_NEEDED' });
+      });
+    })
+  );
+});
+
+/**
  * Ao clicar na notificação Push (FCM ou local), foca a janela do app e navega direto para a tela de destino (ex: frequencia_mensal)
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const notifData = event.notification.data || {};
   const targetScreen = notifData.targetScreen || 'frequencia_mensal';
-  const targetClassId = notifData.targetClassId || undefined;
+  const targetClassId =
+    notifData.targetClassId && notifData.targetClassId !== 'all'
+      ? notifData.targetClassId
+      : undefined;
   const alertId = notifData.alertId || undefined;
 
   event.waitUntil(
@@ -143,7 +184,11 @@ self.addEventListener('notificationclick', (event) => {
           }
         }
         if (self.clients.openWindow) {
-          const targetUrl = notifData.url || `/?screen=${encodeURIComponent(targetScreen)}`;
+          const classQuery = targetClassId
+            ? `&classId=${encodeURIComponent(targetClassId)}`
+            : '';
+          const targetUrl =
+            notifData.url || `/?screen=${encodeURIComponent(targetScreen)}${classQuery}`;
           return self.clients.openWindow(targetUrl);
         }
       })

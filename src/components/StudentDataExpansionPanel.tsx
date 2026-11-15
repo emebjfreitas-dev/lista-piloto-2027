@@ -5,14 +5,7 @@ import {
   getStudentAttendanceMetrics,
   getStudentConsecutiveAlertInfo,
 } from '../utils/attendanceRules';
-import {
-  getStudentGenderLabel,
-  resolveGuardianRelationshipInfo,
-} from '../utils/genderDictionary';
-import {
-  resolveStudentCoordinates,
-  calculateTravelEstimates,
-} from '../utils/geoRouting';
+import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 
 interface StudentDataExpansionPanelProps {
@@ -22,7 +15,6 @@ interface StudentDataExpansionPanelProps {
   minLegalPresence?: number;
   onOpenStudentPdf?: (student: Student) => void;
   onOpenStudentGrid?: (student: Student) => void;
-  onNavigateToMap?: (student: Student) => void;
   onCollapse?: () => void;
   showHeaderMeta?: boolean;
   familyFeedback?: string;
@@ -37,7 +29,6 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
   minLegalPresence,
   onOpenStudentPdf,
   onOpenStudentGrid,
-  onNavigateToMap,
   onCollapse,
   showHeaderMeta = true,
   familyFeedback,
@@ -57,7 +48,6 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
     OFFICIAL_OCTOBER_DAYS
   );
   const consecInfo = getStudentConsecutiveAlertInfo(student);
-  const studentGenderInfo = getStudentGenderLabel(student);
   const guardian1Info = resolveGuardianRelationshipInfo(
     student.filiacao1 || student.guardianName,
     'filiacao1',
@@ -87,9 +77,6 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
     student.name,
     `Olá! Somos da ${SCHOOL_NAME}. Gostaríamos de conversar sobre o acompanhamento escolar de ${student.name}.`
   );
-
-  const coords = resolveStudentCoordinates(student);
-  const travel = calculateTravelEstimates(coords.lat, coords.lng);
 
   const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
   const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
@@ -147,52 +134,43 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className="mt-3 rounded-2xl bg-[#eef2f7] p-3.5 sm:p-5 space-y-3.5 text-slate-950 animate-gentle-fade min-w-0 break-words"
+      className="mt-3 rounded-2xl bg-[#f1f5f9] p-3.5 sm:p-4 space-y-3 text-[#0f172a] animate-gentle-fade min-w-0 break-words"
     >
       {/* Topo Compacto: Identificação + Ações Principais */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
-        {showHeaderMeta ? (
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-8 h-8 rounded-xl bg-[#0b3b8c] text-white font-bold text-xs flex items-center justify-center shrink-0 tabular-nums">
-                {student.number.toString().padStart(2, '0')}
-              </span>
-              <h4 className="font-bold text-base sm:text-lg text-slate-950 leading-snug break-words min-w-0">
-                {student.name}
-              </h4>
-            </div>
-            <p className="text-xs sm:text-[13px] text-slate-700 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5 tabular-nums">
-              <span>{studentGenderInfo.code === 'F' ? 'Menina' : 'Menino'}</span>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 min-w-0">
+        {showHeaderMeta && (
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <h4 className="font-semibold text-[16px] sm:text-[17px] tracking-[-0.02em] text-[#0f172a] leading-snug break-words min-w-0">
+              {student.name}
+            </h4>
+            <p className="text-[12px] tracking-[-0.006em] text-[#64748b] font-medium flex flex-wrap items-center gap-x-1.5 gap-y-0.5 tabular-nums">
               {student.ra && (
-                <>
-                  <span className="text-slate-400" aria-hidden="true">·</span>
-                  <span>
-                    RA {student.ra}
-                    {student.digRa ? `-${student.digRa}` : ''}
-                  </span>
-                </>
+                <span>
+                  RA {student.ra}
+                  {student.digRa ? `-${student.digRa}` : ''}
+                </span>
               )}
               {student.dataNascimento && (
                 <>
-                  <span className="text-slate-400" aria-hidden="true">·</span>
+                  {student.ra && <span aria-hidden="true">·</span>}
                   <span>
-                    Nasc.: {student.dataNascimento}
-                    {student.idade ? ` (${student.idade} anos)` : ''}
+                    {student.dataNascimento}
+                    {student.idade ? ` (${student.idade}a)` : ''}
                   </span>
                 </>
               )}
-              <span className="text-slate-400" aria-hidden="true">·</span>
-              <span>Turma {classGroup.name}</span>
+              {(student.ra || student.dataNascimento) && <span aria-hidden="true">·</span>}
+              <span>{classGroup.name}</span>
             </p>
-          </div>
-        ) : (
-          <div className="text-xs font-semibold text-slate-700 min-w-0">
-            Resumo visual do estudante
           </div>
         )}
 
-        {/* Botões de Ação com Alto Contraste */}
-        <div className="grid grid-cols-1 min-[440px]:grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto min-w-0 shrink-0">
+        {/* Ações Rápidas */}
+        <div
+          className={`flex flex-wrap items-center gap-2 min-w-0 shrink-0 ${
+            showHeaderMeta ? 'w-full lg:w-auto' : 'w-full justify-end'
+          }`}
+        >
           {onOpenStudentGrid && (
             <button
               type="button"
@@ -200,10 +178,10 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 e.stopPropagation();
                 onOpenStudentGrid(student);
               }}
-              className="min-h-[42px] py-2 px-4 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100 shadow-xs"
+              className="flex-1 sm:flex-initial min-h-[38px] py-2 px-3.5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[12.5px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100"
             >
-              <span className="material-symbols-outlined text-[18px] shrink-0">badge</span>
-              <span>Ver Ficha Completa</span>
+              <span className="material-symbols-outlined text-[16px] shrink-0">grid_view</span>
+              <span>Ficha</span>
             </button>
           )}
 
@@ -214,29 +192,28 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 e.stopPropagation();
                 onOpenStudentPdf(student);
               }}
-              title="Abrir Ficha Informativa do Estudante"
-              className={`min-h-[42px] py-2 px-4 rounded-xl font-bold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100 ${
+              className={`flex-1 sm:flex-initial min-h-[38px] py-2 px-3.5 rounded-2xl font-semibold text-[12.5px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 ${
                 hasPdf
-                  ? 'bg-[#0052cc] hover:bg-[#003e99] text-white shadow-xs'
-                  : 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900'
+                  ? 'bg-white hover:bg-[#e2e8f0] text-[#0b3b8c]'
+                  : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px] shrink-0">
-                {hasPdf ? 'picture_as_pdf' : 'description'}
+              <span className="material-symbols-outlined text-[16px] shrink-0">
+                picture_as_pdf
               </span>
-              <span>{hasPdf ? 'Ficha Informativa' : 'Sem Ficha Informativa'}</span>
+              <span>{hasPdf ? 'PDF' : 'Enviar PDF'}</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={handleCopyPlainSummary}
-            className="min-h-[42px] py-2 px-3.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100"
+            className="min-h-[38px] py-2 px-3 rounded-2xl bg-white hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[12.5px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100"
           >
-            <span className="material-symbols-outlined text-[18px] shrink-0">
+            <span className="material-symbols-outlined text-[16px] shrink-0">
               {copied ? 'check' : 'content_copy'}
             </span>
-            <span>{copied ? 'Copiado' : 'Copiar Resumo'}</span>
+            <span>{copied ? 'Copiado' : 'Copiar'}</span>
           </button>
 
           {onCollapse && (
@@ -247,52 +224,51 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 onCollapse();
               }}
               aria-label="Fechar resumo do estudante"
-              className="min-h-[42px] min-w-[42px] py-2 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1 cursor-pointer transition-colors duration-100"
+              className="min-h-[38px] min-w-[38px] py-2 px-2.5 rounded-2xl bg-white hover:bg-[#e2e8f0] text-[#475569] flex items-center justify-center cursor-pointer transition-colors duration-100"
             >
               <span className="material-symbols-outlined text-[18px] shrink-0">close</span>
-              <span className="sm:hidden">Fechar</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Faixa Visual de Frequência (Sempre visível ao expandir para leitura instantânea) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 space-y-2.5 shadow-2xs">
+      {/* Faixa Visual de Frequência */}
+      <div className="bg-white rounded-2xl p-3.5 sm:p-4 space-y-2.5 shadow-2xs">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-baseline gap-2.5 flex-wrap">
+          <div className="flex items-baseline gap-2 flex-wrap">
             <span
-              className={`text-2xl sm:text-3xl font-bold tracking-tight tabular-nums ${
-                isCompliant ? 'text-emerald-800' : 'text-rose-800'
+              className={`text-[24px] sm:text-[26px] font-bold tracking-[-0.025em] tabular-nums ${
+                isCompliant ? 'text-[#047857]' : 'text-[#b42318]'
               }`}
             >
               {metrics.frequenciaPercent}%
             </span>
-            <span className="text-xs sm:text-sm font-semibold text-slate-800">
-              de presença ({metrics.presencas} de {metrics.diasLetivosMatriculados} dias)
+            <span className="text-[13px] font-medium tracking-[-0.008em] text-[#475569] tabular-nums">
+              {metrics.presencas}/{metrics.diasLetivosMatriculados} dias
             </span>
           </div>
 
           <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12px] font-semibold tabular-nums ${
               isCompliant
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                : 'bg-rose-50 border-rose-300 text-rose-900'
+                ? 'bg-[#ecfdf5] text-[#047857]'
+                : 'bg-rose-50 text-[#b42318]'
             }`}
           >
-            <span className="material-symbols-outlined text-[16px] shrink-0">
+            <span className="material-symbols-outlined text-[15px] shrink-0">
               {isCompliant ? 'check_circle' : 'warning'}
             </span>
             <span>
               {isCompliant
-                ? `Dentro da meta (${effectiveMinPresence}%)`
-                : `Abaixo da meta (${effectiveMinPresence}%)`}
+                ? `Meta ${effectiveMinPresence}%`
+                : `Abaixo de ${effectiveMinPresence}%`}
             </span>
           </span>
         </div>
 
         {/* Barra Segmentada Proporcional + Marcador da Meta Legal */}
         <div className="relative pt-1">
-          <div className="w-full h-3.5 rounded-full bg-slate-200 overflow-hidden flex">
+          <div className="w-full h-3 rounded-full bg-[#e2e8f0] overflow-hidden flex">
             {presenceBarPct > 0 && (
               <div
                 style={{ width: `${presenceBarPct}%` }}
@@ -315,81 +291,80 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               />
             )}
           </div>
-          {/* Marcador da Meta Legal */}
           <div
             style={{ left: `${effectiveMinPresence}%` }}
             title={`Mínimo legal: ${effectiveMinPresence}%`}
-            className="absolute top-0 bottom-0 w-0.5 bg-slate-950/75"
+            className="absolute top-0 bottom-0 w-0.5 bg-slate-950/70"
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold tabular-nums pt-0.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold tracking-[-0.006em] tabular-nums pt-0.5">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 text-emerald-900">
-              <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600 shrink-0" />
-              Presenças: {metrics.presencas}d
+            <span className="inline-flex items-center gap-1.5 text-[#047857]">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+              Presenças {metrics.presencas}d
             </span>
-            <span className="inline-flex items-center gap-1.5 text-sky-900">
-              <span className="w-2.5 h-2.5 rounded-sm bg-sky-600 shrink-0" />
-              Atestados: {metrics.atestados}d
+            <span className="inline-flex items-center gap-1.5 text-sky-800">
+              <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
+              Atestados {metrics.atestados}d
             </span>
-            <span className="inline-flex items-center gap-1.5 text-rose-900">
-              <span className="w-2.5 h-2.5 rounded-sm bg-rose-600 shrink-0" />
-              Sem just.: {unexcusedAbsences}d
+            <span className="inline-flex items-center gap-1.5 text-[#b42318]">
+              <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
+              Sem just. {unexcusedAbsences}d
             </span>
           </div>
-          <span className="text-slate-600">Meta legal: {effectiveMinPresence}%</span>
+          <span className="text-[#64748b]">Meta {effectiveMinPresence}%</span>
         </div>
       </div>
 
-      {/* Alerta de Faltas Consecutivas (quando aplicável) */}
+      {/* Alerta de Faltas Consecutivas */}
       {consecInfo.tier !== 'none' && (
         <div
-          className={`rounded-2xl border p-3 sm:p-3.5 flex items-start gap-2.5 text-xs sm:text-[13px] ${
+          className={`rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 text-[12.5px] tracking-[-0.008em] ${
             consecInfo.tier === '10d'
-              ? 'bg-rose-50 border-rose-300 text-rose-950'
-              : 'bg-amber-50 border-amber-300 text-amber-950'
+              ? 'bg-rose-50 text-rose-950'
+              : 'bg-amber-50 text-amber-950'
           }`}
         >
-          <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5">
+          <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">
             warning
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-bold">
+            <p className="font-semibold">
               {consecInfo.tier === '10d'
-                ? 'Alerta Crítico: 10 ou mais faltas seguidas'
+                ? '10+ faltas seguidas · Alerta Crítico'
                 : consecInfo.tier === '5d'
-                ? 'Atenção: 5 ou mais faltas seguidas (Busca Ativa)'
-                : 'Atenção: 3 ou mais faltas seguidas no período'}
+                ? '5+ faltas seguidas · Busca Ativa'
+                : '3+ faltas seguidas'}
             </p>
-            <p className="text-xs font-medium mt-0.5">
+            <p className="text-[12px] opacity-85 mt-0.5">
               {consecInfo.tier === '10d'
-                ? 'Acionar Busca Ativa com urgência e registrar justificativa ou comunicar o Conselho Tutelar.'
-                : 'Recomendado entrar em contato com a família para acompanhar a criança.'}
+                ? 'Acionar Busca Ativa e registrar justificativa ou comunicar Conselho Tutelar.'
+                : 'Recomendado entrar em contato com a família.'}
             </p>
           </div>
         </div>
       )}
 
-      {/* Abas Rápidas (Alternância Fluida Sem Empilhar Blocos Gigantes) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+      {/* Abas Rápidas */}
+      <div className="bg-white rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-2xs">
         <div
           role="tablist"
-          aria-label="Seções de dados do estudante"
-          className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200"
+          aria-label="Dados do estudante"
+          className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#f1f5f9]"
         >
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === 'frequencia'}
             onClick={() => setActiveTab('frequencia')}
-            className={`min-h-[38px] px-2.5 py-1.5 rounded-lg text-xs sm:text-[13px] font-bold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
+            className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'frequencia'
-                ? 'bg-[#0b3b8c] text-white shadow-xs'
-                : 'text-slate-700 hover:text-slate-950 hover:bg-white/70'
+                ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                : 'text-[#64748b] hover:text-[#0f172a]'
             }`}
           >
-            <span className="material-symbols-outlined text-[16px] shrink-0">bar_chart</span>
+            <span className="material-symbols-outlined text-[15px] shrink-0">bar_chart</span>
             <span>Frequência</span>
           </button>
 
@@ -398,14 +373,14 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             role="tab"
             aria-selected={activeTab === 'familia'}
             onClick={() => setActiveTab('familia')}
-            className={`min-h-[38px] px-2.5 py-1.5 rounded-lg text-xs sm:text-[13px] font-bold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
+            className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'familia'
-                ? 'bg-[#0b3b8c] text-white shadow-xs'
-                : 'text-slate-700 hover:text-slate-950 hover:bg-white/70'
+                ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                : 'text-[#64748b] hover:text-[#0f172a]'
             }`}
           >
-            <span className="material-symbols-outlined text-[16px] shrink-0">family_restroom</span>
-            <span>Família &amp; Contato</span>
+            <span className="material-symbols-outlined text-[15px] shrink-0">family_restroom</span>
+            <span>Família</span>
           </button>
 
           <button
@@ -413,94 +388,94 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             role="tab"
             aria-selected={activeTab === 'endereco'}
             onClick={() => setActiveTab('endereco')}
-            className={`min-h-[38px] px-2.5 py-1.5 rounded-lg text-xs sm:text-[13px] font-bold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
+            className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'endereco'
-                ? 'bg-[#0b3b8c] text-white shadow-xs'
-                : 'text-slate-700 hover:text-slate-950 hover:bg-white/70'
+                ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                : 'text-[#64748b] hover:text-[#0f172a]'
             }`}
           >
-            <span className="material-symbols-outlined text-[16px] shrink-0">location_on</span>
-            <span>Endereço &amp; Apoios</span>
+            <span className="material-symbols-outlined text-[15px] shrink-0">location_on</span>
+            <span>Endereço</span>
           </button>
         </div>
 
-        {/* Conteúdo da Aba 1: Frequência & Retorno */}
+        {/* Aba 1: Frequência */}
         {activeTab === 'frequencia' && (
           <div className="space-y-3 animate-gentle-fade">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 tabular-nums">
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between sm:block">
-                <span className="text-xs font-bold text-emerald-900 block">Presenças</span>
-                <span className="text-xl font-bold text-emerald-950">{metrics.presencas} dias</span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 tabular-nums">
+              <div className="p-3 rounded-2xl bg-[#ecfdf5] flex items-center justify-between sm:block">
+                <span className="text-[12px] font-semibold text-[#047857] block">Presenças</span>
+                <span className="text-[19px] font-bold tracking-[-0.02em] text-[#064e3b]">{metrics.presencas}d</span>
               </div>
-              <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 flex items-center justify-between sm:block">
-                <span className="text-xs font-bold text-sky-900 block">Faltas c/ Atestado</span>
-                <span className="text-xl font-bold text-sky-950">{metrics.atestados} dias</span>
+              <div className="p-3 rounded-2xl bg-sky-50 flex items-center justify-between sm:block">
+                <span className="text-[12px] font-semibold text-sky-800 block">Atestados</span>
+                <span className="text-[19px] font-bold tracking-[-0.02em] text-sky-950">{metrics.atestados}d</span>
               </div>
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between sm:block">
-                <span className="text-xs font-bold text-rose-900 block">Faltas Sem Just.</span>
-                <span className="text-xl font-bold text-rose-950">{unexcusedAbsences} dias</span>
+              <div className="p-3 rounded-2xl bg-rose-50 flex items-center justify-between sm:block">
+                <span className="text-[12px] font-semibold text-[#b42318] block">Sem Just.</span>
+                <span className="text-[19px] font-bold tracking-[-0.02em] text-rose-950">{unexcusedAbsences}d</span>
               </div>
             </div>
 
             {familyFeedback ? (
-              <div className="rounded-xl p-3 bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start gap-2.5 text-xs sm:text-sm">
-                <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5 text-emerald-700">
+              <div className="rounded-2xl p-3 bg-[#ecfdf5] text-[#064e3b] flex items-start gap-2 text-[13px]">
+                <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5 text-[#047857]">
                   mark_chat_read
                 </span>
                 <div>
-                  <p className="font-bold text-xs uppercase tracking-wider text-emerald-800">
-                    Devolutiva da Família Registrada
+                  <p className="font-semibold text-[11px] uppercase tracking-[0.03em] text-[#047857]">
+                    Devolutiva da Família
                   </p>
-                  <p className="font-semibold text-slate-950 mt-0.5">“{familyFeedback}”</p>
+                  <p className="font-medium text-[#0f172a] mt-0.5">“{familyFeedback}”</p>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-slate-600 font-medium">
-                Situação da matrícula: <strong className="text-slate-950">{enrollmentStatusText}</strong> · Dias letivos considerados: <strong className="text-slate-950 tabular-nums">{metrics.diasLetivosMatriculados}</strong>.
+              <p className="text-[12px] text-[#64748b] font-medium tabular-nums">
+                {enrollmentStatusText} · {metrics.diasLetivosMatriculados} dias letivos
               </p>
             )}
           </div>
         )}
 
-        {/* Conteúdo da Aba 2: Família e Contato Direto */}
+        {/* Aba 2: Família e Contato */}
         {activeTab === 'familia' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 animate-gentle-fade">
-            <div className="space-y-2.5">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  {guardian1Info.shortRoleLabel || 'Mãe / Responsável 1'}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-gentle-fade">
+            <div className="space-y-2">
+              <div className="p-3 rounded-2xl bg-[#f8fafc]">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                  {guardian1Info.shortRoleLabel || 'Responsável 1'}
                 </span>
                 <p
-                  className={`text-sm font-bold leading-snug mt-0.5 ${
-                    hasGuardian1 ? 'text-slate-950' : 'text-slate-500 font-medium'
+                  className={`text-[14px] font-semibold tracking-[-0.012em] leading-snug mt-0.5 ${
+                    hasGuardian1 ? 'text-[#0f172a]' : 'text-[#94a3b8] font-normal'
                   }`}
                 >
-                  {hasGuardian1 ? guardian1Info.cleanName : 'Não informado na ficha'}
+                  {hasGuardian1 ? guardian1Info.cleanName : 'Não informado'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  {guardian2Info.shortRoleLabel || 'Pai / Responsável 2'}
+              <div className="p-3 rounded-2xl bg-[#f8fafc]">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                  {guardian2Info.shortRoleLabel || 'Responsável 2'}
                 </span>
                 <p
-                  className={`text-sm font-bold leading-snug mt-0.5 ${
-                    hasGuardian2 ? 'text-slate-950' : 'text-slate-500 font-medium'
+                  className={`text-[14px] font-semibold tracking-[-0.012em] leading-snug mt-0.5 ${
+                    hasGuardian2 ? 'text-[#0f172a]' : 'text-[#94a3b8] font-normal'
                   }`}
                 >
-                  {hasGuardian2 ? guardian2Info.cleanName : 'Não informado na ficha'}
+                  {hasGuardian2 ? guardian2Info.cleanName : 'Não informado'}
                 </p>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between gap-3">
+            <div className="p-3.5 rounded-2xl bg-[#f8fafc] flex flex-col justify-between gap-3">
               {waList.length > 0 ? (
                 <>
                   <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                      Telefone Principal
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                      Telefone
                     </span>
-                    <p className="text-base font-bold text-slate-950 tabular-nums mt-0.5">
+                    <p className="text-[16px] font-semibold tracking-[-0.015em] text-[#0f172a] tabular-nums mt-0.5">
                       {waList[0].display}
                     </p>
                   </div>
@@ -509,104 +484,80 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                       href={waList[0].waUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 min-h-[44px] py-2 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer"
+                      className="flex-1 min-h-[40px] py-2 px-3.5 rounded-2xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[18px] shrink-0">chat</span>
+                      <span className="material-symbols-outlined text-[17px] shrink-0">chat</span>
                       <span>WhatsApp</span>
                     </a>
                     <a
                       href={`tel:${rawPhones.replace(/\D/g, '')}`}
-                      className="flex-1 sm:flex-initial min-h-[44px] py-2 px-4 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer shrink-0"
+                      className="flex-1 sm:flex-initial min-h-[40px] py-2 px-3.5 rounded-2xl bg-white hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer shrink-0"
                     >
-                      <span className="material-symbols-outlined text-[18px] shrink-0">call</span>
+                      <span className="material-symbols-outlined text-[17px] shrink-0">call</span>
                       <span>Ligar</span>
                     </a>
                   </div>
                 </>
               ) : (
-                <p className="text-xs sm:text-sm font-medium text-slate-600">
-                  Nenhum telefone cadastrado na ficha do estudante.
+                <p className="text-[13px] font-normal text-[#64748b]">
+                  Nenhum telefone cadastrado.
                 </p>
               )}
             </div>
           </div>
         )}
 
-        {/* Conteúdo da Aba 3: Endereço, Trajeto e Apoios */}
+        {/* Aba 3: Endereço e Apoios */}
         {activeTab === 'endereco' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 animate-gentle-fade">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  Endereço Residencial
-                </span>
-                <p
-                  className={`text-sm font-semibold leading-snug mt-0.5 ${
-                    formattedAddress ? 'text-slate-950' : 'text-slate-500'
-                  }`}
-                >
-                  {formattedAddress || 'Endereço não cadastrado'}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#0b3b8c] bg-blue-50 border border-blue-200 rounded-xl p-2.5 tabular-nums">
-                <span className="material-symbols-outlined text-[17px] shrink-0">route</span>
-                <span>
-                  {travel.distanceRoadKm} km da escola · {travel.walkMinutes} min a pé · {travel.carMinutes} min de carro
-                </span>
-              </div>
-
-              {onNavigateToMap && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onNavigateToMap(student);
-                  }}
-                  className="w-full min-h-[42px] py-2 px-3.5 rounded-xl bg-[#0052cc] hover:bg-[#003e99] text-white font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[17px] shrink-0">map</span>
-                  <span>Ver Localização no Mapa</span>
-                </button>
-              )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-gentle-fade">
+            <div className="p-3.5 rounded-2xl bg-[#f8fafc] space-y-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                Endereço
+              </span>
+              <p
+                className={`text-[13.5px] font-medium leading-snug ${
+                  formattedAddress ? 'text-[#0f172a]' : 'text-[#94a3b8]'
+                }`}
+              >
+                {formattedAddress || 'Não cadastrado'}
+              </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+            <div className="p-3.5 rounded-2xl bg-[#f8fafc] space-y-2">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  Transporte Escolar
+                <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                  Transporte
                 </span>
-                <p className="text-sm font-bold text-slate-950 mt-0.5">
+                <p className="text-[13.5px] font-semibold text-[#0f172a] mt-0.5">
                   {student.rotaOnibus
-                    ? `Ônibus escolar (${student.rotaOnibus})`
-                    : 'Próprio / Família'}
+                    ? `Ônibus (${student.rotaOnibus})`
+                    : 'Próprio'}
                 </p>
               </div>
 
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  Apoio Especial (AEE)
-                </span>
-                <p
-                  className={`text-sm font-semibold mt-0.5 ${
-                    student.deficiencia ? 'text-purple-900 font-bold' : 'text-slate-700'
-                  }`}
-                >
-                  {student.deficiencia || 'Sem necessidade AEE registrada'}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200 text-xs">
+              {student.deficiencia && (
                 <div>
-                  <span className="font-bold text-slate-600">NIS: </span>
-                  <span className={student.nis ? 'font-bold text-emerald-900 tabular-nums' : 'text-slate-600'}>
-                    {student.nis || 'Não cadastrado'}
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                    AEE
                   </span>
+                  <p className="text-[13.5px] font-semibold text-purple-900 mt-0.5">
+                    {student.deficiencia}
+                  </p>
                 </div>
-                <span className="text-slate-700 font-medium break-all tabular-nums">
-                  {student.emailMunicipal || ''}
-                </span>
-              </div>
+              )}
+
+              {(student.nis || student.emailMunicipal) && (
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[12px] text-[#475569] tabular-nums">
+                  {student.nis && (
+                    <span>
+                      NIS <strong className="font-semibold text-[#047857]">{student.nis}</strong>
+                    </span>
+                  )}
+                  {student.emailMunicipal && (
+                    <span className="break-all">{student.emailMunicipal}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

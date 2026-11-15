@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
+import { List, useDynamicRowHeight, useVirtualizer, RowComponentProps } from 'react-window';
 import { ClassGroup, Student, UserRole, SchoolNotice } from '../types';
 import {
   CLASS_EXPORT_COLUMNS,
@@ -22,13 +23,8 @@ import {
 } from '../utils/genderDictionary';
 import { StudentAvatar } from './StudentAvatar';
 import { StudentDataExpansionPanel } from './StudentDataExpansionPanel';
-import { OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
-
-import {
-  getStudentCumulativeOccurrences,
-  triggerConsecutiveAbsencePushNotification,
-} from '../services/pushNotificationService';
+import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
 
 type ViewMode = 'grid' | 'compact' | 'table';
 type StatusFilter =
@@ -61,7 +57,6 @@ interface DetalhesTurmaScreenProps {
   onOpenStudentPdf?: (student: Student) => void;
   onNavigateToBolsaFamilia?: () => void;
   onNavigateToConsecutiveAbsences?: () => void;
-  onNavigateToMap?: (student: Student) => void;
   onNavigateToSheet: () => void;
   onBackToClasses: () => void;
 }
@@ -76,19 +71,19 @@ interface EstudanteCardProps {
   onOpenStudentGrid?: (student: Student) => void;
   onOpenStudentPdf?: (student: Student) => void;
   onOpenPhotoModal?: (student: Student) => void;
+  showMissingPdfAction?: boolean;
   renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
 }
 
 const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
   student,
-  classGroup,
   diasLetivosMes,
-  minLegalPresence,
   isExpanded,
   onToggleExpand,
   onOpenStudentGrid,
   onOpenStudentPdf,
   onOpenPhotoModal,
+  showMissingPdfAction = true,
   renderStudentDetailedExpansion,
 }) => {
   const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
@@ -98,23 +93,15 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
   const isOtherNonActive = !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
   const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
 
-  const cardColorClasses = isTransferred
-    ? 'bg-amber-50 border-amber-300 text-slate-950 shadow-xs hover:shadow-md'
+  const cardSurfaceClasses = isExpanded
+    ? 'bg-white shadow-sm'
+    : isTransferred
+    ? 'bg-amber-50/75 hover:bg-amber-50 shadow-2xs'
     : isRemanejado
-    ? 'bg-purple-50 border-purple-300 text-slate-950 shadow-xs hover:shadow-md'
+    ? 'bg-purple-50/75 hover:bg-purple-50 shadow-2xs'
     : isOtherNonActive
-    ? 'bg-slate-100 border-slate-300 text-slate-800 shadow-xs'
-    : m.isBelowLegalThreshold
-    ? 'bg-rose-50/90 border-rose-300 text-slate-950 shadow-xs hover:shadow-md'
-    : 'bg-white border-slate-200 text-slate-950 shadow-xs hover:border-slate-300 hover:shadow-md';
-
-  const numberBadgeClasses = isTransferred
-    ? 'text-amber-900'
-    : isRemanejado
-    ? 'text-purple-900'
-    : isOtherNonActive
-    ? 'text-slate-700'
-    : 'text-[#0b3b8c]';
+    ? 'bg-slate-100/90 shadow-2xs'
+    : 'bg-white hover:bg-[#fafbfd] shadow-2xs';
 
   const cumulativeOccs = getStudentCumulativeOccurrences(student);
   const latestConsecOcc = cumulativeOccs.length > 0 ? cumulativeOccs[cumulativeOccs.length - 1] : null;
@@ -122,233 +109,180 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
 
   const studentGenderInfo = getStudentGenderLabel(student);
   const guardian1Info = resolveGuardianRelationshipInfo(student.filiacao1 || student.guardianName, 'filiacao1', student.notes);
-  const guardian2Info = resolveGuardianRelationshipInfo(student.filiacao2, 'filiacao2', student.notes);
   const hasStudentPdf = Boolean(
     (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
       (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
   );
+  const waList = buildWhatsAppLinksFromPhoneString(
+    student.telefones || student.guardianPhone,
+    student.name
+  );
 
   return (
-    <div
+    <article
       onClick={() => onToggleExpand(student.id)}
-      title={isExpanded ? 'Clique para recolher detalhes' : `Clique para expandir dados de ${studentGenderInfo.estudanteTerm}`}
-      className={`rounded-2xl border p-4 sm:p-5 flex flex-col justify-between gap-3.5 cursor-pointer select-none transition-all duration-100 min-w-0 ${
-        isExpanded
-          ? 'col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 bg-white border-[#0b3b8c]/40 shadow-md'
-          : 'h-full min-h-[220px]'
-      } ${cardColorClasses}`}
+      className={`rounded-3xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 cursor-pointer select-none transition-colors duration-100 min-w-0 ${
+        isExpanded ? '' : 'h-full'
+      } ${cardSurfaceClasses}`}
     >
-      {isNonActive && (
-        <div
-          className={`-mx-2 -mt-2 px-3 py-1.5 rounded-t-lg text-xs font-bold flex items-center justify-between gap-1.5 ${
-            isTransferred
-              ? 'bg-amber-200 text-amber-950'
-              : isRemanejado
-              ? 'bg-purple-200 text-purple-950'
-              : 'bg-slate-200 text-slate-900'
-          }`}
-        >
-          <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-[15px]">
-              {isTransferred ? 'transfer_within_a_station' : 'swap_horiz'}
-            </span>
-            <span>
-              {isTransferred
-                ? `${studentGenderInfo.transferidoTerm} (Baixa)`
-                : isRemanejado
-                ? `${studentGenderInfo.remanejadoTerm} de Turma`
-                : `Não ativo · ${sit}`}
-            </span>
-          </span>
-          {student.dataMovimentacao && (
-            <span className="font-mono text-xs bg-white/80 px-1.5 py-0.5 rounded">
-              {student.dataMovimentacao}
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="flex items-start gap-3">
-        <StudentAvatar
-          student={student}
-          size="lg"
-          expandableOnClick={true}
-          onUploadPhotoClick={
-            onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined
-          }
-        />
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-1.5">
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-700 font-medium min-w-0">
-              <span className={`text-xs font-bold tabular-nums shrink-0 ${numberBadgeClasses}`}>
-                Nº {student.number.toString().padStart(2, '0')}
-              </span>
-              <span className="text-slate-400" aria-hidden="true">·</span>
-              {student.ra && (
-                <>
-                  <span className="text-xs text-slate-700 tabular-nums font-semibold break-all">
-                    RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}
-                  </span>
-                  <span className="text-slate-400" aria-hidden="true">·</span>
-                </>
-              )}
-              <span className="text-xs text-slate-700 shrink-0">
-                {studentGenderInfo.code === 'F' ? 'Menina' : 'Menino'}
-              </span>
-            </div>
-
-            <div className="flex items-center shrink-0">
-              <button
-                type="button"
-                onClick={(e) => {
+      <div className="space-y-3 min-w-0">
+        <div className="flex items-start justify-between gap-2.5 min-w-0">
+          <div className="flex items-start gap-3.5 min-w-0 flex-1">
+            <div
+              onClick={(e) => {
+                if (onOpenPhotoModal) {
                   e.stopPropagation();
-                  onToggleExpand(student.id);
-                }}
-                title={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
-                aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
-                className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 flex items-center justify-center transition-colors cursor-pointer"
-              >
+                  onOpenPhotoModal(student);
+                }
+              }}
+              className={`shrink-0 ${onOpenPhotoModal ? 'cursor-pointer' : ''}`}
+            >
+              <StudentAvatar
+                student={student}
+                size="lg"
+                className="border-0 bg-[#f1f5f9]"
+              />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
+                <span>{student.number.toString().padStart(2, '0')}</span>
+                <span aria-hidden="true">·</span>
                 <span
-                  className={`material-symbols-outlined text-[18px] transition-transform duration-100 ${
-                    isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
-                  }`}
+                  className={
+                    m.isBelowLegalThreshold && !isNonActive
+                      ? 'text-[#b42318] font-semibold'
+                      : undefined
+                  }
                 >
-                  expand_more
+                  {m.frequenciaPercent}%
                 </span>
-              </button>
-            </div>
-          </div>
-
-          <h3
-            className={`text-base font-bold leading-snug break-words mt-1 ${
-              isTransferred
-                ? 'text-amber-950'
-                : isRemanejado
-                ? 'text-purple-950'
-                : 'text-slate-950'
-            }`}
-          >
-            {student.name}
-          </h3>
-
-          {(isNonActive || student.rotaOnibus || student.deficiencia || consecDaysCount >= 3) && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs">
-              {isTransferred ? (
-                <span className="text-amber-900 text-xs font-bold">
-                  {studentGenderInfo.transferidoTerm}
-                </span>
-              ) : isRemanejado ? (
-                <span className="text-purple-900 text-xs font-bold">
-                  {studentGenderInfo.remanejadoTerm}
-                </span>
-              ) : isOtherNonActive ? (
-                <span className="text-slate-700 text-xs font-bold">
-                  {sit}
-                </span>
-              ) : null}
-
-              {student.rotaOnibus && (
-                <>
-                  {isNonActive && <span className="text-slate-400" aria-hidden="true">·</span>}
-                  <span className="text-xs text-[#0b3b8c] font-semibold">
-                    Rota {student.rotaOnibus.replace(/[^0-9]/g, '') || student.rotaOnibus.split('-')[0].trim()}
-                  </span>
-                </>
-              )}
-
-              {student.deficiencia && (
-                <>
-                  {(isNonActive || student.rotaOnibus) && <span className="text-slate-400" aria-hidden="true">·</span>}
-                  <span className="text-xs text-purple-800 font-bold">
-                    AEE
-                  </span>
-                </>
-              )}
-
-              {consecDaysCount >= 3 && (
-                <>
-                  {(isNonActive || student.rotaOnibus || student.deficiencia) && <span className="text-slate-400" aria-hidden="true">·</span>}
-                  <span
-                    className={`text-xs font-bold flex items-center gap-0.5 ${
-                      consecDaysCount >= 5 ? 'text-rose-800' : 'text-amber-800'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[15px]">
-                      warning
+                {isNonActive && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="font-semibold text-[#64748b]">
+                      {isTransferred
+                        ? studentGenderInfo.transferidoTerm
+                        : isRemanejado
+                        ? studentGenderInfo.remanejadoTerm
+                        : sit}
                     </span>
-                    <span>{consecDaysCount} faltas</span>
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+                  </>
+                )}
+                {student.rotaOnibus && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="text-[#0b3b8c] font-semibold">
+                      Rota {student.rotaOnibus.replace(/[^0-9]/g, '') || student.rotaOnibus.split('-')[0].trim()}
+                    </span>
+                  </>
+                )}
+                {student.deficiencia && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="text-purple-800 font-semibold">AEE</span>
+                  </>
+                )}
+                {consecDaysCount >= 3 && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span
+                      className={
+                        consecDaysCount >= 5
+                          ? 'text-[#b42318] font-semibold'
+                          : 'text-[#b45309] font-semibold'
+                      }
+                    >
+                      {consecDaysCount} faltas seguidas
+                    </span>
+                  </>
+                )}
+              </div>
 
-      <div className="pt-2.5 border-t border-slate-100 space-y-1.5 text-xs sm:text-[13px] min-w-0">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-xs uppercase tracking-wider text-slate-600 font-bold w-9 shrink-0">
-            {guardian1Info.shortRoleLabel}
-          </span>
-          <span className="text-slate-900 font-semibold min-w-0 flex-1 break-words leading-snug">
-            {guardian1Info.cleanName}
+              <h3
+                className={`mt-1 text-[18px] font-semibold tracking-[-0.024em] leading-[1.22] break-words ${
+                  isNonActive ? 'text-[#64748b]' : 'text-[#0f172a]'
+                }`}
+              >
+                {student.name}
+              </h3>
+            </div>
+          </div>
+
+          <span
+            className={`material-symbols-outlined text-[20px] text-[#94a3b8] shrink-0 mt-0.5 transition-transform duration-150 ${
+              isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
+            }`}
+            aria-hidden="true"
+          >
+            expand_more
           </span>
         </div>
-        {guardian2Info.cleanName && (
-          <div className="flex items-baseline gap-2 min-w-0">
-            <span className="text-xs uppercase tracking-wider text-slate-600 font-bold w-9 shrink-0">
-              {guardian2Info.shortRoleLabel}
+
+        {(guardian1Info.cleanName || waList.length > 0) && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-between gap-2 text-[12.5px] font-normal tracking-[-0.008em] text-[#475569] min-w-0"
+          >
+            <span className="truncate min-w-0">
+              {guardian1Info.cleanName}
             </span>
-            <span className="text-slate-900 font-semibold min-w-0 flex-1 break-words leading-snug">
-              {guardian2Info.cleanName}
-            </span>
-          </div>
-        )}
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs min-w-0"
-        >
-          {(() => {
-            const waList = buildWhatsAppLinksFromPhoneString(
-              student.telefones || student.guardianPhone,
-              student.name
-            );
-            if (waList.length === 0) {
-              return (
-                <span className="text-xs font-medium text-slate-600">
-                  Sem telefone
-                </span>
-              );
-            }
-            return (
+            {waList.length > 0 && (
               <a
                 href={waList[0].waUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                title={`WhatsApp: ${waList[0].display}`}
-                className="inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950 hover:underline tabular-nums cursor-pointer min-w-0 max-w-full"
+                className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#047857] hover:underline tabular-nums shrink-0"
               >
-                <span className="material-symbols-outlined text-[15px] shrink-0">chat</span>
-                <span className="break-all leading-snug">{waList[0].display}</span>
+                <span className="material-symbols-outlined text-[14px]">chat</span>
+                <span>{waList[0].display}</span>
               </a>
-            );
-          })()}
-          {student.dataNascimento && (
-            <span className="text-xs tabular-nums text-slate-600 shrink-0 font-semibold">
-              {student.dataNascimento}
-            </span>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {isExpanded && renderStudentDetailedExpansion(student)}
 
-      {!isExpanded && (
+      {!isExpanded && (onOpenPhotoModal || onOpenStudentPdf || onOpenStudentGrid) && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="pt-2 grid grid-cols-1 min-[360px]:grid-cols-2 sm:flex items-center gap-2 min-w-0"
+          className="grid grid-cols-3 gap-2 min-w-0"
         >
+          {onOpenPhotoModal && (
+            <button
+              type="button"
+              onClick={() => onOpenPhotoModal(student)}
+              className="min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
+                photo_camera
+              </span>
+              <span>Foto</span>
+            </button>
+          )}
+
+          {onOpenStudentPdf && (hasStudentPdf || showMissingPdfAction) && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenStudentPdf(student);
+              }}
+              className={`min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                hasStudentPdf
+                  ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
+                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px] shrink-0">
+                picture_as_pdf
+              </span>
+              <span>PDF</span>
+            </button>
+          )}
+
           {onOpenStudentGrid && (
             <button
               type="button"
@@ -357,52 +291,29 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
                 e.stopPropagation();
                 onOpenStudentGrid(student);
               }}
-              className="flex-1 min-h-[42px] py-2 px-3 rounded-xl text-xs sm:text-[13px] font-bold bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100"
+              className="min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[17px] text-[#0b3b8c] shrink-0">
-                badge
+              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
+                grid_view
               </span>
-              <span>Ver Ficha</span>
-            </button>
-          )}
-
-          {onOpenStudentPdf && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onOpenStudentPdf(student);
-              }}
-              title={
-                hasStudentPdf
-                  ? `Abrir Ficha Informativa do Estudante (${student.name})`
-                  : `Estudante sem Ficha Informativa digitalizada`
-              }
-              className={`flex-1 min-h-[42px] py-2 px-3 rounded-xl text-xs sm:text-[13px] font-bold flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer ${
-                hasStudentPdf
-                  ? 'bg-[#0052cc] hover:bg-[#003e99] text-white shadow-xs'
-                  : 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[17px] shrink-0">
-                {hasStudentPdf ? 'picture_as_pdf' : 'upload_file'}
-              </span>
-              <span>
-                {hasStudentPdf ? 'Ficha Informativa' : 'Sem Ficha Info.'}
-              </span>
+              <span>Ficha</span>
             </button>
           )}
         </div>
       )}
-    </div>
+    </article>
   );
 }, (prev, next) => {
   return (
     prev.student === next.student &&
     prev.isExpanded === next.isExpanded &&
     prev.diasLetivosMes === next.diasLetivosMes &&
-    prev.minLegalPresence === next.minLegalPresence
+    prev.minLegalPresence === next.minLegalPresence &&
+    prev.showMissingPdfAction === next.showMissingPdfAction &&
+    prev.onOpenPhotoModal === next.onOpenPhotoModal &&
+    prev.onOpenStudentPdf === next.onOpenStudentPdf &&
+    prev.onOpenStudentGrid === next.onOpenStudentGrid &&
+    prev.renderStudentDetailedExpansion === next.renderStudentDetailedExpansion
   );
 });
 EstudanteCard.displayName = 'EstudanteCard';
@@ -414,20 +325,22 @@ interface LinhaEstudanteProps {
   minLegalPresence: number;
   isExpanded: boolean;
   onToggleExpand: (studentId: string) => void;
+  onOpenStudentGrid?: (student: Student) => void;
   onOpenStudentPdf?: (student: Student) => void;
   onOpenPhotoModal?: (student: Student) => void;
+  showMissingPdfAction?: boolean;
   renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
 }
 
 const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
   student,
-  classGroup,
   diasLetivosMes,
-  minLegalPresence,
   isExpanded,
   onToggleExpand,
+  onOpenStudentGrid,
   onOpenStudentPdf,
   onOpenPhotoModal,
+  showMissingPdfAction = true,
   renderStudentDetailedExpansion,
 }) => {
   const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
@@ -435,9 +348,9 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
   const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
   const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
   const isOtherNonActive = !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+  const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
   const studentGenderInfo = getStudentGenderLabel(student);
   const guardian1Info = resolveGuardianRelationshipInfo(student.filiacao1 || student.guardianName, 'filiacao1', student.notes);
-  const guardian2Info = resolveGuardianRelationshipInfo(student.filiacao2, 'filiacao2', student.notes);
   const hasPdf = Boolean(
     (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
       (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
@@ -446,86 +359,95 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
   return (
     <div
       onClick={() => onToggleExpand(student.id)}
-      title={isExpanded ? 'Clique para fechar detalhes' : 'Clique para expandir dados'}
-      className={`p-3.5 sm:px-5 rounded-2xl flex flex-col gap-2 cursor-pointer transition-all shadow-2xs ${
+      className={`p-4 sm:px-5 rounded-3xl flex flex-col gap-3 cursor-pointer transition-colors shadow-2xs ${
         isTransferred
-          ? 'bg-amber-50 hover:bg-amber-100/70'
+          ? 'bg-amber-50/75 hover:bg-amber-50'
           : isRemanejado
-          ? 'bg-purple-50 hover:bg-purple-100/70'
+          ? 'bg-purple-50/75 hover:bg-purple-50'
           : isOtherNonActive
           ? 'bg-slate-100'
-          : m.isBelowLegalThreshold
-          ? 'bg-rose-50/70 hover:bg-rose-50'
-          : 'bg-white hover:bg-slate-50/80'
+          : 'bg-white hover:bg-[#fafbfd]'
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <span
-            className={`w-8 h-8 rounded-xl text-white font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums ${
-              isTransferred
-                ? 'bg-[#b45309]'
-                : isRemanejado
-                ? 'bg-[#6d28d9]'
-                : isOtherNonActive
-                ? 'bg-[#475569]'
-                : 'bg-[#003440]'
-            }`}
+        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+          <div
+            onClick={(e) => {
+              if (onOpenPhotoModal) {
+                e.stopPropagation();
+                onOpenPhotoModal(student);
+              }
+            }}
+            className={`shrink-0 ${onOpenPhotoModal ? 'cursor-pointer' : ''}`}
           >
-            {student.number.toString().padStart(2, '0')}
-          </span>
-
-          <StudentAvatar
-            student={student}
-            size="md"
-            expandableOnClick={true}
-            onUploadPhotoClick={
-              onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined
-            }
-          />
+            <StudentAvatar
+              student={student}
+              size="md"
+              className="border-0 bg-[#f1f5f9]"
+            />
+          </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-              <span className="font-semibold text-sm sm:text-base text-[#003440] break-words leading-snug">
-                {student.name}
+            <div className="flex flex-wrap items-center gap-x-1.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
+              <span>{student.number.toString().padStart(2, '0')}</span>
+              <span aria-hidden="true">·</span>
+              <span className={m.isBelowLegalThreshold && !isNonActive ? 'text-[#b42318] font-semibold' : undefined}>
+                {m.frequenciaPercent}%
               </span>
               {isTransferred && (
-                <span className="text-xs font-semibold text-amber-800">
-                  · {studentGenderInfo.transferidoTerm}
-                </span>
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>{studentGenderInfo.transferidoTerm}</span>
+                </>
               )}
               {isRemanejado && (
-                <span className="text-xs font-semibold text-purple-800">
-                  · Mudou de Turma
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-slate-600 break-words leading-snug mt-0.5 min-w-0">
-              <span>
-                {guardian1Info.shortRoleLabel}: {guardian1Info.cleanName}
-              </span>
-              {guardian2Info.cleanName && guardian2Info.cleanName.toLowerCase() !== 'não informado' && (
                 <>
-                  <span aria-hidden="true"> · </span>
-                  <span>
-                    {guardian2Info.shortRoleLabel}: {guardian2Info.cleanName}
-                  </span>
-                </>
-              )}
-              {student.telefones && (
-                <>
-                  <span aria-hidden="true"> · </span>
-                  <span className="text-emerald-800 tabular-nums font-medium break-all">
-                    {student.telefones}
-                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span>{studentGenderInfo.remanejadoTerm}</span>
                 </>
               )}
             </div>
+            <span
+              className={`block font-semibold text-[17px] tracking-[-0.022em] leading-[1.24] break-words mt-0.5 ${
+                isNonActive ? 'text-[#64748b]' : 'text-[#0f172a]'
+              }`}
+            >
+              {student.name}
+            </span>
+            {(guardian1Info.cleanName || student.telefones) && (
+              <div className="text-[12.5px] font-normal tracking-[-0.008em] text-[#475569] truncate leading-snug mt-0.5 min-w-0">
+                <span>{guardian1Info.cleanName}</span>
+                {student.telefones && (
+                  <>
+                    <span aria-hidden="true"> · </span>
+                    <span className="text-[#047857] tabular-nums font-medium">
+                      {student.telefones}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto shrink-0">
-          {onOpenStudentPdf && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center justify-end gap-2 w-full sm:w-auto shrink-0"
+        >
+          {onOpenPhotoModal && (
+            <button
+              type="button"
+              onClick={() => onOpenPhotoModal(student)}
+              className="flex-1 sm:flex-initial min-h-[44px] sm:min-h-[40px] px-3.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
+                photo_camera
+              </span>
+              <span>Foto</span>
+            </button>
+          )}
+
+          {onOpenStudentPdf && (hasPdf || showMissingPdfAction) && (
             <button
               type="button"
               onClick={(e) => {
@@ -533,32 +455,45 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
                 e.stopPropagation();
                 onOpenStudentPdf(student);
               }}
-              title={`Abrir Ficha Informativa do Estudante (${student.name})`}
-              className={`flex-1 sm:flex-initial min-h-[42px] py-2 px-4 rounded-xl font-bold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100 ${
+              className={`flex-1 sm:flex-initial min-h-[44px] sm:min-h-[40px] px-3.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                 hasPdf
-                  ? 'bg-[#0052cc] hover:bg-[#003e99] text-white shadow-xs'
-                  : 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900'
+                  ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
+                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
               }`}
             >
-              <span className="material-symbols-outlined text-[17px] shrink-0">
-                {hasPdf ? 'picture_as_pdf' : 'description'}
+              <span className="material-symbols-outlined text-[16px] shrink-0">
+                picture_as_pdf
               </span>
-              <span>{hasPdf ? 'Ficha Informativa' : 'Sem Ficha Info.'}</span>
+              <span>PDF</span>
+            </button>
+          )}
+
+          {onOpenStudentGrid && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenStudentGrid(student);
+              }}
+              className="flex-1 sm:flex-initial min-h-[44px] sm:min-h-[40px] px-3.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
+                grid_view
+              </span>
+              <span>Ficha</span>
             </button>
           )}
 
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleExpand(student.id);
-            }}
-            className="flex-1 sm:flex-initial min-h-[42px] py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1 cursor-pointer transition-colors duration-100"
+            onClick={() => onToggleExpand(student.id)}
+            aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
+            className="w-11 h-11 sm:w-10 sm:h-10 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] flex items-center justify-center cursor-pointer transition-colors shrink-0"
           >
-            <span>{isExpanded ? 'Fechar' : 'Ver Dados'}</span>
             <span
-              className={`material-symbols-outlined text-[18px] shrink-0 transition-transform duration-100 ${
-                isExpanded ? 'rotate-180 text-[#0071e3]' : ''
+              className={`material-symbols-outlined text-[19px] transition-transform duration-150 ${
+                isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
               }`}
             >
               expand_more
@@ -574,7 +509,12 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
   return (
     prev.student === next.student &&
     prev.isExpanded === next.isExpanded &&
-    prev.diasLetivosMes === next.diasLetivosMes
+    prev.diasLetivosMes === next.diasLetivosMes &&
+    prev.showMissingPdfAction === next.showMissingPdfAction &&
+    prev.onOpenPhotoModal === next.onOpenPhotoModal &&
+    prev.onOpenStudentPdf === next.onOpenStudentPdf &&
+    prev.onOpenStudentGrid === next.onOpenStudentGrid &&
+    prev.renderStudentDetailedExpansion === next.renderStudentDetailedExpansion
   );
 });
 LinhaEstudante.displayName = 'LinhaEstudante';
@@ -584,20 +524,28 @@ interface EstudanteTabelaRowProps {
   classGroup: ClassGroup;
   diasLetivosMes: number;
   minLegalPresence: number;
+  rowIndex: number;
+  tbodyRef?: (element: Element | null) => void;
   isExpanded: boolean;
   onToggleExpand: (studentId: string) => void;
+  onOpenStudentGrid?: (student: Student) => void;
   onOpenStudentPdf?: (student: Student) => void;
+  onOpenPhotoModal?: (student: Student) => void;
+  showMissingPdfAction?: boolean;
   renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
 }
 
 const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
   student,
-  classGroup,
   diasLetivosMes,
-  minLegalPresence,
+  rowIndex,
+  tbodyRef,
   isExpanded,
   onToggleExpand,
+  onOpenStudentGrid,
   onOpenStudentPdf,
+  onOpenPhotoModal,
+  showMissingPdfAction = true,
   renderStudentDetailedExpansion,
 }) => {
   const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
@@ -615,6 +563,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
   const guardian1Info = resolveGuardianRelationshipInfo(student.filiacao1 || student.guardianName, 'filiacao1', student.notes);
   const guardian2Info = resolveGuardianRelationshipInfo(student.filiacao2, 'filiacao2', student.notes);
 
+  const zebraBgClass = rowIndex % 2 === 1 ? 'bg-[#f8fafc]/70' : 'bg-white';
   const rowColorClass = isTransferred
     ? 'bg-[#fef3c7]/75 hover:bg-[#fde68a]/75'
     : isRemanejado
@@ -629,7 +578,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
     ? 'bg-[#fffbeb] hover:bg-[#fef3c7]'
     : m.isBelowLegalThreshold
     ? 'bg-[#fff9f8] hover:bg-[#fff0ee]'
-    : 'hover:bg-[#f4f8f6]';
+    : `${zebraBgClass} hover:bg-[#f1f5f9]/70`;
 
   const hasPdf = Boolean(
     (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
@@ -637,11 +586,11 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
   );
 
   return (
-    <React.Fragment>
+    <tbody ref={tbodyRef} data-index={rowIndex}>
       <tr
         onClick={() => onToggleExpand(student.id)}
         className={`cursor-pointer transition-colors ${rowColorClass} ${
-          isExpanded ? 'ring-1 ring-[#003440]/20' : ''
+          isExpanded ? 'bg-[#f1f5f9]' : ''
         }`}
       >
         <td className="py-2.5 px-3 text-center">
@@ -653,17 +602,17 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                 onToggleExpand(student.id);
               }}
               title={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
-              className="p-0.5 rounded hover:bg-black/10 text-[#003440] cursor-pointer"
+              className="p-1 rounded-lg hover:bg-black/5 text-[#0f172a] cursor-pointer"
             >
               <span
                 className={`material-symbols-outlined text-[16px] transition-transform ${
-                  isExpanded ? 'rotate-180 text-[#0071e3]' : ''
+                  isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
                 }`}
               >
                 expand_more
               </span>
             </button>
-            <span className="font-mono font-semibold text-[#003440] text-xs tabular-nums">
+            <span className="font-semibold text-[#475569] text-[12px] tabular-nums">
               {student.number.toString().padStart(2, '0')}
             </span>
           </div>
@@ -671,47 +620,80 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
         <td className="py-2.5 px-3">
           <div className="flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <StudentAvatar
-                student={student}
-                size="sm"
-                expandableOnClick={true}
-              />
+              <div
+                onClick={(e) => {
+                  if (onOpenPhotoModal) {
+                    e.stopPropagation();
+                    onOpenPhotoModal(student);
+                  }
+                }}
+                className={`shrink-0 ${onOpenPhotoModal ? 'cursor-pointer' : ''}`}
+              >
+                <StudentAvatar
+                  student={student}
+                  size="sm"
+                  className="border-0 bg-[#f1f5f9]"
+                />
+              </div>
               <div className="min-w-0">
-                <span className="font-bold text-[#003440] break-words block leading-snug">
+                <span className="font-semibold text-[15px] text-[#0f172a] tracking-[-0.018em] break-words block leading-snug">
                   {student.name}
-                </span>
-                <span
-                  className={`inline-block px-2 py-0.5 rounded font-semibold text-xs mt-0.5 ${
-                    studentGenderInfo.code === 'F'
-                      ? 'bg-[#ffdad6]/60 text-[#93000a]'
-                      : 'bg-[#d3e4ff]/75 text-[#001c38]'
-                  }`}
-                >
-                  {studentGenderInfo.estudanteTitle}
                 </span>
               </div>
             </div>
-            {onOpenStudentPdf && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onOpenStudentPdf(student);
-                }}
-                title={`Abrir Ficha Informativa do Estudante (${student.name})`}
-                className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors ${
-                  hasPdf
-                    ? 'bg-[#0052cc] hover:bg-[#003e99] text-white'
-                    : 'bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-300'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  picture_as_pdf
-                </span>
-                <span>{hasPdf ? 'Ficha Informativa' : 'Sem Ficha Info.'}</span>
-              </button>
-            )}
+            <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5 shrink-0">
+              {onOpenPhotoModal && (
+                <button
+                  type="button"
+                  onClick={() => onOpenPhotoModal(student)}
+                  title={`Foto (${student.name})`}
+                  className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[12px] tracking-[-0.008em] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[15px] text-[#475569]">
+                    photo_camera
+                  </span>
+                  <span>Foto</span>
+                </button>
+              )}
+              {onOpenStudentPdf && (hasPdf || showMissingPdfAction) && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onOpenStudentPdf(student);
+                  }}
+                  title={`PDF (${student.name})`}
+                  className={`min-h-[34px] px-2.5 py-1 rounded-xl font-semibold text-[12px] tracking-[-0.008em] flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
+                    hasPdf
+                      ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
+                      : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">
+                    picture_as_pdf
+                  </span>
+                  <span>PDF</span>
+                </button>
+              )}
+              {onOpenStudentGrid && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onOpenStudentGrid(student);
+                  }}
+                  title={`Ficha (${student.name})`}
+                  className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[12px] tracking-[-0.008em] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[15px] text-[#475569]">
+                    grid_view
+                  </span>
+                  <span>Ficha</span>
+                </button>
+              )}
+            </div>
           </div>
         </td>
         <td className="py-2.5 px-2.5 text-center">
@@ -725,7 +707,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                 </span>
                 <span>{consecInfo.shortBadge}</span>
               </span>
-              <span className="text-xs font-semibold text-[#41484b] mt-0.5">
+              <span className="text-[11px] font-semibold text-[#475569] mt-0.5">
                 {consecInfo.tier === '10d'
                   ? 'Evasão Crítica'
                   : consecInfo.tier === '5d'
@@ -734,8 +716,8 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
               </span>
             </div>
           ) : (
-            <span className="px-2.5 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-xs">
-              Em dia (sem alerta)
+            <span className="px-2.5 py-0.5 rounded-full bg-[#ecfdf5] text-[#047857] font-semibold text-[11.5px]">
+              Em dia
             </span>
           )}
         </td>
@@ -797,46 +779,519 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
           </td>
         </tr>
       )}
-    </React.Fragment>
+    </tbody>
+  );
+}, (prev, next) => {
+  return (
+    prev.student === next.student &&
+    prev.rowIndex === next.rowIndex &&
+    prev.isExpanded === next.isExpanded &&
+    prev.diasLetivosMes === next.diasLetivosMes &&
+    prev.showMissingPdfAction === next.showMissingPdfAction &&
+    prev.tbodyRef === next.tbodyRef &&
+    prev.onOpenPhotoModal === next.onOpenPhotoModal &&
+    prev.onOpenStudentPdf === next.onOpenStudentPdf &&
+    prev.onOpenStudentGrid === next.onOpenStudentGrid &&
+    prev.renderStudentDetailedExpansion === next.renderStudentDetailedExpansion
+  );
+});
+EstudanteTabelaRow.displayName = 'EstudanteTabelaRow';
+
+interface VirtualCardRowData {
+  key: string;
+  students: Student[];
+  isExpandedRow: boolean;
+}
+
+function buildVirtualCardRows(
+  students: Student[],
+  columns: number,
+  expandedStudentId: string | null
+): VirtualCardRowData[] {
+  const rows: VirtualCardRowData[] = [];
+  let buffer: Student[] = [];
+
+  const flushBuffer = () => {
+    if (buffer.length === 0) return;
+    rows.push({
+      key: buffer.map((s) => s.id).join('_'),
+      students: buffer,
+      isExpandedRow: false,
+    });
+    buffer = [];
+  };
+
+  for (const student of students) {
+    const isExpanded =
+      expandedStudentId === '__ALL__' || expandedStudentId === student.id;
+    if (isExpanded && columns > 1) {
+      flushBuffer();
+      rows.push({
+        key: `exp_${student.id}`,
+        students: [student],
+        isExpandedRow: true,
+      });
+    } else {
+      buffer.push(student);
+      if (buffer.length >= columns) {
+        flushBuffer();
+      }
+    }
+  }
+  flushBuffer();
+  return rows;
+}
+
+interface Peb1StudentCardProps {
+  student: Student;
+  diasLetivosMes: number;
+  isExpanded: boolean;
+  onToggleExpand: (studentId: string) => void;
+  onOpenPhotoModal?: (student: Student) => void;
+  onOpenStudentPdf?: (student: Student) => void;
+  onOpenStudentGrid?: (student: Student) => void;
+  renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
+}
+
+const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
+  student,
+  diasLetivosMes,
+  isExpanded,
+  onToggleExpand,
+  onOpenPhotoModal,
+  onOpenStudentPdf,
+  onOpenStudentGrid,
+  renderStudentDetailedExpansion,
+}) => {
+  const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+  const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+  const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+  const isOtherNonActive =
+    !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+  const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
+  const studentGenderInfo = getStudentGenderLabel(student);
+  const metrics = getStudentAttendanceMetrics(
+    student,
+    diasLetivosMes,
+    OFFICIAL_OCTOBER_DAYS
+  );
+  const cumulativeOccs = getStudentCumulativeOccurrences(student);
+  const latestConsecOcc =
+    cumulativeOccs.length > 0 ? cumulativeOccs[cumulativeOccs.length - 1] : null;
+  const consecDaysCount = latestConsecOcc ? latestConsecOcc.selectedDates.length : 0;
+  const hasStudentPdf = Boolean(
+    (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+      (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+  );
+
+  return (
+    <article
+      className={`rounded-3xl bg-white p-4 sm:p-5 transition-colors duration-100 min-w-0 ${
+        isExpanded ? 'shadow-sm' : 'shadow-2xs hover:bg-[#fafbfd]'
+      }`}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onClick={() => onToggleExpand(student.id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggleExpand(student.id);
+          }
+        }}
+        className="flex items-start justify-between gap-3 cursor-pointer select-none min-w-0"
+      >
+        <div className="flex items-start gap-3.5 min-w-0 flex-1">
+          <div
+            onClick={(e) => {
+              if (onOpenPhotoModal) {
+                e.stopPropagation();
+                onOpenPhotoModal(student);
+              }
+            }}
+            title={onOpenPhotoModal ? 'Atualizar foto' : undefined}
+            className={`shrink-0 ${onOpenPhotoModal ? 'cursor-pointer' : ''}`}
+          >
+            <StudentAvatar
+              student={student}
+              size="lg"
+              className="border-0 bg-[#f1f5f9]"
+            />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
+              <span>{student.number.toString().padStart(2, '0')}</span>
+              <span aria-hidden="true">·</span>
+              <span
+                className={
+                  metrics.isBelowLegalThreshold && !isNonActive
+                    ? 'text-[#b42318] font-semibold'
+                    : undefined
+                }
+              >
+                {metrics.frequenciaPercent}%
+              </span>
+              {isNonActive && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-semibold text-[#64748b]">
+                    {isTransferred
+                      ? studentGenderInfo.transferidoTerm
+                      : isRemanejado
+                      ? studentGenderInfo.remanejadoTerm
+                      : sit}
+                  </span>
+                </>
+              )}
+              {consecDaysCount >= 3 && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span
+                    className={
+                      consecDaysCount >= 5
+                        ? 'text-[#b42318] font-semibold'
+                        : 'text-[#b45309] font-semibold'
+                    }
+                  >
+                    {consecDaysCount} faltas seguidas
+                  </span>
+                </>
+              )}
+            </div>
+
+            <h2
+              className={`mt-1 text-[18px] sm:text-[19px] font-semibold tracking-[-0.024em] leading-[1.22] break-words ${
+                isNonActive ? 'text-[#64748b]' : 'text-[#0f172a]'
+              }`}
+            >
+              {student.name}
+            </h2>
+          </div>
+        </div>
+
+        <span
+          className={`material-symbols-outlined text-[20px] text-[#94a3b8] shrink-0 mt-0.5 transition-transform duration-150 ${
+            isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
+          }`}
+          aria-hidden="true"
+        >
+          expand_more
+        </span>
+      </div>
+
+      {(onOpenPhotoModal || onOpenStudentPdf || onOpenStudentGrid) && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="mt-4 grid grid-cols-3 gap-2 min-w-0"
+        >
+          {onOpenPhotoModal && (
+            <button
+              type="button"
+              onClick={() => onOpenPhotoModal(student)}
+              className="min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
+                photo_camera
+              </span>
+              <span>Foto</span>
+            </button>
+          )}
+
+          {onOpenStudentPdf && (
+            <button
+              type="button"
+              onClick={() => onOpenStudentPdf(student)}
+              className={`min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                hasStudentPdf
+                  ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
+                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px] shrink-0">
+                picture_as_pdf
+              </span>
+              <span>PDF</span>
+            </button>
+          )}
+
+          {onOpenStudentGrid && (
+            <button
+              type="button"
+              onClick={() => onOpenStudentGrid(student)}
+              className="min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
+                grid_view
+              </span>
+              <span>Ficha</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {isExpanded && (
+        <div className="pt-2">{renderStudentDetailedExpansion(student)}</div>
+      )}
+    </article>
   );
 }, (prev, next) => {
   return (
     prev.student === next.student &&
     prev.isExpanded === next.isExpanded &&
-    prev.diasLetivosMes === next.diasLetivosMes
+    prev.diasLetivosMes === next.diasLetivosMes &&
+    prev.onOpenPhotoModal === next.onOpenPhotoModal &&
+    prev.onOpenStudentPdf === next.onOpenStudentPdf &&
+    prev.onOpenStudentGrid === next.onOpenStudentGrid &&
+    prev.renderStudentDetailedExpansion === next.renderStudentDetailedExpansion
   );
 });
-EstudanteTabelaRow.displayName = 'EstudanteTabelaRow';
+Peb1StudentCard.displayName = 'Peb1StudentCard';
+
+interface Peb1CardRowProps {
+  rows: VirtualCardRowData[];
+  columnCount: number;
+  diasLetivosMes: number;
+  expandedStudentId: string | null;
+  onToggleExpand: (studentId: string) => void;
+  onOpenPhotoModal?: (student: Student) => void;
+  onOpenStudentPdf?: (student: Student) => void;
+  onOpenStudentGrid?: (student: Student) => void;
+  renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
+}
+
+const Peb1CardRow = ({
+  ariaAttributes,
+  index,
+  style,
+  rows,
+  columnCount,
+  diasLetivosMes,
+  expandedStudentId,
+  onToggleExpand,
+  onOpenPhotoModal,
+  onOpenStudentPdf,
+  onOpenStudentGrid,
+  renderStudentDetailedExpansion,
+}: RowComponentProps<Peb1CardRowProps>) => {
+  const row = rows[index];
+  if (!row) return null;
+
+  const gridColsClass =
+    row.isExpandedRow || columnCount <= 1
+      ? 'grid-cols-1'
+      : columnCount === 2
+      ? 'grid-cols-2'
+      : 'grid-cols-3';
+
+  return (
+    <div {...ariaAttributes} style={style} className="pb-3.5">
+      <div className={`grid ${gridColsClass} gap-3.5 items-start`}>
+        {row.students.map((student) => (
+          <Peb1StudentCard
+            key={student.id}
+            student={student}
+            diasLetivosMes={diasLetivosMes}
+            isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+            onToggleExpand={onToggleExpand}
+            onOpenPhotoModal={onOpenPhotoModal}
+            onOpenStudentPdf={onOpenStudentPdf}
+            onOpenStudentGrid={onOpenStudentGrid}
+            renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+interface AdminGridRowProps {
+  rows: VirtualCardRowData[];
+  columnCount: number;
+  classGroup: ClassGroup;
+  diasLetivosMes: number;
+  minLegalPresence: number;
+  expandedStudentId: string | null;
+  onToggleExpand: (studentId: string) => void;
+  onOpenStudentGrid?: (student: Student) => void;
+  onOpenStudentPdf?: (student: Student) => void;
+  onOpenPhotoModal?: (student: Student) => void;
+  renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
+}
+
+const AdminGridRow = ({
+  ariaAttributes,
+  index,
+  style,
+  rows,
+  columnCount,
+  classGroup,
+  diasLetivosMes,
+  minLegalPresence,
+  expandedStudentId,
+  onToggleExpand,
+  onOpenStudentGrid,
+  onOpenStudentPdf,
+  onOpenPhotoModal,
+  renderStudentDetailedExpansion,
+}: RowComponentProps<AdminGridRowProps>) => {
+  const row = rows[index];
+  if (!row) return null;
+
+  const gridColsClass =
+    row.isExpandedRow || columnCount <= 1
+      ? 'grid-cols-1'
+      : columnCount === 2
+      ? 'grid-cols-2'
+      : columnCount === 3
+      ? 'grid-cols-3'
+      : 'grid-cols-4';
+
+  return (
+    <div {...ariaAttributes} style={style} className="pb-3.5">
+      <div className={`grid ${gridColsClass} gap-3.5 items-stretch`}>
+        {row.students.map((student) => (
+          <EstudanteCard
+            key={student.id}
+            student={student}
+            classGroup={classGroup}
+            diasLetivosMes={diasLetivosMes}
+            minLegalPresence={minLegalPresence}
+            isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+            onToggleExpand={onToggleExpand}
+            onOpenStudentGrid={onOpenStudentGrid}
+            onOpenStudentPdf={onOpenStudentPdf}
+            onOpenPhotoModal={onOpenPhotoModal}
+            showMissingPdfAction={true}
+            renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+interface AdminCompactRowProps {
+  students: Student[];
+  classGroup: ClassGroup;
+  diasLetivosMes: number;
+  minLegalPresence: number;
+  expandedStudentId: string | null;
+  onToggleExpand: (studentId: string) => void;
+  onOpenStudentGrid?: (student: Student) => void;
+  onOpenStudentPdf?: (student: Student) => void;
+  onOpenPhotoModal?: (student: Student) => void;
+  renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
+}
+
+const AdminCompactRow = ({
+  ariaAttributes,
+  index,
+  style,
+  students,
+  classGroup,
+  diasLetivosMes,
+  minLegalPresence,
+  expandedStudentId,
+  onToggleExpand,
+  onOpenStudentGrid,
+  onOpenStudentPdf,
+  onOpenPhotoModal,
+  renderStudentDetailedExpansion,
+}: RowComponentProps<AdminCompactRowProps>) => {
+  const student = students[index];
+  if (!student) return null;
+
+  return (
+    <div {...ariaAttributes} style={style} className="pb-2.5">
+      <LinhaEstudante
+        student={student}
+        classGroup={classGroup}
+        diasLetivosMes={diasLetivosMes}
+        minLegalPresence={minLegalPresence}
+        isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+        onToggleExpand={onToggleExpand}
+        onOpenStudentGrid={onOpenStudentGrid}
+        onOpenStudentPdf={onOpenStudentPdf}
+        onOpenPhotoModal={onOpenPhotoModal}
+        showMissingPdfAction={true}
+        renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+      />
+    </div>
+  );
+};
 
 export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   classGroup,
-  assignedClasses = [],
-  onSwitchAssignedClass,
   userRole = 'admin',
-  userEmail,
-  userName,
-  schoolNotices = [],
-  onSaveSchoolNotices,
   canLaunchAttendance = true,
   onGoToMonthlyAttendance,
-  onGoToMonthlySummary,
   onOpenStudentGrid,
   onOpenPhotoModal,
   onOpenStudentPdf,
-  onNavigateToBolsaFamilia,
-  onNavigateToConsecutiveAbsences,
-  onNavigateToMap,
   onBackToClasses,
 }) => {
+  const isPeb1 = userRole === 'usuario';
   const [searchStudent, setSearchStudent] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
-  const [visibleStudentLimit, setVisibleStudentLimit] = useState<number>(30);
+  const [tableElement, setTableElement] = useState<HTMLTableElement | null>(null);
+  const [viewportSize, setViewportSize] = useState<{ width: number; height: number }>(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1024,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800,
+  }));
 
   useEffect(() => {
-    setVisibleStudentLimit(30);
-  }, [searchStudent, statusFilter, classGroup.id]);
+    setExpandedStudentId(null);
+  }, [classGroup.id]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const viewportWidth = viewportSize.width;
+  const defaultVirtualViewportHeight = Math.max(460, viewportSize.height - 180);
+  const peb1ColumnCount = viewportWidth >= 1280 ? 3 : viewportWidth >= 768 ? 2 : 1;
+  const adminGridColumnCount =
+    viewportWidth >= 1280 ? 4 : viewportWidth >= 1024 ? 3 : viewportWidth >= 640 ? 2 : 1;
+
+  // Referências estáveis para callbacks externos evitando re-renderizações em massa durante scroll virtualizado
+  const onOpenStudentGridRef = useRef(onOpenStudentGrid);
+  const onOpenPhotoModalRef = useRef(onOpenPhotoModal);
+  const onOpenStudentPdfRef = useRef(onOpenStudentPdf);
+  useEffect(() => {
+    onOpenStudentGridRef.current = onOpenStudentGrid;
+    onOpenPhotoModalRef.current = onOpenPhotoModal;
+    onOpenStudentPdfRef.current = onOpenStudentPdf;
+  }, [onOpenStudentGrid, onOpenPhotoModal, onOpenStudentPdf]);
+
+  const hasGridAction = Boolean(onOpenStudentGrid);
+  const hasPhotoAction = Boolean(onOpenPhotoModal);
+  const hasPdfAction = Boolean(onOpenStudentPdf);
+
+  const stableOpenStudentGrid = useMemo(
+    () => (hasGridAction ? (student: Student) => onOpenStudentGridRef.current?.(student) : undefined),
+    [hasGridAction]
+  );
+  const stableOpenPhotoModal = useMemo(
+    () => (hasPhotoAction ? (student: Student) => onOpenPhotoModalRef.current?.(student) : undefined),
+    [hasPhotoAction]
+  );
+  const stableOpenStudentPdf = useMemo(
+    () => (hasPdfAction ? (student: Student) => onOpenStudentPdfRef.current?.(student) : undefined),
+    [hasPdfAction]
+  );
 
   // Estado do Configurador de Download .XLS da Turma (Colunas, Campos e Ordem)
   const [isExportXlsModalOpen, setIsExportXlsModalOpen] = useState(false);
@@ -1050,106 +1505,337 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     });
   }, [orderedStudents, searchStudent, statusFilter, userRole, diasLetivosMes, minLegalPresence]);
 
-  const displayedStudents = useMemo(() => {
-    return filteredStudents.slice(0, visibleStudentLimit);
-  }, [filteredStudents, visibleStudentLimit]);
-  const renderStudentDetailedExpansion = (
-    student: Student
-  ) => {
+  const handleToggleExpand = useCallback((studentId: string) => {
+    setExpandedStudentId((prev) => (prev === studentId ? null : studentId));
+  }, []);
+
+  const renderStudentDetailedExpansion = useCallback(
+    (student: Student) => {
+      const occs = getStudentCumulativeOccurrences(student);
+      const latestWithFeedback = [...occs]
+        .reverse()
+        .find((o) => (o.familyFeedback || '').trim().length > 0);
+      const latestFeedback =
+        latestWithFeedback?.familyFeedback ||
+        student.consecutiveAbsenceAlert?.familyFeedback ||
+        undefined;
+
+      return (
+        <StudentDataExpansionPanel
+          student={student}
+          classGroup={classGroup}
+          diasLetivosMes={diasLetivosMes}
+          minLegalPresence={minLegalPresence}
+          onOpenStudentPdf={stableOpenStudentPdf}
+          onOpenStudentGrid={stableOpenStudentGrid}
+          onCollapse={() => setExpandedStudentId(null)}
+          showHeaderMeta={!isPeb1}
+          familyFeedback={latestFeedback}
+        />
+      );
+    },
+    [
+      classGroup,
+      diasLetivosMes,
+      minLegalPresence,
+      stableOpenStudentPdf,
+      stableOpenStudentGrid,
+      isPeb1,
+    ]
+  );
+
+  const peb1Rows = useMemo(
+    () => buildVirtualCardRows(filteredStudents, peb1ColumnCount, expandedStudentId),
+    [filteredStudents, peb1ColumnCount, expandedStudentId]
+  );
+
+  const adminGridRows = useMemo(
+    () => buildVirtualCardRows(filteredStudents, adminGridColumnCount, expandedStudentId),
+    [filteredStudents, adminGridColumnCount, expandedStudentId]
+  );
+
+  const peb1LayoutKey =
+    peb1ColumnCount > 1
+      ? `multi-${expandedStudentId ?? 'none'}`
+      : expandedStudentId === '__ALL__'
+      ? 'all'
+      : 'single';
+
+  const adminGridLayoutKey =
+    adminGridColumnCount > 1
+      ? `multi-${expandedStudentId ?? 'none'}`
+      : expandedStudentId === '__ALL__'
+      ? 'all'
+      : 'single';
+
+  const peb1DynamicRowHeight = useDynamicRowHeight({
+    defaultRowHeight: viewportWidth < 640 ? 172 : 164,
+    key: `peb1-${classGroup.id}-${peb1ColumnCount}-${filteredStudents.length}-${peb1LayoutKey}`,
+  });
+
+  const adminGridDynamicRowHeight = useDynamicRowHeight({
+    defaultRowHeight: viewportWidth < 640 ? 228 : 220,
+    key: `grid-${classGroup.id}-${adminGridColumnCount}-${filteredStudents.length}-${adminGridLayoutKey}`,
+  });
+
+  const adminCompactDynamicRowHeight = useDynamicRowHeight({
+    defaultRowHeight: viewportWidth < 640 ? 132 : 84,
+    key: `compact-${classGroup.id}-${viewportWidth < 640 ? 'm' : 'd'}-${filteredStudents.length}-${
+      expandedStudentId === '__ALL__' ? 'all' : 'single'
+    }`,
+  });
+
+  const tableDynamicRowHeight = useDynamicRowHeight({
+    defaultRowHeight: 62,
+    key: `table-${classGroup.id}-${filteredStudents.length}-${
+      expandedStudentId === '__ALL__' ? 'all' : 'single'
+    }`,
+  });
+
+  const tableVirtualizer = useVirtualizer({
+    count: !isPeb1 && viewMode === 'table' ? filteredStudents.length : 0,
+    element: tableElement,
+    scrollElement: 'window',
+    defaultSize: defaultVirtualViewportHeight,
+    itemSize: tableDynamicRowHeight,
+    overscanCount: 6,
+  });
+
+  const getVirtualCardRowKey = useCallback(
+    (index: number, data: { rows: VirtualCardRowData[] }) => data.rows[index]?.key ?? index,
+    []
+  );
+
+  const getCompactRowKey = useCallback(
+    (index: number, data: { students: Student[] }) => data.students[index]?.id ?? index,
+    []
+  );
+
+  const peb1RowProps = useMemo<Peb1CardRowProps>(
+    () => ({
+      rows: peb1Rows,
+      columnCount: peb1ColumnCount,
+      diasLetivosMes,
+      expandedStudentId,
+      onToggleExpand: handleToggleExpand,
+      onOpenPhotoModal: stableOpenPhotoModal,
+      onOpenStudentPdf: stableOpenStudentPdf,
+      onOpenStudentGrid: stableOpenStudentGrid,
+      renderStudentDetailedExpansion,
+    }),
+    [
+      peb1Rows,
+      peb1ColumnCount,
+      diasLetivosMes,
+      expandedStudentId,
+      handleToggleExpand,
+      stableOpenPhotoModal,
+      stableOpenStudentPdf,
+      stableOpenStudentGrid,
+      renderStudentDetailedExpansion,
+    ]
+  );
+
+  const adminGridRowProps = useMemo<AdminGridRowProps>(
+    () => ({
+      rows: adminGridRows,
+      columnCount: adminGridColumnCount,
+      classGroup,
+      diasLetivosMes,
+      minLegalPresence,
+      expandedStudentId,
+      onToggleExpand: handleToggleExpand,
+      onOpenStudentGrid: stableOpenStudentGrid,
+      onOpenStudentPdf: stableOpenStudentPdf,
+      onOpenPhotoModal: stableOpenPhotoModal,
+      renderStudentDetailedExpansion,
+    }),
+    [
+      adminGridRows,
+      adminGridColumnCount,
+      classGroup,
+      diasLetivosMes,
+      minLegalPresence,
+      expandedStudentId,
+      handleToggleExpand,
+      stableOpenStudentGrid,
+      stableOpenStudentPdf,
+      stableOpenPhotoModal,
+      renderStudentDetailedExpansion,
+    ]
+  );
+
+  const adminCompactRowProps = useMemo<AdminCompactRowProps>(
+    () => ({
+      students: filteredStudents,
+      classGroup,
+      diasLetivosMes,
+      minLegalPresence,
+      expandedStudentId,
+      onToggleExpand: handleToggleExpand,
+      onOpenStudentGrid: stableOpenStudentGrid,
+      onOpenStudentPdf: stableOpenStudentPdf,
+      onOpenPhotoModal: stableOpenPhotoModal,
+      renderStudentDetailedExpansion,
+    }),
+    [
+      filteredStudents,
+      classGroup,
+      diasLetivosMes,
+      minLegalPresence,
+      expandedStudentId,
+      handleToggleExpand,
+      stableOpenStudentGrid,
+      stableOpenStudentPdf,
+      stableOpenPhotoModal,
+      renderStudentDetailedExpansion,
+    ]
+  );
+
+  if (isPeb1) {
     return (
-      <StudentDataExpansionPanel
-        student={student}
-        classGroup={classGroup}
-        diasLetivosMes={diasLetivosMes}
-        minLegalPresence={minLegalPresence}
-        onOpenStudentPdf={onOpenStudentPdf}
-        onOpenStudentGrid={onOpenStudentGrid}
-        onNavigateToMap={onNavigateToMap}
-        onCollapse={() => setExpandedStudentId(null)}
-      />
+      <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
+        <header className="space-y-3.5 min-w-0">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap min-w-0 px-0.5">
+            <h1 className="text-[26px] sm:text-[30px] font-bold text-[#0f172a] tracking-[-0.028em] leading-[1.15] break-words">
+              {classGroup.name}
+            </h1>
+            <span className="text-[13px] font-medium tracking-[-0.008em] text-[#64748b] tabular-nums">
+              {searchStudent.trim()
+                ? `${filteredStudents.length} de ${orderedStudents.length} estudantes`
+                : `${orderedStudents.length} estudantes`}
+              {classGroup.shift ? ` · ${classGroup.shift.replace('Turno ', '')}` : ''}
+            </span>
+          </div>
+
+          <div className="relative min-w-0">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[20px]">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchStudent}
+              onChange={(e) => setSearchStudent(e.target.value)}
+              placeholder="Buscar estudante por nome ou número..."
+              aria-label="Buscar estudante"
+              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#f8fafc] shadow-2xs transition-colors"
+            />
+            {searchStudent && (
+              <button
+                type="button"
+                onClick={() => setSearchStudent('')}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center text-[#64748b] hover:text-[#0f172a] cursor-pointer"
+                aria-label="Limpar busca"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {peb1Rows.length === 0 ? (
+          <div className="bg-white rounded-3xl py-12 px-4 text-center space-y-2">
+            <p className="text-sm font-medium text-[#3c3c43]">
+              Nenhum estudante encontrado.
+            </p>
+            {searchStudent && (
+              <button
+                type="button"
+                onClick={() => setSearchStudent('')}
+                className="text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+              >
+                Limpar busca
+              </button>
+            )}
+          </div>
+        ) : (
+          <section aria-label="Estudantes da turma" className="min-w-0 space-y-3.5">
+            {peb1Rows.map((row, index) => (
+              <div key={row.key || index} className="pb-1">
+                <div className={`grid ${row.isExpandedRow || peb1ColumnCount <= 1 ? 'grid-cols-1' : peb1ColumnCount === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-3.5 items-start`}>
+                  {row.students.map((student) => (
+                    <Peb1StudentCard
+                      key={student.id}
+                      student={student}
+                      diasLetivosMes={diasLetivosMes}
+                      isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+                      onToggleExpand={handleToggleExpand}
+                      onOpenPhotoModal={stableOpenPhotoModal}
+                      onOpenStudentPdf={stableOpenStudentPdf}
+                      onOpenStudentGrid={stableOpenStudentGrid}
+                      renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+      </div>
     );
-  };
+  }
 
   return (
     <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
 
       {/* Contexto da Turma e Navegação */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 py-0.5 min-w-0">
-        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-          {userRole !== 'usuario' ? (
-            <button
-              type="button"
-              onClick={onBackToClasses}
-              className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-            >
-              <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-              <span>Turmas</span>
-            </button>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-[#0b3b8c] font-bold text-xs shrink-0">
-              <span className="material-symbols-outlined text-[14px]">school</span>
-              <span>Docente Regente PEB I</span>
-            </span>
-          )}
-          {userRole !== 'usuario' && <span className="text-slate-300">/</span>}
-          <span className="font-bold text-slate-900 break-words">Turma {classGroup.name}</span>
-          <span className="text-slate-400">·</span>
-          <span className="break-words">{classGroup.shift}</span>
-        </div>
-        <span className="text-slate-500 font-medium text-xs tabular-nums shrink-0">
-          {classGroup.room} · {diasLetivosMes} dias letivos
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] tracking-[-0.008em] text-[#64748b] py-0.5 min-w-0">
+        <button
+          type="button"
+          onClick={onBackToClasses}
+          className="text-[#475569] hover:text-[#0f172a] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+        >
+          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+          <span>Turmas</span>
+        </button>
+        <span className="text-[#64748b] font-medium tabular-nums shrink-0">
+          {classGroup.shift.replace('Turno ', '')} · {classGroup.room} · {diasLetivosMes} dias letivos
         </span>
       </div>
 
-      {/* Painel Coeso da Turma & Controles (Alunos Visíveis Imediatamente) */}
-      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm space-y-3.5 min-w-0">
-        {/* Linha 1: Título da Turma + Badges + Quadro Docente Resumido + Ações */}
+      {/* Painel Coeso da Turma & Controles */}
+      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3.5 min-w-0">
+        {/* Linha 1: Título da Turma + Docentes + Ações */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
           <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight break-words">
-                Turma {classGroup.name}
+            <div className="flex flex-wrap items-baseline gap-2 min-w-0">
+              <h1 className="text-[24px] sm:text-[28px] font-bold text-[#0f172a] tracking-[-0.028em] leading-[1.15] break-words">
+                {classGroup.name}
               </h1>
               {classGroup.turmaAbrev && (
-                <span className="text-xs font-bold uppercase tracking-wider text-white bg-[#0b3b8c] px-2.5 py-0.5 rounded-lg tabular-nums">
+                <span className="text-[11px] font-bold uppercase tracking-[0.02em] text-white bg-[#0b3b8c] px-2 py-0.5 rounded-lg tabular-nums">
                   {classGroup.turmaAbrev}
                 </span>
               )}
-              <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg break-words">
-                {classGroup.shift.replace('Turno ', '')} · {classGroup.room}
-              </span>
               {classGroup.classeSedCode && (
-                <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg tabular-nums">
-                  SED: {classGroup.classeSedCode}
+                <span className="text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
+                  SED {classGroup.classeSedCode}
                 </span>
               )}
             </div>
-            {/* Linha Coesa de Docentes */}
-            <p className="text-xs text-slate-600 font-medium break-words leading-relaxed">
-              <span className="font-bold text-slate-800">Regente:</span> {classGroup.teacherName || 'Docente Regente'}
+            <p className="text-[13px] tracking-[-0.008em] text-[#64748b] font-normal break-words leading-relaxed">
+              <span className="font-semibold text-[#334155]">Regente:</span> {classGroup.teacherName || 'Docente Regente'}
               {classGroup.artTeacher && (
-                <> <span className="text-slate-300">·</span> <span className="font-bold text-slate-800">Arte:</span> {classGroup.artTeacher}</>
+                <> · <span className="font-semibold text-[#334155]">Arte:</span> {classGroup.artTeacher}</>
               )}
               {classGroup.peTeacher && (
-                <> <span className="text-slate-300">·</span> <span className="font-bold text-slate-800">Ed. Física:</span> {classGroup.peTeacher}</>
+                <> · <span className="font-semibold text-[#334155]">Ed. Física:</span> {classGroup.peTeacher}</>
               )}
               {classGroup.englishTeacher && (
-                <> <span className="text-slate-300">·</span> <span className="font-bold text-slate-800">Inglês:</span> {classGroup.englishTeacher}</>
+                <> · <span className="font-semibold text-[#334155]">Inglês:</span> {classGroup.englishTeacher}</>
               )}
             </p>
           </div>
 
-          {/* Botões de Ação */}
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto min-w-0 shrink-0">
             {canLaunchAttendance && (
               <button
                 type="button"
                 onClick={onGoToMonthlyAttendance}
-                className="w-full sm:w-auto min-h-[42px] py-2 px-4 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors shadow-xs"
-                title="Informar faltas do mês de referência"
+                className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
               >
-                <span className="material-symbols-outlined text-[18px] text-emerald-300 shrink-0">checklist</span>
-                <span>Informar Faltas do Mês</span>
+                <span className="material-symbols-outlined text-[17px] text-emerald-300 shrink-0">checklist</span>
+                <span>Informar Faltas</span>
               </button>
             )}
 
@@ -1157,59 +1843,54 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsExportXlsModalOpen(true)}
-                className="w-full sm:w-auto min-h-[42px] py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
-                title="Exportar planilha personalizada em Excel/XLS"
+                className="w-full sm:w-auto min-h-[40px] py-2 px-3.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
               >
-                <span className="material-symbols-outlined text-[18px] text-slate-700 shrink-0">download</span>
+                <span className="material-symbols-outlined text-[17px] text-[#475569] shrink-0">download</span>
                 <span>Exportar .XLS</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Linha 2: Indicadores Rápidos da Turma (Pills Clicáveis sem Bloat) */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1 min-w-0">
+        {/* Linha 2: Indicadores Rápidos */}
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <button
             type="button"
             onClick={() => setStatusFilter(statusFilter === 'ativos' ? 'all' : 'ativos')}
-            className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1.5 tabular-nums ${
               statusFilter === 'ativos'
-                ? 'bg-[#0b3b8c] text-white shadow-xs'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                ? 'bg-[#0b3b8c] text-white'
+                : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
             }`}
           >
-            <span>Ativos:</span>
-            <span className="tabular-nums font-black">{classSummary.ativos}</span>
-            <span className="text-[11px] opacity-80">/ {classSummary.totalMatriculados}</span>
+            <span>Ativos</span>
+            <span className="font-bold">{classSummary.ativos}/{classSummary.totalMatriculados}</span>
           </button>
 
-          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-[#005035] flex items-center gap-1.5">
-            <span>Presença Global:</span>
-            <span className="tabular-nums font-black">{classSummary.pctPresencaTotal}%</span>
-            <span className="text-[11px] opacity-75">(meta {minLegalPresence}%)</span>
+          <div className="min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold bg-[#ecfdf5] text-[#047857] flex items-center gap-1 tabular-nums">
+            <span>Presença</span>
+            <span className="font-bold">{classSummary.pctPresencaTotal}%</span>
+            <span className="text-[11px] opacity-75">· meta {minLegalPresence}%</span>
           </div>
 
-          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-medium bg-slate-100 text-slate-700 flex items-center gap-1 tabular-nums">
-            <span className="font-bold text-slate-900">{classSummary.feminino}</span>
-            <span>Meninas</span>
-            <span className="text-slate-300">·</span>
-            <span className="font-bold text-slate-900">{classSummary.masculino}</span>
-            <span>Meninos</span>
+          <div className="min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-medium bg-[#f1f5f9] text-[#475569] flex items-center gap-1.5 tabular-nums">
+            <span><strong className="font-semibold text-[#0f172a]">{classSummary.feminino}</strong> F</span>
+            <span className="text-[#cbd5e1]">·</span>
+            <span><strong className="font-semibold text-[#0f172a]">{classSummary.masculino}</strong> M</span>
           </div>
 
           {(classSummary.transferidos + classSummary.remanejados > 0) && (
             <button
               type="button"
               onClick={() => setStatusFilter(statusFilter === 'movimentados' ? 'all' : 'movimentados')}
-              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1 tabular-nums ${
                 statusFilter === 'movimentados'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-amber-50 hover:bg-amber-100 text-amber-950'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-amber-50 hover:bg-amber-100 text-amber-900'
               }`}
             >
-              <span>Movimentados:</span>
-              <span className="tabular-nums font-black">{classSummary.transferidos + classSummary.remanejados}</span>
-              <span className="text-[11px] opacity-80">({classSummary.transferidos} transf.)</span>
+              <span>Movimentados</span>
+              <span className="font-bold">{classSummary.transferidos + classSummary.remanejados}</span>
             </button>
           )}
 
@@ -1217,20 +1898,19 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')}
-              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1 tabular-nums ${
                 statusFilter === 'sem_ficha_pdf'
-                  ? 'bg-rose-700 text-white shadow-xs'
-                  : 'bg-rose-50 hover:bg-rose-100 text-rose-900'
+                  ? 'bg-rose-700 text-white'
+                  : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
               }`}
             >
-              <span className="material-symbols-outlined text-[15px]">description</span>
-              <span>Fichas PDF:</span>
-              <span className="tabular-nums font-black">{classSummary.semFichaEscaneadaCount} pendentes</span>
+              <span>PDFs pendentes</span>
+              <span className="font-bold">{classSummary.semFichaEscaneadaCount}</span>
             </button>
           ) : (
-            <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-[#005035] flex items-center gap-1">
+            <div className="min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold bg-[#ecfdf5] text-[#047857] flex items-center gap-1">
               <span className="material-symbols-outlined text-[15px]">verified</span>
-              <span>100% Fichas Digitalizadas</span>
+              <span>100% PDFs</span>
             </div>
           )}
 
@@ -1238,14 +1918,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter(statusFilter === 'alerta' ? 'all' : 'alerta')}
-              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1 tabular-nums ${
                 statusFilter === 'alerta'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-rose-100 hover:bg-rose-200 text-rose-950'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
               }`}
             >
-              <span className="material-symbols-outlined text-[15px]">warning</span>
-              <span>Alerta Presença: {classSummary.alertaLegalCount}</span>
+              <span>Alerta</span>
+              <span className="font-bold">{classSummary.alertaLegalCount}</span>
             </button>
           )}
 
@@ -1253,14 +1933,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter(statusFilter === 'onibus_fretado' ? 'all' : 'onibus_fretado')}
-              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+              className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1 tabular-nums ${
                 statusFilter === 'onibus_fretado'
-                  ? 'bg-slate-800 text-white shadow-xs'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                  ? 'bg-slate-800 text-white'
+                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#334155]'
               }`}
             >
-              <span className="material-symbols-outlined text-[15px]">directions_bus</span>
-              <span>Ônibus ({classSummary.onibusFretadoCount})</span>
+              <span>Ônibus</span>
+              <span className="font-bold">{classSummary.onibusFretadoCount}</span>
             </button>
           )}
 
@@ -1268,36 +1948,37 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             <button
               type="button"
               onClick={() => setStatusFilter(statusFilter === 'bolsa_familia' ? 'all' : 'bolsa_familia')}
-              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+              className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1 tabular-nums ${
                 statusFilter === 'bolsa_familia'
-                  ? 'bg-blue-800 text-white shadow-xs'
-                  : 'bg-blue-50 hover:bg-blue-100 text-blue-950'
+                  ? 'bg-[#0b3b8c] text-white'
+                  : 'bg-blue-50 hover:bg-blue-100 text-[#0b3b8c]'
               }`}
             >
-              <span>Bolsa Família ({classSummary.bolsaFamiliaCount})</span>
+              <span>Bolsa Família</span>
+              <span className="font-bold">{classSummary.bolsaFamiliaCount}</span>
             </button>
           )}
         </div>
 
-        {/* Linha 3: Barra de Busca + Controles de Visualização + Expandir Todos */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1 min-w-0">
-          {/* Campo de busca */}
+        {/* Linha 3: Busca + Controles */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-0.5 min-w-0">
           <div className="relative flex-1 min-w-0">
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[19px]">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[19px]">
               search
             </span>
             <input
               type="text"
               value={searchStudent}
               onChange={(e) => setSearchStudent(e.target.value)}
-              placeholder="Buscar estudante por Nº, nome, RA ou responsável..."
-              className="w-full min-h-[44px] pl-10 pr-9 rounded-xl bg-slate-100 text-xs sm:text-sm font-semibold text-slate-950 placeholder:text-slate-500 focus:outline-none focus:bg-slate-200/70 transition-colors"
+              placeholder="Buscar por Nº, nome, RA ou responsável..."
+              aria-label="Buscar estudante"
+              className="w-full min-h-[44px] pl-10 pr-9 rounded-2xl bg-[#f1f5f9] text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#e2e8f0]/70 transition-colors"
             />
             {searchStudent && (
               <button
                 type="button"
                 onClick={() => setSearchStudent('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-black cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a] cursor-pointer"
                 aria-label="Limpar busca"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
@@ -1306,26 +1987,24 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
 
           <div className="flex items-center gap-2 justify-between sm:justify-end shrink-0">
-            {/* Se houver filtro ativo diferente de 'all', botão para limpar */}
             {statusFilter !== 'all' && (
               <button
                 type="button"
                 onClick={() => setStatusFilter('all')}
-                className="min-h-[40px] px-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                className="min-h-[40px] px-3 rounded-2xl bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#0f172a] font-semibold text-[12.5px] tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <span className="material-symbols-outlined text-[15px]">filter_alt_off</span>
-                <span>Limpar filtro</span>
+                <span>Limpar</span>
               </button>
             )}
 
-            {/* Botão Expandir / Recolher Todos */}
             <button
               type="button"
               onClick={() =>
                 setExpandedStudentId((prev) => (prev === '__ALL__' ? null : '__ALL__'))
               }
               title="Expandir ou recolher resumo de todos"
-              className="min-h-[40px] px-3.5 rounded-xl text-xs font-bold text-slate-800 hover:text-black bg-slate-100 hover:bg-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
+              className="min-h-[40px] px-3.5 rounded-2xl text-[12.5px] tracking-[-0.01em] font-semibold text-[#0f172a] bg-[#f1f5f9] hover:bg-[#e2e8f0] flex items-center gap-1 cursor-pointer transition-colors"
             >
               <span className="material-symbols-outlined text-[17px]">
                 {expandedStudentId === '__ALL__' ? 'unfold_less' : 'unfold_more'}
@@ -1333,16 +2012,15 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <span>{expandedStudentId === '__ALL__' ? 'Recolher' : 'Expandir'}</span>
             </button>
 
-            {/* Alternador de Modo de Visualização */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-[#f1f5f9] p-1 rounded-2xl">
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
                 title="Cartões"
-                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-xl text-[12.5px] tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors ${
                   viewMode === 'grid'
-                    ? 'bg-white text-slate-950 font-bold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 font-medium'
+                    ? 'bg-white text-[#0f172a] font-semibold shadow-2xs'
+                    : 'text-[#64748b] hover:text-[#0f172a] font-medium'
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">grid_view</span>
@@ -1352,10 +2030,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 type="button"
                 onClick={() => setViewMode('compact')}
                 title="Lista"
-                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-xl text-[12.5px] tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors ${
                   viewMode === 'compact'
-                    ? 'bg-white text-slate-950 font-bold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 font-medium'
+                    ? 'bg-white text-[#0f172a] font-semibold shadow-2xs'
+                    : 'text-[#64748b] hover:text-[#0f172a] font-medium'
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">view_agenda</span>
@@ -1365,10 +2043,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 type="button"
                 onClick={() => setViewMode('table')}
                 title="Tabela"
-                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-xl text-[12.5px] tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors ${
                   viewMode === 'table'
-                    ? 'bg-white text-slate-950 font-bold shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 font-medium'
+                    ? 'bg-white text-[#0f172a] font-semibold shadow-2xs'
+                    : 'text-[#64748b] hover:text-[#0f172a] font-medium'
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">table_rows</span>
@@ -1379,156 +2057,176 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         </div>
       </section>
 
-
-      {/* MODO 1: CARDS EM ORDEM NUMÉRICA DA TURMA (Padrão iOS Apple) */}
-      {viewMode === 'grid' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 items-stretch">
-            {displayedStudents.map((student) => (
-              <EstudanteCard
-                key={student.id}
-                student={student}
-                classGroup={classGroup}
-                diasLetivosMes={diasLetivosMes}
-                minLegalPresence={minLegalPresence}
-                isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
-                onToggleExpand={(id) => setExpandedStudentId((prev) => (prev === id ? null : id))}
-                onOpenStudentGrid={onOpenStudentGrid}
-                onOpenStudentPdf={onOpenStudentPdf}
-                onOpenPhotoModal={onOpenPhotoModal}
-                renderStudentDetailedExpansion={renderStudentDetailedExpansion}
-              />
-            ))}
-          </div>
-          {filteredStudents.length > visibleStudentLimit && (
-            <div className="py-4 text-center">
-              <button
-                type="button"
-                onClick={() => setVisibleStudentLimit((prev) => prev + 30)}
-                className="min-h-[44px] px-6 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm shadow-sm cursor-pointer transition-colors"
-              >
-                Carregar mais estudantes ({filteredStudents.length - visibleStudentLimit} restantes)
-              </button>
-            </div>
+      {filteredStudents.length === 0 ? (
+        <div className="bg-white rounded-3xl py-12 px-4 text-center space-y-2 shadow-2xs">
+          <p className="text-[15px] font-medium tracking-[-0.012em] text-[#475569]">
+            Nenhum estudante encontrado.
+          </p>
+          {(searchStudent || statusFilter !== 'all') && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchStudent('');
+                setStatusFilter('all');
+              }}
+              className="text-[13px] font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+            >
+              Limpar filtros
+            </button>
           )}
         </div>
-      )}
-
-      {/* MODO 2: LISTA COMPACTA (Ordem Numérica + Expansão Fluida Inline) */}
-      {viewMode === 'compact' && (
-        <div className="space-y-4">
-          <div className="space-y-2.5">
-            {displayedStudents.map((student) => (
-              <LinhaEstudante
-                key={student.id}
-                student={student}
-                classGroup={classGroup}
-                diasLetivosMes={diasLetivosMes}
-                minLegalPresence={minLegalPresence}
-                isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
-                onToggleExpand={(id) => setExpandedStudentId((prev) => (prev === id ? null : id))}
-                onOpenStudentPdf={onOpenStudentPdf}
-                onOpenPhotoModal={onOpenPhotoModal}
-                renderStudentDetailedExpansion={renderStudentDetailedExpansion}
-              />
-            ))}
-          </div>
-          {filteredStudents.length > visibleStudentLimit && (
-            <div className="py-4 text-center">
-              <button
-                type="button"
-                onClick={() => setVisibleStudentLimit((prev) => prev + 30)}
-                className="min-h-[44px] px-6 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm shadow-sm cursor-pointer transition-colors"
-              >
-                Carregar mais estudantes ({filteredStudents.length - visibleStudentLimit} restantes)
-              </button>
+      ) : (
+        <>
+          {/* MODO 1: CARDS EM ORDEM NUMÉRICA DA TURMA */}
+          {viewMode === 'grid' && (
+            <div className="min-w-0 space-y-3.5">
+              {adminGridRows.map((row, index) => (
+                <div key={row.key || index} className="pb-1">
+                  <div className={`grid ${row.isExpandedRow || adminGridColumnCount <= 1 ? 'grid-cols-1' : adminGridColumnCount === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-3.5 items-start`}>
+                    {row.students.map((student) => (
+                      <EstudanteCard
+                        key={student.id}
+                        student={student}
+                        classGroup={classGroup}
+                        diasLetivosMes={diasLetivosMes}
+                        minLegalPresence={minLegalPresence}
+                        isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+                        onToggleExpand={handleToggleExpand}
+                        onOpenStudentGrid={stableOpenStudentGrid}
+                        onOpenStudentPdf={stableOpenStudentPdf}
+                        onOpenPhotoModal={stableOpenPhotoModal}
+                        showMissingPdfAction={userRole === 'admin'}
+                        renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-        </div>
-      )}
 
-      {/* MODO 3: TABELA NOMINAL COMPLETA (Expansão ajustada à largura da tela em qualquer dispositivo) */}
-      {viewMode === 'table' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-3xl overflow-x-auto shadow-2xs">
-            {/* Legenda Visual Rápida de Faltas Consecutivas (3, 5 e 10 Dias) */}
-            <div className="px-4 py-3 bg-[#f7f9f8] flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-1.5 font-semibold text-[#003440]">
-                <span className="material-symbols-outlined text-[17px] text-[#ba1a1a]">
-                  notification_important
-                </span>
-                <span>Código de Cores — Faltas Seguidas na Tabela:</span>
+          {/* MODO 2: LISTA COMPACTA (Ordem Numérica + Expansão Fluida Inline) */}
+          {viewMode === 'compact' && (
+            <div className="min-w-0 space-y-3.5">
+              {filteredStudents.map((student) => (
+                <LinhaEstudante
+                  key={student.id}
+                  student={student}
+                  classGroup={classGroup}
+                  diasLetivosMes={diasLetivosMes}
+                  minLegalPresence={minLegalPresence}
+                  isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+                  onToggleExpand={handleToggleExpand}
+                  onOpenStudentGrid={stableOpenStudentGrid}
+                  onOpenStudentPdf={stableOpenStudentPdf}
+                  onOpenPhotoModal={stableOpenPhotoModal}
+                  showMissingPdfAction={userRole === 'admin'}
+                  renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* MODO 3: TABELA NOMINAL VIRTUALIZADA */}
+          {viewMode === 'table' && (() => {
+            const vItems = tableVirtualizer.items;
+            const topSpacerPx = vItems.length > 0 ? vItems[0].offset : 0;
+            const lastVItem = vItems.length > 0 ? vItems[vItems.length - 1] : null;
+            const bottomSpacerPx = lastVItem
+              ? Math.max(0, tableVirtualizer.totalSize - (lastVItem.offset + lastVItem.size))
+              : 0;
+
+            return (
+              <div className="space-y-4">
+                <div className="bg-white rounded-3xl overflow-x-auto shadow-2xs">
+                  <div className="px-4 py-3 bg-[#f8fafc] flex flex-wrap items-center justify-between gap-2 text-[12px] tracking-[-0.006em]">
+                    <span className="font-semibold text-[#334155]">Faltas seguidas:</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fffbeb] text-[#92400e] font-semibold tabular-nums">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+                        <span>3+ Atenção</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff7ed] text-[#9a3412] font-semibold tabular-nums">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#ea580c]" />
+                        <span>5+ Busca Ativa</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff1f2] text-[#9f1239] font-semibold tabular-nums">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#e11d48]" />
+                        <span>10+ Crítico</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <table
+                    ref={setTableElement}
+                    className="w-full text-left text-[13px] tracking-[-0.008em] border-collapse min-w-[1160px]"
+                  >
+                    <thead className="bg-[#f8fafc] text-[#475569] font-semibold uppercase tracking-[0.03em] text-[11px]">
+                      <tr>
+                        <th className="py-3 px-3 text-center">Nº</th>
+                        <th className="py-3 px-3">Estudante</th>
+                        <th className="py-3 px-2.5 text-center">Faltas Seguidas</th>
+                        <th className="py-3 px-2.5">RA</th>
+                        <th className="py-3 px-3">Filiação 1</th>
+                        <th className="py-3 px-3">Filiação 2</th>
+                        <th className="py-3 px-2.5">Contato</th>
+                        <th className="py-3 px-2.5 text-center">Presença</th>
+                        <th className="py-3 px-2.5 text-center">Faltas</th>
+                        <th className="py-3 px-2.5 text-center">Situação</th>
+                      </tr>
+                    </thead>
+                    {topSpacerPx > 0 && (
+                      <tbody aria-hidden="true">
+                        <tr>
+                          <td colSpan={10} className="p-0 border-0" style={{ height: topSpacerPx }} />
+                        </tr>
+                      </tbody>
+                    )}
+                    {vItems.map((virtualItem) => {
+                      const student = filteredStudents[virtualItem.index];
+                      if (!student) return null;
+                      return (
+                        <EstudanteTabelaRow
+                          key={student.id}
+                          student={student}
+                          classGroup={classGroup}
+                          diasLetivosMes={diasLetivosMes}
+                          minLegalPresence={minLegalPresence}
+                          rowIndex={virtualItem.index}
+                          tbodyRef={tableVirtualizer.measureElement}
+                          isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+                          onToggleExpand={handleToggleExpand}
+                          onOpenStudentGrid={stableOpenStudentGrid}
+                          onOpenStudentPdf={stableOpenStudentPdf}
+                          onOpenPhotoModal={stableOpenPhotoModal}
+                          showMissingPdfAction={true}
+                          renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+                        />
+                      );
+                    })}
+                    {bottomSpacerPx > 0 && (
+                      <tbody aria-hidden="true">
+                        <tr>
+                          <td colSpan={10} className="p-0 border-0" style={{ height: bottomSpacerPx }} />
+                        </tr>
+                      </tbody>
+                    )}
+                  </table>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fffbeb] text-[#92400e] border border-[#f59e0b]/40 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
-                  <span>3+ Dias Seguidos (Atenção)</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff7ed] text-[#9a3412] border border-[#ea580c]/40 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-[#ea580c]" />
-                  <span>5+ Dias Seguidos (Busca Ativa)</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff1f2] text-[#9f1239] border border-[#e11d48]/40 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-[#e11d48]" />
-                  <span>10+ Dias Seguidos (Evasão Crítica)</span>
-                </span>
-              </div>
-            </div>
-
-            <table className="w-full text-left text-xs sm:text-[13px] border-collapse min-w-[1160px]">
-              <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-semibold uppercase tracking-wider text-xs">
-                <tr>
-                  <th className="py-3 px-3 text-center">Nº</th>
-                  <th className="py-3 px-3">Estudante &amp; Ficha Informativa do Estudante</th>
-                  <th className="py-3 px-2.5 text-center">Alerta Faltas Seguidas (3 / 5 / 10 dias)</th>
-                  <th className="py-3 px-2.5">Registro (RA)</th>
-                  <th className="py-3 px-3">Filiação 1 (Mãe / Pai / Avó / Tia...)</th>
-                  <th className="py-3 px-3">Filiação 2 (Pai / Mãe / Avô / Tio...)</th>
-                  <th className="py-3 px-2.5">Telefone / E-mail</th>
-                  <th className="py-3 px-2.5 text-center">Presença no Mês</th>
-                  <th className="py-3 px-2.5 text-center">Faltas no Mês</th>
-                  <th className="py-3 px-2.5 text-center">Situação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/[0.05]">
-                {displayedStudents.map((student) => (
-                  <EstudanteTabelaRow
-                    key={student.id}
-                    student={student}
-                    classGroup={classGroup}
-                    diasLetivosMes={diasLetivosMes}
-                    minLegalPresence={minLegalPresence}
-                    isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
-                    onToggleExpand={(id) => setExpandedStudentId((prev) => (prev === id ? null : id))}
-                    onOpenStudentPdf={onOpenStudentPdf}
-                    renderStudentDetailedExpansion={renderStudentDetailedExpansion}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {filteredStudents.length > visibleStudentLimit && (
-            <div className="py-4 text-center">
-              <button
-                type="button"
-                onClick={() => setVisibleStudentLimit((prev) => prev + 30)}
-                className="min-h-[44px] px-6 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm shadow-sm cursor-pointer transition-colors"
-              >
-                Carregar mais estudantes ({filteredStudents.length - visibleStudentLimit} restantes)
-              </button>
-            </div>
-          )}
-        </div>
+            );
+          })()}
+        </>
       )}
 
       {/* Toast de Confirmação de Download .XLS */}
       {exportSuccessToast && (
         <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-100">
-          <div className="bg-[#003440] text-white px-4 py-3.5 rounded-2xl shadow-2xl border border-white/15 flex items-center gap-3">
-            <span className="material-symbols-outlined text-[24px] text-[#a4f3ca]">
+          <div className="bg-[#0f172a] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
+            <span className="material-symbols-outlined text-[22px] text-emerald-400">
               download_done
             </span>
-            <p className="text-sm font-bold leading-snug">{exportSuccessToast}</p>
+            <p className="text-[13.5px] font-semibold tracking-[-0.01em] leading-snug">{exportSuccessToast}</p>
           </div>
         </div>
       )}
@@ -1579,26 +2277,26 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="bg-white w-full max-w-6xl rounded-3xl shadow-xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[92vh] animate-apple-pop"
+              className="bg-[#f1f5f9] w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-apple-pop"
             >
               {/* Cabeçalho do Modal de Exportação .XLS */}
-              <div className="bg-white px-5 sm:px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="bg-white px-5 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-[#f1f5f9] text-[#0f172a] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-[22px]">table_view</span>
                   </div>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Exportação da Turma · Formato .{exportFileFormat}
+                    <div className="flex flex-wrap items-center gap-2 text-[12px] tracking-[-0.006em] text-[#64748b] tabular-nums">
+                      <span className="font-semibold uppercase tracking-[0.03em]">
+                        .{exportFileFormat}
                       </span>
-                      <span className="text-slate-300" aria-hidden="true">·</span>
-                      <span className="text-xs text-slate-500 font-mono tabular-nums">
+                      <span aria-hidden="true">·</span>
+                      <span>
                         {selectedColDefs.length} colunas · {previewData.rows.length} estudantes
                       </span>
                     </div>
-                    <h2 className="text-base sm:text-lg font-semibold text-slate-900 tracking-tight leading-tight mt-0.5 break-words">
-                      Baixar Planilha da Turma {classGroup.name}
+                    <h2 className="text-[18px] sm:text-[20px] font-semibold text-[#0f172a] tracking-[-0.022em] leading-tight mt-0.5 break-words">
+                      Planilha · {classGroup.name}
                     </h2>
                   </div>
                 </div>
@@ -1607,16 +2305,16 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   <button
                     type="button"
                     onClick={handleExecuteDownloadXLS}
-                    className="min-h-[40px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-[13px] flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                    className="min-h-[40px] px-4 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
                     <span className="material-symbols-outlined text-[18px]">download</span>
-                    <span>Baixar Planilha (.{exportFileFormat})</span>
+                    <span>Baixar .{exportFileFormat.toUpperCase()}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setIsExportXlsModalOpen(false)}
-                    className="w-10 h-10 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
+                    className="w-10 h-10 rounded-2xl bg-[#f1f5f9] text-[#475569] hover:text-[#0f172a] hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer transition-colors"
                     aria-label="Fechar"
                   >
                     <span className="material-symbols-outlined text-[20px]">close</span>
@@ -1626,14 +2324,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
               {/* Corpo Principal Rolável */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-                {/* 1. Modelos Rápidos (Presets de Colunas) */}
-                <div className="bg-white rounded-2xl p-4 border border-black/[0.06] space-y-2.5">
+                {/* 1. Modelos Rápidos */}
+                <div className="bg-white rounded-2xl p-4 space-y-2.5 shadow-2xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#003440] flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[17px] text-[#005035]">
-                        auto_awesome
-                      </span>
-                      <span>1. Modelos Rápidos de Colunas (ou personalize abaixo)</span>
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.03em] text-[#334155]">
+                      Modelos de Colunas
                     </span>
 
                     <div className="flex items-center gap-1.5">
@@ -1642,23 +2337,23 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         onClick={() =>
                           saveSelectedColumns(CLASS_EXPORT_COLUMNS.map((c) => c.id))
                         }
-                        className="px-2.5 py-1 rounded-lg bg-[#eaf6ef] hover:bg-[#d5f0e0] text-[#005035] font-bold text-xs cursor-pointer"
+                        className="px-2.5 py-1 rounded-xl bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#047857] font-semibold text-[12px] cursor-pointer"
                       >
-                        Marcar Todas ({CLASS_EXPORT_COLUMNS.length})
+                        Todas ({CLASS_EXPORT_COLUMNS.length})
                       </button>
                       <button
                         type="button"
                         onClick={() => saveSelectedColumns(DEFAULT_CLASS_EXPORT_COLUMN_IDS)}
-                        className="px-2.5 py-1 rounded-lg bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#003440] font-bold text-xs cursor-pointer"
+                        className="px-2.5 py-1 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[12px] cursor-pointer"
                       >
-                        Restaurar Padrão
+                        Padrão
                       </button>
                       <button
                         type="button"
                         onClick={() => saveSelectedColumns(['numeroChamada', 'estudante'])}
-                        className="px-2.5 py-1 rounded-lg bg-[#fff8f7] hover:bg-[#ffdad6] text-[#ba1a1a] font-bold text-xs cursor-pointer"
+                        className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold text-[12px] cursor-pointer"
                       >
-                        Mínimo (Nº + Nome)
+                        Mínimo
                       </button>
                     </div>
                   </div>
@@ -1673,21 +2368,21 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           key={preset.id}
                           type="button"
                           onClick={() => saveSelectedColumns(preset.columnIds)}
-                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                          className={`p-3 rounded-2xl text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
                             isCurrentPreset
-                              ? 'bg-[#eaf6ef] border-[#005035] shadow-2xs'
-                              : 'bg-[#f8faf9] hover:bg-white border-black/[0.06]'
+                              ? 'bg-[#eef4ff] text-[#0b3b8c]'
+                              : 'bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#0f172a]'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-xs sm:text-[13px] text-[#003440]">
+                            <span className="font-semibold text-[13px] tracking-[-0.01em]">
                               {preset.label}
                             </span>
-                            <span className="px-2 py-0.5 rounded bg-[#003440]/10 text-[#003440] font-mono font-bold text-xs">
-                              {preset.columnIds.length} colunas
+                            <span className="px-2 py-0.5 rounded-lg bg-white/80 text-[#334155] font-semibold text-[11px] tabular-nums">
+                              {preset.columnIds.length}
                             </span>
                           </div>
-                          <p className="text-xs text-[#5a676b] break-words leading-snug">
+                          <p className="text-[12px] text-[#64748b] break-words leading-snug">
                             {preset.description}
                           </p>
                         </button>
@@ -1696,56 +2391,54 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 </div>
 
-                {/* 2. Opções de Ordenação das Linhas, Filtro de Situação e Formato (.xls / .xlsx) */}
+                {/* 2. Ordenação, Filtro e Formato */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="bg-white rounded-2xl p-3.5 border border-black/[0.06] space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-[#5a676b] block">
-                      Ordem dos Estudantes (Linhas)
+                  <div className="bg-white rounded-2xl p-3.5 space-y-1 shadow-2xs">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                      Ordenação
                     </label>
                     <select
                       value={exportSortBy}
                       onChange={(e) => setExportSortBy(e.target.value as ClassExportSortOrder)}
-                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f5f7f6] border border-black/[0.08] text-sm font-bold text-[#003440]"
+                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f1f5f9] text-[13px] font-semibold text-[#0f172a]"
                     >
-                      <option value="number_asc">Nº da Chamada (01, 02, 03...)</option>
-                      <option value="name_asc">Ordem Alfabética (A → Z)</option>
-                      <option value="name_desc">Ordem Alfabética (Z → A)</option>
-                      <option value="absences_desc">Maior Falta Total primeiro</option>
-                      <option value="presence_asc">Menor % Presença primeiro</option>
+                      <option value="number_asc">Nº da Chamada (01, 02...)</option>
+                      <option value="name_asc">Alfabética (A → Z)</option>
+                      <option value="name_desc">Alfabética (Z → A)</option>
+                      <option value="absences_desc">Maior Falta primeiro</option>
+                      <option value="presence_asc">Menor % Presença</option>
                     </select>
                   </div>
 
-                  <div className="bg-white rounded-2xl p-3.5 border border-black/[0.06] space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-[#5a676b] block">
-                      Filtrar Estudantes na Planilha
+                  <div className="bg-white rounded-2xl p-3.5 space-y-1 shadow-2xs">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                      Estudantes
                     </label>
                     <select
                       value={exportStatusFilter}
                       onChange={(e) =>
                         setExportStatusFilter(e.target.value as ClassExportStatusFilter)
                       }
-                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f5f7f6] border border-black/[0.08] text-sm font-bold text-[#003440]"
+                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f1f5f9] text-[13px] font-semibold text-[#0f172a]"
                     >
                       <option value="all">
-                        Todos da Turma ({classGroup.students.length})
+                        Todos ({classGroup.students.length})
                       </option>
                       <option value="ativos">
-                        Somente Ativos ({classSummary.ativos})
+                        Ativos ({classSummary.ativos})
                       </option>
                       <option value="movimentados">
-                        Somente Transferidos / Remanejados (
-                        {classSummary.transferidos + classSummary.remanejados})
+                        Movimentados ({classSummary.transferidos + classSummary.remanejados})
                       </option>
                       <option value="alerta">
-                        Somente em Alerta Legal &lt;{minLegalPresence}% (
-                        {classSummary.alertaLegalCount})
+                        Em Alerta &lt;{minLegalPresence}% ({classSummary.alertaLegalCount})
                       </option>
                     </select>
                   </div>
 
-                  <div className="bg-white rounded-2xl p-3.5 border border-black/[0.06] space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-[#5a676b] block">
-                      Formato do Arquivo Excel
+                  <div className="bg-white rounded-2xl p-3.5 space-y-1 shadow-2xs">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                      Formato
                     </label>
                     <div className="ios-segmented w-full flex">
                       <button
@@ -1755,7 +2448,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                           exportFileFormat === 'xls' ? 'ios-segmented-item-active' : ''
                         }`}
                       >
-                        .XLS (Padrão)
+                        .XLS
                       </button>
                       <button
                         type="button"
@@ -1769,72 +2462,67 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl p-3.5 border border-black/[0.06] flex items-center justify-between gap-2">
+                  <div className="bg-white rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-2xs">
                     <div>
-                      <span className="text-xs font-semibold text-[#003440] block">
-                        Aba Resumo / Alta da Turma
+                      <span className="text-[13px] font-semibold text-[#0f172a] block">
+                        Aba Resumo
                       </span>
-                      <span className="text-xs text-[#5a676b] block">
-                        Ativos, Fem., Masc., Transf., Reman.
+                      <span className="text-[12px] text-[#64748b] block">
+                        Totais e presença da turma
                       </span>
                     </div>
                     <input
                       type="checkbox"
                       checked={includeSummarySheet}
                       onChange={(e) => setIncludeSummarySheet(e.target.checked)}
-                      className="w-5 h-5 accent-[#005035] rounded cursor-pointer"
+                      className="w-5 h-5 accent-[#0b3b8c] rounded cursor-pointer"
                     />
                   </div>
                 </div>
 
-                {/* 3. Grade Dupla: Selecionar Campos (Esquerda) + Definir Ordem das Colunas (Direita) */}
+                {/* 3. Grade Dupla: Campos e Ordem */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                  {/* Coluna Esquerda (7 cols): Selecionar Colunas / Campos disponíveis */}
-                  <div className="lg:col-span-7 bg-white rounded-2xl p-4 border border-black/[0.06] space-y-3">
+                  <div className="lg:col-span-7 bg-white rounded-2xl p-4 space-y-3 shadow-2xs">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-[#003440] flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[18px] text-[#005035]">
-                          checklist
-                        </span>
-                        <span>2. Selecionar Campos / Colunas ({CLASS_EXPORT_COLUMNS.length} disponíveis)</span>
+                      <h3 className="text-[14px] font-semibold text-[#0f172a] tracking-[-0.015em]">
+                        Campos disponíveis ({CLASS_EXPORT_COLUMNS.length})
                       </h3>
 
                       <div className="relative w-full sm:w-56">
-                        <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8e8e93] text-[16px]">
+                        <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[16px]">
                           search
                         </span>
                         <input
                           type="text"
                           value={columnSearchTerm}
                           onChange={(e) => setColumnSearchTerm(e.target.value)}
-                          placeholder="Buscar coluna (ex: Mãe, Pai, RA)..."
-                          className="w-full min-h-[38px] pl-8 pr-2.5 rounded-xl bg-[#f5f7f6] text-xs font-medium text-[#1c1c1e] focus:outline-none focus:bg-white border border-black/[0.06]"
+                          placeholder="Buscar campo..."
+                          className="w-full min-h-[38px] pl-8 pr-2.5 rounded-xl bg-[#f1f5f9] text-[13px] font-normal text-[#0f172a] focus:outline-none focus:bg-[#e2e8f0]/70"
                         />
                       </div>
                     </div>
 
-                    {/* Filtro por Categoria */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
                       <button
                         type="button"
                         onClick={() => setActiveCategoryFilter('all')}
-                        className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer ${
+                        className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] font-semibold whitespace-nowrap cursor-pointer ${
                           activeCategoryFilter === 'all'
-                            ? 'bg-[#003440] text-white'
-                            : 'bg-[#f2f4f3] text-[#436370] hover:bg-[#e5e9e7]'
+                            ? 'bg-[#0b3b8c] text-white'
+                            : 'bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0]'
                         }`}
                       >
-                        Todas Categorias
+                        Todas
                       </button>
                       {categories.map((cat) => (
                         <button
                           key={cat}
                           type="button"
                           onClick={() => setActiveCategoryFilter(cat)}
-                          className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer ${
+                          className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] font-semibold whitespace-nowrap cursor-pointer ${
                             activeCategoryFilter === cat
-                              ? 'bg-[#005035] text-white'
-                              : 'bg-[#f2f4f3] text-[#436370] hover:bg-[#e5e9e7]'
+                              ? 'bg-[#0b3b8c] text-white'
+                              : 'bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0]'
                           }`}
                         >
                           {cat}
@@ -1842,7 +2530,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       ))}
                     </div>
 
-                    {/* Lista de Checkboxes de Colunas */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[310px] overflow-y-auto pr-1">
                       {availableColumnsFiltered.map((col) => {
                         const isChecked = selectedColumnIds.includes(col.id);
@@ -1850,10 +2537,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                         return (
                           <label
                             key={col.id}
-                            className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 cursor-pointer select-none transition-all min-w-0 ${
+                            className={`p-2.5 rounded-xl flex items-center justify-between gap-2 cursor-pointer select-none transition-colors min-w-0 ${
                               isChecked
-                                ? 'bg-[#eaf6ef]/70 border-[#005035]/40 text-[#003440]'
-                                : 'bg-[#f9faf9] hover:bg-[#f2f4f3] border-black/[0.05] text-[#5a676b]'
+                                ? 'bg-[#eef4ff] text-[#0b3b8c]'
+                                : 'bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#475569]'
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -1861,20 +2548,20 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => handleToggleColumn(col.id)}
-                                className="w-4 h-4 accent-[#005035] rounded cursor-pointer shrink-0"
+                                className="w-4 h-4 accent-[#0b3b8c] rounded cursor-pointer shrink-0"
                               />
                               <div className="min-w-0 flex-1">
-                                <span className="font-bold text-xs block break-words leading-snug">
+                                <span className="font-semibold text-[12.5px] block break-words leading-snug text-[#0f172a]">
                                   {col.shortLabel}
                                 </span>
-                                <span className="font-mono text-xs opacity-75 block break-words leading-snug">
+                                <span className="text-[11px] text-[#64748b] block break-words leading-snug">
                                   {col.label}
                                 </span>
                               </div>
                             </div>
 
                             {isChecked && (
-                              <span className="px-2 py-0.5 rounded-md bg-[#005035] text-white font-mono font-semibold text-xs shrink-0">
+                              <span className="px-2 py-0.5 rounded-lg bg-[#0b3b8c] text-white font-semibold text-[11px] tabular-nums shrink-0">
                                 {orderPos + 1}ª
                               </span>
                             )}
@@ -1884,20 +2571,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     </div>
                   </div>
 
-                  {/* Coluna Direita (5 cols): Definir a Ordem Exata das Colunas na Planilha (.xls) */}
-                  <div className="lg:col-span-5 bg-white rounded-2xl p-4 border border-black/[0.06] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold text-[#003440] flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-[18px] text-[#005035]">
-                            swap_vert
-                          </span>
-                          <span>3. Ordem das Colunas ({selectedColDefs.length})</span>
-                        </h3>
-                        <p className="text-xs text-[#5a676b]">
-                          Use as setas ↑ ↓ ou arraste para mudar a ordem das colunas no .xls
-                        </p>
-                      </div>
+                  <div className="lg:col-span-5 bg-white rounded-2xl p-4 space-y-3 shadow-2xs">
+                    <div>
+                      <h3 className="text-[14px] font-semibold text-[#0f172a] tracking-[-0.015em]">
+                        Ordem ({selectedColDefs.length})
+                      </h3>
+                      <p className="text-[12px] text-[#64748b]">
+                        Arraste ou use as setas para reordenar
+                      </p>
                     </div>
 
                     <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
@@ -1915,18 +2596,18 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                             saveSelectedColumns(next);
                             setDraggedColIndex(null);
                           }}
-                          className="p-2.5 rounded-xl bg-[#f7f9f8] hover:bg-[#eef3f1] border border-black/[0.06] flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing min-w-0"
+                          className="p-2.5 rounded-xl bg-[#f8fafc] hover:bg-[#f1f5f9] flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing min-w-0"
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="w-7 h-7 rounded-lg bg-[#003440] text-white font-mono font-semibold text-xs flex items-center justify-center shrink-0">
+                            <span className="w-7 h-7 rounded-lg bg-[#0b3b8c] text-white font-semibold text-[12px] tabular-nums flex items-center justify-center shrink-0">
                               {idx + 1}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <span className="font-bold text-xs text-[#003440] block break-words leading-snug">
+                              <span className="font-semibold text-[12.5px] text-[#0f172a] block break-words leading-snug">
                                 {col.shortLabel}
                               </span>
-                              <span className="font-mono text-xs text-[#5a676b] block break-words leading-snug">
-                                Coluna Excel: {col.label}
+                              <span className="text-[11px] text-[#64748b] block break-words leading-snug">
+                                {col.label}
                               </span>
                             </div>
                           </div>
@@ -1936,8 +2617,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                               type="button"
                               disabled={idx === 0}
                               onClick={() => handleMoveColumn(idx, 'top')}
-                              title="Mover para 1ª coluna"
-                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eaf6ef] text-[#003440] border border-black/[0.06] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                              title="Mover para 1ª"
+                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-[16px]">
                                 keyboard_double_arrow_up
@@ -1947,8 +2628,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                               type="button"
                               disabled={idx === 0}
                               onClick={() => handleMoveColumn(idx, 'up')}
-                              title="Subir posição"
-                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eaf6ef] text-[#003440] border border-black/[0.06] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                              title="Subir"
+                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-[16px]">
                                 arrow_upward
@@ -1958,8 +2639,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                               type="button"
                               disabled={idx === selectedColDefs.length - 1}
                               onClick={() => handleMoveColumn(idx, 'down')}
-                              title="Descer posição"
-                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eaf6ef] text-[#003440] border border-black/[0.06] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                              title="Descer"
+                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-[16px]">
                                 arrow_downward
@@ -1969,8 +2650,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                               type="button"
                               disabled={selectedColDefs.length <= 1}
                               onClick={() => handleToggleColumn(col.id)}
-                              title="Remover coluna"
-                              className="w-8 h-8 rounded-lg bg-[#fff8f7] hover:bg-[#ffdad6] text-[#ba1a1a] border border-[#ba1a1a]/20 flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                              title="Remover"
+                              className="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 flex items-center justify-center disabled:opacity-30 cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-[16px]">close</span>
                             </button>
@@ -1981,46 +2662,39 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 </div>
 
-                {/* 4. Pré-visualização em Tempo Real da Planilha (.xls) */}
-                <div className="bg-white rounded-2xl p-4 border border-black/[0.06] space-y-2.5">
+                {/* 4. Pré-visualização */}
+                <div className="bg-white rounded-2xl p-4 space-y-2.5 shadow-2xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#003440] flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[17px] text-[#005035]">
-                        preview
-                      </span>
-                      <span>
-                        Prévia das Colunas e Ordem na Planilha .
-                        {exportFileFormat.toUpperCase()} (Primeiros 4 registros)
-                      </span>
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.03em] text-[#334155]">
+                      Prévia (.{exportFileFormat.toUpperCase()})
                     </span>
-                    <span className="text-xs font-semibold text-[#5a676b]">
-                      Total a exportar: {previewData.rows.length} linhas ×{' '}
-                      {previewData.headers.length} colunas
+                    <span className="text-[12px] font-medium text-[#64748b] tabular-nums">
+                      {previewData.rows.length} linhas × {previewData.headers.length} colunas
                     </span>
                   </div>
 
-                  <div className="border border-black/[0.08] rounded-xl overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-[#003440] text-white font-bold uppercase whitespace-nowrap">
+                  <div className="rounded-xl overflow-x-auto bg-[#f8fafc]">
+                    <table className="w-full text-left text-[12px] border-collapse">
+                      <thead className="bg-[#0f172a] text-white font-semibold uppercase whitespace-nowrap">
                         <tr>
                           {previewData.headers.map((h, i) => (
-                            <th key={`${h}-${i}`} className="py-2 px-2.5 border-r border-white/10">
-                              <span className="text-[#a4f3ca] mr-1">{i + 1}.</span>
+                            <th key={`${h}-${i}`} className="py-2 px-2.5">
+                              <span className="text-sky-300 mr-1 tabular-nums">{i + 1}.</span>
                               {h}
                             </th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-black/[0.05] whitespace-nowrap">
+                      <tbody className="whitespace-nowrap">
                         {previewData.rows.slice(0, 4).map((row, rIdx) => (
                           <tr
                             key={rIdx}
-                            className={rIdx % 2 === 0 ? 'bg-white' : 'bg-[#f8faf9]'}
+                            className={rIdx % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'}
                           >
                             {previewData.headers.map((h, cIdx) => (
                               <td
                                 key={`${rIdx}-${cIdx}`}
-                                className="py-1.5 px-2.5 border-r border-black/[0.04] text-[#1c1c1e] font-medium max-w-[220px] truncate"
+                                className="py-1.5 px-2.5 text-[#0f172a] font-medium max-w-[220px] truncate"
                               >
                                 {String(row[h] ?? '—')}
                               </td>
@@ -2034,31 +2708,27 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               </div>
 
               {/* Rodapé do Modal */}
-              <div className="bg-white px-5 py-3.5 border-t border-black/[0.06] flex flex-wrap items-center justify-between gap-3">
-                <div className="text-xs text-[#5a676b] font-medium">
-                  Arquivo:{' '}
-                  <strong className="font-mono text-[#003440]">
-                    Planilha_{classGroup.name.replace(/\s+/g, '_')}_2027.{exportFileFormat}
-                  </strong>
+              <div className="bg-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-[12px] text-[#64748b] font-medium tabular-nums">
+                  Planilha_{classGroup.name.replace(/\s+/g, '_')}_2027.{exportFileFormat}
                 </div>
 
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setIsExportXlsModalOpen(false)}
-                    className="min-h-[42px] px-4 rounded-xl bg-[#f2f4f3] hover:bg-[#e5e9e7] text-[#3c3c43] font-bold text-sm cursor-pointer"
+                    className="min-h-[40px] px-4 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="button"
                     onClick={handleExecuteDownloadXLS}
-                    className="min-h-[42px] px-5 rounded-xl bg-[#005035] hover:bg-[#003d28] text-white font-semibold text-sm flex items-center gap-2 shadow-sm cursor-pointer transition-all active:scale-97"
+                    className="min-h-[40px] px-5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[20px]">download</span>
+                    <span className="material-symbols-outlined text-[18px]">download</span>
                     <span>
-                      Baixar Planilha .{exportFileFormat.toUpperCase()} ({selectedColDefs.length}{' '}
-                      Colunas)
+                      Baixar .{exportFileFormat.toUpperCase()} ({selectedColDefs.length})
                     </span>
                   </button>
                 </div>

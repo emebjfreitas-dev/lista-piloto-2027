@@ -3297,14 +3297,24 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   <h3 className="text-base font-semibold text-[#1d1d1f]">
                     Central Firebase Cloud Messaging (FCM) · Prazos da Janela
                   </h3>
-                  <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#eaf6ef] text-[#005035]">
-                    {fcmStatus?.hasFirebaseAdminAccount
-                      ? 'FCM HTTP v1 + Web Push Automático Ativos'
-                      : 'Configuração Automática Ativa · Pronto para Uso'}
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
+                      fcmStatus?.fcmHttpV1Ready
+                        ? 'bg-[#eaf6ef] text-[#005035]'
+                        : fcmStatus?.hasFirebaseAdminAccount
+                        ? 'bg-[#e8f0fe] text-[#1a4fa3]'
+                        : 'bg-[#fef3c7] text-[#92400e]'
+                    }`}
+                  >
+                    {fcmStatus?.fcmHttpV1Ready
+                      ? 'FCM HTTP v1 + VAPID Configurados'
+                      : fcmStatus?.hasFirebaseAdminAccount
+                      ? 'Service Account Ativa · Web Push Pronto'
+                      : 'Modo Web Push / Tempo Real Ativo'}
                   </span>
                 </div>
                 <p className="text-xs text-[#6e6e73] max-w-2xl">
-                  Sistema configurado automaticamente com Web Push (VAPID P-256) e monitoramento em segundo plano para lembrar professores antes do fechamento da chamada ({windowEval.closingDateFormatted}).
+                  Integração oficial via Firebase Cloud Messaging (VAPID + Service Account) com monitoramento automático para lembrar professores antes do fechamento da chamada ({windowEval.closingDateFormatted}).
                 </p>
               </div>
 
@@ -3339,7 +3349,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   {fcmStatus?.totalRegisteredDevices ?? 0} dispositivo(s)
                 </span>
                 <span className="text-xs text-[#047857] block">
-                  {fcmStatus?.activeFcmTokensCount ?? 0} pronto(s) para push em segundo plano
+                  {fcmStatus?.realFcmTokensCount ?? fcmStatus?.activeFcmTokensCount ?? 0} token(s) FCM pronto(s) em segundo plano
                 </span>
               </div>
 
@@ -3420,56 +3430,82 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   </button>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[#eaf6ef]/70 space-y-2.5 flex flex-col justify-between">
+                <form
+                  onSubmit={handleSaveFcmConfigFromAcessos}
+                  className="p-4 rounded-2xl bg-[#eaf6ef]/70 space-y-3 flex flex-col justify-between"
+                >
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-[#005035]">
-                        Configuração Automática Web Push + FCM
+                        Regras de Alerta Automático (FCM HTTP v1)
                       </span>
                       <span className="px-2 py-0.5 rounded-md bg-white text-[#047857] text-xs font-semibold">
-                        VAPID P-256 Gerado
+                        {fcmStatus?.hasViteVapidKey ? 'VAPID Ativo' : 'Web Push Ativo'}
                       </span>
                     </div>
                     <p className="text-xs text-[#374151] leading-relaxed">
-                      Nenhuma chave manual necessária. O servidor gerou automaticamente as credenciais criptográficas VAPID e verifica a cada 15 minutos se a janela está próxima do encerramento.
+                      Credenciais de projeto (ListaPilotoCandelario2027 · Firebase) e chave VAPID conectadas no servidor. O monitor verifica automaticamente a janela a cada 15 minutos.
                     </p>
                   </div>
 
-                  <details className="pt-1">
-                    <summary className="text-xs font-semibold text-[#48484a] hover:text-[#111827] cursor-pointer select-none">
-                      Configuração Avançada Opcional (Sobrescrever VAPID do Firebase)
-                    </summary>
-                    <form
-                      onSubmit={handleSaveFcmConfigFromAcessos}
-                      className="mt-2.5 pt-2.5 space-y-2"
-                    >
-                      <input
-                        type="text"
-                        value={fcmConfigDraft.vapidPublicKey || ''}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    <label className="space-y-1 block">
+                      <span className="text-xs font-semibold text-[#1d1d1f] block">
+                        Antecedência do Aviso
+                      </span>
+                      <select
+                        value={fcmConfigDraft.notifyDaysBeforeClose}
                         onChange={(e) =>
                           setFcmConfigDraft((prev) => ({
                             ...prev,
-                            vapidPublicKey: e.target.value,
+                            notifyDaysBeforeClose: Number(e.target.value),
                           }))
                         }
-                        placeholder="Chave pública VAPID personalizada (opcional)"
-                        className="w-full min-h-[38px] px-3 rounded-xl bg-white text-xs text-[#1d1d1f] focus:outline-none"
-                      />
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-[#6e6e73]">
-                          Em branco = modo automático do servidor ativo.
-                        </span>
-                        <button
-                          type="submit"
-                          disabled={isSavingFcmConfig}
-                          className="min-h-[38px] px-3.5 rounded-xl bg-[#1d1d1f] hover:bg-black text-white text-xs font-semibold cursor-pointer disabled:opacity-60 shrink-0"
-                        >
-                          {isSavingFcmConfig ? 'Salvando...' : 'Aplicar'}
-                        </button>
-                      </div>
-                    </form>
-                  </details>
-                </div>
+                        className="w-full min-h-[38px] px-3 rounded-xl bg-white text-xs font-semibold text-[#1d1d1f] focus:outline-none"
+                      >
+                        <option value={1}>1 dia antes de abrir</option>
+                        <option value={2}>2 dias antes de abrir</option>
+                        <option value={3}>3 dias antes de abrir</option>
+                        <option value={4}>4 dias antes de abrir</option>
+                        <option value={5}>5 dias antes de abrir</option>
+                      </select>
+                    </label>
+
+                    <label className="space-y-1 block">
+                      <span className="text-xs font-semibold text-[#1d1d1f] block">
+                        Público-Alvo Automático
+                      </span>
+                      <select
+                        value={fcmConfigDraft.remindPendingTeachersOnly ? 'pending' : 'all'}
+                        onChange={(e) =>
+                          setFcmConfigDraft((prev) => ({
+                            ...prev,
+                            remindPendingTeachersOnly: e.target.value === 'pending',
+                          }))
+                        }
+                        className="w-full min-h-[38px] px-3 rounded-xl bg-white text-xs font-semibold text-[#1d1d1f] focus:outline-none"
+                      >
+                        <option value="pending">Apenas turmas pendentes</option>
+                        <option value="all">Todos os docentes</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-xs text-[#374151]">
+                      {fcmStatus?.hasFirebaseAdminAccount
+                        ? 'Service Account verificada para envio em segundo plano.'
+                        : 'Envio em tempo real via Service Worker ativo.'}
+                    </span>
+                    <button
+                      type="submit"
+                      disabled={isSavingFcmConfig}
+                      className="min-h-[38px] px-3.5 rounded-xl bg-[#1d1d1f] hover:bg-black text-white text-xs font-semibold cursor-pointer disabled:opacity-60 shrink-0"
+                    >
+                      {isSavingFcmConfig ? 'Salvando...' : 'Salvar Regras'}
+                    </button>
+                  </div>
+                </form>
               </div>
             )}
 

@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
   getMessaging,
   getToken,
@@ -30,7 +30,12 @@ import {
   UserRole,
 } from '../types';
 import { evaluateAttendanceLaunchWindow, getActiveUserAuthHeaders } from './db';
-import { firestoreDb, saveConfigMetaToFirestoreCloud } from './firebaseSync';
+import {
+  firestoreDb,
+  handleFirestoreError,
+  OperationType,
+  saveConfigMetaToFirestoreCloud,
+} from './firebaseSync';
 import { isBackendApiAvailable } from './apiEnvironment';
 import {
   PushNoticeItem,
@@ -74,9 +79,13 @@ export interface FcmBackendStatus {
   autoVapidPublicKey?: string;
   hasServiceAccountConfigured: boolean;
   hasFirebaseAdminAccount?: boolean;
+  hasViteVapidKey?: boolean;
+  fcmHttpV1Ready?: boolean;
+  firebaseProjectId?: string | null;
   hasVapidKey: boolean;
   totalRegisteredDevices: number;
   activeFcmTokensCount: number;
+  realFcmTokensCount?: number;
   teachersCoveredEmails: string[];
   recentDispatches: FcmWindowAlert[];
   fcmConfig: FcmSystemConfig;
@@ -91,6 +100,7 @@ export interface FcmBackendStatus {
     active: boolean;
     updatedAtMs: number;
     hasFcmToken: boolean;
+    hasNativeFcmToken?: boolean;
   }>;
 }
 
@@ -155,6 +165,24 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return outputArray;
 }
 
+function areApplicationServerKeysEqual(
+  existingKey: ArrayBuffer | null | undefined,
+  expectedBase64Url: string
+): boolean {
+  if (!existingKey || !expectedBase64Url) return false;
+  try {
+    const existingBytes = new Uint8Array(existingKey);
+    const expectedBytes = urlBase64ToUint8Array(expectedBase64Url);
+    if (existingBytes.length !== expectedBytes.length) return false;
+    for (let i = 0; i < existingBytes.length; i++) {
+      if (existingBytes[i] !== expectedBytes[i]) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchAutoVapidKeysFromServer(): Promise<{
   publicKey: string;
   firebaseVapidKey: string;
@@ -203,11 +231,16 @@ export function saveStoredFcmSystemConfig(config: FcmSystemConfig): void {
   }
 }
 
-export function getEffectiveVapidKey(overrideKey?: string): string {
-  if (overrideKey && overrideKey.trim()) return overrideKey.trim();
+export function getViteEnvVapidKey(): string {
   const envKey = (import.meta as unknown as { env?: Record<string, string | undefined> }).env
     ?.VITE_FIREBASE_VAPID_KEY;
-  if (envKey && envKey.trim()) return envKey.trim();
+  return (envKey || '').trim();
+}
+
+export function getEffectiveVapidKey(overrideKey?: string): string {
+  if (overrideKey && overrideKey.trim()) return overrideKey.trim();
+  const envKey = getViteEnvVapidKey();
+  if (envKey) return envKey;
   const cfgKey = getStoredFcmSystemConfig().vapidPublicKey;
   return (cfgKey || '').trim();
 }
@@ -265,9 +298,30 @@ async function getSafeMessagingInstance(): Promise<Messaging | null> {
   }
 }
 
+async function waitForActiveServiceWorker(
+  initialReg: ServiceWorkerRegistration | null
+): Promise<ServiceWorkerRegistration | null> {
+  if (!initialReg) return null;
+  if (initialReg.active) return initialReg;
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      const readyReg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<ServiceWorkerRegistration>((resolve) =>
+          window.setTimeout(() => resolve(initialReg), 3000)
+        ),
+      ]);
+      return readyReg || initialReg;
+    } catch {
+      return initialReg;
+    }
+  }
+  return initialReg;
+}
+
 /**
- * Registra o dispositivo do professor no Firebase Cloud Messaging (FCM),
- * obtém o Token Push quando suportado pelo navegador/VAPID e persiste no servidor + Firestore.
+ * Registra o dispositivo do professor no Firebase Cloud Messaging (FCM) usando VITE_FIREBASE_VAPID_KEY,
+ * evita colisão de applicationServerKey no PushManager e persiste no backend + Firestore.
  */
 export async function registerDeviceForFcm(params: {
   userEmail: string;
@@ -277,7 +331,8 @@ export async function registerDeviceForFcm(params: {
   assignedClassIds?: string[];
   vapidKeyOverride?: string;
 }): Promise<FcmRegistrationResult> {
-  const reg = await registerPushServiceWorker();
+  const initialReg = await registerPushServiceWorker();
+  const reg = await waitForActiveServiceWorker(initialReg);
   const swReady = Boolean(reg);
   const messagingSupported = await isMessagingSupported().catch(() => false);
   const pushManagerSupported = Boolean(reg && 'pushManager' in reg);
@@ -324,20 +379,84 @@ export async function registerDeviceForFcm(params: {
   const prefs = getStoredPushPreferences();
   saveStoredPushPreferences({ ...prefs, enabled: true, deadlinesEnabled: true });
 
-  // Busca chave pública VAPID gerada automaticamente pelo servidor (zero configuração manual)
   const serverVapid = await fetchAutoVapidKeysFromServer();
   const autoPublicKey = serverVapid.publicKey;
   const firebaseVapidKey =
-    serverVapid.firebaseVapidKey || getEffectiveVapidKey(params.vapidKeyOverride);
+    getEffectiveVapidKey(params.vapidKeyOverride) || serverVapid.firebaseVapidKey;
 
-  let obtainedFcmToken: string | null = getStoredFcmToken();
+  let obtainedFcmToken: string | null = null;
   let pushSubscriptionPayload: FcmDeviceSubscription['pushSubscription'] | undefined = undefined;
+  let vapidSource: FcmDeviceSubscription['vapidSource'] = 'auto_webpush';
   let statusDetail = 'Alertas em tempo real ativos via Service Worker.';
 
-  // 1. Inscrição Web Push padrão RFC 8291 (usa a chave VAPID automática do servidor -> entrega pelo FCM Web Push do navegador)
-  if (reg && 'pushManager' in reg && autoPublicKey) {
+  // 1. Prioridade absoluta ao Firebase Cloud Messaging (FCM) via VITE_FIREBASE_VAPID_KEY
+  const messaging = await getSafeMessagingInstance();
+  if (messaging && reg && firebaseVapidKey) {
+    try {
+      // Remove assinatura anterior se tiver sido criada com outra VAPID key (evita InvalidAccessError)
+      if ('pushManager' in reg) {
+        const existingSub = await reg.pushManager.getSubscription();
+        if (
+          existingSub &&
+          !areApplicationServerKeysEqual(
+            existingSub.options?.applicationServerKey,
+            firebaseVapidKey
+          )
+        ) {
+          await existingSub.unsubscribe().catch(() => false);
+        }
+      }
+
+      const token = await getToken(messaging, {
+        vapidKey: firebaseVapidKey,
+        serviceWorkerRegistration: reg,
+      });
+
+      if (token) {
+        obtainedFcmToken = token;
+        vapidSource = 'firebase_fcm';
+        setStoredFcmToken(token);
+        setStoredPushSubscriptionActive(true);
+        statusDetail =
+          'Dispositivo conectado ao Firebase Cloud Messaging (FCM) com VITE_FIREBASE_VAPID_KEY.';
+
+        if ('pushManager' in reg) {
+          const fcmSub = await reg.pushManager.getSubscription();
+          if (fcmSub) {
+            const subJson = fcmSub.toJSON();
+            if (subJson.endpoint && subJson.keys?.p256dh && subJson.keys?.auth) {
+              pushSubscriptionPayload = {
+                endpoint: subJson.endpoint,
+                expirationTime: subJson.expirationTime ?? null,
+                keys: {
+                  p256dh: subJson.keys.p256dh,
+                  auth: subJson.keys.auth,
+                },
+              };
+            }
+          }
+        }
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn('FCM getToken fallback para Web Push/SW:', errMsg);
+      obtainedFcmToken = getStoredFcmToken();
+    }
+  } else {
+    obtainedFcmToken = getStoredFcmToken();
+  }
+
+  // 2. Fallback Web Push RFC 8291 com chave automática do servidor SOMENTE se FCM nativo não obteve token
+  if (!obtainedFcmToken && reg && 'pushManager' in reg && autoPublicKey) {
     try {
       let existingSub = await reg.pushManager.getSubscription();
+      if (
+        existingSub &&
+        !areApplicationServerKeysEqual(existingSub.options?.applicationServerKey, autoPublicKey)
+      ) {
+        await existingSub.unsubscribe().catch(() => false);
+        existingSub = null;
+      }
       if (!existingSub) {
         existingSub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
@@ -355,34 +474,15 @@ export async function registerDeviceForFcm(params: {
               auth: subJson.keys.auth,
             },
           };
+          vapidSource = 'auto_webpush';
           setStoredPushSubscriptionActive(true);
           statusDetail =
-            'Notificações Push configuradas e ativadas automaticamente neste dispositivo.';
+            'Notificações Web Push ativadas neste dispositivo (modo compatível).';
         }
       }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn('Web Push PushManager fallback para FCM/SW:', errMsg);
-    }
-  }
-
-  // 2. Complemento Firebase Cloud Messaging getToken quando VAPID do Firebase estiver disponível
-  const messaging = await getSafeMessagingInstance();
-  if (messaging && reg && firebaseVapidKey) {
-    try {
-      const token = await getToken(messaging, {
-        vapidKey: firebaseVapidKey,
-        serviceWorkerRegistration: reg,
-      });
-      if (token) {
-        obtainedFcmToken = token;
-        setStoredFcmToken(token);
-        setStoredPushSubscriptionActive(true);
-        statusDetail = 'Dispositivo conectado ao Firebase Cloud Messaging (FCM) e Web Push.';
-      }
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn('FCM getToken fallback para Web Push/SW:', errMsg);
+      console.warn('Web Push PushManager fallback para SW:', errMsg);
     }
   }
 
@@ -405,6 +505,7 @@ export async function registerDeviceForFcm(params: {
     teacherRoleType: params.teacherRoleType,
     assignedClassIds: Array.isArray(params.assignedClassIds) ? params.assignedClassIds : [],
     ...(obtainedFcmToken ? { fcmToken: obtainedFcmToken } : {}),
+    vapidSource,
     ...(pushSubscriptionPayload ? { pushSubscription: pushSubscriptionPayload } : {}),
     channel,
     permission,
@@ -414,7 +515,7 @@ export async function registerDeviceForFcm(params: {
     updatedAtMs: nowMs,
   };
 
-  // 3. Persistir no backend Express (para disparo automático e manual em segundo plano)
+  // 3. Persistir no backend Express (para disparo HTTP v1 automático e manual em segundo plano)
   if (isBackendApiAvailable()) {
     try {
       await fetch('/api/fcm/register-token', {
@@ -438,8 +539,8 @@ export async function registerDeviceForFcm(params: {
         merge: true,
       });
     }
-  } catch {
-    // fallback silencioso caso iframe não possua token Firebase Auth
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `school_fcm_tokens_2027/${subId}`);
   }
 
   return {
@@ -518,15 +619,15 @@ export async function unregisterDeviceFromFcm(userEmail: string): Promise<void> 
         { merge: true }
       );
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    handleFirestoreError(err, OperationType.UPDATE, `school_fcm_tokens_2027/${subId}`);
   }
 }
 
 /**
  * Inscreve o aplicativo em:
  * 1) Mensagens FCM em primeiro plano (`onMessage`)
- * 2) Feed em tempo real do Firestore (`school_fcm_alerts_2027`)
+ * 2) Feed em tempo real do Firestore (`school_fcm_alerts_2027`) via `onAuthStateChanged`
  * 3) Sincronismo periódico de alertas no backend (`/api/fcm/alerts`)
  */
 export function subscribeToFcmNotifications(params: {
@@ -538,11 +639,11 @@ export function subscribeToFcmNotifications(params: {
   let cancelled = false;
   let unsubFcmForeground: (() => void) | null = null;
   let unsubFirestoreAlerts: (() => void) | null = null;
+  let unsubAuth: (() => void) | null = null;
   let pollIntervalId: number | null = null;
 
   const processIncomingAlert = async (alert: FcmWindowAlert) => {
     if (cancelled || !alert || !alert.id) return;
-    // Filtra por audiência/turma do professor (Admin vê todos os broadcasts)
     if (params.userRole !== 'admin') {
       if (
         alert.targetAudience === 'peb1' &&
@@ -563,7 +664,6 @@ export function subscribeToFcmNotifications(params: {
       }
     }
 
-    // Evita disparar duplicado no mesmo dispositivo
     const isNew = markAlertIdSeen(alert.id);
     if (!isNew) return;
 
@@ -621,16 +721,19 @@ export function subscribeToFcmNotifications(params: {
     }
   });
 
-  // 2. Firestore real-time alerts (`school_fcm_alerts_2027`) quando autenticado no Firebase Auth
-  try {
-    const auth = getAuth(app);
-    if (auth.currentUser) {
+  // 2. Firestore real-time alerts (`school_fcm_alerts_2027`) sincronizado com estado Firebase Auth
+  const attachFirestoreAlertsListener = () => {
+    if (unsubFirestoreAlerts) {
+      unsubFirestoreAlerts();
+      unsubFirestoreAlerts = null;
+    }
+    try {
       const q = query(
         collection(firestoreDb, 'school_fcm_alerts_2027'),
         orderBy('createdAtMs', 'desc'),
         limit(10)
       );
-      const bootThresholdMs = Date.now() - 1000 * 60 * 60 * 12; // últimas 12h
+      const bootThresholdMs = Date.now() - 1000 * 60 * 60 * 12;
       unsubFirestoreAlerts = onSnapshot(
         q,
         (snap) => {
@@ -643,11 +746,29 @@ export function subscribeToFcmNotifications(params: {
             }
           });
         },
-        () => {
-          // ignore permission errors if Firebase Auth session expired
+        (err) => {
+          handleFirestoreError(err, OperationType.LIST, 'school_fcm_alerts_2027');
         }
       );
+    } catch {
+      // ignore
     }
+  };
+
+  try {
+    const auth = getAuth(app);
+    if (auth.currentUser) {
+      attachFirestoreAlertsListener();
+    }
+    unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (cancelled) return;
+      if (user) {
+        attachFirestoreAlertsListener();
+      } else if (unsubFirestoreAlerts) {
+        unsubFirestoreAlerts();
+        unsubFirestoreAlerts = null;
+      }
+    });
   } catch {
     // ignore
   }
@@ -687,6 +808,7 @@ export function subscribeToFcmNotifications(params: {
     cancelled = true;
     if (unsubFcmForeground) unsubFcmForeground();
     if (unsubFirestoreAlerts) unsubFirestoreAlerts();
+    if (unsubAuth) unsubAuth();
     if (pollIntervalId !== null) window.clearInterval(pollIntervalId);
   };
 }
@@ -705,25 +827,38 @@ export async function evaluateAndTriggerWindowClosingReminder(params: {
   const prefs = getStoredPushPreferences();
   if (!prefs.enabled || !prefs.deadlinesEnabled) return null;
 
+  const fcmSysCfg = getStoredFcmSystemConfig();
+  if (!fcmSysCfg.autoWindowAlertsEnabled && !params.forceNotify) {
+    return null;
+  }
+
   const win = evaluateAttendanceLaunchWindow(params.attendanceWindowConfig);
   const pendingClasses = params.visibleClasses.filter((c) => c.isPending);
+  const notifyDays = Math.max(1, Math.min(5, Number(fcmSysCfg.notifyDaysBeforeClose || 2)));
 
   const isCriticalPhase =
     win.windowPhase === 'next_month_closing' ||
     win.windowPhase === 'last_day' ||
-    win.windowPhase === 'closing_soon' ||
+    (win.windowPhase === 'closing_soon' && win.daysRemaining <= notifyDays) ||
     win.windowPhase === 'override_open';
 
   if (!isCriticalPhase && !params.forceNotify) {
     return null;
   }
 
-  // Se não houver turmas pendentes visíveis para este professor e não for disparo forçado, não incomodar
-  if (pendingClasses.length === 0 && !params.forceNotify) {
+  if (
+    fcmSysCfg.remindPendingTeachersOnly &&
+    pendingClasses.length === 0 &&
+    !params.forceNotify
+  ) {
     return null;
   }
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const nowLocal = new Date();
+  const todayKey = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(nowLocal.getDate()).padStart(2, '0')}`;
   const dedupKey = `${todayKey}|${win.windowPhase}|${win.urgencyLevel}|${pendingClasses.length}|${(
     params.userEmail || ''
   )
@@ -786,7 +921,7 @@ export async function evaluateAndTriggerWindowClosingReminder(params: {
 
 /**
  * Dispara alerta FCM oficial sobre o fechamento da janela de lançamento de presença
- * para professores (com suporte a envio HTTP v1 em background + Firestore realtime + Service Worker).
+ * para professores (envio HTTP v1 em background + Firestore realtime + Service Worker).
  */
 export async function dispatchWindowClosingFcmAlert(params: {
   title?: string;
@@ -860,7 +995,7 @@ export async function dispatchWindowClosingFcmAlert(params: {
   let deliveredFcmCount = 0;
   let serverMessage = 'Alerta publicado em tempo real para os dispositivos conectados.';
 
-  // 1. Disparo backend (FCM HTTP v1 + persistência no estado compartilhado)
+  // 1. Disparo backend (FCM HTTP v1 via Service Account + persistência compartilhada)
   if (isBackendApiAvailable()) {
     try {
       const res = await fetch('/api/fcm/send-window-alert', {
@@ -887,8 +1022,8 @@ export async function dispatchWindowClosingFcmAlert(params: {
     if (auth.currentUser) {
       await setDoc(doc(firestoreDb, 'school_fcm_alerts_2027', alertId), alert);
     }
-  } catch {
-    // ignore if auth session not active
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, `school_fcm_alerts_2027/${alertId}`);
   }
 
   // 3. Garantir feedback imediato local na central e Service Worker
@@ -969,11 +1104,17 @@ export async function saveFcmSystemConfiguration(
 export function getFcmCapabilitySnapshot(): {
   permission: NotificationPermission | 'unsupported';
   hasFcmToken: boolean;
+  hasNativeFcmToken: boolean;
   hasVapidKey: boolean;
+  hasViteVapidKey: boolean;
 } {
+  const viteVapid = Boolean(getViteEnvVapidKey());
+  const nativeToken = Boolean(getStoredFcmToken());
   return {
     permission: getPushPermissionState(),
-    hasFcmToken: Boolean(getStoredFcmToken()) || getStoredPushSubscriptionActive(),
-    hasVapidKey: true,
+    hasFcmToken: nativeToken || getStoredPushSubscriptionActive(),
+    hasNativeFcmToken: nativeToken,
+    hasVapidKey: Boolean(getEffectiveVapidKey()),
+    hasViteVapidKey: viteVapid,
   };
 }

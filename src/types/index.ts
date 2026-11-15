@@ -71,15 +71,34 @@ export interface MonthlyAttendanceEntry {
   observacao?: string;
 }
 
+export type ContactAttemptChannel =
+  | 'whatsapp'
+  | 'ligacao'
+  | 'presencial'
+  | 'recado_agenda'
+  | 'nao_atendeu';
+
+export type ActiveSearchOutcomeStatus =
+  | 'aguardando_contato'
+  | 'em_tentativa'
+  | 'contato_realizado'
+  | 'justificado_atestado'
+  | 'encaminhado_busca';
+
 export interface ConsecutiveAbsenceOccurrence {
   id: string;
   sequenceNumber: number;
   selectedDates: string[];
   reportedAt: string;
   reportedByTeacher?: string;
+  teacherObservation?: string;
   familyFeedback?: string;
   feedbackUpdatedAt?: string;
+  feedbackByName?: string;
+  contactChannel?: ContactAttemptChannel;
+  contactStatus?: ActiveSearchOutcomeStatus;
   feedbackReadByTeacher?: boolean;
+  feedbackReadAt?: string;
   monthLabel?: string;
 }
 
@@ -123,6 +142,13 @@ export type SyncStateStatus = 'synced' | 'syncing' | 'pending' | 'error';
 
 export type NoticePriority = 'urgente' | 'importante' | 'informativo';
 
+export interface NoticeReadReceipt {
+  userEmail: string;
+  userName: string;
+  userRole?: string;
+  readAtISO: string;
+}
+
 export interface SchoolNotice {
   id: string;
   title: string;
@@ -135,6 +161,7 @@ export interface SchoolNotice {
   pinned?: boolean;
   active: boolean;
   targetAudience?: 'all' | 'peb1' | 'peb2';
+  readBy?: NoticeReadReceipt[];
 }
 
 export interface PendingSyncOperation {
@@ -346,7 +373,6 @@ export type ScreenType =
   | 'bolsa_familia'
   | 'dias_letivos'
   | 'resumo'
-  | 'mapa_estudantes'
   | 'planilha'
   | 'usuarios_acesso'
   | 'diagnostico_bd'
@@ -469,6 +495,7 @@ export interface FcmDeviceSubscription {
   teacherRoleType?: AuthorizedUser['teacherRoleType'];
   assignedClassIds: string[];
   fcmToken?: string;
+  vapidSource?: 'firebase_fcm' | 'auto_webpush';
   pushSubscription?: {
     endpoint: string;
     expirationTime?: number | null;

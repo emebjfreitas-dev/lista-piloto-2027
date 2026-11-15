@@ -387,7 +387,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
       await saveClassesToFirestoreCloud(classes, Date.now());
       setFeedback({
         type: 'success',
-        text: 'Banco sincronizado com sucesso com a nuvem (Firebase Firestore).',
+        text: 'Banco sincronizado com sucesso com a nuvem (ListaPilotoCandelario2027 · Firebase Firestore).',
       });
     } catch (err: any) {
       setFeedback({

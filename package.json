@@ -28,6 +28,7 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-is": "^19.3.0",
+    "react-window": "^2.5.3",
     "recharts": "^3.10.1",
     "sonner": "^2.0.8",
     "tsx": "^4.23.15",

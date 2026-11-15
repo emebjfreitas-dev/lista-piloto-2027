@@ -47,6 +47,7 @@ interface HeaderProps {
   attendanceWindowConfig?: AttendanceWindowConfig;
   visibleClasses?: ClassGroup[];
   allClasses?: ClassGroup[];
+  instantSheetSyncStatus?: 'idle' | 'syncing' | 'synced';
   onRestoreAdminRole?: () => void;
   onBack?: () => void;
   onChangeScreen?: (screen: ScreenType) => void;
@@ -71,6 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
   attendanceWindowConfig,
   visibleClasses = [],
   allClasses = [],
+  instantSheetSyncStatus = 'idle',
   onRestoreAdminRole,
   onChangeScreen,
   onSelectClassById,
@@ -265,35 +267,74 @@ export const Header: React.FC<HeaderProps> = ({
     <>
       <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/98 backdrop-blur-xl shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
         <div className="h-16 px-3.5 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
-          {/* Zona 1: Identidade Institucional */}
-          <button
-            type="button"
-            onClick={() => navigateTo('home')}
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none min-w-0 text-left min-h-[44px]"
-            title="Ir para o Início"
-          >
-            <img
-              src={APP_LOGO_URL}
-              alt="Brasão de Jundiaí"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-              }}
-              className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
-            />
-            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5 min-w-0 leading-tight">
-              <span className="text-[13px] sm:text-base font-extrabold tracking-tight text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors truncate">
-                Lista Piloto Candelário 2027
+          {/* Zona 1: Identidade Institucional & Status Google Sheets */}
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigateTo('home')}
+              className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none min-w-0 text-left min-h-[44px]"
+              title="Ir para o Início"
+            >
+              <img
+                src={APP_LOGO_URL}
+                alt="Brasão de Jundiaí"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = APP_LOGO_FALLBACK_URL;
+                }}
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
+              />
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5 min-w-0 leading-tight">
+                <span className="text-[13px] sm:text-base font-extrabold tracking-tight text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors truncate">
+                  Lista Piloto Candelário 2027
+                </span>
+                <span className="text-slate-400 font-light hidden md:inline" aria-hidden="true">
+                  ·
+                </span>
+                <span className="text-[11px] sm:text-[13px] text-slate-600 font-semibold hidden sm:inline whitespace-nowrap">
+                  EMEB Candelário
+                </span>
+              </div>
+            </button>
+
+            {/* Indicador de Status Google Sheets (Pulsante e Discreto) */}
+            <div
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/80 border border-slate-200/60 text-xs font-medium text-slate-600 shrink-0"
+              title={
+                instantSheetSyncStatus === 'syncing'
+                  ? 'Sincronizando dados com a Planilha Oficial...'
+                  : instantSheetSyncStatus === 'synced'
+                  ? 'Planilha Oficial Sincronizada'
+                  : 'Sincronização em segundo plano pronta'
+              }
+            >
+              <span className="relative flex h-2 w-2">
+                {instantSheetSyncStatus === 'syncing' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                )}
+                {instantSheetSyncStatus === 'synced' && (
+                  <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                <span
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    instantSheetSyncStatus === 'syncing'
+                      ? 'bg-amber-500'
+                      : instantSheetSyncStatus === 'synced'
+                      ? 'bg-emerald-500'
+                      : 'bg-slate-300'
+                  }`}
+                ></span>
               </span>
-              <span className="text-slate-400 font-light hidden md:inline" aria-hidden="true">
-                ·
-              </span>
-              <span className="text-[11px] sm:text-[13px] text-slate-600 font-semibold hidden sm:inline whitespace-nowrap">
-                EMEB Candelário
+              <span className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">
+                {instantSheetSyncStatus === 'syncing'
+                  ? 'Sincronizando Sheets...'
+                  : instantSheetSyncStatus === 'synced'
+                  ? 'Sheets Sincronizado'
+                  : 'Sheets Pronto'}
               </span>
             </div>
-          </button>
+          </div>
 
           {/* Zona 2: Navegação Principal Enxuta (Desktop & Tablet Paisagem lg+) */}
           {onChangeScreen && (

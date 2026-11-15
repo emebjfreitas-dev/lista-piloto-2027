@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
+  ActiveSearchOutcomeStatus,
+  AuthorizedUser,
   ClassGroup,
   ConsecutiveAbsenceOccurrence,
+  ContactAttemptChannel,
   Student,
   UserRole,
 } from '../types';
@@ -11,11 +14,32 @@ import {
   triggerPushNotification,
 } from '../services/pushNotificationService';
 import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
+import { SCHOOL_NAME } from '../data/mockData';
+import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
+import { toast } from 'sonner';
+import {
+  ArrowLeft,
+  Check,
+  CheckCheck,
+  ChevronDown,
+  Clock,
+  Edit3,
+  MessageCircle,
+  Phone,
+  Search,
+  Send,
+  Trash2,
+  UserCheck,
+  X,
+} from 'lucide-react';
 
 interface FaltasConsecutivasScreenProps {
   classGroup: ClassGroup;
   availableClasses?: ClassGroup[];
   userRole?: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
+  userName?: string;
+  userEmail?: string;
   onSelectClass?: (cls: ClassGroup) => void;
   onUpdateStudent: (classId: string, updatedStudent: Student) => void;
   onBack?: () => void;
@@ -29,10 +53,6 @@ export interface SchoolDayOption {
   chronologicalIndex: number;
 }
 
-/**
- * Gera os últimos dias letivos (segunda a sexta-feira) em ordem cronológica
- * para que a professora PEB I possa selecionar facilmente 3 ou mais dias seguidos.
- */
 export function getRecentSchoolDays(referenceDate: Date = new Date(), count = 12): SchoolDayOption[] {
   const rawDays: Array<{
     key: string;
@@ -66,9 +86,6 @@ export function getRecentSchoolDays(referenceDate: Date = new Date(), count = 12
   }));
 }
 
-/**
- * Verifica se os dias selecionados contêm pelo menos 3 dias letivos consecutivos.
- */
 export function hasThreeOrMoreConsecutiveSchoolDays(
   selectedKeys: string[],
   availableDays: SchoolDayOption[]
@@ -114,38 +131,139 @@ export function hasThreeOrMoreConsecutiveSchoolDays(
   };
 }
 
-const QUICK_FAMILY_FEEDBACK_CHIPS = [
-  'Atestado Médico Entregue',
-  'Criança com quadro febril / virose',
-  'Consulta médica / odontológica',
-  'Viagem familiar comunicada',
-  'Tentativa de contato sem sucesso (Caixa Postal)',
-  'Responsável ciente · Retorno amanhã',
+const CONTACT_CHANNEL_OPTIONS: Array<{
+  id: ContactAttemptChannel;
+  label: string;
+}> = [
+  { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'ligacao', label: 'Ligação' },
+  { id: 'presencial', label: 'Presencial' },
+  { id: 'recado_agenda', label: 'Recado / E-mail' },
+  { id: 'nao_atendeu', label: 'Sem resposta' },
 ];
+
+const OUTCOME_STATUS_OPTIONS: Array<{
+  id: ActiveSearchOutcomeStatus;
+  label: string;
+  toneClass: string;
+}> = [
+  {
+    id: 'contato_realizado',
+    label: 'Retorno obtido',
+    toneClass: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+  },
+  {
+    id: 'justificado_atestado',
+    label: 'Atestado / Saúde',
+    toneClass: 'text-sky-800 bg-sky-50 border-sky-200',
+  },
+  {
+    id: 'em_tentativa',
+    label: 'Em tentativa',
+    toneClass: 'text-amber-800 bg-amber-50 border-amber-200',
+  },
+  {
+    id: 'encaminhado_busca',
+    label: 'Busca / Conselho',
+    toneClass: 'text-rose-800 bg-rose-50 border-rose-200',
+  },
+];
+
+const QUICK_FAMILY_FEEDBACK_CHIPS = [
+  'Responsável ciente · Retorno às aulas previsto para amanhã',
+  'Criança com quadro febril / virose · Família enviará atestado',
+  'Consulta médica / odontológica informada pela família',
+  'Viagem familiar comunicada previamente',
+  'Tentativa de contato sem sucesso (caixa postal / sem retorno)',
+  'Encaminhado para acompanhamento presencial da equipe gestora',
+];
+
+function getChannelLabel(channel?: ContactAttemptChannel): string {
+  const found = CONTACT_CHANNEL_OPTIONS.find((c) => c.id === channel);
+  return found ? found.label : 'Contato escolar';
+}
+
+function getOutcomeMeta(
+  occ: ConsecutiveAbsenceOccurrence
+): {
+  status: ActiveSearchOutcomeStatus;
+  label: string;
+  toneClass: string;
+} {
+  const hasFeedback = Boolean((occ.familyFeedback || '').trim());
+  const status: ActiveSearchOutcomeStatus =
+    occ.contactStatus || (hasFeedback ? 'contato_realizado' : 'aguardando_contato');
+
+  if (status === 'aguardando_contato') {
+    return {
+      status,
+      label: 'Aguardando contato da secretaria',
+      toneClass: 'text-amber-900 bg-amber-50 border-amber-200',
+    };
+  }
+  const found = OUTCOME_STATUS_OPTIONS.find((o) => o.id === status);
+  if (found) {
+    return {
+      status: found.id,
+      label: found.label,
+      toneClass: found.toneClass,
+    };
+  }
+  return {
+    status: 'contato_realizado',
+    label: 'Retorno registrado',
+    toneClass: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+  };
+}
+
+interface AdminFeedbackDraft {
+  channel: ContactAttemptChannel;
+  status: ActiveSearchOutcomeStatus;
+  text: string;
+}
 
 export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> = ({
   classGroup,
   availableClasses = [],
   userRole = 'usuario',
+  teacherRoleType,
+  userName,
   onSelectClass,
   onUpdateStudent,
   onBack,
 }) => {
+  // Regras estritas de responsabilidade:
+  // - APENAS PEB I (userRole === 'usuario') informa 3+ faltas seguidas e pede para secretaria contatar
+  // - APENAS Equipe Administrativa (isStrictAdmin) contata famílias e preenche feedbacks
+  // - Demais perfis (PEB II, Apoio, AEE) apenas acompanham visualmente solicitações e devolutivas
+  const isPeb1 = userRole === 'usuario';
+  const isStrictAdmin =
+    userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
+  const canRequestSecretariaContact = isPeb1;
+  const canManageFamilyFeedback = isStrictAdmin;
+  const isReadOnlyViewer = !canRequestSecretariaContact && !canManageFamilyFeedback;
+
+  const recentSchoolDays = useMemo(() => getRecentSchoolDays(new Date(), 12), []);
+
+  const [viewAllClassesMode, setViewAllClassesMode] = useState(
+    !isPeb1 && availableClasses.length > 1
+  );
+  const [searchQuery, setSearchQuery] = useState('');
   const [expandedStudentKey, setExpandedStudentKey] = useState<string | null>(null);
+
+  // Estado para solicitações da PEB I
   const [draftSelectedDaysByStudent, setDraftSelectedDaysByStudent] = useState<
     Record<string, string[]>
   >({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<
-    'all' | 'com_ocorrencia' | 'com_feedback' | 'aguardando_feedback'
-  >('all');
-  const [viewAllClassesMode, setViewAllClassesMode] = useState(
-    userRole !== 'usuario' && availableClasses.length > 1
-  );
-  const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>({});
-  const [showRecentStrip, setShowRecentStrip] = useState(true);
+  const [teacherObsDrafts, setTeacherObsDrafts] = useState<Record<string, string>>({});
 
-  // Modal direto de leitura (sem scroll excessivo)
+  // Estado estruturado de atendimento / feedback do Admin
+  const [adminFeedbackDrafts, setAdminFeedbackDrafts] = useState<
+    Record<string, AdminFeedbackDraft>
+  >({});
+  const [editingFeedbackIds, setEditingFeedbackIds] = useState<Record<string, boolean>>({});
+
+  // Modal de leitura / atendimento rápido
   const [readingOccurrenceModal, setReadingOccurrenceModal] = useState<{
     cls: ClassGroup;
     student: Student;
@@ -153,24 +271,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   } | null>(null);
   const [isEditingModalFeedback, setIsEditingModalFeedback] = useState(false);
 
-  const canReportDays = userRole === 'usuario' || userRole === 'admin';
-  const canEditFamilyFeedback = userRole === 'admin';
-
-  const recentSchoolDays = useMemo(() => getRecentSchoolDays(new Date(), 12), []);
-
-  const openOccurrencePopup = (
-    cls: ClassGroup,
-    student: Student,
-    occurrenceId: string
-  ) => {
-    setIsEditingModalFeedback(false);
-    setReadingOccurrenceModal({ cls, student, occurrenceId });
-  };
-
-  // Lista unificada de estudantes (por turma ou todas as turmas para PEB II / Admin)
+  // Lista unificada no escopo do perfil
   const scopedEntries = useMemo(() => {
     const sourceClasses =
-      userRole !== 'usuario' && viewAllClassesMode && availableClasses.length > 0
+      !isPeb1 && viewAllClassesMode && availableClasses.length > 0
         ? availableClasses
         : [classGroup];
 
@@ -204,14 +308,22 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       }
     }
     return entries;
-  }, [viewAllClassesMode, availableClasses, classGroup]);
+  }, [isPeb1, viewAllClassesMode, availableClasses, classGroup]);
 
-  // Estatísticas acumulativas do ano
+  // Indicadores reais do escopo atual
   const summaryStats = useMemo(() => {
     let totalOccurrencesCount = 0;
     let totalWithFeedback = 0;
     let totalWaitingFeedback = 0;
+    let totalInAttempt = 0;
     let studentsWithAnyOccurrence = 0;
+
+    const unreadFeedbacksForTeacher: Array<{
+      cls: ClassGroup;
+      student: Student;
+      occ: ConsecutiveAbsenceOccurrence;
+    }> = [];
+
     const recentFeedbacks: Array<{
       cls: ClassGroup;
       student: Student;
@@ -224,9 +336,16 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       }
       occurrences.forEach((occ) => {
         totalOccurrencesCount += 1;
-        if ((occ.familyFeedback || '').trim().length > 0) {
+        const hasFb = (occ.familyFeedback || '').trim().length > 0;
+        if (hasFb) {
           totalWithFeedback += 1;
           recentFeedbacks.push({ cls, student, occ });
+          if (occ.contactStatus === 'em_tentativa') {
+            totalInAttempt += 1;
+          }
+          if (!occ.feedbackReadByTeacher) {
+            unreadFeedbacksForTeacher.push({ cls, student, occ });
+          }
         } else {
           totalWaitingFeedback += 1;
         }
@@ -238,9 +357,41 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       totalOccurrencesCount,
       totalWithFeedback,
       totalWaitingFeedback,
+      totalInAttempt,
+      unreadFeedbacksForTeacher,
       recentFeedbacks,
     };
   }, [scopedEntries]);
+
+  // Filtro inicial inteligente por perfil:
+  // - Admin: abre direto na fila pendente ("Aguardando contato") se houver pendências, senão "Com Solicitações"
+  // - Demais perfis (PEB II / AEE / Apoio): abre em "Com Solicitações" para foco imediato
+  // - PEB I: abre em "Todos da Turma" (com pedidos ativos priorizados no topo) para informar facilmente
+  const [filterMode, setFilterMode] = useState<
+    'all' | 'com_ocorrencia' | 'com_feedback' | 'aguardando_feedback'
+  >(() => {
+    if (isStrictAdmin) {
+      return summaryStats.totalWaitingFeedback > 0 ? 'aguardando_feedback' : 'com_ocorrencia';
+    }
+    if (isReadOnlyViewer) {
+      return 'com_ocorrencia';
+    }
+    return 'all';
+  });
+
+  useEffect(() => {
+    setExpandedStudentKey(null);
+    setViewAllClassesMode(!isPeb1 && availableClasses.length > 1);
+    if (isStrictAdmin) {
+      setFilterMode(
+        summaryStats.totalWaitingFeedback > 0 ? 'aguardando_feedback' : 'com_ocorrencia'
+      );
+    } else if (isReadOnlyViewer) {
+      setFilterMode('com_ocorrencia');
+    } else {
+      setFilterMode('all');
+    }
+  }, [userRole, teacherRoleType, isPeb1, isStrictAdmin, isReadOnlyViewer]);
 
   const filteredEntries = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -254,7 +405,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       }
       if (
         filterMode === 'aguardando_feedback' &&
-        !occurrences.some((o) => !(o.familyFeedback || '').trim())
+        !occurrences.some(
+          (o) =>
+            !(o.familyFeedback || '').trim() || o.contactStatus === 'em_tentativa'
+        )
       ) {
         return false;
       }
@@ -262,31 +416,65 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       return (
         student.name.toLowerCase().includes(q) ||
         cls.name.toLowerCase().includes(q) ||
+        (cls.teacherName && cls.teacherName.toLowerCase().includes(q)) ||
+        (student.ra && student.ra.toLowerCase().includes(q)) ||
         student.number.toString() === q ||
         student.number.toString().padStart(2, '0') === q
       );
     });
 
-    // Prioriza estudantes com ocorrências ativas no topo para evitar scroll longo
-    if (filterMode === 'all' && !q) {
-      return [...list].sort((a, b) => {
-        const aHas = a.occurrences.length > 0 ? 1 : 0;
-        const bHas = b.occurrences.length > 0 ? 1 : 0;
-        if (aHas !== bHas) return bHas - aHas;
-        return 0;
-      });
-    }
-    return list;
+    // Prioriza estudantes aguardando retorno primeiro, depois com retorno, depois sem ocorrências
+    return [...list].sort((a, b) => {
+      const aPending = a.occurrences.some((o) => !(o.familyFeedback || '').trim()) ? 2 : a.occurrences.length > 0 ? 1 : 0;
+      const bPending = b.occurrences.some((o) => !(o.familyFeedback || '').trim()) ? 2 : b.occurrences.length > 0 ? 1 : 0;
+      if (aPending !== bPending) return bPending - aPending;
+      return 0;
+    });
   }, [scopedEntries, searchQuery, filterMode]);
 
+  const getOrInitAdminDraft = (occ: ConsecutiveAbsenceOccurrence): AdminFeedbackDraft => {
+    const existing = adminFeedbackDrafts[occ.id];
+    if (existing) return existing;
+    return {
+      channel: occ.contactChannel || 'whatsapp',
+      status:
+        occ.contactStatus && occ.contactStatus !== 'aguardando_contato'
+          ? occ.contactStatus
+          : 'contato_realizado',
+      text: occ.familyFeedback || '',
+    };
+  };
+
+  const updateAdminDraft = (
+    occ: ConsecutiveAbsenceOccurrence,
+    patch: Partial<AdminFeedbackDraft>
+  ) => {
+    setAdminFeedbackDrafts((prev) => {
+      const current = prev[occ.id] || {
+        channel: occ.contactChannel || 'whatsapp',
+        status:
+          occ.contactStatus && occ.contactStatus !== 'aguardando_contato'
+            ? occ.contactStatus
+            : 'contato_realizado',
+        text: occ.familyFeedback || '',
+      };
+      return {
+        ...prev,
+        [occ.id]: {
+          ...current,
+          ...patch,
+        },
+      };
+    });
+  };
+
+  // --- AÇÕES EXCLUSIVAS PEB I ---
   const handleToggleDraftDay = (compositeKey: string, dayKey: string) => {
-    if (!canReportDays) return;
+    if (!canRequestSecretariaContact) return;
     setDraftSelectedDaysByStudent((prev) => {
       const current = prev[compositeKey] || [];
       const exists = current.includes(dayKey);
-      const next = exists
-        ? current.filter((d) => d !== dayKey)
-        : [...current, dayKey];
+      const next = exists ? current.filter((d) => d !== dayKey) : [...current, dayKey];
       return {
         ...prev,
         [compositeKey]: next,
@@ -295,7 +483,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   };
 
   const handleSelectLastThreeDaysShortcut = (compositeKey: string) => {
-    if (!canReportDays) return;
+    if (!canRequestSecretariaContact) return;
     const lastThree = recentSchoolDays.slice(-3).map((d) => d.key);
     setDraftSelectedDaysByStudent((prev) => ({
       ...prev,
@@ -303,13 +491,11 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     }));
   };
 
-  const handleRegisterNewOccurrence = (cls: ClassGroup, student: Student) => {
+  const handleRequestSecretariaContact = (cls: ClassGroup, student: Student) => {
+    if (!canRequestSecretariaContact) return;
     const compositeKey = `${cls.id}_${student.id}`;
     const selectedRaw = draftSelectedDaysByStudent[compositeKey] || [];
-    const validation = hasThreeOrMoreConsecutiveSchoolDays(
-      selectedRaw,
-      recentSchoolDays
-    );
+    const validation = hasThreeOrMoreConsecutiveSchoolDays(selectedRaw, recentSchoolDays);
     if (!validation.isValid) return;
 
     const existingOccurrences = getStudentCumulativeOccurrences(student);
@@ -323,14 +509,18 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       minute: '2-digit',
     });
 
+    const obsText = (teacherObsDrafts[compositeKey] || '').trim();
+
     const newOccurrence: ConsecutiveAbsenceOccurrence = {
       id: `${student.id}_occ_${nextSequenceNumber}_${Date.now()}`,
       sequenceNumber: nextSequenceNumber,
       selectedDates: validation.sortedKeys,
       reportedAt: nowStr,
-      reportedByTeacher: cls.teacherName || 'PEB I',
+      reportedByTeacher: userName || cls.teacherName || 'Regente PEB I',
+      teacherObservation: obsText || undefined,
       familyFeedback: '',
       feedbackUpdatedAt: '',
+      contactStatus: 'aguardando_contato',
       feedbackReadByTeacher: false,
     };
 
@@ -342,8 +532,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
         selectedDates: newOccurrence.selectedDates,
         reportedAt: newOccurrence.reportedAt,
         reportedByTeacher: newOccurrence.reportedByTeacher,
-        familyFeedback: newOccurrence.familyFeedback,
-        feedbackUpdatedAt: newOccurrence.feedbackUpdatedAt,
+        familyFeedback: '',
+        feedbackUpdatedAt: '',
         active: true,
         occurrences: updatedOccurrences,
       },
@@ -355,80 +545,24 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       ...prev,
       [compositeKey]: [],
     }));
+    setTeacherObsDrafts((prev) => ({
+      ...prev,
+      [compositeKey]: '',
+    }));
+
+    toast.success(`Solicitação enviada à secretaria para ${student.name.split(' ')[0]}!`);
 
     triggerPushNotification(
       {
-        title: `${nextSequenceNumber}ª Ocorrência Registrada • ${student.name.split(' ')[0]}`,
-        body: `Faltas seguidas (${validation.sortedKeys.join(', ')}) enviadas para a Planilha da Secretaria.`,
+        title: `Contato Solicitado (${nextSequenceNumber}ª) • ${student.name.split(' ')[0]}`,
+        body: `PEB I (${cls.name}) solicitou contato com a família (${validation.sortedKeys.join(', ')}).`,
         category: 'busca_ativa',
         targetClassId: cls.id,
         targetScreen: 'faltas_consecutivas',
-        authorName: cls.teacherName || 'PEB I',
+        authorName: userName || cls.teacherName || 'Regente PEB I',
       },
       { saveToFeed: true, showBanner: true }
     );
-  };
-
-  const handleSaveOccurrenceFeedback = (
-    cls: ClassGroup,
-    student: Student,
-    occurrenceId: string,
-    feedbackText: string
-  ) => {
-    const existingOccurrences = getStudentCumulativeOccurrences(student);
-    const nowStr = new Date().toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    const updatedOccurrences = existingOccurrences.map((occ) =>
-      occ.id === occurrenceId
-        ? {
-            ...occ,
-            familyFeedback: feedbackText.trim(),
-            feedbackUpdatedAt: nowStr,
-            feedbackReadByTeacher: false,
-          }
-        : occ
-    );
-
-    const latest = updatedOccurrences[updatedOccurrences.length - 1];
-    const targetOcc =
-      updatedOccurrences.find((o) => o.id === occurrenceId) || latest;
-
-    const updatedStudent: Student = {
-      ...student,
-      consecutiveAbsenceAlert: {
-        selectedDates: latest?.selectedDates || [],
-        reportedAt: latest?.reportedAt || nowStr,
-        reportedByTeacher: latest?.reportedByTeacher || cls.teacherName || 'PEB I',
-        familyFeedback: latest?.familyFeedback || feedbackText.trim(),
-        feedbackUpdatedAt: latest?.feedbackUpdatedAt || nowStr,
-        active: updatedOccurrences.length > 0,
-        occurrences: updatedOccurrences,
-      },
-    };
-
-    onUpdateStudent(cls.id, updatedStudent);
-
-    if (feedbackText.trim()) {
-      triggerPushNotification(
-        {
-          title: `Feedback da Família • ${student.name.split(' ')[0]} (${
-            targetOcc?.sequenceNumber || 1
-          }ª Ocorrência)`,
-          body: `Retorno da Secretaria: "${feedbackText.trim()}" — Toque para ler.`,
-          category: 'busca_ativa',
-          targetClassId: cls.id,
-          targetScreen: 'faltas_consecutivas',
-          authorName: 'Secretaria Escolar',
-        },
-        { saveToFeed: true, showBanner: true }
-      );
-    }
   };
 
   const handleRemoveOccurrence = (
@@ -436,7 +570,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     student: Student,
     occurrenceId: string
   ) => {
-    if (!canReportDays) return;
+    if (!canRequestSecretariaContact) return;
     const existingOccurrences = getStudentCumulativeOccurrences(student);
     const remaining = existingOccurrences
       .filter((o) => o.id !== occurrenceId)
@@ -460,9 +594,140 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     };
 
     onUpdateStudent(cls.id, updatedStudent);
+    toast.success('Solicitação removida.');
     if (readingOccurrenceModal?.occurrenceId === occurrenceId) {
       setReadingOccurrenceModal(null);
     }
+  };
+
+  const handleMarkFeedbackAsReadByTeacher = (
+    cls: ClassGroup,
+    student: Student,
+    occurrenceId: string
+  ) => {
+    if (!canRequestSecretariaContact) return;
+    const existingOccurrences = getStudentCumulativeOccurrences(student);
+    const readAtStr = new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const updatedOccurrences = existingOccurrences.map((occ) =>
+      occ.id === occurrenceId
+        ? {
+            ...occ,
+            feedbackReadByTeacher: true,
+            feedbackReadAt: readAtStr,
+          }
+        : occ
+    );
+
+    const latest = updatedOccurrences[updatedOccurrences.length - 1];
+    const updatedStudent: Student = {
+      ...student,
+      consecutiveAbsenceAlert: {
+        selectedDates: latest?.selectedDates || [],
+        reportedAt: latest?.reportedAt || '',
+        reportedByTeacher: latest?.reportedByTeacher || cls.teacherName || 'PEB I',
+        familyFeedback: latest?.familyFeedback || '',
+        feedbackUpdatedAt: latest?.feedbackUpdatedAt || '',
+        active: updatedOccurrences.length > 0,
+        occurrences: updatedOccurrences,
+      },
+    };
+
+    onUpdateStudent(cls.id, updatedStudent);
+    toast.success('Ciência registrada no retorno da secretaria.');
+  };
+
+  // --- AÇÕES EXCLUSIVAS ADMIN / SECRETARIA ---
+  const handleSaveAdminFeedback = (
+    cls: ClassGroup,
+    student: Student,
+    occurrenceId: string,
+    draft: AdminFeedbackDraft
+  ) => {
+    if (!canManageFamilyFeedback) return;
+    const cleanText = draft.text.trim();
+    if (!cleanText) {
+      toast.error('Escreva ou selecione o parecer do contato com a família antes de salvar.');
+      return;
+    }
+
+    const existingOccurrences = getStudentCumulativeOccurrences(student);
+    const nowStr = new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const authorLabel =
+      userName && !userName.toLowerCase().includes('emeb')
+        ? userName
+        : 'Secretaria / Gestão';
+
+    const updatedOccurrences = existingOccurrences.map((occ) =>
+      occ.id === occurrenceId
+        ? {
+            ...occ,
+            familyFeedback: cleanText,
+            feedbackUpdatedAt: nowStr,
+            feedbackByName: authorLabel,
+            contactChannel: draft.channel,
+            contactStatus: draft.status,
+            feedbackReadByTeacher: false,
+            feedbackReadAt: undefined,
+          }
+        : occ
+    );
+
+    const latest = updatedOccurrences[updatedOccurrences.length - 1];
+    const targetOcc = updatedOccurrences.find((o) => o.id === occurrenceId) || latest;
+
+    const updatedStudent: Student = {
+      ...student,
+      consecutiveAbsenceAlert: {
+        selectedDates: latest?.selectedDates || [],
+        reportedAt: latest?.reportedAt || nowStr,
+        reportedByTeacher: latest?.reportedByTeacher || cls.teacherName || 'PEB I',
+        familyFeedback: latest?.familyFeedback || cleanText,
+        feedbackUpdatedAt: latest?.feedbackUpdatedAt || nowStr,
+        active: updatedOccurrences.length > 0,
+        occurrences: updatedOccurrences,
+      },
+    };
+
+    onUpdateStudent(cls.id, updatedStudent);
+    setEditingFeedbackIds((prev) => ({ ...prev, [occurrenceId]: false }));
+
+    toast.success(`Feedback registrado para ${student.name.split(' ')[0]}!`);
+
+    triggerPushNotification(
+      {
+        title: `Retorno da Secretaria • ${student.name.split(' ')[0]} (${
+          targetOcc?.sequenceNumber || 1
+        }ª)`,
+        body: `[${getChannelLabel(draft.channel)}] ${cleanText}`,
+        category: 'busca_ativa',
+        targetClassId: cls.id,
+        targetScreen: 'faltas_consecutivas',
+        authorName: authorLabel,
+      },
+      { saveToFeed: true, showBanner: true }
+    );
+  };
+
+  const openOccurrencePopup = (
+    cls: ClassGroup,
+    student: Student,
+    occurrenceId: string
+  ) => {
+    setIsEditingModalFeedback(false);
+    setReadingOccurrenceModal({ cls, student, occurrenceId });
   };
 
   const activeModalData = useMemo(() => {
@@ -482,47 +747,92 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     return { cls, student, occurrences, activeOcc };
   }, [readingOccurrenceModal, scopedEntries]);
 
+  const buildStudentContactData = (
+    cls: ClassGroup,
+    student: Student,
+    datesList: string[]
+  ) => {
+    const guardian1 = resolveGuardianRelationshipInfo(
+      student.filiacao1 || student.guardianName,
+      'filiacao1',
+      student.notes
+    );
+    const guardian2 = resolveGuardianRelationshipInfo(
+      student.filiacao2,
+      'filiacao2',
+      student.notes
+    );
+    const rawPhones = student.telefones || student.guardianPhone || '';
+    const datesText = datesList.length > 0 ? ` nos dias ${datesList.join(', ')}` : '';
+    const message = `Olá! Somos da equipe da ${SCHOOL_NAME}. Notamos faltas seguidas de ${student.name} (${cls.name})${datesText} e gostaríamos de saber se está tudo bem com a criança e a família.`;
+    const waLinks = buildWhatsAppLinksFromPhoneString(rawPhones, student.name, message);
+    const cleanTelDigits = (rawPhones.split('/')[0] || '').replace(/\D/g, '');
+    return {
+      guardian1,
+      guardian2,
+      rawPhones,
+      waLinks,
+      cleanTelDigits,
+    };
+  };
+
   return (
-    <div className="flex flex-col w-full min-w-0 space-y-3 pb-20 animate-gentle-fade">
-      {/* Cabeçalho Compacto Institucional */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-5 shadow-xs space-y-3 min-w-0">
-        {/* Linha 1: Breadcrumb + Título + Escopo */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 min-w-0">
-          <div className="min-w-0 space-y-0.5">
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 min-w-0">
+    <div className="flex flex-col w-full min-w-0 max-w-[1440px] mx-auto space-y-4 pb-20 animate-gentle-fade">
+      {/* Cabeçalho Institucional Limpo por Papel */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 min-w-0">
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 min-w-0">
               {onBack && (
                 <>
                   <button
                     type="button"
                     onClick={onBack}
-                    className="text-[#0b3b8c] hover:underline font-bold inline-flex items-center gap-1 cursor-pointer shrink-0"
+                    className="text-[#0b3b8c] hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer shrink-0"
                   >
-                    <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                    <ArrowLeft className="w-3.5 h-3.5" />
                     <span>Voltar</span>
                   </button>
-                  <span className="text-slate-300">/</span>
+                  <span className="text-slate-300" aria-hidden="true">/</span>
                 </>
               )}
-              <span className="font-bold text-[#be123c] uppercase tracking-wider">
-                Busca Ativa · Regra 3+ Faltas Seguidas
+              <span className="font-semibold text-[#be123c]">
+                {canManageFamilyFeedback
+                  ? 'Atendimento da Secretaria · Contato com Famílias'
+                  : canRequestSecretariaContact
+                  ? 'Busca Ativa · Solicitar Contato à Secretaria'
+                  : 'Busca Ativa · Acompanhamento de Devolutivas'}
               </span>
             </div>
-            <h1 className="text-lg sm:text-2xl font-bold text-slate-950 tracking-tight leading-snug break-words">
-              Faltas Consecutivas &amp; Retorno da Família
+
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight leading-snug break-words">
+              {canManageFamilyFeedback
+                ? 'Central de Contato com Famílias & Feedbacks'
+                : canRequestSecretariaContact
+                ? `Busca Ativa — ${classGroup.name}`
+                : 'Acompanhamento de Busca Ativa (3+ Faltas)'}
             </h1>
+
+            <p className="text-xs sm:text-sm text-slate-600 max-w-3xl leading-relaxed">
+              {canManageFamilyFeedback
+                ? 'Apenas o(a) regente PEB I solicita contato quando há 3 ou mais faltas seguidas. Utilize esta fila para contatar os responsáveis e registrar o retorno para o professor.'
+                : canRequestSecretariaContact
+                ? 'Identificou 3 ou mais faltas seguidas? Selecione os dias abaixo para pedir contato da secretaria e acompanhe aqui o retorno da família.'
+                : 'Visualização consolidada das solicitações enviadas pelos regentes PEB I e dos feedbacks registrados pela equipe administrativa.'}
+            </p>
           </div>
 
-          {/* Seletor de Escopo: Apenas Admin e PEB II podem alternar turmas; PEB I tem apenas a sua turma */}
-          {userRole !== 'usuario' && availableClasses.length > 1 && onSelectClass ? (
-            <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
+          {/* Escopo de turmas: Admin/Outros podem alternar; PEB I vê exclusivamente sua turma */}
+          {!isPeb1 && availableClasses.length > 1 && onSelectClass ? (
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
               <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setViewAllClassesMode(true)}
-                  className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                     viewAllClassesMode
-                      ? 'bg-[#0b3b8c] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-slate-950'
+                      ? 'bg-white text-slate-950 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
                   Todas ({availableClasses.length})
@@ -530,13 +840,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 <button
                   type="button"
                   onClick={() => setViewAllClassesMode(false)}
-                  className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                     !viewAllClassesMode
-                      ? 'bg-[#0b3b8c] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-slate-950'
+                      ? 'bg-white text-slate-950 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
-                  {classGroup.name}
+                  Por Turma
                 </button>
               </div>
 
@@ -547,211 +857,229 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                     const target = availableClasses.find((c) => c.id === e.target.value);
                     if (target) onSelectClass(target);
                   }}
-                  className="min-w-0 h-9 px-3 rounded-xl bg-slate-50 text-slate-950 text-xs font-bold cursor-pointer focus:outline-none"
+                  className="h-9 px-3 rounded-xl bg-slate-100 text-slate-950 text-xs font-semibold cursor-pointer focus:outline-none"
                 >
                   {availableClasses.map((cls) => (
                     <option key={cls.id} value={cls.id}>
-                      {cls.name} — {cls.shift.replace('Turno ', '')}
+                      {cls.name} · {cls.shift.replace('Turno ', '')}
                     </option>
                   ))}
                 </select>
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="px-3 py-1.5 rounded-xl bg-blue-50 text-[#0b3b8c] font-bold text-xs">
-                Sua Turma: {classGroup.name} ({classGroup.shift.replace('Turno ', '')})
-              </span>
+            <div className="text-xs font-semibold text-slate-700 shrink-0 pt-1">
+              Turma {classGroup.name} · {classGroup.shift.replace('Turno ', '')}
             </div>
           )}
         </div>
 
-        {/* Linha 2: 4 KPIs Clicáveis Ultra-Compactos (Atalhos de Filtro) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 min-w-0">
+        {/* Barra de Filtros / Indicadores Clicáveis (Zero Cards Aninhados Pesados) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 min-w-0">
           <button
             type="button"
-            onClick={() => setFilterMode('com_ocorrencia')}
-            className={`text-left px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
-              filterMode === 'com_ocorrencia'
-                ? 'bg-[#be123c] border-[#be123c] text-white shadow-xs'
-                : 'bg-rose-50/70 border-rose-200 text-rose-950 hover:bg-rose-100/70'
+            onClick={() => setFilterMode('aguardando_feedback')}
+            className={`text-left p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+              filterMode === 'aguardando_feedback'
+                ? 'bg-[#b45309] border-[#b45309] text-white'
+                : 'bg-amber-50/70 border-amber-200 text-amber-950 hover:bg-amber-100/70'
             }`}
           >
             <div className="min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wide block truncate">
-                Ocorrências
+              <span className="text-xs font-semibold block truncate">
+                {canManageFamilyFeedback ? 'Aguardando Contato' : 'Aguardando Secretaria'}
               </span>
-              <span className="text-lg sm:text-xl font-bold tabular-nums leading-tight">
-                {summaryStats.totalOccurrencesCount}
-              </span>
-            </div>
-            <span className="material-symbols-outlined text-[20px] opacity-80 shrink-0">
-              event_busy
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setFilterMode('all')}
-            className={`text-left px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
-              filterMode === 'all'
-                ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white shadow-xs'
-                : 'bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wide block truncate">
-                Com Registro / Todos
-              </span>
-              <span className="text-lg sm:text-xl font-bold tabular-nums leading-tight">
-                {summaryStats.studentsWithAnyOccurrence}{' '}
-                <span className="text-xs font-medium opacity-75">/ {scopedEntries.length}</span>
+              <span className="text-xl font-bold tabular-nums leading-tight mt-0.5 block">
+                {summaryStats.totalWaitingFeedback}
               </span>
             </div>
-            <span className="material-symbols-outlined text-[20px] opacity-80 shrink-0">
-              groups
-            </span>
+            <Clock className="w-5 h-5 opacity-80 shrink-0" />
           </button>
 
           <button
             type="button"
             onClick={() => setFilterMode('com_feedback')}
-            className={`text-left px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+            className={`text-left p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
               filterMode === 'com_feedback'
-                ? 'bg-[#047857] border-[#047857] text-white shadow-xs'
+                ? 'bg-[#047857] border-[#047857] text-white'
                 : 'bg-emerald-50/70 border-emerald-200 text-emerald-950 hover:bg-emerald-100/70'
             }`}
           >
             <div className="min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wide block truncate">
-                Com Retorno
+              <span className="text-xs font-semibold block truncate">
+                Com Feedback
               </span>
-              <span className="text-lg sm:text-xl font-bold tabular-nums leading-tight">
+              <span className="text-xl font-bold tabular-nums leading-tight mt-0.5 block">
                 {summaryStats.totalWithFeedback}
               </span>
             </div>
-            <span className="material-symbols-outlined text-[20px] opacity-80 shrink-0">
-              mark_chat_read
-            </span>
+            <CheckCheck className="w-5 h-5 opacity-80 shrink-0" />
           </button>
 
           <button
             type="button"
-            onClick={() => setFilterMode('aguardando_feedback')}
-            className={`text-left px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
-              filterMode === 'aguardando_feedback'
-                ? 'bg-[#b45309] border-[#b45309] text-white shadow-xs'
-                : 'bg-amber-50/70 border-amber-200 text-amber-950 hover:bg-amber-100/70'
+            onClick={() => setFilterMode('com_ocorrencia')}
+            className={`text-left p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+              filterMode === 'com_ocorrencia'
+                ? 'bg-[#be123c] border-[#be123c] text-white'
+                : 'bg-rose-50/70 border-rose-200 text-rose-950 hover:bg-rose-100/70'
             }`}
           >
             <div className="min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wide block truncate">
-                Aguardando
+              <span className="text-xs font-semibold block truncate">
+                Solicitações PEB I
               </span>
-              <span className="text-lg sm:text-xl font-bold tabular-nums leading-tight">
-                {summaryStats.totalWaitingFeedback}
+              <span className="text-xl font-bold tabular-nums leading-tight mt-0.5 block">
+                {summaryStats.totalOccurrencesCount}
               </span>
             </div>
-            <span className="material-symbols-outlined text-[20px] opacity-80 shrink-0">
-              schedule
-            </span>
+            <Send className="w-5 h-5 opacity-80 shrink-0" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterMode('all')}
+            className={`text-left p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+              filterMode === 'all'
+                ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
+                : 'bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <div className="min-w-0">
+              <span className="text-xs font-semibold block truncate">
+                {isPeb1 ? 'Todos da Turma' : 'Consultar Turmas'}
+              </span>
+              <span className="text-xl font-bold tabular-nums leading-tight mt-0.5 block">
+                {scopedEntries.length}
+              </span>
+            </div>
+            <UserCheck className="w-5 h-5 opacity-80 shrink-0" />
           </button>
         </div>
 
-        {/* Linha 3: Busca Rápida */}
+        {/* Busca Rápida */}
         <div className="relative">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[19px]">
-            search
-          </span>
+          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar estudante por nome, número ou turma..."
+            placeholder={
+              isPeb1
+                ? 'Buscar estudante da sua turma por nome ou número...'
+                : 'Buscar por estudante, turma, professor(a) ou RA...'
+            }
             className="w-full h-10 pl-10 pr-9 bg-slate-100 text-slate-950 text-sm rounded-xl focus:bg-slate-200/70 focus:outline-none transition-colors"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 cursor-pointer p-1"
               aria-label="Limpar busca"
             >
-              <span className="material-symbols-outlined text-[18px]">cancel</span>
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
       </section>
 
-      {/* Faixa Horizontal Compacta de Retornos Recentes (Zero Scroll Vertical Longo) */}
-      {summaryStats.recentFeedbacks.length > 0 && (
-        <section className="bg-white border border-emerald-200 rounded-2xl p-3 sm:px-4 shadow-xs space-y-2 min-w-0">
-          <div className="flex items-center justify-between gap-2 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-6 h-6 rounded-lg bg-emerald-100 text-[#047857] flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[15px]">
-                  notifications_active
-                </span>
-              </span>
-              <h2 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                Retornos da Família ({summaryStats.recentFeedbacks.length}) — toque para abrir direto
+      {/* Destaque para PEB I: Devolutivas Novas da Secretaria aguardando ciência */}
+      {isPeb1 && summaryStats.unreadFeedbacksForTeacher.length > 0 && (
+        <section className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm sm:text-base font-bold text-emerald-950">
+                Novos Retornos da Secretaria ({summaryStats.unreadFeedbacksForTeacher.length})
               </h2>
+              <p className="text-xs text-emerald-900/80">
+                A equipe administrativa contatou as famílias abaixo. Leia a devolutiva e confirme ciência.
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowRecentStrip((v) => !v)}
-              className="text-xs font-bold text-[#0052cc] hover:underline shrink-0 cursor-pointer"
-            >
-              {showRecentStrip ? 'Ocultar' : 'Mostrar'}
-            </button>
           </div>
 
-          {showRecentStrip && (
-            <div className="flex overflow-x-auto gap-2 pb-1 snap-x no-scrollbar">
-              {summaryStats.recentFeedbacks.slice(0, 8).map(({ cls, student, occ }) => (
-                <button
-                  key={occ.id}
-                  type="button"
-                  onClick={() => openOccurrencePopup(cls, student, occ.id)}
-                  className="snap-start shrink-0 w-[235px] sm:w-[260px] text-left p-2.5 rounded-xl bg-emerald-50/70 hover:bg-emerald-100/80 border border-emerald-200 transition-colors cursor-pointer flex flex-col justify-between gap-1"
-                >
-                  <div className="flex items-center justify-between gap-1.5 min-w-0">
-                    <span className="px-2 py-0.5 rounded-md bg-[#047857] text-white text-[10px] font-bold uppercase truncate">
-                      {occ.sequenceNumber}ª · {cls.name}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {summaryStats.unreadFeedbacksForTeacher.map(({ cls, student, occ }) => (
+              <div
+                key={`unread-${occ.id}`}
+                className="bg-white border border-emerald-200 rounded-xl p-3.5 space-y-2 flex flex-col justify-between"
+              >
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 text-xs text-slate-600 tabular-nums">
+                    <span className="font-bold text-slate-950 truncate">
+                      {student.number.toString().padStart(2, '0')} · {student.name}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-600 shrink-0 tabular-nums">
-                      {occ.selectedDates.length}d
-                    </span>
+                    <span className="shrink-0">{occ.feedbackUpdatedAt || 'Recente'}</span>
                   </div>
-                  <p className="text-xs font-bold text-slate-950 truncate">
-                    {student.name}
+                  <p className="text-xs text-slate-600">
+                    {occ.sequenceNumber}ª solicitação ({occ.selectedDates.join(', ')}) ·{' '}
+                    {getChannelLabel(occ.contactChannel)} · {occ.feedbackByName || 'Secretaria'}
                   </p>
-                  <p className="text-[11px] text-[#047857] font-semibold line-clamp-1">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-snug pt-0.5 break-words">
                     “{occ.familyFeedback}”
                   </p>
-                </button>
-              ))}
-            </div>
-          )}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => openOccurrencePopup(cls, student, occ.id)}
+                    className="text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                  >
+                    Ver ficha completa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleMarkFeedbackAsReadByTeacher(cls, student, occ.id)
+                    }
+                    className="min-h-[34px] px-3 py-1 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Confirmar leitura</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
-      {/* Lista Compacta de Estudantes */}
-      <div className="space-y-2">
+      {/* Lista Principal de Estudantes / Fila de Atendimento */}
+      <div className="space-y-3">
         {filteredEntries.length === 0 ? (
-          <div className="p-8 text-center space-y-1 bg-white border border-slate-200 rounded-2xl shadow-xs">
-            <p className="text-sm font-bold text-slate-950">
-              Nenhum estudante encontrado neste filtro
+          <div className="p-8 text-center space-y-2 bg-white border border-slate-200 rounded-2xl">
+            <p className="text-sm sm:text-base font-bold text-slate-950">
+              {filterMode === 'aguardando_feedback'
+                ? 'Nenhuma solicitação pendente de contato no momento'
+                : 'Nenhum registro encontrado neste filtro'}
             </p>
-            <p className="text-xs font-medium text-slate-600">
-              Selecione outro indicador acima para visualizar os demais estudantes.
+            <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
+              {canManageFamilyFeedback && filterMode === 'aguardando_feedback'
+                ? 'Todas as solicitações enviadas pelos docentes PEB I já receberam retorno ou ainda não há pedidos abertos.'
+                : canRequestSecretariaContact
+                ? 'Alterne para "Todos da Turma" para selecionar 3 ou mais dias consecutivos de falta de algum estudante.'
+                : 'Selecione outro filtro acima para consultar os históricos ou devolutivas registradas.'}
             </p>
+            {filterMode !== 'com_ocorrencia' && summaryStats.totalOccurrencesCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilterMode('com_ocorrencia')}
+                className="mt-2 min-h-[38px] px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-semibold cursor-pointer"
+              >
+                Ver todas as solicitações ({summaryStats.totalOccurrencesCount})
+              </button>
+            )}
           </div>
         ) : (
           filteredEntries.map(({ cls, student, occurrences, totalConsecutiveDaysYear }) => {
             const compositeKey = `${cls.id}_${student.id}`;
             const isExpanded = expandedStudentKey === compositeKey;
             const hasOccurrences = occurrences.length > 0;
+            const pendingCount = occurrences.filter(
+              (o) => !(o.familyFeedback || '').trim() || o.contactStatus === 'em_tentativa'
+            ).length;
+
             const draftDays = draftSelectedDaysByStudent[compositeKey] || [];
             const draftValidation = hasThreeOrMoreConsecutiveSchoolDays(
               draftDays,
@@ -763,30 +1091,34 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               totalConsecutiveDaysYear
             );
 
+            // Para Admin: quando há ocorrências, mostramos os dados de contato e atendimento com agilidade
+            const latestOcc = occurrences[occurrences.length - 1];
+            const contactData = buildStudentContactData(
+              cls,
+              student,
+              latestOcc?.selectedDates || []
+            );
+
             return (
               <div
                 key={compositeKey}
-                className={`rounded-xl border transition-all overflow-hidden ${
-                  hasOccurrences
-                    ? 'bg-white border-rose-300 shadow-xs'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
-                }`}
+                className="bg-white border border-slate-200 rounded-2xl overflow-hidden transition-colors"
               >
-                {/* Linha Compacta do Estudante */}
+                {/* Cabeçalho do Estudante */}
                 <div
                   onClick={() =>
                     setExpandedStudentKey(isExpanded ? null : compositeKey)
                   }
-                  className={`p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer select-none ${
-                    hasOccurrences ? 'bg-rose-50/40' : ''
-                  }`}
+                  className="p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/70 transition-colors"
                 >
-                  <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                  <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                     <span
-                      className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 tabular-nums mt-0.5 sm:mt-0 ${
-                        hasOccurrences
+                      className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 tabular-nums mt-0.5 sm:mt-0 ${
+                        pendingCount > 0
                           ? 'bg-[#be123c] text-white'
-                          : 'bg-slate-100 border border-slate-200 text-slate-800'
+                          : hasOccurrences
+                          ? 'bg-emerald-700 text-white'
+                          : 'bg-slate-100 text-slate-800'
                       }`}
                     >
                       {student.number.toString().padStart(2, '0')}
@@ -794,225 +1126,420 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                     <StudentAvatar student={student} size="sm" />
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-                        <h3 className="font-bold text-sm sm:text-[15px] text-slate-950 break-words leading-snug">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                        <h3 className="font-bold text-sm sm:text-base text-slate-950 break-words leading-snug">
                           {student.name}
                         </h3>
-                        {viewAllClassesMode && (
-                          <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700">
-                            {cls.name}
-                          </span>
-                        )}
-                        <span className="text-xs font-semibold text-slate-600 tabular-nums">
-                          · {accumulatedMonthAbsences} falta(s) no mês
+                        <span className="text-xs text-slate-600 tabular-nums">
+                          {!isPeb1 ? `${cls.name} · ` : ''}
+                          {accumulatedMonthAbsences} falta(s) no mês
+                          {hasOccurrences ? ` · ${occurrences.length} solicitação(ões)` : ''}
                         </span>
                       </div>
 
-                      {/* Botões Diretos de Pop-up para cada Ocorrência */}
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5 min-w-0">
-                        {occurrences.map((occ) => {
-                          const hasFeedback = Boolean(
-                            (occ.familyFeedback || '').trim()
-                          );
-                          return (
-                            <button
-                              key={occ.id}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openOccurrencePopup(cls, student, occ.id);
-                              }}
-                              className={`min-h-[30px] max-w-full inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold text-left transition-all cursor-pointer active:scale-95 ${
-                                hasFeedback
-                                  ? 'bg-emerald-50 border-emerald-300 text-[#047857] hover:bg-emerald-100'
-                                  : 'bg-rose-50 border-rose-300 text-[#be123c] hover:bg-rose-100'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[14px] shrink-0">
-                                {hasFeedback ? 'mark_chat_read' : 'event_busy'}
-                              </span>
-                              <span className="truncate">
-                                {occ.sequenceNumber}ª ({occ.selectedDates.length}d:{' '}
-                                {occ.selectedDates.join(', ')})
-                              </span>
-                              <span className="underline ml-0.5 shrink-0">
-                                {hasFeedback ? 'Ver retorno' : 'Abrir'}
-                              </span>
-                            </button>
-                          );
-                        })}
-
-                        {!hasOccurrences && (
-                          <span className="text-xs text-slate-500 font-medium">
-                            {canReportDays
-                              ? 'Toque para marcar 3+ dias seguidos de falta'
-                              : 'Sem faltas consecutivas no ano'}
-                          </span>
-                        )}
-                      </div>
+                      {/* Resumo limpo sem poluição visual */}
+                      {hasOccurrences ? (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          {occurrences.map((occ) => {
+                            const outcome = getOutcomeMeta(occ);
+                            const hasFb = Boolean((occ.familyFeedback || '').trim());
+                            return (
+                              <button
+                                key={occ.id}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (canManageFamilyFeedback) {
+                                    setExpandedStudentKey(compositeKey);
+                                  } else {
+                                    openOccurrencePopup(cls, student, occ.id);
+                                  }
+                                }}
+                                className={`min-h-[30px] px-2.5 py-1 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors ${outcome.toneClass}`}
+                              >
+                                <span className="tabular-nums">
+                                  {occ.sequenceNumber}ª ({occ.selectedDates.join(', ')})
+                                </span>
+                                <span aria-hidden="true">·</span>
+                                <span>
+                                  {hasFb ? outcome.label : 'Aguardando contato'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500">
+                          {canRequestSecretariaContact
+                            ? 'Sem pedido enviado · Toque para marcar 3+ faltas seguidas e solicitar contato'
+                            : 'Nenhuma solicitação de busca ativa registrada pela PEB I'}
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* Botão Expandir / Registrar */}
+                  {/* Ação Rápida Direita */}
                   <div className="flex items-center justify-end gap-2 shrink-0">
+                    {canManageFamilyFeedback && hasOccurrences && contactData.waLinks[0] && (
+                      <a
+                        href={contactData.waLinks[0].waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="min-h-[38px] px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
+
                     <span
-                      className={`min-h-[34px] py-1 px-3 rounded-lg border text-xs font-bold inline-flex items-center justify-center gap-1 ${
+                      className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap ${
                         isExpanded
                           ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
-                          : 'bg-slate-100 border-slate-300 text-slate-900 hover:bg-slate-200'
+                          : 'bg-slate-50 border-slate-200 text-slate-900'
                       }`}
                     >
-                      <span>{isExpanded ? 'Fechar' : canReportDays ? 'Registrar / Histórico' : 'Histórico'}</span>
-                      <span
-                        className={`material-symbols-outlined text-[17px] shrink-0 transition-transform ${
+                      <span>
+                        {isExpanded
+                          ? 'Recolher'
+                          : canManageFamilyFeedback
+                          ? pendingCount > 0
+                            ? 'Contatar & Preencher'
+                            : 'Ver / Editar Retorno'
+                          : canRequestSecretariaContact
+                          ? hasOccurrences
+                            ? 'Acompanhar / Novo Pedido'
+                            : 'Pedir Contato'
+                          : 'Ver Histórico'}
+                      </span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${
                           isExpanded ? 'rotate-180' : ''
                         }`}
-                      >
-                        expand_more
-                      </span>
+                      />
                     </span>
                   </div>
                 </div>
 
-                {/* Painel Expansível Fluido */}
+                {/* Conteúdo Expandido — Separado por Papel */}
                 {isExpanded && (
-                  <div className="px-3 sm:px-5 pb-4 pt-3 bg-slate-50 border-t border-slate-200 space-y-3 animate-gentle-fade">
-                    {occurrences.length > 0 && (
-                      <div className="space-y-2">
-                        <span className="text-xs font-bold text-slate-700 block">
-                          Histórico no ano ({occurrences.length}{' '}
-                          {occurrences.length === 1 ? 'registro' : 'registros'})
-                        </span>
+                  <div className="px-3.5 sm:px-5 pb-5 pt-4 bg-slate-50/70 border-t border-slate-200 space-y-4 animate-gentle-fade">
+                    {/* Faixa de Contato Familiar (Sempre visível para Admin ao atender; útil para leitura dos demais) */}
+                    {(canManageFamilyFeedback || hasOccurrences) && (
+                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="space-y-0.5 min-w-0">
+                          <span className="text-xs font-semibold text-slate-500 block">
+                            Responsáveis &amp; Telefone Cadastrado
+                          </span>
+                          <p className="text-sm font-bold text-slate-950 break-words">
+                            {contactData.guardian1.cleanName || 'Responsável Legal'}
+                            {contactData.guardian1.shortRoleLabel
+                              ? ` (${contactData.guardian1.shortRoleLabel})`
+                              : ''}
+                            {contactData.guardian2.cleanName
+                              ? ` · ${contactData.guardian2.cleanName}`
+                              : ''}
+                          </p>
+                          <p className="text-xs text-slate-600 tabular-nums">
+                            {contactData.rawPhones || 'Nenhum telefone cadastrado na ficha SED'}
+                          </p>
+                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {contactData.rawPhones && (
+                          <div className="flex flex-wrap items-center gap-2 shrink-0">
+                            {contactData.waLinks[0] && (
+                              <a
+                                href={contactData.waLinks[0].waUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="min-h-[40px] px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                              >
+                                <MessageCircle className="w-4 h-4 shrink-0" />
+                                <span>Contatar via WhatsApp</span>
+                              </a>
+                            )}
+                            {contactData.cleanTelDigits && (
+                              <a
+                                href={`tel:${contactData.cleanTelDigits}`}
+                                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-900 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                              >
+                                <Phone className="w-4 h-4 shrink-0" />
+                                <span>Ligar</span>
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Histórico de Solicitações e Devolutivas */}
+                    {occurrences.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-bold text-slate-700">
+                          Solicitações da Turma e Retornos da Secretaria ({occurrences.length})
+                        </h4>
+
+                        <div className="space-y-3">
                           {occurrences.map((occ) => {
-                            const hasFeedback = Boolean(
-                              (occ.familyFeedback || '').trim()
-                            );
-                            const draftKey = `${compositeKey}_${occ.id}`;
+                            const hasFeedback = Boolean((occ.familyFeedback || '').trim());
+                            const outcome = getOutcomeMeta(occ);
+                            const isEditingThis =
+                              canManageFamilyFeedback &&
+                              (!hasFeedback || editingFeedbackIds[occ.id]);
+                            const adminDraft = getOrInitAdminDraft(occ);
 
                             return (
                               <div
                                 key={occ.id}
-                                className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 shadow-2xs min-w-0"
+                                className="bg-white border border-slate-200 rounded-xl p-4 space-y-3"
                               >
-                                <div className="flex items-start justify-between gap-2 min-w-0">
-                                  <div className="min-w-0 flex-1 break-words">
-                                    <span className="text-xs font-bold text-[#be123c] block">
-                                      {occ.sequenceNumber}ª ocorrência · {occ.selectedDates.length} dias
-                                    </span>
-                                    <p className="text-xs sm:text-sm font-bold text-slate-950 mt-0.5 tabular-nums break-words">
-                                      {occ.selectedDates.join(' · ')}
+                                {/* Metadados da Solicitação PEB I */}
+                                <div className="flex flex-wrap items-start justify-between gap-2 pb-2.5 border-b border-slate-100">
+                                  <div className="space-y-1 min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-600 tabular-nums">
+                                      <span className="font-bold text-[#be123c]">
+                                        {occ.sequenceNumber}ª Solicitação ({occ.selectedDates.length} dias seguidos)
+                                      </span>
+                                      <span aria-hidden="true">·</span>
+                                      <span>Enviado por {occ.reportedByTeacher || cls.teacherName || 'PEB I'}</span>
+                                      <span aria-hidden="true">·</span>
+                                      <span>{occ.reportedAt || '2027'}</span>
+                                    </div>
+                                    <p className="text-sm font-bold text-slate-950 tabular-nums">
+                                      Datas faltosas: {occ.selectedDates.join(' · ')}
                                     </p>
-                                    <p className="text-[11px] text-slate-600 mt-0.5 break-words">
-                                      {occ.reportedAt || '2027'} · {occ.reportedByTeacher || cls.teacherName || 'PEB I'}
-                                    </p>
+                                    {occ.teacherObservation && (
+                                      <p className="text-xs text-slate-700 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200/80 mt-1">
+                                        <span className="font-semibold text-slate-900">Observação PEB I: </span>
+                                        {occ.teacherObservation}
+                                      </p>
+                                    )}
                                   </div>
 
-                                  <div className="flex items-center gap-1 shrink-0">
+                                  <div className="flex items-center gap-1.5 shrink-0">
                                     <button
                                       type="button"
                                       onClick={() => openOccurrencePopup(cls, student, occ.id)}
-                                      className="h-8 px-2.5 rounded-lg bg-[#0052cc] hover:bg-[#0b3b8c] text-white text-xs font-bold cursor-pointer"
+                                      className="min-h-[34px] px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-semibold cursor-pointer transition-colors"
                                     >
-                                      Pop-up
+                                      Resumo
                                     </button>
-                                    {canReportDays && (
+                                    {canRequestSecretariaContact && (
                                       <button
                                         type="button"
-                                        onClick={() =>
-                                          handleRemoveOccurrence(cls, student, occ.id)
-                                        }
-                                        title="Excluir este registro"
-                                        aria-label="Excluir este registro"
-                                        className="w-8 h-8 rounded-lg hover:bg-rose-50 text-slate-500 hover:text-[#be123c] flex items-center justify-center cursor-pointer"
+                                        onClick={() => handleRemoveOccurrence(cls, student, occ.id)}
+                                        title="Excluir solicitação enviada por engano"
+                                        aria-label="Excluir solicitação"
+                                        className="w-8 h-8 rounded-lg hover:bg-rose-50 text-slate-500 hover:text-[#be123c] flex items-center justify-center cursor-pointer transition-colors"
                                       >
-                                        <span className="material-symbols-outlined text-[17px]">
-                                          delete
-                                        </span>
+                                        <Trash2 className="w-4 h-4" />
                                       </button>
                                     )}
                                   </div>
                                 </div>
 
-                                {hasFeedback ? (
-                                  <div
-                                    onClick={() => openOccurrencePopup(cls, student, occ.id)}
-                                    className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 cursor-pointer hover:bg-emerald-100/70 transition-colors min-w-0 break-words"
-                                  >
-                                    <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] font-bold uppercase text-[#047857]">
-                                      <span>Retorno da Família</span>
-                                      <span>{occ.feedbackUpdatedAt}</span>
+                                {/* Visualização do Feedback já preenchido (para Todos os Perfis) */}
+                                {hasFeedback && !isEditingThis && (
+                                  <div className="rounded-xl bg-emerald-50/70 border border-emerald-200 p-3.5 space-y-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-emerald-900 font-semibold">
+                                        <span>{outcome.label}</span>
+                                        <span aria-hidden="true">·</span>
+                                        <span>Via {getChannelLabel(occ.contactChannel)}</span>
+                                        <span aria-hidden="true">·</span>
+                                        <span>{occ.feedbackByName || 'Secretaria Escolar'}</span>
+                                        {occ.feedbackUpdatedAt && (
+                                          <>
+                                            <span aria-hidden="true">·</span>
+                                            <span className="tabular-nums">{occ.feedbackUpdatedAt}</span>
+                                          </>
+                                        )}
+                                      </div>
+
+                                      <div className="flex items-center gap-2">
+                                        {occ.feedbackReadByTeacher ? (
+                                          <span className="text-xs font-semibold text-emerald-800 inline-flex items-center gap-1">
+                                            <CheckCheck className="w-3.5 h-3.5" />
+                                            <span>
+                                              Lido pela PEB I
+                                              {occ.feedbackReadAt ? ` (${occ.feedbackReadAt})` : ''}
+                                            </span>
+                                          </span>
+                                        ) : canRequestSecretariaContact ? (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handleMarkFeedbackAsReadByTeacher(cls, student, occ.id)
+                                            }
+                                            className="min-h-[32px] px-3 py-1 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                          >
+                                            <Check className="w-3.5 h-3.5" />
+                                            <span>Confirmar leitura</span>
+                                          </button>
+                                        ) : (
+                                          <span className="text-xs text-slate-600">
+                                            Aguardando leitura docente
+                                          </span>
+                                        )}
+
+                                        {canManageFamilyFeedback && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setEditingFeedbackIds((prev) => ({
+                                                ...prev,
+                                                [occ.id]: true,
+                                              }))
+                                            }
+                                            className="min-h-[32px] px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-emerald-300 text-emerald-950 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                          >
+                                            <Edit3 className="w-3.5 h-3.5" />
+                                            <span>Editar</span>
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
-                                    <p className="text-xs sm:text-sm font-bold leading-snug mt-0.5 break-words">
+
+                                    <p className="text-sm font-semibold text-slate-950 leading-relaxed break-words">
                                       “{occ.familyFeedback}”
                                     </p>
                                   </div>
-                                ) : (
-                                  <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-950 text-xs font-semibold flex items-center justify-between gap-2">
-                                    <span className="truncate">
-                                      Aguardando contato da secretaria
+                                )}
+
+                                {/* Estado Aguardando (para PEB I e Demais Usuários) */}
+                                {!hasFeedback && !canManageFamilyFeedback && (
+                                  <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-950 text-xs font-medium flex items-center justify-between gap-2">
+                                    <span>
+                                      Solicitação recebida · Aguardando a equipe administrativa contatar a família e preencher o feedback.
                                     </span>
-                                    <span className="material-symbols-outlined text-[16px] text-[#b45309] shrink-0">
-                                      schedule
-                                    </span>
+                                    <Clock className="w-4 h-4 text-amber-700 shrink-0" />
                                   </div>
                                 )}
 
-                                {canEditFamilyFeedback && (
-                                  <div className="pt-1 space-y-1.5">
-                                    <div className="flex flex-wrap items-center gap-1">
-                                      {QUICK_FAMILY_FEEDBACK_CHIPS.slice(0, 3).map((chip) => (
+                                {/* METODOLOGIA ESTRUTURADA DE PREENCHIMENTO DO ADMIN (Exclusivo Equipe Administrativa) */}
+                                {canManageFamilyFeedback && isEditingThis && (
+                                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5 space-y-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-xs font-bold text-slate-900">
+                                        {hasFeedback
+                                          ? 'Atualizar Devolutiva da Secretaria'
+                                          : 'Registrar Contato com a Família e Feedback'}
+                                      </span>
+                                      {hasFeedback && (
                                         <button
-                                          key={chip}
                                           type="button"
                                           onClick={() =>
-                                            setFeedbackDrafts((prev) => ({
+                                            setEditingFeedbackIds((prev) => ({
                                               ...prev,
-                                              [draftKey]: chip,
+                                              [occ.id]: false,
                                             }))
                                           }
-                                          className="px-2 py-1 rounded-md bg-slate-100 hover:bg-[#0b3b8c] border border-slate-200 text-slate-800 hover:text-white text-[11px] font-bold transition-colors cursor-pointer"
+                                          className="text-xs font-semibold text-slate-600 hover:text-slate-950 cursor-pointer"
                                         >
-                                          + {chip}
+                                          Cancelar
                                         </button>
-                                      ))}
+                                      )}
                                     </div>
-                                    <div className="flex flex-col sm:flex-row gap-1.5">
-                                      <input
-                                        type="text"
-                                        value={
-                                          feedbackDrafts[draftKey] !== undefined
-                                            ? feedbackDrafts[draftKey]
-                                            : occ.familyFeedback || ''
-                                        }
+
+                                    {/* Passo 1: Canal utilizado */}
+                                    <div className="space-y-1.5">
+                                      <span className="text-xs font-semibold text-slate-700 block">
+                                        1. Canal de contato utilizado
+                                      </span>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {CONTACT_CHANNEL_OPTIONS.map((ch) => (
+                                          <button
+                                            key={ch.id}
+                                            type="button"
+                                            onClick={() =>
+                                              updateAdminDraft(occ, {
+                                                channel: ch.id,
+                                                status:
+                                                  ch.id === 'nao_atendeu'
+                                                    ? 'em_tentativa'
+                                                    : adminDraft.status,
+                                              })
+                                            }
+                                            className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer whitespace-nowrap ${
+                                              adminDraft.channel === ch.id
+                                                ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
+                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                            }`}
+                                          >
+                                            {ch.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Passo 2: Situação / Desfecho */}
+                                    <div className="space-y-1.5">
+                                      <span className="text-xs font-semibold text-slate-700 block">
+                                        2. Resultado do contato
+                                      </span>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {OUTCOME_STATUS_OPTIONS.map((st) => (
+                                          <button
+                                            key={st.id}
+                                            type="button"
+                                            onClick={() =>
+                                              updateAdminDraft(occ, { status: st.id })
+                                            }
+                                            className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer whitespace-nowrap ${
+                                              adminDraft.status === st.id
+                                                ? 'bg-slate-900 border-slate-900 text-white'
+                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                            }`}
+                                          >
+                                            {st.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Passo 3: Modelos rápidos + Parecer */}
+                                    <div className="space-y-1.5">
+                                      <span className="text-xs font-semibold text-slate-700 block">
+                                        3. Feedback para o(a) docente PEB I
+                                      </span>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {QUICK_FAMILY_FEEDBACK_CHIPS.map((chip) => (
+                                          <button
+                                            key={chip}
+                                            type="button"
+                                            onClick={() =>
+                                              updateAdminDraft(occ, { text: chip })
+                                            }
+                                            className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer text-left"
+                                          >
+                                            + {chip}
+                                          </button>
+                                        ))}
+                                      </div>
+
+                                      <textarea
+                                        rows={2}
+                                        value={adminDraft.text}
                                         onChange={(e) =>
-                                          setFeedbackDrafts((prev) => ({
-                                            ...prev,
-                                            [draftKey]: e.target.value,
-                                          }))
+                                          updateAdminDraft(occ, { text: e.target.value })
                                         }
-                                        placeholder="Devolutiva da família..."
-                                        className="flex-1 h-9 px-3 rounded-lg bg-slate-50 border border-slate-300 text-slate-950 text-xs focus:bg-white focus:border-[#0052cc] focus:outline-none"
+                                        placeholder="Descreva com clareza o retorno obtido da família para orientar o professor..."
+                                        className="w-full p-2.5 rounded-xl bg-white border border-slate-300 text-slate-950 text-xs sm:text-sm focus:border-[#0b3b8c] focus:outline-none resize-none"
                                       />
+                                    </div>
+
+                                    <div className="flex justify-end">
                                       <button
                                         type="button"
-                                        onClick={() => {
-                                          const text =
-                                            feedbackDrafts[draftKey] !== undefined
-                                              ? feedbackDrafts[draftKey]
-                                              : occ.familyFeedback || '';
-                                          handleSaveOccurrenceFeedback(
-                                            cls,
-                                            student,
-                                            occ.id,
-                                            text
-                                          );
-                                        }}
-                                        className="h-9 px-3 rounded-lg bg-[#0052cc] hover:bg-[#0b3b8c] text-white font-bold text-xs cursor-pointer shrink-0"
+                                        onClick={() =>
+                                          handleSaveAdminFeedback(cls, student, occ.id, adminDraft)
+                                        }
+                                        className="min-h-[40px] px-4 py-2 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs sm:text-sm inline-flex items-center gap-1.5 cursor-pointer transition-colors"
                                       >
-                                        Salvar &amp; Push
+                                        <Check className="w-4 h-4 shrink-0" />
+                                        <span>Salvar Feedback e Notificar PEB I</span>
                                       </button>
                                     </div>
                                   </div>
@@ -1024,25 +1551,26 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       </div>
                     )}
 
-                    {/* Registrar Nova Sequência */}
-                    {canReportDays && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 min-w-0">
+                    {/* FORMULÁRIO EXCLUSIVO PEB I: Solicitar contato à Secretaria (3+ faltas seguidas) */}
+                    {canRequestSecretariaContact ? (
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 min-w-0">
                         <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
-                          <div className="min-w-0 break-words flex-1">
-                            <span className="text-xs sm:text-sm font-bold text-slate-950 block">
-                              Registrar {occurrences.length + 1}ª Ocorrência (mín. 3 dias seguidos):
-                            </span>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-950">
+                              Pedir para a Secretaria Contatar a Família ({occurrences.length + 1}ª Solicitação)
+                            </h4>
+                            <p className="text-xs text-slate-600">
+                              Marque pelo menos 3 dias letivos consecutivos em que o(a) estudante faltou.
+                            </p>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 shrink-0">
                             <button
                               type="button"
-                              onClick={() =>
-                                handleSelectLastThreeDaysShortcut(compositeKey)
-                              }
-                              className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 text-xs font-bold cursor-pointer"
+                              onClick={() => handleSelectLastThreeDaysShortcut(compositeKey)}
+                              className="min-h-[34px] px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-900 text-xs font-semibold cursor-pointer whitespace-nowrap"
                             >
-                              Últimos 3 dias
+                              Últimos 3 dias letivos
                             </button>
                             {draftDays.length > 0 && (
                               <button
@@ -1053,7 +1581,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                     [compositeKey]: [],
                                   }))
                                 }
-                                className="text-xs font-bold text-slate-600 hover:text-[#be123c] cursor-pointer"
+                                className="text-xs font-semibold text-slate-600 hover:text-[#be123c] cursor-pointer"
                               >
                                 Limpar
                               </button>
@@ -1068,29 +1596,45 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                               <button
                                 key={day.key}
                                 type="button"
-                                onClick={() =>
-                                  handleToggleDraftDay(compositeKey, day.key)
-                                }
-                                className={`min-h-[38px] px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 ${
+                                onClick={() => handleToggleDraftDay(compositeKey, day.key)}
+                                className={`min-h-[38px] px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center justify-between gap-1 cursor-pointer transition-colors tabular-nums ${
                                   isSelected
-                                    ? 'bg-[#be123c] text-white shadow-2xs'
+                                    ? 'bg-[#be123c] text-white'
                                     : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
                                 }`}
                               >
                                 <span>{day.fullLabel}</span>
-                                <span className="material-symbols-outlined text-[15px]">
-                                  {isSelected
-                                    ? 'check_circle'
-                                    : 'radio_button_unchecked'}
-                                </span>
+                                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
                               </button>
                             );
                           })}
                         </div>
 
+                        <div className="space-y-1.5">
+                          <label
+                            htmlFor={`obs-${compositeKey}`}
+                            className="text-xs font-semibold text-slate-700 block"
+                          >
+                            Observação para a secretaria (opcional)
+                          </label>
+                          <input
+                            id={`obs-${compositeKey}`}
+                            type="text"
+                            value={teacherObsDrafts[compositeKey] || ''}
+                            onChange={(e) =>
+                              setTeacherObsDrafts((prev) => ({
+                                ...prev,
+                                [compositeKey]: e.target.value,
+                              }))
+                            }
+                            placeholder="Ex.: Colega comentou que está com febre / família não respondeu recado na agenda..."
+                            className="w-full h-9 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-950 text-xs sm:text-sm focus:bg-white focus:border-[#0b3b8c] focus:outline-none"
+                          />
+                        </div>
+
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
                           <span
-                            className={`text-xs font-bold ${
+                            className={`text-xs font-semibold ${
                               draftValidation.isValid
                                 ? 'text-[#047857]'
                                 : draftDays.length > 0
@@ -1099,27 +1643,31 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             }`}
                           >
                             {draftValidation.isValid
-                              ? `✓ ${draftValidation.sortedKeys.length} dias (${draftValidation.maxConsecutive} seguidos) — Pronto para registrar`
+                              ? `${draftValidation.sortedKeys.length} dias marcados (${draftValidation.maxConsecutive} seguidos) · Pronto para enviar à secretaria`
                               : draftDays.length > 0
-                              ? `Selecione pelo menos 3 dias seguidos (atual: ${draftValidation.maxConsecutive}).`
-                              : 'Toque nos dias letivos acima.'}
+                              ? `Selecione pelo menos 3 dias letivos seguidos (sequência atual: ${draftValidation.maxConsecutive}).`
+                              : 'Selecione os dias de falta acima.'}
                           </span>
 
                           <button
                             type="button"
                             disabled={!draftValidation.isValid}
-                            onClick={() => handleRegisterNewOccurrence(cls, student)}
-                            className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-xl bg-[#be123c] hover:bg-[#9f1239] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none shrink-0"
+                            onClick={() => handleRequestSecretariaContact(cls, student)}
+                            className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-xl bg-[#be123c] hover:bg-[#9f1239] text-white font-semibold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors disabled:opacity-40 disabled:pointer-events-none shrink-0"
                           >
-                            <span className="material-symbols-outlined text-[18px] shrink-0">
-                              cloud_upload
-                            </span>
-                            <span>
-                              Registrar {occurrences.length + 1}ª Ocorrência
-                            </span>
+                            <Send className="w-4 h-4 shrink-0" />
+                            <span>Pedir para Secretaria Contatar</span>
                           </button>
                         </div>
                       </div>
+                    ) : (
+                      occurrences.length === 0 && (
+                        <div className="bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-600">
+                          {canManageFamilyFeedback
+                            ? 'Este estudante não possui solicitação aberta. Apenas o(a) docente PEB I da turma envia o pedido de contato quando identifica 3 ou mais faltas seguidas.'
+                            : 'Nenhuma solicitação de busca ativa registrada para este estudante até o momento.'}
+                        </div>
+                      )
                     )}
                   </div>
                 )}
@@ -1129,37 +1677,26 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
         )}
       </div>
 
-      {/* ===================================================================== */}
-      {/* POP-UP DIRETO SEM SCROLL (OCUPAÇÃO COMPACTA E ALTA LEITURA)           */}
-      {/* ===================================================================== */}
+      {/* Pop-up Compacto de Leitura / Atendimento Rápido */}
       {activeModalData && (
         <div
           onClick={() => setReadingOccurrenceModal(null)}
-          className="fixed inset-0 z-[85] flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
+          className="fixed inset-0 z-[85] flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-300 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[84dvh] min-w-0"
+            className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] min-w-0"
           >
-            {/* Topo Institucional Compacto */}
-            <div className="px-4 py-3 bg-[#0b3b8c] text-white flex items-center justify-between gap-2.5 min-w-0 shrink-0">
+            <div className="px-4 py-3.5 bg-[#0b3b8c] text-white flex items-center justify-between gap-2.5 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <StudentAvatar student={activeModalData.student} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-blue-100 font-mono tabular-nums">
-                    <span>
-                      {activeModalData.cls.name} · Nº{' '}
-                      {activeModalData.student.number.toString().padStart(2, '0')}
-                    </span>
-                    <span>·</span>
-                    <span>
-                      {activeModalData.occurrences.length}{' '}
-                      {activeModalData.occurrences.length === 1
-                        ? 'ocorrência'
-                        : 'ocorrências'}
-                    </span>
+                  <div className="text-xs text-blue-100 tabular-nums truncate">
+                    {activeModalData.cls.name} · Nº{' '}
+                    {activeModalData.student.number.toString().padStart(2, '0')} ·{' '}
+                    {activeModalData.occurrences.length} solicitação(ões)
                   </div>
-                  <h2 className="text-sm sm:text-base font-bold text-white truncate leading-snug">
+                  <h2 className="text-sm sm:text-base font-bold text-white truncate">
                     {activeModalData.student.name}
                   </h2>
                 </div>
@@ -1171,15 +1708,14 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 aria-label="Fechar pop-up"
                 className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer shrink-0 transition-colors"
               >
-                <span className="material-symbols-outlined text-[19px]">close</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Seletor Inline entre Sequências (se houver mais de 1) */}
             {activeModalData.occurrences.length > 1 && (
               <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-                <span className="text-[11px] font-bold text-slate-600 shrink-0 mr-1">
-                  Sequências:
+                <span className="text-xs font-semibold text-slate-600 shrink-0 mr-1">
+                  Solicitações:
                 </span>
                 {activeModalData.occurrences.map((occ) => {
                   const isCurrent = occ.id === activeModalData.activeOcc.id;
@@ -1195,7 +1731,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           occurrenceId: occ.id,
                         });
                       }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0 border ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors shrink-0 border tabular-nums ${
                         isCurrent
                           ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
                           : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50'
@@ -1208,219 +1744,243 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               </div>
             )}
 
-            {/* Corpo Direto Sem Scroll */}
-            <div className="p-3.5 sm:p-4 overflow-y-auto space-y-2.5 min-w-0">
-              {/* Bloco 1: Dias Seguidos Faltosos */}
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 space-y-1.5 min-w-0">
-                <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
-                  <span className="font-bold uppercase tracking-wider text-[#be123c]">
-                    {activeModalData.activeOcc.sequenceNumber}ª Ocorrência ·{' '}
+            <div className="p-4 overflow-y-auto space-y-3 min-w-0">
+              {/* Dias Faltosos e Pedido PEB I */}
+              <div className="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+                  <span className="font-bold text-[#be123c]">
+                    {activeModalData.activeOcc.sequenceNumber}ª Solicitação ·{' '}
                     {activeModalData.activeOcc.selectedDates.length} dias seguidos
                   </span>
-                  <span className="font-semibold text-slate-600">
+                  <span className="text-slate-600 tabular-nums">
                     {activeModalData.activeOcc.reportedAt || '2027'} ·{' '}
                     {activeModalData.activeOcc.reportedByTeacher ||
                       activeModalData.cls.teacherName ||
                       'PEB I'}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {activeModalData.activeOcc.selectedDates.map((d) => (
-                    <span
-                      key={d}
-                      className="px-2.5 py-0.5 rounded-lg bg-[#be123c] text-white font-bold text-xs tabular-nums"
-                    >
-                      {d}
-                    </span>
-                  ))}
-                </div>
+                <p className="text-sm font-bold text-slate-950 tabular-nums">
+                  {activeModalData.activeOcc.selectedDates.join(' · ')}
+                </p>
+                {activeModalData.activeOcc.teacherObservation && (
+                  <p className="text-xs text-slate-700 pt-1 border-t border-rose-200/70">
+                    <span className="font-semibold">Obs. PEB I: </span>
+                    {activeModalData.activeOcc.teacherObservation}
+                  </p>
+                )}
               </div>
 
-              {/* Bloco 2: Devolutiva da Secretaria / Feedback da Família */}
-              <div
-                className={`p-3 rounded-xl border space-y-1 min-w-0 ${
-                  (activeModalData.activeOcc.familyFeedback || '').trim()
-                    ? 'bg-emerald-50/70 border-emerald-200'
-                    : 'bg-amber-50/70 border-amber-200'
-                }`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-1.5">
-                  <span
-                    className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 ${
-                      (activeModalData.activeOcc.familyFeedback || '').trim()
-                        ? 'text-[#047857]'
-                        : 'text-[#b45309]'
+              {/* Feedback da Secretaria */}
+              {(() => {
+                const occ = activeModalData.activeOcc;
+                const outcome = getOutcomeMeta(occ);
+                const hasFb = Boolean((occ.familyFeedback || '').trim());
+                return (
+                  <div
+                    className={`p-3.5 rounded-xl border space-y-1.5 ${
+                      hasFb
+                        ? 'bg-emerald-50/70 border-emerald-200'
+                        : 'bg-amber-50/70 border-amber-200'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[15px] shrink-0">
-                      forum
-                    </span>
-                    <span>Devolutiva da Família / Secretaria</span>
-                  </span>
-                  {activeModalData.activeOcc.feedbackUpdatedAt && (
-                    <span className="text-[11px] font-semibold text-slate-600 tabular-nums">
-                      {activeModalData.activeOcc.feedbackUpdatedAt}
-                    </span>
-                  )}
-                </div>
-
-                {(activeModalData.activeOcc.familyFeedback || '').trim() ? (
-                  <p className="text-sm sm:text-base font-bold text-slate-950 leading-snug break-words">
-                    “{activeModalData.activeOcc.familyFeedback}”
-                  </p>
-                ) : (
-                  <p className="text-xs sm:text-sm font-medium text-amber-950 leading-snug break-words">
-                    Ocorrência registrada na planilha da secretaria · Aguardando contato com a família.
-                  </p>
-                )}
-              </div>
-
-              {/* Bloco 3: Responsável & WhatsApp Compacto */}
-              <div className="p-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2 min-w-0">
-                {(() => {
-                  const gInfo = resolveGuardianRelationshipInfo(
-                    activeModalData.student.filiacao1 ||
-                      activeModalData.student.guardianName,
-                    'filiacao1',
-                    activeModalData.student.notes
-                  );
-                  return (
-                    <div className="min-w-0 flex-1 break-words">
-                      <span className="text-[10px] font-bold uppercase text-slate-600 block">
-                        {gInfo.roleLabel}
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+                      <span
+                        className={`font-bold ${
+                          hasFb ? 'text-[#047857]' : 'text-[#b45309]'
+                        }`}
+                      >
+                        {hasFb
+                          ? `${outcome.label} · Via ${getChannelLabel(occ.contactChannel)}`
+                          : 'Aguardando contato da secretaria'}
                       </span>
-                      <span className="text-xs sm:text-sm font-bold text-slate-950 break-words">
-                        {gInfo.cleanName || 'Responsável Legal'}
+                      {occ.feedbackUpdatedAt && (
+                        <span className="text-slate-600 tabular-nums">
+                          {occ.feedbackByName ? `${occ.feedbackByName} · ` : ''}
+                          {occ.feedbackUpdatedAt}
+                        </span>
+                      )}
+                    </div>
+
+                    {hasFb ? (
+                      <p className="text-sm font-semibold text-slate-950 leading-relaxed break-words">
+                        “{occ.familyFeedback}”
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-950">
+                        Solicitação enviada pela turma PEB I · Pendente de contato com a família.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Responsável & Contato */}
+              {(() => {
+                const contactData = buildStudentContactData(
+                  activeModalData.cls,
+                  activeModalData.student,
+                  activeModalData.activeOcc.selectedDates
+                );
+                return (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs text-slate-600 block">
+                        {contactData.guardian1.shortRoleLabel || 'Responsável Legal'}
+                      </span>
+                      <span className="text-sm font-bold text-slate-950 break-words">
+                        {contactData.guardian1.cleanName || 'Responsável Legal'}
                       </span>
                     </div>
-                  );
-                })()}
 
-                {(activeModalData.student.telefones ||
-                  activeModalData.student.guardianPhone) && (
-                  <a
-                    href={`https://wa.me/55${(
-                      activeModalData.student.telefones ||
-                      activeModalData.student.guardianPhone ||
-                      ''
-                    )
-                      .split('/')[0]
-                      .replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white font-bold text-xs shrink-0 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[15px] shrink-0">
-                      chat
-                    </span>
-                    <span className="tabular-nums">
-                      {activeModalData.student.telefones ||
-                        activeModalData.student.guardianPhone}
-                    </span>
-                  </a>
-                )}
-              </div>
+                    {contactData.waLinks[0] && (
+                      <a
+                        href={contactData.waLinks[0].waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center gap-1.5 shrink-0 transition-colors tabular-nums"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{contactData.waLinks[0].display}</span>
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
 
-              {/* Edição Sob Demanda para Admin (mantém pop-up compacto até tocar em Editar) */}
-              {canEditFamilyFeedback && isEditingModalFeedback && (
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-300 space-y-2 animate-gentle-fade">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-slate-900">
-                      Atualizar Devolutiva da Secretaria:
-                    </span>
+              {/* Edição rápida no pop-up (Exclusivo Admin) */}
+              {canManageFamilyFeedback && isEditingModalFeedback && (() => {
+                const occ = activeModalData.activeOcc;
+                const draft = getOrInitAdminDraft(occ);
+                return (
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-300 space-y-2.5 animate-gentle-fade">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-slate-900">
+                        Registrar Contato &amp; Feedback
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingModalFeedback(false)}
+                        className="text-xs font-semibold text-slate-600 hover:text-slate-950 cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {CONTACT_CHANNEL_OPTIONS.map((ch) => (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => updateAdminDraft(occ, { channel: ch.id })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border cursor-pointer ${
+                            draft.channel === ch.id
+                              ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
+                              : 'bg-white border-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {ch.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {OUTCOME_STATUS_OPTIONS.map((st) => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => updateAdminDraft(occ, { status: st.id })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border cursor-pointer ${
+                            draft.status === st.id
+                              ? 'bg-slate-900 border-slate-900 text-white'
+                              : 'bg-white border-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {QUICK_FAMILY_FEEDBACK_CHIPS.slice(0, 4).map((chip) => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => updateAdminDraft(occ, { text: chip })}
+                          className="px-2 py-1 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium cursor-pointer text-left"
+                        >
+                          + {chip}
+                        </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                      rows={2}
+                      value={draft.text}
+                      onChange={(e) => updateAdminDraft(occ, { text: e.target.value })}
+                      placeholder="Retorno dado pela família..."
+                      className="w-full p-2.5 rounded-lg bg-white border border-slate-300 text-slate-950 text-xs sm:text-sm focus:border-[#0b3b8c] focus:outline-none resize-none"
+                    />
                     <button
                       type="button"
-                      onClick={() => setIsEditingModalFeedback(false)}
-                      className="text-xs font-bold text-slate-600 hover:text-slate-950 cursor-pointer"
+                      onClick={() => {
+                        handleSaveAdminFeedback(
+                          activeModalData.cls,
+                          activeModalData.student,
+                          occ.id,
+                          draft
+                        );
+                        setIsEditingModalFeedback(false);
+                      }}
+                      className="w-full min-h-[38px] rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs sm:text-sm cursor-pointer"
                     >
-                      Cancelar
+                      Salvar Feedback e Notificar PEB I
                     </button>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1">
-                    {QUICK_FAMILY_FEEDBACK_CHIPS.map((chip) => (
-                      <button
-                        key={chip}
-                        type="button"
-                        onClick={() =>
-                          setFeedbackDrafts((prev) => ({
-                            ...prev,
-                            [`modal_${activeModalData.activeOcc.id}`]: chip,
-                          }))
-                        }
-                        className="px-2 py-1 rounded-md bg-white hover:bg-[#0b3b8c] border border-slate-300 text-slate-800 hover:text-white text-[11px] font-bold transition-colors cursor-pointer"
-                      >
-                        + {chip}
-                      </button>
-                    ))}
-                  </div>
-                  <textarea
-                    rows={2}
-                    value={
-                      feedbackDrafts[
-                        `modal_${activeModalData.activeOcc.id}`
-                      ] !== undefined
-                        ? feedbackDrafts[`modal_${activeModalData.activeOcc.id}`]
-                        : activeModalData.activeOcc.familyFeedback || ''
-                    }
-                    onChange={(e) =>
-                      setFeedbackDrafts((prev) => ({
-                        ...prev,
-                        [`modal_${activeModalData.activeOcc.id}`]: e.target.value,
-                      }))
-                    }
-                    placeholder="Retorno dado pela família..."
-                    className="w-full p-2.5 rounded-lg bg-white border border-slate-300 text-slate-950 text-xs sm:text-sm focus:border-[#0052cc] focus:outline-none resize-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const text =
-                        feedbackDrafts[
-                          `modal_${activeModalData.activeOcc.id}`
-                        ] !== undefined
-                          ? feedbackDrafts[`modal_${activeModalData.activeOcc.id}`]
-                          : activeModalData.activeOcc.familyFeedback || '';
-                      handleSaveOccurrenceFeedback(
-                        activeModalData.cls,
-                        activeModalData.student,
-                        activeModalData.activeOcc.id,
-                        text
-                      );
-                      setIsEditingModalFeedback(false);
-                    }}
-                    className="w-full min-h-[38px] rounded-xl bg-[#0052cc] hover:bg-[#0b3b8c] text-white font-bold text-xs sm:text-sm cursor-pointer"
-                  >
-                    Salvar Devolutiva &amp; Enviar Push
-                  </button>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
-            {/* Rodapé Compacto */}
-            <div className="px-4 py-2.5 bg-slate-100 flex items-center justify-between gap-2 shrink-0">
-              {canEditFamilyFeedback && !isEditingModalFeedback ? (
+            <div className="px-4 py-3 bg-slate-100 flex items-center justify-between gap-2 shrink-0">
+              {canManageFamilyFeedback && !isEditingModalFeedback ? (
                 <button
                   type="button"
                   onClick={() => setIsEditingModalFeedback(true)}
-                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-blue-50 text-[#0b3b8c] font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-blue-50 text-[#0b3b8c] font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer border border-slate-200"
                 >
-                  <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                  <Edit3 className="w-3.5 h-3.5" />
                   <span>
                     {(activeModalData.activeOcc.familyFeedback || '').trim()
-                      ? 'Editar Devolutiva'
-                      : 'Registrar Devolutiva'}
+                      ? 'Editar Feedback'
+                      : 'Preencher Feedback'}
                   </span>
                 </button>
+              ) : canRequestSecretariaContact &&
+                (activeModalData.activeOcc.familyFeedback || '').trim() &&
+                !activeModalData.activeOcc.feedbackReadByTeacher ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleMarkFeedbackAsReadByTeacher(
+                      activeModalData.cls,
+                      activeModalData.student,
+                      activeModalData.activeOcc.id
+                    )
+                  }
+                  className="min-h-[38px] px-3.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Confirmar leitura</span>
+                </button>
               ) : (
-                <span className="text-[11px] font-semibold text-slate-500">
-                  Leitura rápida · Busca Ativa
+                <span className="text-xs font-medium text-slate-500">
+                  Busca Ativa Escolar
                 </span>
               )}
 
               <button
                 type="button"
                 onClick={() => setReadingOccurrenceModal(null)}
-                className="min-h-[38px] px-5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs sm:text-sm cursor-pointer"
+                className="min-h-[38px] px-5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-xs sm:text-sm cursor-pointer"
               >
                 Fechar
               </button>

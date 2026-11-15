@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 import { ClassGroup, Student, UserRole } from '../types';
 import {
   MONTHLY_SCHOOL_DAYS_2027,
@@ -52,15 +53,26 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     return match ? match.schoolDays : (classGroup.classesHeld || 20);
   });
   const [students, setStudents] = useState<Student[]>(classGroup.students);
-  const [ruleAlertMessage, setRuleAlertMessage] = useState<string | null>(null);
   const [searchName, setSearchName] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'faltas' | 'atestados'>('all');
   const [attendanceViewMode, setAttendanceViewMode] = useState<'compact' | 'cards'>('compact');
 
-  // Estado de feedback visual de salvamento com animação flash e transição de cores
+  // Estado de feedback visual e tátil de salvamento com animação flash, Sonner toast e transição de cores
   const [saveFlashState, setSaveFlashState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [lastSavedStudentId, setLastSavedStudentId] = useState<string | null>(null);
-  const saveFlashTimerRef = React.useRef<number | null>(null);
+  const saveFlashTimerRef = useRef<number | null>(null);
+  const prevSaveFlashStateRef = useRef<'idle' | 'saving' | 'saved'>('idle');
+  const lastSavedInfoRef = useRef<{
+    studentName?: string;
+    studentNumber?: number;
+    faltas?: number;
+    atestados?: number;
+    frequenciaPercent?: number;
+    monthName: string;
+    presenceRate: number;
+    totalFaltasTurma: number;
+    savedAt: number;
+  } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -69,6 +81,59 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       }
     };
   }, []);
+
+  // Dispara toast informativo com animação suave via Sonner + feedback tátil assim que o salvamento é concluído
+  useEffect(() => {
+    if (prevSaveFlashStateRef.current !== 'saved' && saveFlashState === 'saved') {
+      const info = lastSavedInfoRef.current;
+
+      // Feedback tátil progressivo para dispositivos móveis compatíveis
+      try {
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+          navigator.vibrate(12);
+        }
+      } catch {
+        // Ignora caso o navegador bloqueie vibração
+      }
+
+      if (info) {
+        const shortName = info.studentName
+          ? info.studentName.trim().split(/\s+/).slice(0, 2).join(' ')
+          : '';
+        const numberPrefix =
+          typeof info.studentNumber === 'number'
+            ? `Nº ${info.studentNumber.toString().padStart(2, '0')} · `
+            : '';
+
+        const title = shortName
+          ? `Faltas salvas · ${numberPrefix}${shortName}`
+          : `Frequência de ${info.monthName} salva`;
+
+        const description =
+          typeof info.faltas === 'number' && typeof info.atestados === 'number'
+            ? `${info.faltas} ${info.faltas === 1 ? 'falta' : 'faltas'} · ${info.atestados} ${
+                info.atestados === 1 ? 'atestado' : 'atestados'
+              } · ${info.frequenciaPercent ?? info.presenceRate}% de presença (${info.monthName})`
+            : `Turma ${classGroup.name} · ${info.presenceRate}% de presença global (${info.totalFaltasTurma} faltas)`;
+
+        toast.success(title, {
+          id: 'registro-frequencia-save-toast',
+          description,
+          duration: 2800,
+          className: 'sonner-sf-toast sonner-attendance-toast',
+          icon: (
+            <span
+              key={info.savedAt}
+              className="sonner-tactile-pop w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[14px]">check</span>
+            </span>
+          ),
+        });
+      }
+    }
+    prevSaveFlashStateRef.current = saveFlashState;
+  }, [saveFlashState, classGroup.name]);
 
   const selectedMonthMeta = useMemo(
     () => MONTHLY_SCHOOL_DAYS_2027.find((m) => m.month === selectedMonthName),
@@ -100,10 +165,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   }, [classGroup.students]);
 
   const triggerRuleAlert = (msg: string) => {
-    setRuleAlertMessage(msg);
-    window.setTimeout(() => {
-      setRuleAlertMessage(null);
-    }, 3000);
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([16, 40, 16]);
+      }
+    } catch {
+      // ignore
+    }
+    toast.warning(msg, {
+      id: 'registro-frequencia-rule-alert',
+      duration: 3200,
+      className: 'sonner-sf-toast',
+    });
   };
 
   const commitInstantUpdate = (
@@ -128,6 +201,25 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       students: nextStudents,
     };
     const classMetrics = getClassAttendanceMetrics(tempClass, OFFICIAL_OCTOBER_DAYS);
+    const updatedStudent = studentIdSaved
+      ? nextStudents.find((s) => s.id === studentIdSaved)
+      : undefined;
+    const updatedStudentMetrics = updatedStudent
+      ? getStudentAttendanceMetrics(updatedStudent, customMonthDays, OFFICIAL_OCTOBER_DAYS)
+      : undefined;
+
+    lastSavedInfoRef.current = {
+      studentName: updatedStudent?.name,
+      studentNumber: updatedStudent?.number,
+      faltas: updatedStudentMetrics?.faltas,
+      atestados: updatedStudentMetrics?.atestados,
+      frequenciaPercent: updatedStudentMetrics?.frequenciaPercent,
+      monthName: customMonthName,
+      presenceRate: classMetrics.presenceRate,
+      totalFaltasTurma: classMetrics.totalFaltasTurma,
+      savedAt: Date.now(),
+    };
+
     const updatedClass: ClassGroup = {
       ...tempClass,
       presenceRate: classMetrics.presenceRate,
@@ -141,7 +233,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       window.clearTimeout(saveFlashTimerRef.current);
     }
 
-    // Transição para o estado 'saved' com sutil animação flash esmeralda confirmando gravação
+    // Transição para o estado 'saved' com animação suave confirmando gravação
     saveFlashTimerRef.current = window.setTimeout(() => {
       setSaveFlashState('saved');
       saveFlashTimerRef.current = window.setTimeout(() => {
@@ -453,16 +545,6 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
   return (
     <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
-      {/* Alerta de regra caso tente ultrapassar limite de dias ou atestados */}
-      {ruleAlertMessage && (
-        <div className="fixed top-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-100">
-          <div className="bg-[#ff3b30] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 min-w-0">
-            <span className="material-symbols-outlined text-[22px] shrink-0">warning</span>
-            <p className="font-bold text-sm leading-snug break-words min-w-0">{ruleAlertMessage}</p>
-          </div>
-        </div>
-      )}
-
       {/* Breadcrumb e Contexto */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 py-0.5 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
@@ -526,13 +608,13 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               </div>
             ) : saveFlashState === 'saved' ? (
               <div
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-md ring-2 ring-emerald-400/60 scale-105 transition-all duration-300"
+                className="sonner-tactile-pop inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-md transition-all duration-300"
                 title="Dados persistidos com sucesso no banco de dados e nuvem!"
               >
                 <span className="material-symbols-outlined text-[17px] text-white">
                   check_circle
                 </span>
-                <span>✓ Salvo com sucesso!</span>
+                <span>Salvo com sucesso!</span>
               </div>
             ) : (
               <div
@@ -793,7 +875,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         {student.name}
                       </span>
                       {isJustSaved && (
-                        <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 animate-pulse">
+                        <span className="sonner-tactile-pop px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1">
                           <span className="material-symbols-outlined text-[13px]">check</span>
                           <span>Salvo!</span>
                         </span>
@@ -1017,7 +1099,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         {isJustSaved && (
-                          <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 animate-pulse">
+                          <span className="sonner-tactile-pop px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1">
                             <span className="material-symbols-outlined text-[13px]">check</span>
                             <span>Salvo!</span>
                           </span>
