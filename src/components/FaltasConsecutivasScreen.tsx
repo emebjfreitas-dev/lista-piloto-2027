@@ -170,7 +170,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   // Lista unificada de estudantes (por turma ou todas as turmas para PEB II / Admin)
   const scopedEntries = useMemo(() => {
     const sourceClasses =
-      viewAllClassesMode && availableClasses.length > 0
+      userRole !== 'usuario' && viewAllClassesMode && availableClasses.length > 0
         ? availableClasses
         : [classGroup];
 
@@ -512,44 +512,42 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             </h1>
           </div>
 
-          {/* Seletor de Escopo Compacto */}
-          {availableClasses.length > 1 && onSelectClass && (
+          {/* Seletor de Escopo: Apenas Admin e PEB II podem alternar turmas; PEB I tem apenas a sua turma */}
+          {userRole !== 'usuario' && availableClasses.length > 1 && onSelectClass ? (
             <div className="flex flex-wrap items-center gap-2 min-w-0 shrink-0">
-              {userRole !== 'usuario' && (
-                <div className="inline-flex items-center gap-1 bg-slate-100 border border-slate-200 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setViewAllClassesMode(true)}
-                    className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                      viewAllClassesMode
-                        ? 'bg-[#0b3b8c] text-white shadow-xs'
-                        : 'text-slate-700 hover:text-slate-950'
-                    }`}
-                  >
-                    Todas ({availableClasses.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewAllClassesMode(false)}
-                    className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                      !viewAllClassesMode
-                        ? 'bg-[#0b3b8c] text-white shadow-xs'
-                        : 'text-slate-700 hover:text-slate-950'
-                    }`}
-                  >
-                    {classGroup.name}
-                  </button>
-                </div>
-              )}
+              <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setViewAllClassesMode(true)}
+                  className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    viewAllClassesMode
+                      ? 'bg-[#0b3b8c] text-white shadow-xs'
+                      : 'text-slate-700 hover:text-slate-950'
+                  }`}
+                >
+                  Todas ({availableClasses.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewAllClassesMode(false)}
+                  className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    !viewAllClassesMode
+                      ? 'bg-[#0b3b8c] text-white shadow-xs'
+                      : 'text-slate-700 hover:text-slate-950'
+                  }`}
+                >
+                  {classGroup.name}
+                </button>
+              </div>
 
-              {(!viewAllClassesMode || userRole === 'usuario') && (
+              {!viewAllClassesMode && (
                 <select
                   value={classGroup.id}
                   onChange={(e) => {
                     const target = availableClasses.find((c) => c.id === e.target.value);
                     if (target) onSelectClass(target);
                   }}
-                  className="min-w-0 h-9 px-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-950 text-xs font-bold cursor-pointer focus:outline-none focus:border-[#0052cc]"
+                  className="min-w-0 h-9 px-3 rounded-xl bg-slate-50 text-slate-950 text-xs font-bold cursor-pointer focus:outline-none"
                 >
                   {availableClasses.map((cls) => (
                     <option key={cls.id} value={cls.id}>
@@ -558,6 +556,12 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   ))}
                 </select>
               )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="px-3 py-1.5 rounded-xl bg-blue-50 text-[#0b3b8c] font-bold text-xs">
+                Sua Turma: {classGroup.name} ({classGroup.shift.replace('Turno ', '')})
+              </span>
             </div>
           )}
         </div>

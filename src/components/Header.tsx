@@ -168,8 +168,8 @@ export const Header: React.FC<HeaderProps> = ({
       icon: Home,
     },
     {
-      id: 'turmas',
-      label: 'Turmas',
+      id: userRole === 'usuario' ? 'detalhes' : 'turmas',
+      label: userRole === 'usuario' ? 'Minha Turma' : 'Turmas',
       activeMatch: currentScreen === 'turmas' || currentScreen === 'detalhes',
       icon: Users,
     },
@@ -283,8 +283,8 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
             />
             <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5 min-w-0 leading-tight">
-              <span className="text-[15px] sm:text-base font-extrabold tracking-tight text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors truncate">
-                Candelário Gestão
+              <span className="text-[13px] sm:text-base font-extrabold tracking-tight text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors truncate">
+                Lista Piloto Candelário 2027
               </span>
               <span className="text-slate-400 font-light hidden md:inline" aria-hidden="true">
                 ·

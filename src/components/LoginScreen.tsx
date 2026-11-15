@@ -128,8 +128,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </span>
 
         {/* Nome do App */}
-        <h1 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-[#0b3b8c] leading-tight mt-4 text-balance break-words">
-          Candelário Gestão
+        <h1 className="text-xl sm:text-[24px] font-extrabold tracking-tight text-[#0b3b8c] leading-tight mt-4 text-balance break-words">
+          Lista Piloto Candelário 2027
         </h1>
 
         {/* Unidade Escolar */}

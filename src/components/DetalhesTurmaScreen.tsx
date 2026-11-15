@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { ClassGroup, Student, UserRole, SchoolNotice } from '../types';
 import {
   CLASS_EXPORT_COLUMNS,
@@ -66,6 +66,748 @@ interface DetalhesTurmaScreenProps {
   onBackToClasses: () => void;
 }
 
+interface EstudanteCardProps {
+  student: Student;
+  classGroup: ClassGroup;
+  diasLetivosMes: number;
+  minLegalPresence: number;
+  isExpanded: boolean;
+  onToggleExpand: (studentId: string) => void;
+  onOpenStudentGrid?: (student: Student) => void;
+  onOpenStudentPdf?: (student: Student) => void;
+  onOpenPhotoModal?: (student: Student) => void;
+  renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
+}
+
+const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
+  student,
+  classGroup,
+  diasLetivosMes,
+  minLegalPresence,
+  isExpanded,
+  onToggleExpand,
+  onOpenStudentGrid,
+  onOpenStudentPdf,
+  onOpenPhotoModal,
+  renderStudentDetailedExpansion,
+}) => {
+  const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+  const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+  const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+  const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+  const isOtherNonActive = !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+  const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
+
+  const cardColorClasses = isTransferred
+    ? 'bg-amber-50 border-amber-300 text-slate-950 shadow-xs hover:shadow-md'
+    : isRemanejado
+    ? 'bg-purple-50 border-purple-300 text-slate-950 shadow-xs hover:shadow-md'
+    : isOtherNonActive
+    ? 'bg-slate-100 border-slate-300 text-slate-800 shadow-xs'
+    : m.isBelowLegalThreshold
+    ? 'bg-rose-50/90 border-rose-300 text-slate-950 shadow-xs hover:shadow-md'
+    : 'bg-white border-slate-200 text-slate-950 shadow-xs hover:border-slate-300 hover:shadow-md';
+
+  const numberBadgeClasses = isTransferred
+    ? 'text-amber-900'
+    : isRemanejado
+    ? 'text-purple-900'
+    : isOtherNonActive
+    ? 'text-slate-700'
+    : 'text-[#0b3b8c]';
+
+  const cumulativeOccs = getStudentCumulativeOccurrences(student);
+  const latestConsecOcc = cumulativeOccs.length > 0 ? cumulativeOccs[cumulativeOccs.length - 1] : null;
+  const consecDaysCount = latestConsecOcc ? latestConsecOcc.selectedDates.length : 0;
+
+  const studentGenderInfo = getStudentGenderLabel(student);
+  const guardian1Info = resolveGuardianRelationshipInfo(student.filiacao1 || student.guardianName, 'filiacao1', student.notes);
+  const guardian2Info = resolveGuardianRelationshipInfo(student.filiacao2, 'filiacao2', student.notes);
+  const hasStudentPdf = Boolean(
+    (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+      (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+  );
+
+  return (
+    <div
+      onClick={() => onToggleExpand(student.id)}
+      title={isExpanded ? 'Clique para recolher detalhes' : `Clique para expandir dados de ${studentGenderInfo.estudanteTerm}`}
+      className={`rounded-2xl border p-4 sm:p-5 flex flex-col justify-between gap-3.5 cursor-pointer select-none transition-all duration-100 min-w-0 ${
+        isExpanded
+          ? 'col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 bg-white border-[#0b3b8c]/40 shadow-md'
+          : 'h-full min-h-[220px]'
+      } ${cardColorClasses}`}
+    >
+      {isNonActive && (
+        <div
+          className={`-mx-2 -mt-2 px-3 py-1.5 rounded-t-lg text-xs font-bold flex items-center justify-between gap-1.5 ${
+            isTransferred
+              ? 'bg-amber-200 text-amber-950'
+              : isRemanejado
+              ? 'bg-purple-200 text-purple-950'
+              : 'bg-slate-200 text-slate-900'
+          }`}
+        >
+          <span className="flex items-center gap-1">
+            <span className="material-symbols-outlined text-[15px]">
+              {isTransferred ? 'transfer_within_a_station' : 'swap_horiz'}
+            </span>
+            <span>
+              {isTransferred
+                ? `${studentGenderInfo.transferidoTerm} (Baixa)`
+                : isRemanejado
+                ? `${studentGenderInfo.remanejadoTerm} de Turma`
+                : `Não ativo · ${sit}`}
+            </span>
+          </span>
+          {student.dataMovimentacao && (
+            <span className="font-mono text-xs bg-white/80 px-1.5 py-0.5 rounded">
+              {student.dataMovimentacao}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-start gap-3">
+        <StudentAvatar
+          student={student}
+          size="lg"
+          expandableOnClick={true}
+          onUploadPhotoClick={
+            onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined
+          }
+        />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-1.5">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-700 font-medium min-w-0">
+              <span className={`text-xs font-bold tabular-nums shrink-0 ${numberBadgeClasses}`}>
+                Nº {student.number.toString().padStart(2, '0')}
+              </span>
+              <span className="text-slate-400" aria-hidden="true">·</span>
+              {student.ra && (
+                <>
+                  <span className="text-xs text-slate-700 tabular-nums font-semibold break-all">
+                    RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}
+                  </span>
+                  <span className="text-slate-400" aria-hidden="true">·</span>
+                </>
+              )}
+              <span className="text-xs text-slate-700 shrink-0">
+                {studentGenderInfo.code === 'F' ? 'Menina' : 'Menino'}
+              </span>
+            </div>
+
+            <div className="flex items-center shrink-0">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand(student.id);
+                }}
+                title={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
+                aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
+                className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <span
+                  className={`material-symbols-outlined text-[18px] transition-transform duration-100 ${
+                    isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
+                  }`}
+                >
+                  expand_more
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <h3
+            className={`text-base font-bold leading-snug break-words mt-1 ${
+              isTransferred
+                ? 'text-amber-950'
+                : isRemanejado
+                ? 'text-purple-950'
+                : 'text-slate-950'
+            }`}
+          >
+            {student.name}
+          </h3>
+
+          {(isNonActive || student.rotaOnibus || student.deficiencia || consecDaysCount >= 3) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs">
+              {isTransferred ? (
+                <span className="text-amber-900 text-xs font-bold">
+                  {studentGenderInfo.transferidoTerm}
+                </span>
+              ) : isRemanejado ? (
+                <span className="text-purple-900 text-xs font-bold">
+                  {studentGenderInfo.remanejadoTerm}
+                </span>
+              ) : isOtherNonActive ? (
+                <span className="text-slate-700 text-xs font-bold">
+                  {sit}
+                </span>
+              ) : null}
+
+              {student.rotaOnibus && (
+                <>
+                  {isNonActive && <span className="text-slate-400" aria-hidden="true">·</span>}
+                  <span className="text-xs text-[#0b3b8c] font-semibold">
+                    Rota {student.rotaOnibus.replace(/[^0-9]/g, '') || student.rotaOnibus.split('-')[0].trim()}
+                  </span>
+                </>
+              )}
+
+              {student.deficiencia && (
+                <>
+                  {(isNonActive || student.rotaOnibus) && <span className="text-slate-400" aria-hidden="true">·</span>}
+                  <span className="text-xs text-purple-800 font-bold">
+                    AEE
+                  </span>
+                </>
+              )}
+
+              {consecDaysCount >= 3 && (
+                <>
+                  {(isNonActive || student.rotaOnibus || student.deficiencia) && <span className="text-slate-400" aria-hidden="true">·</span>}
+                  <span
+                    className={`text-xs font-bold flex items-center gap-0.5 ${
+                      consecDaysCount >= 5 ? 'text-rose-800' : 'text-amber-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[15px]">
+                      warning
+                    </span>
+                    <span>{consecDaysCount} faltas</span>
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="pt-2.5 border-t border-slate-100 space-y-1.5 text-xs sm:text-[13px] min-w-0">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="text-xs uppercase tracking-wider text-slate-600 font-bold w-9 shrink-0">
+            {guardian1Info.shortRoleLabel}
+          </span>
+          <span className="text-slate-900 font-semibold min-w-0 flex-1 break-words leading-snug">
+            {guardian1Info.cleanName}
+          </span>
+        </div>
+        {guardian2Info.cleanName && (
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="text-xs uppercase tracking-wider text-slate-600 font-bold w-9 shrink-0">
+              {guardian2Info.shortRoleLabel}
+            </span>
+            <span className="text-slate-900 font-semibold min-w-0 flex-1 break-words leading-snug">
+              {guardian2Info.cleanName}
+            </span>
+          </div>
+        )}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs min-w-0"
+        >
+          {(() => {
+            const waList = buildWhatsAppLinksFromPhoneString(
+              student.telefones || student.guardianPhone,
+              student.name
+            );
+            if (waList.length === 0) {
+              return (
+                <span className="text-xs font-medium text-slate-600">
+                  Sem telefone
+                </span>
+              );
+            }
+            return (
+              <a
+                href={waList[0].waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`WhatsApp: ${waList[0].display}`}
+                className="inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950 hover:underline tabular-nums cursor-pointer min-w-0 max-w-full"
+              >
+                <span className="material-symbols-outlined text-[15px] shrink-0">chat</span>
+                <span className="break-all leading-snug">{waList[0].display}</span>
+              </a>
+            );
+          })()}
+          {student.dataNascimento && (
+            <span className="text-xs tabular-nums text-slate-600 shrink-0 font-semibold">
+              {student.dataNascimento}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {isExpanded && renderStudentDetailedExpansion(student)}
+
+      {!isExpanded && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="pt-2 grid grid-cols-1 min-[360px]:grid-cols-2 sm:flex items-center gap-2 min-w-0"
+        >
+          {onOpenStudentGrid && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenStudentGrid(student);
+              }}
+              className="flex-1 min-h-[42px] py-2 px-3 rounded-xl text-xs sm:text-[13px] font-bold bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100"
+            >
+              <span className="material-symbols-outlined text-[17px] text-[#0b3b8c] shrink-0">
+                badge
+              </span>
+              <span>Ver Ficha</span>
+            </button>
+          )}
+
+          {onOpenStudentPdf && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenStudentPdf(student);
+              }}
+              title={
+                hasStudentPdf
+                  ? `Abrir Ficha Informativa do Estudante (${student.name})`
+                  : `Estudante sem Ficha Informativa digitalizada`
+              }
+              className={`flex-1 min-h-[42px] py-2 px-3 rounded-xl text-xs sm:text-[13px] font-bold flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer ${
+                hasStudentPdf
+                  ? 'bg-[#0052cc] hover:bg-[#003e99] text-white shadow-xs'
+                  : 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[17px] shrink-0">
+                {hasStudentPdf ? 'picture_as_pdf' : 'upload_file'}
+              </span>
+              <span>
+                {hasStudentPdf ? 'Ficha Informativa' : 'Sem Ficha Info.'}
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}, (prev, next) => {
+  return (
+    prev.student === next.student &&
+    prev.isExpanded === next.isExpanded &&
+    prev.diasLetivosMes === next.diasLetivosMes &&
+    prev.minLegalPresence === next.minLegalPresence
+  );
+});
+EstudanteCard.displayName = 'EstudanteCard';
+
+interface LinhaEstudanteProps {
+  student: Student;
+  classGroup: ClassGroup;
+  diasLetivosMes: number;
+  minLegalPresence: number;
+  isExpanded: boolean;
+  onToggleExpand: (studentId: string) => void;
+  onOpenStudentPdf?: (student: Student) => void;
+  onOpenPhotoModal?: (student: Student) => void;
+  renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
+}
+
+const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
+  student,
+  classGroup,
+  diasLetivosMes,
+  minLegalPresence,
+  isExpanded,
+  onToggleExpand,
+  onOpenStudentPdf,
+  onOpenPhotoModal,
+  renderStudentDetailedExpansion,
+}) => {
+  const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+  const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+  const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+  const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+  const isOtherNonActive = !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+  const studentGenderInfo = getStudentGenderLabel(student);
+  const guardian1Info = resolveGuardianRelationshipInfo(student.filiacao1 || student.guardianName, 'filiacao1', student.notes);
+  const guardian2Info = resolveGuardianRelationshipInfo(student.filiacao2, 'filiacao2', student.notes);
+  const hasPdf = Boolean(
+    (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+      (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+  );
+
+  return (
+    <div
+      onClick={() => onToggleExpand(student.id)}
+      title={isExpanded ? 'Clique para fechar detalhes' : 'Clique para expandir dados'}
+      className={`p-3.5 sm:px-5 rounded-2xl flex flex-col gap-2 cursor-pointer transition-all shadow-2xs ${
+        isTransferred
+          ? 'bg-amber-50 hover:bg-amber-100/70'
+          : isRemanejado
+          ? 'bg-purple-50 hover:bg-purple-100/70'
+          : isOtherNonActive
+          ? 'bg-slate-100'
+          : m.isBelowLegalThreshold
+          ? 'bg-rose-50/70 hover:bg-rose-50'
+          : 'bg-white hover:bg-slate-50/80'
+      }`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span
+            className={`w-8 h-8 rounded-xl text-white font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums ${
+              isTransferred
+                ? 'bg-[#b45309]'
+                : isRemanejado
+                ? 'bg-[#6d28d9]'
+                : isOtherNonActive
+                ? 'bg-[#475569]'
+                : 'bg-[#003440]'
+            }`}
+          >
+            {student.number.toString().padStart(2, '0')}
+          </span>
+
+          <StudentAvatar
+            student={student}
+            size="md"
+            expandableOnClick={true}
+            onUploadPhotoClick={
+              onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined
+            }
+          />
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
+              <span className="font-semibold text-sm sm:text-base text-[#003440] break-words leading-snug">
+                {student.name}
+              </span>
+              {isTransferred && (
+                <span className="text-xs font-semibold text-amber-800">
+                  · {studentGenderInfo.transferidoTerm}
+                </span>
+              )}
+              {isRemanejado && (
+                <span className="text-xs font-semibold text-purple-800">
+                  · Mudou de Turma
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-slate-600 break-words leading-snug mt-0.5 min-w-0">
+              <span>
+                {guardian1Info.shortRoleLabel}: {guardian1Info.cleanName}
+              </span>
+              {guardian2Info.cleanName && guardian2Info.cleanName.toLowerCase() !== 'não informado' && (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  <span>
+                    {guardian2Info.shortRoleLabel}: {guardian2Info.cleanName}
+                  </span>
+                </>
+              )}
+              {student.telefones && (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  <span className="text-emerald-800 tabular-nums font-medium break-all">
+                    {student.telefones}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto shrink-0">
+          {onOpenStudentPdf && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenStudentPdf(student);
+              }}
+              title={`Abrir Ficha Informativa do Estudante (${student.name})`}
+              className={`flex-1 sm:flex-initial min-h-[42px] py-2 px-4 rounded-xl font-bold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100 ${
+                hasPdf
+                  ? 'bg-[#0052cc] hover:bg-[#003e99] text-white shadow-xs'
+                  : 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[17px] shrink-0">
+                {hasPdf ? 'picture_as_pdf' : 'description'}
+              </span>
+              <span>{hasPdf ? 'Ficha Informativa' : 'Sem Ficha Info.'}</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand(student.id);
+            }}
+            className="flex-1 sm:flex-initial min-h-[42px] py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1 cursor-pointer transition-colors duration-100"
+          >
+            <span>{isExpanded ? 'Fechar' : 'Ver Dados'}</span>
+            <span
+              className={`material-symbols-outlined text-[18px] shrink-0 transition-transform duration-100 ${
+                isExpanded ? 'rotate-180 text-[#0071e3]' : ''
+              }`}
+            >
+              expand_more
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {isExpanded && renderStudentDetailedExpansion(student)}
+    </div>
+  );
+}, (prev, next) => {
+  return (
+    prev.student === next.student &&
+    prev.isExpanded === next.isExpanded &&
+    prev.diasLetivosMes === next.diasLetivosMes
+  );
+});
+LinhaEstudante.displayName = 'LinhaEstudante';
+
+interface EstudanteTabelaRowProps {
+  student: Student;
+  classGroup: ClassGroup;
+  diasLetivosMes: number;
+  minLegalPresence: number;
+  isExpanded: boolean;
+  onToggleExpand: (studentId: string) => void;
+  onOpenStudentPdf?: (student: Student) => void;
+  renderStudentDetailedExpansion: (student: Student) => React.ReactNode;
+}
+
+const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
+  student,
+  classGroup,
+  diasLetivosMes,
+  minLegalPresence,
+  isExpanded,
+  onToggleExpand,
+  onOpenStudentPdf,
+  renderStudentDetailedExpansion,
+}) => {
+  const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
+  const consecInfo = getStudentConsecutiveAlertInfo(student);
+  const pctFalta =
+    m.diasLetivosMatriculados > 0
+      ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
+      : 0;
+  const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
+  const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
+  const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
+  const isOtherNonActive = !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
+
+  const studentGenderInfo = getStudentGenderLabel(student);
+  const guardian1Info = resolveGuardianRelationshipInfo(student.filiacao1 || student.guardianName, 'filiacao1', student.notes);
+  const guardian2Info = resolveGuardianRelationshipInfo(student.filiacao2, 'filiacao2', student.notes);
+
+  const rowColorClass = isTransferred
+    ? 'bg-[#fef3c7]/75 hover:bg-[#fde68a]/75'
+    : isRemanejado
+    ? 'bg-[#ede9fe]/75 hover:bg-[#ddd6fe]/75'
+    : isOtherNonActive
+    ? 'bg-[#e2e8f0]/75'
+    : consecInfo.tier === '10d'
+    ? 'bg-[#fff1f2] hover:bg-[#ffe4e6]'
+    : consecInfo.tier === '5d'
+    ? 'bg-[#fff7ed] hover:bg-[#ffedd5]'
+    : consecInfo.tier === '3d'
+    ? 'bg-[#fffbeb] hover:bg-[#fef3c7]'
+    : m.isBelowLegalThreshold
+    ? 'bg-[#fff9f8] hover:bg-[#fff0ee]'
+    : 'hover:bg-[#f4f8f6]';
+
+  const hasPdf = Boolean(
+    (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+      (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+  );
+
+  return (
+    <React.Fragment>
+      <tr
+        onClick={() => onToggleExpand(student.id)}
+        className={`cursor-pointer transition-colors ${rowColorClass} ${
+          isExpanded ? 'ring-1 ring-[#003440]/20' : ''
+        }`}
+      >
+        <td className="py-2.5 px-3 text-center">
+          <div className="flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand(student.id);
+              }}
+              title={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
+              className="p-0.5 rounded hover:bg-black/10 text-[#003440] cursor-pointer"
+            >
+              <span
+                className={`material-symbols-outlined text-[16px] transition-transform ${
+                  isExpanded ? 'rotate-180 text-[#0071e3]' : ''
+                }`}
+              >
+                expand_more
+              </span>
+            </button>
+            <span className="font-mono font-semibold text-[#003440] text-xs tabular-nums">
+              {student.number.toString().padStart(2, '0')}
+            </span>
+          </div>
+        </td>
+        <td className="py-2.5 px-3">
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <StudentAvatar
+                student={student}
+                size="sm"
+                expandableOnClick={true}
+              />
+              <div className="min-w-0">
+                <span className="font-bold text-[#003440] break-words block leading-snug">
+                  {student.name}
+                </span>
+                <span
+                  className={`inline-block px-2 py-0.5 rounded font-semibold text-xs mt-0.5 ${
+                    studentGenderInfo.code === 'F'
+                      ? 'bg-[#ffdad6]/60 text-[#93000a]'
+                      : 'bg-[#d3e4ff]/75 text-[#001c38]'
+                  }`}
+                >
+                  {studentGenderInfo.estudanteTitle}
+                </span>
+              </div>
+            </div>
+            {onOpenStudentPdf && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onOpenStudentPdf(student);
+                }}
+                title={`Abrir Ficha Informativa do Estudante (${student.name})`}
+                className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors ${
+                  hasPdf
+                    ? 'bg-[#0052cc] hover:bg-[#003e99] text-white'
+                    : 'bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-300'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  picture_as_pdf
+                </span>
+                <span>{hasPdf ? 'Ficha Informativa' : 'Sem Ficha Info.'}</span>
+              </button>
+            )}
+          </div>
+        </td>
+        <td className="py-2.5 px-2.5 text-center">
+          {consecInfo.tier !== 'none' ? (
+            <div className="inline-flex flex-col items-center">
+              <span
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-semibold text-xs uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
+              >
+                <span className="material-symbols-outlined text-[14px]">
+                  {consecInfo.icon}
+                </span>
+                <span>{consecInfo.shortBadge}</span>
+              </span>
+              <span className="text-xs font-semibold text-[#41484b] mt-0.5">
+                {consecInfo.tier === '10d'
+                  ? 'Evasão Crítica'
+                  : consecInfo.tier === '5d'
+                  ? 'Busca Ativa'
+                  : 'Contato Família'}
+              </span>
+            </div>
+          ) : (
+            <span className="px-2.5 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-xs">
+              Em dia (sem alerta)
+            </span>
+          )}
+        </td>
+        <td className="py-2.5 px-2.5 tabular-nums text-slate-700 font-medium">
+          {student.ra}-{student.digRa}
+        </td>
+        <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
+          <span className="text-xs font-semibold uppercase text-[#005035] block">
+            {guardian1Info.roleLabel}
+          </span>
+          <span className="break-words">{guardian1Info.cleanName}</span>
+        </td>
+        <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
+          <span className="text-xs font-semibold uppercase text-[#003440] block">
+            {guardian2Info.roleLabel}
+          </span>
+          <span className="break-words">{guardian2Info.cleanName}</span>
+        </td>
+        <td className="py-2.5 px-2.5 text-xs">
+          <div className="text-[#005035] font-semibold tabular-nums">
+            {student.telefones || '—'}
+          </div>
+          <div className="text-[#5a676b] break-all max-w-[200px] leading-snug">
+            {student.emailMunicipal || '—'}
+          </div>
+        </td>
+        <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#005035]">
+          {m.presencas}/{m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
+        </td>
+        <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#ba1a1a]">
+          {m.faltas} ({pctFalta}%)
+        </td>
+        <td className="py-2.5 px-2.5 text-center">
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${
+              isTransferred
+                ? 'bg-[#b45309] text-white'
+                : isRemanejado
+                ? 'bg-[#6d28d9] text-white'
+                : isOtherNonActive
+                ? 'bg-[#475569] text-white'
+                : 'bg-[#eaf6ef] text-[#005035]'
+            }`}
+          >
+            {isTransferred
+              ? studentGenderInfo.transferidoTerm.toUpperCase()
+              : isRemanejado
+              ? studentGenderInfo.remanejadoTerm.toUpperCase()
+              : studentGenderInfo.ativoTerm.toUpperCase()}
+          </span>
+        </td>
+      </tr>
+      {isExpanded && (
+        <tr className="bg-slate-50/70 animate-gentle-fade">
+          <td colSpan={10} className="p-3 sm:p-4">
+            <div className="sticky left-0 w-[calc(100vw-2.5rem)] max-w-full lg:w-full">
+              {renderStudentDetailedExpansion(student)}
+            </div>
+          </td>
+        </tr>
+      )}
+    </React.Fragment>
+  );
+}, (prev, next) => {
+  return (
+    prev.student === next.student &&
+    prev.isExpanded === next.isExpanded &&
+    prev.diasLetivosMes === next.diasLetivosMes
+  );
+});
+EstudanteTabelaRow.displayName = 'EstudanteTabelaRow';
+
 export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   classGroup,
   assignedClasses = [],
@@ -90,6 +832,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [visibleStudentLimit, setVisibleStudentLimit] = useState<number>(30);
+
+  useEffect(() => {
+    setVisibleStudentLimit(30);
+  }, [searchStudent, statusFilter, classGroup.id]);
 
   // Estado do Configurador de Download .XLS da Turma (Colunas, Campos e Ordem)
   const [isExportXlsModalOpen, setIsExportXlsModalOpen] = useState(false);
@@ -302,6 +1049,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       return true;
     });
   }, [orderedStudents, searchStudent, statusFilter, userRole, diasLetivosMes, minLegalPresence]);
+
+  const displayedStudents = useMemo(() => {
+    return filteredStudents.slice(0, visibleStudentLimit);
+  }, [filteredStudents, visibleStudentLimit]);
   const renderStudentDetailedExpansion = (
     student: Student
   ) => {
@@ -322,99 +1073,79 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   return (
     <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
 
-      {/* Se a professora PEB I tiver 2 ou mais turmas vinculadas, seletor estilo Segmented Control iOS */}
-      {userRole === 'usuario' && assignedClasses.length > 1 && onSwitchAssignedClass && (
-        <section className="bg-white rounded-2xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-xs min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="material-symbols-outlined text-[18px] text-blue-700 shrink-0">
-              swap_horiz
-            </span>
-            <span className="text-xs font-bold text-slate-950 break-words">
-              Suas Turmas ({assignedClasses.length}):
-            </span>
-          </div>
-          <div className="ios-segmented w-full sm:w-auto">
-            {assignedClasses.map((cls) => {
-              const isSelected = cls.id === classGroup.id;
-              return (
-                <button
-                  key={cls.id}
-                  type="button"
-                  onClick={() => onSwitchAssignedClass(cls)}
-                  className={`ios-segmented-item flex-1 sm:flex-initial ${
-                    isSelected ? 'ios-segmented-item-active' : ''
-                  }`}
-                >
-                  {cls.name} ({cls.shift.replace('Turno ', '')})
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
       {/* Contexto da Turma e Navegação */}
-      {/* Breadcrumb Limpo */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 py-0.5 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-          <button
-            type="button"
-            onClick={onBackToClasses}
-            className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-          >
-            <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-            <span>Turmas</span>
-          </button>
-          <span className="text-slate-300">/</span>
-          <span className="font-semibold text-slate-800 break-words">{classGroup.name}</span>
+          {userRole !== 'usuario' ? (
+            <button
+              type="button"
+              onClick={onBackToClasses}
+              className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            >
+              <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+              <span>Turmas</span>
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-[#0b3b8c] font-bold text-xs shrink-0">
+              <span className="material-symbols-outlined text-[14px]">school</span>
+              <span>Docente Regente PEB I</span>
+            </span>
+          )}
+          {userRole !== 'usuario' && <span className="text-slate-300">/</span>}
+          <span className="font-bold text-slate-900 break-words">Turma {classGroup.name}</span>
           <span className="text-slate-400">·</span>
           <span className="break-words">{classGroup.shift}</span>
         </div>
-        <span className="hidden sm:inline text-slate-500 font-medium text-xs tabular-nums shrink-0">
-          {classGroup.room}
+        <span className="text-slate-500 font-medium text-xs tabular-nums shrink-0">
+          {classGroup.room} · {diasLetivosMes} dias letivos
         </span>
       </div>
 
-      {/* Painel Principal da Turma */}
-      <section className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-6 lg:p-7 shadow-sm space-y-5 min-w-0">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
-          <div className="min-w-0 flex-1">
+      {/* Painel Coeso da Turma & Controles (Alunos Visíveis Imediatamente) */}
+      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm space-y-3.5 min-w-0">
+        {/* Linha 1: Título da Turma + Badges + Quadro Docente Resumido + Ações */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
+          <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight break-words">
+                Turma {classGroup.name}
+              </h1>
               {classGroup.turmaAbrev && (
-                <span className="text-xs font-bold uppercase tracking-wider text-white bg-[#0b3b8c] px-2.5 py-1 rounded-lg tabular-nums">
+                <span className="text-xs font-bold uppercase tracking-wider text-white bg-[#0b3b8c] px-2.5 py-0.5 rounded-lg tabular-nums">
                   {classGroup.turmaAbrev}
                 </span>
               )}
-              <span className="text-xs font-bold text-slate-900 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg break-words">
-                {classGroup.shift} · {classGroup.room}
+              <span className="text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg break-words">
+                {classGroup.shift.replace('Turno ', '')} · {classGroup.room}
               </span>
               {classGroup.classeSedCode && (
-                <span className="text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg tabular-nums">
+                <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg tabular-nums">
                   SED: {classGroup.classeSedCode}
                 </span>
               )}
-              <span className="text-xs font-bold text-slate-700">
-                Mín. Legal: {minLegalPresence}%
-              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-950 tracking-tight mt-1.5 break-words">
-              Turma {classGroup.name}
-            </h1>
-            <p className="text-sm text-slate-700 font-medium mt-0.5 break-words">
-              {classGroup.sedClassName
-                ? `${classGroup.sedClassName} · Previsto SED: ${classGroup.sedExpectedStudents ?? classSummary.totalMatriculados}`
-                : `${classGroup.grade} · ${classGroup.room}`}{' '}
-              · {diasLetivosMes} dias letivos no mês
+            {/* Linha Coesa de Docentes */}
+            <p className="text-xs text-slate-600 font-medium break-words leading-relaxed">
+              <span className="font-bold text-slate-800">Regente:</span> {classGroup.teacherName || 'Docente Regente'}
+              {classGroup.artTeacher && (
+                <> <span className="text-slate-300">·</span> <span className="font-bold text-slate-800">Arte:</span> {classGroup.artTeacher}</>
+              )}
+              {classGroup.peTeacher && (
+                <> <span className="text-slate-300">·</span> <span className="font-bold text-slate-800">Ed. Física:</span> {classGroup.peTeacher}</>
+              )}
+              {classGroup.englishTeacher && (
+                <> <span className="text-slate-300">·</span> <span className="font-bold text-slate-800">Inglês:</span> {classGroup.englishTeacher}</>
+              )}
             </p>
           </div>
 
-          {/* Ações da Turma */}
-          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto min-w-0 shrink-0">
+          {/* Botões de Ação */}
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto min-w-0 shrink-0">
             {canLaunchAttendance && (
               <button
                 type="button"
                 onClick={onGoToMonthlyAttendance}
-                className="w-full sm:w-auto min-h-[44px] py-2 px-5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors shadow-xs"
+                className="w-full sm:w-auto min-h-[42px] py-2 px-4 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors shadow-xs"
                 title="Informar faltas do mês de referência"
               >
                 <span className="material-symbols-outlined text-[18px] text-emerald-300 shrink-0">checklist</span>
@@ -426,7 +1157,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsExportXlsModalOpen(true)}
-                className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors"
+                className="w-full sm:w-auto min-h-[42px] py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
+                title="Exportar planilha personalizada em Excel/XLS"
               >
                 <span className="material-symbols-outlined text-[18px] text-slate-700 shrink-0">download</span>
                 <span>Exportar .XLS</span>
@@ -435,1191 +1167,357 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
         </div>
 
-        {/* Quadro Docente Oficial da Turma */}
-        {(classGroup.teacherName || classGroup.artTeacher || classGroup.peTeacher || classGroup.englishTeacher) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-4 items-stretch min-w-0">
-            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 flex items-start gap-3 h-full min-h-[88px] transition-colors min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-[#0b3b8c] text-white flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[18px]">school</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    {classGroup.pronoun || 'PROFESSORA'} REGENTE
-                  </span>
-                  {classGroup.teacherFirstName && (
-                    <span className="px-2 py-0.5 rounded bg-blue-100 text-[#0b3b8c] text-xs font-bold">
-                      {classGroup.teacherFirstName}
-                    </span>
-                  )}
-                </div>
-                {classGroup.isVaga || classGroup.teacherName === 'TURMA VAGA' ? (
-                  <div className="mt-1">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-100 border border-amber-300 text-amber-950 text-xs font-semibold">
-                      <span className="w-2 h-2 rounded-full bg-amber-600" />
-                      Turma Vaga
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-sm font-bold text-slate-950 break-words leading-snug mt-0.5" title={classGroup.teacherName || undefined}>
-                      {classGroup.teacherName || 'Não atribuído'}
-                    </p>
-                    <p className="text-xs font-mono text-slate-600 font-medium break-all leading-snug mt-0.5" title={classGroup.teacherEmail || undefined}>
-                      {classGroup.teacherEmail || 'Docente Regente'}
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 flex items-start gap-3 h-full min-h-[88px] transition-colors min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[18px]">palette</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  Arte (PEB II)
-                </span>
-                <p className="text-sm font-bold text-slate-950 break-words leading-snug mt-0.5" title={classGroup.artTeacher || undefined}>
-                  {classGroup.artTeacher || '—'}
-                </p>
-                <p className="text-xs font-mono text-slate-600 font-medium break-all leading-snug mt-0.5" title={classGroup.artTeacherEmail || undefined}>
-                  {classGroup.artTeacherEmail || 'Especialista'}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 flex items-start gap-3 h-full min-h-[88px] transition-colors min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[18px]">sports_soccer</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  Ed. Física (PEB II)
-                </span>
-                <p className="text-sm font-bold text-slate-950 break-words leading-snug mt-0.5" title={classGroup.peTeacher || undefined}>
-                  {classGroup.peTeacher || '—'}
-                </p>
-                <p className="text-xs font-mono text-slate-600 font-medium break-all leading-snug mt-0.5" title={classGroup.peTeacherEmail || undefined}>
-                  {classGroup.peTeacherEmail || 'Especialista'}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 flex items-start gap-3 h-full min-h-[88px] transition-colors min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[18px]">translate</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block">
-                  Inglês (PEB II)
-                </span>
-                <p className="text-sm font-bold text-slate-950 break-words leading-snug mt-0.5" title={classGroup.englishTeacher || undefined}>
-                  {classGroup.englishTeacher || '—'}
-                </p>
-                <p className="text-xs font-mono text-slate-600 font-medium break-all leading-snug mt-0.5" title={classGroup.englishTeacherEmail || undefined}>
-                  {classGroup.englishTeacherEmail || 'Especialista'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Indicadores Cadastrais da Turma */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 pt-4 items-stretch min-w-0">
-          {/* 1. Estudantes Ativos */}
-          <div
+        {/* Linha 2: Indicadores Rápidos da Turma (Pills Clicáveis sem Bloat) */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 min-w-0">
+          <button
+            type="button"
             onClick={() => setStatusFilter(statusFilter === 'ativos' ? 'all' : 'ativos')}
-            className={`rounded-2xl border p-4 cursor-pointer transition-all duration-100 flex flex-col justify-between h-full min-h-[88px] min-w-0 break-words ${
+            className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               statusFilter === 'ativos'
-                ? 'bg-blue-50 border-[#0b3b8c] shadow-xs'
-                : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                ? 'bg-[#0b3b8c] text-white shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
             }`}
           >
-            <span className="text-xs font-bold text-slate-600 block">
-              Estudantes Ativos
-            </span>
-            <div className="flex flex-wrap items-baseline gap-1.5 mt-1">
-              <span className="text-2xl sm:text-3xl font-bold text-slate-950 tabular-nums">
-                {classSummary.ativos}
-              </span>
-              <span className="text-xs sm:text-[13px] text-slate-600 font-medium tabular-nums">
-                de {classSummary.totalMatriculados} matriculados
-              </span>
-            </div>
+            <span>Ativos:</span>
+            <span className="tabular-nums font-black">{classSummary.ativos}</span>
+            <span className="text-[11px] opacity-80">/ {classSummary.totalMatriculados}</span>
+          </button>
+
+          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-[#005035] flex items-center gap-1.5">
+            <span>Presença Global:</span>
+            <span className="tabular-nums font-black">{classSummary.pctPresencaTotal}%</span>
+            <span className="text-[11px] opacity-75">(meta {minLegalPresence}%)</span>
           </div>
 
-          {/* 2. Composição por Gênero */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between h-full min-h-[88px] min-w-0 break-words">
-            <span className="text-xs font-bold text-slate-600 block">
-              Gênero
-            </span>
-            <div className="flex flex-wrap items-baseline gap-2 mt-1 tabular-nums text-sm">
-              <span className="font-bold text-slate-950">
-                {classSummary.feminino} <span className="text-slate-600 font-medium">Feminino</span>
-              </span>
-              <span className="text-slate-400">·</span>
-              <span className="font-bold text-slate-950">
-                {classSummary.masculino} <span className="text-slate-600 font-medium">Masculino</span>
-              </span>
-            </div>
+          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-medium bg-slate-100 text-slate-700 flex items-center gap-1 tabular-nums">
+            <span className="font-bold text-slate-900">{classSummary.feminino}</span>
+            <span>Meninas</span>
+            <span className="text-slate-300">·</span>
+            <span className="font-bold text-slate-900">{classSummary.masculino}</span>
+            <span>Meninos</span>
           </div>
 
-          {/* 3. Movimentação */}
-          <div
-            onClick={() =>
-              classSummary.transferidos + classSummary.remanejados > 0 &&
-              setStatusFilter(statusFilter === 'movimentados' ? 'all' : 'movimentados')
-            }
-            className={`rounded-2xl border p-4 transition-all duration-100 flex flex-col justify-between h-full min-h-[88px] min-w-0 break-words ${
-              statusFilter === 'movimentados'
-                ? 'bg-blue-50 border-[#0b3b8c] shadow-xs'
-                : classSummary.transferidos + classSummary.remanejados > 0
-                ? 'bg-slate-50 border-slate-200 cursor-pointer hover:bg-slate-100'
-                : 'bg-slate-50 border-slate-200'
-            }`}
-          >
-            <span className="text-xs font-bold text-slate-600 block">
-              Movimentados
-            </span>
-            <div className="flex flex-wrap items-baseline gap-1.5 mt-1 tabular-nums">
-              <span className="text-2xl sm:text-3xl font-bold text-slate-950">
-                {classSummary.transferidos + classSummary.remanejados}
-              </span>
-              <span className="text-xs sm:text-[13px] text-slate-600 font-medium">
-                ({classSummary.transferidos} transf. · {classSummary.remanejados} reman.)
-              </span>
-            </div>
-          </div>
-
-          {/* 4. Fichas Informativas do Estudante */}
-          <div
-            onClick={() =>
-              classSummary.semFichaEscaneadaCount > 0 &&
-              setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')
-            }
-            className={`rounded-2xl border p-4 transition-all duration-100 flex flex-col justify-between h-full min-h-[88px] min-w-0 break-words ${
-              classSummary.semFichaEscaneadaCount > 0
-                ? statusFilter === 'sem_ficha_pdf'
-                  ? 'bg-rose-100 border-rose-500 shadow-xs cursor-pointer'
-                  : 'bg-rose-50 border-rose-300 hover:bg-rose-100/80 cursor-pointer'
-                : 'bg-emerald-50 border-emerald-300'
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-1">
-              <span
-                className={`text-xs font-bold ${
-                  classSummary.semFichaEscaneadaCount > 0 ? 'text-rose-900' : 'text-emerald-900'
-                }`}
-              >
-                {classSummary.semFichaEscaneadaCount > 0
-                  ? 'Sem Ficha Informativa'
-                  : 'Fichas Informativas em Dia'}
-              </span>
-              {classSummary.semFichaEscaneadaCount > 0 && (
-                <span className="px-2 py-0.5 rounded-lg bg-rose-200 text-xs font-bold text-rose-950">
-                  {statusFilter === 'sem_ficha_pdf' ? 'Ver todos' : 'Filtrar'}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-baseline gap-1.5 mt-1 tabular-nums">
-              <span
-                className={`text-2xl sm:text-3xl font-bold ${
-                  classSummary.semFichaEscaneadaCount > 0 ? 'text-rose-950' : 'text-emerald-950'
-                }`}
-              >
-                {classSummary.semFichaEscaneadaCount > 0
-                  ? classSummary.semFichaEscaneadaCount
-                  : classSummary.comFichaEscaneadaCount}
-              </span>
-              <span className={`text-xs sm:text-[13px] font-medium ${
-                classSummary.semFichaEscaneadaCount > 0 ? 'text-rose-800' : 'text-emerald-800'
-              }`}>
-                {classSummary.semFichaEscaneadaCount > 0
-                  ? `pendente(s) · ${classSummary.comFichaEscaneadaCount} em dia`
-                  : '100% digitalizadas'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Barra de Filtros e Busca */}
-      <section className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        {/* Campo de busca */}
-        <div className="relative flex-1 min-w-0 w-full">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600 text-[20px]">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchStudent}
-            onChange={(e) => setSearchStudent(e.target.value)}
-            placeholder="Buscar estudante por Nº, nome, RA, responsável..."
-            className="w-full min-h-[48px] pl-11 pr-10 rounded-2xl bg-slate-100 text-sm font-semibold text-slate-950 placeholder:text-slate-600 focus:outline-none focus:bg-slate-200/70 transition-colors"
-          />
-          {searchStudent && (
+          {(classSummary.transferidos + classSummary.remanejados > 0) && (
             <button
               type="button"
-              onClick={() => setSearchStudent('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-black cursor-pointer"
+              onClick={() => setStatusFilter(statusFilter === 'movimentados' ? 'all' : 'movimentados')}
+              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === 'movimentados'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-amber-50 hover:bg-amber-100 text-amber-950'
+              }`}
             >
-              <span className="material-symbols-outlined text-[20px]">close</span>
+              <span>Movimentados:</span>
+              <span className="tabular-nums font-black">{classSummary.transferidos + classSummary.remanejados}</span>
+              <span className="text-[11px] opacity-80">({classSummary.transferidos} transf.)</span>
+            </button>
+          )}
+
+          {classSummary.semFichaEscaneadaCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')}
+              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === 'sem_ficha_pdf'
+                  ? 'bg-rose-700 text-white shadow-xs'
+                  : 'bg-rose-50 hover:bg-rose-100 text-rose-900'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">description</span>
+              <span>Fichas PDF:</span>
+              <span className="tabular-nums font-black">{classSummary.semFichaEscaneadaCount} pendentes</span>
+            </button>
+          ) : (
+            <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-[#005035] flex items-center gap-1">
+              <span className="material-symbols-outlined text-[15px]">verified</span>
+              <span>100% Fichas Digitalizadas</span>
+            </div>
+          )}
+
+          {classSummary.alertaLegalCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === 'alerta' ? 'all' : 'alerta')}
+              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                statusFilter === 'alerta'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'bg-rose-100 hover:bg-rose-200 text-rose-950'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">warning</span>
+              <span>Alerta Presença: {classSummary.alertaLegalCount}</span>
+            </button>
+          )}
+
+          {classSummary.onibusFretadoCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === 'onibus_fretado' ? 'all' : 'onibus_fretado')}
+              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                statusFilter === 'onibus_fretado'
+                  ? 'bg-slate-800 text-white shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">directions_bus</span>
+              <span>Ônibus ({classSummary.onibusFretadoCount})</span>
+            </button>
+          )}
+
+          {userRole === 'admin' && classSummary.bolsaFamiliaCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === 'bolsa_familia' ? 'all' : 'bolsa_familia')}
+              className={`min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                statusFilter === 'bolsa_familia'
+                  ? 'bg-blue-800 text-white shadow-xs'
+                  : 'bg-blue-50 hover:bg-blue-100 text-blue-950'
+              }`}
+            >
+              <span>Bolsa Família ({classSummary.bolsaFamiliaCount})</span>
             </button>
           )}
         </div>
 
-        {/* Filtros de Situação & Modos de Visualização */}
-        <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end w-full lg:w-auto min-w-0">
-          <div className="flex flex-wrap items-center gap-1 bg-slate-100 border border-slate-200 p-1 rounded-xl max-w-full">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('all')}
-              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-semibold transition-colors duration-100 cursor-pointer ${
-                statusFilter === 'all'
-                  ? 'bg-[#0b3b8c] text-white shadow-xs font-bold'
-                  : 'text-slate-700 hover:text-slate-950'
-              }`}
-            >
-              Todos ({orderedStudents.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('ativos')}
-              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-semibold transition-colors duration-100 cursor-pointer ${
-                statusFilter === 'ativos'
-                  ? 'bg-[#0b3b8c] text-white shadow-xs font-bold'
-                  : 'text-slate-700 hover:text-slate-950'
-              }`}
-            >
-              Ativos ({classSummary.ativos})
-            </button>
-            {classSummary.semFichaEscaneadaCount > 0 && (
+        {/* Linha 3: Barra de Busca + Controles de Visualização + Expandir Todos */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1 min-w-0">
+          {/* Campo de busca */}
+          <div className="relative flex-1 min-w-0">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[19px]">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchStudent}
+              onChange={(e) => setSearchStudent(e.target.value)}
+              placeholder="Buscar estudante por Nº, nome, RA ou responsável..."
+              className="w-full min-h-[44px] pl-10 pr-9 rounded-xl bg-slate-100 text-xs sm:text-sm font-semibold text-slate-950 placeholder:text-slate-500 focus:outline-none focus:bg-slate-200/70 transition-colors"
+            />
+            {searchStudent && (
               <button
                 type="button"
-                onClick={() => setStatusFilter('sem_ficha_pdf')}
-                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-semibold transition-colors duration-100 cursor-pointer flex items-center gap-1 ${
-                  statusFilter === 'sem_ficha_pdf'
-                    ? 'bg-rose-700 text-white shadow-xs font-bold'
-                    : 'text-rose-800 hover:bg-rose-100'
-                }`}
+                onClick={() => setSearchStudent('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-black cursor-pointer"
+                aria-label="Limpar busca"
               >
-                <span>Sem Ficha Info. ({classSummary.semFichaEscaneadaCount})</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setStatusFilter('onibus_fretado')}
-              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-medium transition-colors duration-100 cursor-pointer ${
-                statusFilter === 'onibus_fretado'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Ônibus ({classSummary.onibusFretadoCount})
-            </button>
-            {userRole === 'admin' && (
-              <button
-                type="button"
-                onClick={() => setStatusFilter('bolsa_familia')}
-                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-medium transition-colors duration-100 cursor-pointer ${
-                  statusFilter === 'bolsa_familia'
-                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Bolsa Família ({classSummary.bolsaFamiliaCount})
-              </button>
-            )}
-            {(classSummary.transferidos + classSummary.remanejados > 0) && (
-              <button
-                type="button"
-                onClick={() => setStatusFilter('movimentados')}
-                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-medium transition-colors duration-100 cursor-pointer ${
-                  statusFilter === 'movimentados'
-                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Movimentados ({classSummary.transferidos + classSummary.remanejados})
-              </button>
-            )}
-            {userRole === 'admin' && classSummary.alertaLegalCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setStatusFilter('alerta')}
-                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-medium transition-colors duration-100 cursor-pointer ${
-                  statusFilter === 'alerta'
-                    ? 'bg-rose-600 text-white shadow-2xs font-semibold'
-                    : 'text-rose-700 hover:text-rose-900'
-                }`}
-              >
-                Abaixo {minLegalPresence}% ({classSummary.alertaLegalCount})
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             )}
           </div>
 
-          {/* Botão Expandir Todos */}
-          <button
-            type="button"
-            onClick={() =>
-              setExpandedStudentId((prev) => (prev === '__ALL__' ? null : '__ALL__'))
-            }
-            title="Expandir ou recolher resumo de todos"
-            className="min-h-[42px] px-4 rounded-2xl text-xs sm:text-[13px] font-bold text-slate-900 hover:text-black bg-slate-100 hover:bg-slate-200/80 flex items-center gap-1.5 cursor-pointer transition-colors duration-100"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              {expandedStudentId === '__ALL__' ? 'unfold_less' : 'unfold_more'}
-            </span>
-            <span>{expandedStudentId === '__ALL__' ? 'Recolher' : 'Expandir'}</span>
-          </button>
+          <div className="flex items-center gap-2 justify-between sm:justify-end shrink-0">
+            {/* Se houver filtro ativo diferente de 'all', botão para limpar */}
+            {statusFilter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className="min-h-[40px] px-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-[15px]">filter_alt_off</span>
+                <span>Limpar filtro</span>
+              </button>
+            )}
 
-          {/* Seletor de visualização */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            {/* Botão Expandir / Recolher Todos */}
             <button
               type="button"
-              onClick={() => setViewMode('grid')}
-              title="Cartões"
-              className={`min-h-[38px] px-3 rounded-lg text-xs sm:text-[13px] flex items-center gap-1.5 cursor-pointer transition-colors duration-100 ${
-                viewMode === 'grid'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              onClick={() =>
+                setExpandedStudentId((prev) => (prev === '__ALL__' ? null : '__ALL__'))
+              }
+              title="Expandir ou recolher resumo de todos"
+              className="min-h-[40px] px-3.5 rounded-xl text-xs font-bold text-slate-800 hover:text-black bg-slate-100 hover:bg-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[17px]">grid_view</span>
-              <span className="hidden sm:inline">Cards</span>
+              <span className="material-symbols-outlined text-[17px]">
+                {expandedStudentId === '__ALL__' ? 'unfold_less' : 'unfold_more'}
+              </span>
+              <span>{expandedStudentId === '__ALL__' ? 'Recolher' : 'Expandir'}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('compact')}
-              title="Lista"
-              className={`min-h-[38px] px-3 rounded-lg text-xs sm:text-[13px] flex items-center gap-1.5 cursor-pointer transition-colors duration-100 ${
-                viewMode === 'compact'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[17px]">view_agenda</span>
-              <span className="hidden sm:inline">Lista</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              title="Tabela"
-              className={`min-h-[38px] px-3 rounded-lg text-xs sm:text-[13px] flex items-center gap-1.5 cursor-pointer transition-colors duration-100 ${
-                viewMode === 'table'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[17px]">table_rows</span>
-              <span className="hidden sm:inline">Tabela</span>
-            </button>
+
+            {/* Alternador de Modo de Visualização */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                title="Cartões"
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 font-medium'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">grid_view</span>
+                <span className="hidden sm:inline">Cards</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('compact')}
+                title="Lista"
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                  viewMode === 'compact'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 font-medium'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">view_agenda</span>
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                title="Tabela"
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 font-medium'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">table_rows</span>
+                <span className="hidden sm:inline">Tabela</span>
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
+
       {/* MODO 1: CARDS EM ORDEM NUMÉRICA DA TURMA (Padrão iOS Apple) */}
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 items-stretch">
-          {filteredStudents.map((student) => {
-            const m = getStudentAttendanceMetrics(
-              student,
-              diasLetivosMes,
-              OFFICIAL_OCTOBER_DAYS
-            );
-            const pctFalta =
-              m.diasLetivosMatriculados > 0
-                ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
-                : 0;
-            const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
-            const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
-            const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
-            const isOtherNonActive =
-              !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
-            const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
-
-            const cleanPhotoFileName = `${student.name
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .toUpperCase()
-              .trim()}.jpg`;
-
-            const cardColorClasses = isTransferred
-              ? 'bg-amber-50 border-amber-300 text-slate-950 shadow-xs hover:shadow-md'
-              : isRemanejado
-              ? 'bg-purple-50 border-purple-300 text-slate-950 shadow-xs hover:shadow-md'
-              : isOtherNonActive
-              ? 'bg-slate-100 border-slate-300 text-slate-800 shadow-xs'
-              : m.isBelowLegalThreshold
-              ? 'bg-rose-50/90 border-rose-300 text-slate-950 shadow-xs hover:shadow-md'
-              : 'bg-white border-slate-200 text-slate-950 shadow-xs hover:border-slate-300 hover:shadow-md';
-
-            const numberBadgeClasses = isTransferred
-              ? 'text-amber-900'
-              : isRemanejado
-              ? 'text-purple-900'
-              : isOtherNonActive
-              ? 'text-slate-700'
-              : 'text-[#0b3b8c]';
-
-            const cumulativeOccs = getStudentCumulativeOccurrences(student);
-            const latestConsecOcc =
-              cumulativeOccs.length > 0
-                ? cumulativeOccs[cumulativeOccs.length - 1]
-                : null;
-            const consecDaysCount = latestConsecOcc
-              ? latestConsecOcc.selectedDates.length
-              : 0;
-
-            const studentGenderInfo = getStudentGenderLabel(student);
-            const guardian1Info = resolveGuardianRelationshipInfo(
-              student.filiacao1 || student.guardianName,
-              'filiacao1',
-              student.notes
-            );
-            const guardian2Info = resolveGuardianRelationshipInfo(
-              student.filiacao2,
-              'filiacao2',
-              student.notes
-            );
-            const isExpanded =
-              expandedStudentId === '__ALL__' || expandedStudentId === student.id;
-            const hasStudentPdf = Boolean(
-              (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
-                (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
-            );
-
-            return (
-              <div
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 items-stretch">
+            {displayedStudents.map((student) => (
+              <EstudanteCard
                 key={student.id}
-                onClick={() => {
-                  setExpandedStudentId((prev) => (prev === student.id ? null : student.id));
-                }}
-                title={isExpanded ? 'Clique para recolher detalhes' : `Clique para expandir dados de ${studentGenderInfo.estudanteTerm}`}
-                className={`rounded-2xl border p-4 sm:p-5 flex flex-col justify-between gap-3.5 cursor-pointer select-none transition-all duration-100 min-w-0 ${
-                  isExpanded
-                    ? 'col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 bg-white border-[#0b3b8c]/40 shadow-md'
-                    : 'h-full min-h-[220px]'
-                } ${cardColorClasses}`}
+                student={student}
+                classGroup={classGroup}
+                diasLetivosMes={diasLetivosMes}
+                minLegalPresence={minLegalPresence}
+                isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+                onToggleExpand={(id) => setExpandedStudentId((prev) => (prev === id ? null : id))}
+                onOpenStudentGrid={onOpenStudentGrid}
+                onOpenStudentPdf={onOpenStudentPdf}
+                onOpenPhotoModal={onOpenPhotoModal}
+                renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+              />
+            ))}
+          </div>
+          {filteredStudents.length > visibleStudentLimit && (
+            <div className="py-4 text-center">
+              <button
+                type="button"
+                onClick={() => setVisibleStudentLimit((prev) => prev + 30)}
+                className="min-h-[44px] px-6 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm shadow-sm cursor-pointer transition-colors"
               >
-                {/* Faixa para Estudantes Não Ativos */}
-                {isNonActive && (
-                  <div
-                    className={`-mx-2 -mt-2 px-3 py-1.5 rounded-t-lg text-xs font-bold flex items-center justify-between gap-1.5 ${
-                      isTransferred
-                        ? 'bg-amber-200 text-amber-950'
-                        : isRemanejado
-                        ? 'bg-purple-200 text-purple-950'
-                        : 'bg-slate-200 text-slate-900'
-                    }`}
-                  >
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[15px]">
-                        {isTransferred ? 'transfer_within_a_station' : 'swap_horiz'}
-                      </span>
-                      <span>
-                        {isTransferred
-                          ? `${studentGenderInfo.transferidoTerm} (Baixa)`
-                          : isRemanejado
-                          ? `${studentGenderInfo.remanejadoTerm} de Turma`
-                          : `Não ativo · ${sit}`}
-                      </span>
-                    </span>
-                    {student.dataMovimentacao && (
-                      <span className="font-mono text-xs bg-white/80 px-1.5 py-0.5 rounded">
-                        {student.dataMovimentacao}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Topo do Card: Foto + Nº Ordem Numérica + RA + Gênero + Ação Expandir */}
-                <div className="flex items-start gap-3">
-                  <StudentAvatar
-                    student={student}
-                    size="lg"
-                    expandableOnClick={true}
-                    onUploadPhotoClick={
-                      onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined
-                    }
-                  />
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1.5">
-                      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-700 font-medium min-w-0">
-                        <span className={`text-xs font-bold tabular-nums shrink-0 ${numberBadgeClasses}`}>
-                          Nº {student.number.toString().padStart(2, '0')}
-                        </span>
-                        <span className="text-slate-400" aria-hidden="true">·</span>
-                        {student.ra && (
-                          <>
-                            <span className="text-xs text-slate-700 tabular-nums font-semibold break-all">
-                              RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}
-                            </span>
-                            <span className="text-slate-400" aria-hidden="true">·</span>
-                          </>
-                        )}
-                        <span className="text-xs text-slate-700 shrink-0">
-                          {studentGenderInfo.code === 'F' ? 'Menina' : 'Menino'}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedStudentId((prev) =>
-                              prev === student.id ? null : student.id
-                            );
-                          }}
-                          title={
-                            isExpanded
-                              ? 'Recolher detalhes'
-                              : 'Expandir dados completos'
-                          }
-                          aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
-                          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-950 flex items-center justify-center transition-colors cursor-pointer"
-                        >
-                          <span
-                            className={`material-symbols-outlined text-[18px] transition-transform duration-100 ${
-                              isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
-                            }`}
-                          >
-                            expand_more
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Nome Oficial do Estudante */}
-                    <h3
-                      className={`text-base font-bold leading-snug break-words mt-1 ${
-                        isTransferred
-                          ? 'text-amber-950'
-                          : isRemanejado
-                          ? 'text-purple-950'
-                          : 'text-slate-950'
-                      }`}
-                    >
-                      {student.name}
-                    </h3>
-
-                    {/* Metadados por Exceção (Alto Contraste) */}
-                    {(isNonActive || student.rotaOnibus || student.deficiencia || consecDaysCount >= 3) && (
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1 text-xs">
-                        {isTransferred ? (
-                          <span className="text-amber-900 text-xs font-bold">
-                            {studentGenderInfo.transferidoTerm}
-                          </span>
-                        ) : isRemanejado ? (
-                          <span className="text-purple-900 text-xs font-bold">
-                            {studentGenderInfo.remanejadoTerm}
-                          </span>
-                        ) : isOtherNonActive ? (
-                          <span className="text-slate-700 text-xs font-bold">
-                            {sit}
-                          </span>
-                        ) : null}
-
-                        {student.rotaOnibus && (
-                          <>
-                            {isNonActive && <span className="text-slate-400" aria-hidden="true">·</span>}
-                            <span className="text-xs text-[#0b3b8c] font-semibold">
-                              Rota {student.rotaOnibus.replace(/[^0-9]/g, '') || student.rotaOnibus.split('-')[0].trim()}
-                            </span>
-                          </>
-                        )}
-
-                        {student.deficiencia && (
-                          <>
-                            {(isNonActive || student.rotaOnibus) && <span className="text-slate-400" aria-hidden="true">·</span>}
-                            <span className="text-xs text-purple-800 font-bold">
-                              AEE
-                            </span>
-                          </>
-                        )}
-
-                        {consecDaysCount >= 3 && (
-                          <>
-                            {(isNonActive || student.rotaOnibus || student.deficiencia) && <span className="text-slate-400" aria-hidden="true">·</span>}
-                            <span
-                              className={`text-xs font-bold flex items-center gap-0.5 ${
-                                consecDaysCount >= 5 ? 'text-rose-800' : 'text-amber-800'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[15px]">
-                                warning
-                              </span>
-                              <span>{consecDaysCount} faltas</span>
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Vínculo Familiar e Contato Rápido */}
-                <div className="pt-2.5 border-t border-slate-100 space-y-1.5 text-xs sm:text-[13px] min-w-0">
-                  <div className="flex items-baseline gap-2 min-w-0">
-                    <span className="text-xs uppercase tracking-wider text-slate-600 font-bold w-9 shrink-0">
-                      {guardian1Info.shortRoleLabel}
-                    </span>
-                    <span className="text-slate-900 font-semibold min-w-0 flex-1 break-words leading-snug">
-                      {guardian1Info.cleanName}
-                    </span>
-                  </div>
-                  {guardian2Info.cleanName && (
-                    <div className="flex items-baseline gap-2 min-w-0">
-                      <span className="text-xs uppercase tracking-wider text-slate-600 font-bold w-9 shrink-0">
-                        {guardian2Info.shortRoleLabel}
-                      </span>
-                      <span className="text-slate-900 font-semibold min-w-0 flex-1 break-words leading-snug">
-                        {guardian2Info.cleanName}
-                      </span>
-                    </div>
-                  )}
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="pt-1 flex flex-wrap items-center justify-between gap-2 text-xs min-w-0"
-                  >
-                    {(() => {
-                      const waList = buildWhatsAppLinksFromPhoneString(
-                        student.telefones || student.guardianPhone,
-                        student.name
-                      );
-                      if (waList.length === 0) {
-                        return (
-                          <span className="text-xs font-medium text-slate-600">
-                            Sem telefone
-                          </span>
-                        );
-                      }
-                      return (
-                        <a
-                          href={waList[0].waUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={`WhatsApp: ${waList[0].display}`}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950 hover:underline tabular-nums cursor-pointer min-w-0 max-w-full"
-                        >
-                          <span className="material-symbols-outlined text-[15px] shrink-0">chat</span>
-                          <span className="break-all leading-snug">{waList[0].display}</span>
-                        </a>
-                      );
-                    })()}
-                    {student.dataNascimento && (
-                      <span className="text-xs tabular-nums text-slate-600 shrink-0 font-semibold">
-                        {student.dataNascimento}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Visualização Prévia e Expansão de Dados Fluida */}
-                {isExpanded && renderStudentDetailedExpansion(student)}
-
-                {/* Ações do Cartão recolhido: Ficha Completa & Ficha Informativa do Estudante */}
-                {!isExpanded && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="pt-2 grid grid-cols-1 min-[360px]:grid-cols-2 sm:flex items-center gap-2 min-w-0"
-                  >
-                    {onOpenStudentGrid && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onOpenStudentGrid(student);
-                        }}
-                        className="flex-1 min-h-[42px] py-2 px-3 rounded-xl text-xs sm:text-[13px] font-bold bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100"
-                      >
-                        <span className="material-symbols-outlined text-[17px] text-[#0b3b8c] shrink-0">
-                          badge
-                        </span>
-                        <span>Ver Ficha</span>
-                      </button>
-                    )}
-
-                    {onOpenStudentPdf && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onOpenStudentPdf(student);
-                        }}
-                        title={
-                          hasStudentPdf
-                            ? `Abrir Ficha Informativa do Estudante (${student.name})`
-                            : `Estudante sem Ficha Informativa digitalizada`
-                        }
-                        className={`flex-1 min-h-[42px] py-2 px-3 rounded-xl text-xs sm:text-[13px] font-bold flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer ${
-                          hasStudentPdf
-                            ? 'bg-[#0052cc] hover:bg-[#003e99] text-white shadow-xs'
-                            : 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[17px] shrink-0">
-                          {hasStudentPdf ? 'picture_as_pdf' : 'upload_file'}
-                        </span>
-                        <span>
-                          {hasStudentPdf ? 'Ficha Informativa' : 'Sem Ficha Info.'}
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                Carregar mais estudantes ({filteredStudents.length - visibleStudentLimit} restantes)
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* MODO 2: LISTA COMPACTA (Ordem Numérica + Expansão Fluida Inline) */}
       {viewMode === 'compact' && (
-        <div className="space-y-2.5">
-          {filteredStudents.map((student) => {
-            const m = getStudentAttendanceMetrics(
-              student,
-              diasLetivosMes,
-              OFFICIAL_OCTOBER_DAYS
-            );
-            const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
-            const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
-            const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
-            const isOtherNonActive =
-              !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
-            const studentGenderInfo = getStudentGenderLabel(student);
-            const guardian1Info = resolveGuardianRelationshipInfo(
-              student.filiacao1 || student.guardianName,
-              'filiacao1',
-              student.notes
-            );
-            const guardian2Info = resolveGuardianRelationshipInfo(
-              student.filiacao2,
-              'filiacao2',
-              student.notes
-            );
-            const isExpanded =
-              expandedStudentId === '__ALL__' || expandedStudentId === student.id;
-
-            const hasPdf = Boolean(
-              (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
-                (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
-            );
-
-            return (
-              <div
+        <div className="space-y-4">
+          <div className="space-y-2.5">
+            {displayedStudents.map((student) => (
+              <LinhaEstudante
                 key={student.id}
-                onClick={() =>
-                  setExpandedStudentId((prev) => (prev === student.id ? null : student.id))
-                }
-                title={isExpanded ? 'Clique para fechar detalhes' : 'Clique para expandir dados'}
-                className={`p-3.5 sm:px-5 rounded-2xl flex flex-col gap-2 cursor-pointer transition-all shadow-2xs ${
-                  isTransferred
-                    ? 'bg-amber-50 hover:bg-amber-100/70'
-                    : isRemanejado
-                    ? 'bg-purple-50 hover:bg-purple-100/70'
-                    : isOtherNonActive
-                    ? 'bg-slate-100'
-                    : m.isBelowLegalThreshold
-                    ? 'bg-rose-50/70 hover:bg-rose-50'
-                    : 'bg-white hover:bg-slate-50/80'
-                }`}
+                student={student}
+                classGroup={classGroup}
+                diasLetivosMes={diasLetivosMes}
+                minLegalPresence={minLegalPresence}
+                isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+                onToggleExpand={(id) => setExpandedStudentId((prev) => (prev === id ? null : id))}
+                onOpenStudentPdf={onOpenStudentPdf}
+                onOpenPhotoModal={onOpenPhotoModal}
+                renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+              />
+            ))}
+          </div>
+          {filteredStudents.length > visibleStudentLimit && (
+            <div className="py-4 text-center">
+              <button
+                type="button"
+                onClick={() => setVisibleStudentLimit((prev) => prev + 30)}
+                className="min-h-[44px] px-6 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm shadow-sm cursor-pointer transition-colors"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span
-                      className={`w-8 h-8 rounded-xl text-white font-semibold text-xs flex items-center justify-center shrink-0 tabular-nums ${
-                        isTransferred
-                          ? 'bg-[#b45309]'
-                          : isRemanejado
-                          ? 'bg-[#6d28d9]'
-                          : isOtherNonActive
-                          ? 'bg-[#475569]'
-                          : 'bg-[#003440]'
-                      }`}
-                    >
-                      {student.number.toString().padStart(2, '0')}
-                    </span>
-
-                    <StudentAvatar
-                      student={student}
-                      size="md"
-                      expandableOnClick={true}
-                      onUploadPhotoClick={
-                        onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined
-                      }
-                    />
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-                        <span className="font-semibold text-sm sm:text-base text-[#003440] break-words leading-snug">
-                          {student.name}
-                        </span>
-                        {isTransferred && (
-                          <span className="text-xs font-semibold text-amber-800">
-                            · {studentGenderInfo.transferidoTerm}
-                          </span>
-                        )}
-                        {isRemanejado && (
-                          <span className="text-xs font-semibold text-purple-800">
-                            · Mudou de Turma
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-600 break-words leading-snug mt-0.5 min-w-0">
-                        <span>
-                          {guardian1Info.shortRoleLabel}: {guardian1Info.cleanName}
-                        </span>
-                        {guardian2Info.cleanName && guardian2Info.cleanName.toLowerCase() !== 'não informado' && (
-                          <>
-                            <span aria-hidden="true"> · </span>
-                            <span>
-                              {guardian2Info.shortRoleLabel}: {guardian2Info.cleanName}
-                            </span>
-                          </>
-                        )}
-                        {student.telefones && (
-                          <>
-                            <span aria-hidden="true"> · </span>
-                            <span className="text-emerald-800 tabular-nums font-medium break-all">
-                              {student.telefones}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto shrink-0">
-                    {onOpenStudentPdf && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          onOpenStudentPdf(student);
-                        }}
-                        title={`Abrir Ficha Informativa do Estudante (${student.name})`}
-                        className={`flex-1 sm:flex-initial min-h-[42px] py-2 px-4 rounded-xl font-bold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors duration-100 ${
-                          hasPdf
-                            ? 'bg-[#0052cc] hover:bg-[#003e99] text-white shadow-xs'
-                            : 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-900'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[17px] shrink-0">
-                          {hasPdf ? 'picture_as_pdf' : 'description'}
-                        </span>
-                        <span>{hasPdf ? 'Ficha Informativa' : 'Sem Ficha Info.'}</span>
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedStudentId((prev) =>
-                          prev === student.id ? null : student.id
-                        );
-                      }}
-                      className="flex-1 sm:flex-initial min-h-[42px] py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1 cursor-pointer transition-colors duration-100"
-                    >
-                      <span>{isExpanded ? 'Fechar' : 'Ver Dados'}</span>
-                      <span
-                        className={`material-symbols-outlined text-[18px] shrink-0 transition-transform duration-100 ${
-                          isExpanded ? 'rotate-180 text-[#0071e3]' : ''
-                        }`}
-                      >
-                        expand_more
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {isExpanded && renderStudentDetailedExpansion(student)}
-              </div>
-            );
-          })}
+                Carregar mais estudantes ({filteredStudents.length - visibleStudentLimit} restantes)
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* MODO 3: TABELA NOMINAL COMPLETA (Expansão ajustada à largura da tela em qualquer dispositivo) */}
       {viewMode === 'table' && (
-        <div className="bg-white rounded-3xl overflow-x-auto shadow-2xs">
-          {/* Legenda Visual Rápida de Faltas Consecutivas (3, 5 e 10 Dias) */}
-          <div className="px-4 py-3 bg-[#f7f9f8] flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-1.5 font-semibold text-[#003440]">
-              <span className="material-symbols-outlined text-[17px] text-[#ba1a1a]">
-                notification_important
-              </span>
-              <span>Código de Cores — Faltas Seguidas na Tabela:</span>
+        <div className="space-y-4">
+          <div className="bg-white rounded-3xl overflow-x-auto shadow-2xs">
+            {/* Legenda Visual Rápida de Faltas Consecutivas (3, 5 e 10 Dias) */}
+            <div className="px-4 py-3 bg-[#f7f9f8] flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 font-semibold text-[#003440]">
+                <span className="material-symbols-outlined text-[17px] text-[#ba1a1a]">
+                  notification_important
+                </span>
+                <span>Código de Cores — Faltas Seguidas na Tabela:</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fffbeb] text-[#92400e] border border-[#f59e0b]/40 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
+                  <span>3+ Dias Seguidos (Atenção)</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff7ed] text-[#9a3412] border border-[#ea580c]/40 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-[#ea580c]" />
+                  <span>5+ Dias Seguidos (Busca Ativa)</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff1f2] text-[#9f1239] border border-[#e11d48]/40 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-[#e11d48]" />
+                  <span>10+ Dias Seguidos (Evasão Crítica)</span>
+                </span>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fffbeb] text-[#92400e] border border-[#f59e0b]/40 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
-                <span>3+ Dias Seguidos (Atenção)</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff7ed] text-[#9a3412] border border-[#ea580c]/40 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-[#ea580c]" />
-                <span>5+ Dias Seguidos (Busca Ativa)</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#fff1f2] text-[#9f1239] border border-[#e11d48]/40 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-[#e11d48]" />
-                <span>10+ Dias Seguidos (Evasão Crítica)</span>
-              </span>
-            </div>
+
+            <table className="w-full text-left text-xs sm:text-[13px] border-collapse min-w-[1160px]">
+              <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-semibold uppercase tracking-wider text-xs">
+                <tr>
+                  <th className="py-3 px-3 text-center">Nº</th>
+                  <th className="py-3 px-3">Estudante &amp; Ficha Informativa do Estudante</th>
+                  <th className="py-3 px-2.5 text-center">Alerta Faltas Seguidas (3 / 5 / 10 dias)</th>
+                  <th className="py-3 px-2.5">Registro (RA)</th>
+                  <th className="py-3 px-3">Filiação 1 (Mãe / Pai / Avó / Tia...)</th>
+                  <th className="py-3 px-3">Filiação 2 (Pai / Mãe / Avô / Tio...)</th>
+                  <th className="py-3 px-2.5">Telefone / E-mail</th>
+                  <th className="py-3 px-2.5 text-center">Presença no Mês</th>
+                  <th className="py-3 px-2.5 text-center">Faltas no Mês</th>
+                  <th className="py-3 px-2.5 text-center">Situação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/[0.05]">
+                {displayedStudents.map((student) => (
+                  <EstudanteTabelaRow
+                    key={student.id}
+                    student={student}
+                    classGroup={classGroup}
+                    diasLetivosMes={diasLetivosMes}
+                    minLegalPresence={minLegalPresence}
+                    isExpanded={expandedStudentId === '__ALL__' || expandedStudentId === student.id}
+                    onToggleExpand={(id) => setExpandedStudentId((prev) => (prev === id ? null : id))}
+                    onOpenStudentPdf={onOpenStudentPdf}
+                    renderStudentDetailedExpansion={renderStudentDetailedExpansion}
+                  />
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          <table className="w-full text-left text-xs sm:text-[13px] border-collapse min-w-[1160px]">
-            <thead className="bg-[#f7f9f8] text-[#003440] border-b border-black/[0.06] font-semibold uppercase tracking-wider text-xs">
-              <tr>
-                <th className="py-3 px-3 text-center">Nº</th>
-                <th className="py-3 px-3">Estudante &amp; Ficha Informativa do Estudante</th>
-                <th className="py-3 px-2.5 text-center">Alerta Faltas Seguidas (3 / 5 / 10 dias)</th>
-                <th className="py-3 px-2.5">Registro (RA)</th>
-                <th className="py-3 px-3">Filiação 1 (Mãe / Pai / Avó / Tia...)</th>
-                <th className="py-3 px-3">Filiação 2 (Pai / Mãe / Avô / Tio...)</th>
-                <th className="py-3 px-2.5">Telefone / E-mail</th>
-                <th className="py-3 px-2.5 text-center">Presença no Mês</th>
-                <th className="py-3 px-2.5 text-center">Faltas no Mês</th>
-                <th className="py-3 px-2.5 text-center">Situação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/[0.05]">
-              {filteredStudents.map((student) => {
-                const m = getStudentAttendanceMetrics(
-                  student,
-                  diasLetivosMes,
-                  OFFICIAL_OCTOBER_DAYS
-                );
-                const consecInfo = getStudentConsecutiveAlertInfo(student);
-                const pctFalta =
-                  m.diasLetivosMatriculados > 0
-                    ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
-                    : 0;
-                const sit = (student.situacao || 'ATIVO').toUpperCase().trim();
-                const isTransferred = sit.includes('BXTR') || sit.includes('TRANSF');
-                const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
-                const isOtherNonActive =
-                  !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
-
-                const studentGenderInfo = getStudentGenderLabel(student);
-                const guardian1Info = resolveGuardianRelationshipInfo(
-                  student.filiacao1 || student.guardianName,
-                  'filiacao1',
-                  student.notes
-                );
-                const guardian2Info = resolveGuardianRelationshipInfo(
-                  student.filiacao2,
-                  'filiacao2',
-                  student.notes
-                );
-
-                const rowColorClass = isTransferred
-                  ? 'bg-[#fef3c7]/75 hover:bg-[#fde68a]/75'
-                  : isRemanejado
-                  ? 'bg-[#ede9fe]/75 hover:bg-[#ddd6fe]/75'
-                  : isOtherNonActive
-                  ? 'bg-[#e2e8f0]/75'
-                  : consecInfo.tier === '10d'
-                  ? 'bg-[#fff1f2] hover:bg-[#ffe4e6]'
-                  : consecInfo.tier === '5d'
-                  ? 'bg-[#fff7ed] hover:bg-[#ffedd5]'
-                  : consecInfo.tier === '3d'
-                  ? 'bg-[#fffbeb] hover:bg-[#fef3c7]'
-                  : m.isBelowLegalThreshold
-                  ? 'bg-[#fff9f8] hover:bg-[#fff0ee]'
-                  : 'hover:bg-[#f4f8f6]';
-
-                const isExpanded =
-                  expandedStudentId === '__ALL__' || expandedStudentId === student.id;
-
-                return (
-                  <React.Fragment key={student.id}>
-                    <tr
-                      onClick={() =>
-                        setExpandedStudentId((prev) => (prev === student.id ? null : student.id))
-                      }
-                      className={`cursor-pointer transition-colors ${rowColorClass} ${
-                        isExpanded ? 'ring-1 ring-[#003440]/20' : ''
-                      }`}
-                    >
-                      <td className="py-2.5 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setExpandedStudentId((prev) =>
-                                prev === student.id ? null : student.id
-                              );
-                            }}
-                            title={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
-                            className="p-0.5 rounded hover:bg-black/10 text-[#003440] cursor-pointer"
-                          >
-                            <span
-                              className={`material-symbols-outlined text-[16px] transition-transform ${
-                                isExpanded ? 'rotate-180 text-[#0071e3]' : ''
-                              }`}
-                            >
-                              expand_more
-                            </span>
-                          </button>
-                          <span className="font-mono font-semibold text-[#003440] text-xs tabular-nums">
-                            {student.number.toString().padStart(2, '0')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <div className="flex items-center justify-between gap-2.5">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <StudentAvatar
-                              student={student}
-                              size="sm"
-                              expandableOnClick={true}
-                            />
-                            <div className="min-w-0">
-                              <span className="font-bold text-[#003440] break-words block leading-snug">
-                                {student.name}
-                              </span>
-                              <span
-                                className={`inline-block px-2 py-0.5 rounded font-semibold text-xs mt-0.5 ${
-                                  studentGenderInfo.code === 'F'
-                                    ? 'bg-[#ffdad6]/60 text-[#93000a]'
-                                    : 'bg-[#d3e4ff]/75 text-[#001c38]'
-                                }`}
-                              >
-                                {studentGenderInfo.estudanteTitle}
-                              </span>
-                            </div>
-                          </div>
-                          {onOpenStudentPdf && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                onOpenStudentPdf(student);
-                              }}
-                              title={`Abrir Ficha Informativa do Estudante (${student.name})`}
-                              className={`min-h-[36px] px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors ${
-                                (student.fichaPdfDriveUrl &&
-                                  student.fichaPdfDriveUrl.trim().length > 0) ||
-                                (student.fichaPdfDriveId &&
-                                  student.fichaPdfDriveId.trim().length > 0)
-                                  ? 'bg-[#0052cc] hover:bg-[#003e99] text-white'
-                                  : 'bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-300'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[16px]">
-                                picture_as_pdf
-                              </span>
-                              <span>
-                                {(student.fichaPdfDriveUrl &&
-                                  student.fichaPdfDriveUrl.trim().length > 0) ||
-                                (student.fichaPdfDriveId &&
-                                  student.fichaPdfDriveId.trim().length > 0)
-                                  ? 'Ficha Informativa'
-                                  : 'Sem Ficha Info.'}
-                              </span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-2.5 text-center">
-                        {consecInfo.tier !== 'none' ? (
-                          <div className="inline-flex flex-col items-center">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-semibold text-xs uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
-                            >
-                              <span className="material-symbols-outlined text-[14px]">
-                                {consecInfo.icon}
-                              </span>
-                              <span>{consecInfo.shortBadge}</span>
-                            </span>
-                            <span className="text-xs font-semibold text-[#41484b] mt-0.5">
-                              {consecInfo.tier === '10d'
-                                ? 'Evasão Crítica'
-                                : consecInfo.tier === '5d'
-                                ? 'Busca Ativa'
-                                : 'Contato Família'}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-bold text-xs">
-                            Em dia (sem alerta)
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-2.5 tabular-nums text-slate-700 font-medium">
-                        {student.ra}-{student.digRa}
-                      </td>
-                      <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
-                        <span className="text-xs font-semibold uppercase text-[#005035] block">
-                          {guardian1Info.roleLabel}
-                        </span>
-                        <span className="break-words">{guardian1Info.cleanName}</span>
-                      </td>
-                      <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
-                        <span className="text-xs font-semibold uppercase text-[#003440] block">
-                          {guardian2Info.roleLabel}
-                        </span>
-                        <span className="break-words">{guardian2Info.cleanName}</span>
-                      </td>
-                      <td className="py-2.5 px-2.5 text-xs">
-                        <div className="text-[#005035] font-semibold tabular-nums">
-                          {student.telefones || '—'}
-                        </div>
-                        <div className="text-[#5a676b] break-all max-w-[200px] leading-snug">
-                          {student.emailMunicipal || '—'}
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#005035]">
-                        {m.presencas}/{m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
-                      </td>
-                      <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#ba1a1a]">
-                        {m.faltas} ({pctFalta}%)
-                      </td>
-                      <td className="py-2.5 px-2.5 text-center">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${
-                            isTransferred
-                              ? 'bg-[#b45309] text-white'
-                              : isRemanejado
-                              ? 'bg-[#6d28d9] text-white'
-                              : isOtherNonActive
-                              ? 'bg-[#475569] text-white'
-                              : 'bg-[#eaf6ef] text-[#005035]'
-                          }`}
-                        >
-                          {isTransferred
-                            ? studentGenderInfo.transferidoTerm.toUpperCase()
-                            : isRemanejado
-                            ? studentGenderInfo.remanejadoTerm.toUpperCase()
-                            : studentGenderInfo.ativoTerm.toUpperCase()}
-                        </span>
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr className="bg-slate-50/70 animate-gentle-fade">
-                        <td colSpan={10} className="p-3 sm:p-4">
-                          <div className="sticky left-0 w-[calc(100vw-2.5rem)] max-w-full lg:w-full">
-                            {renderStudentDetailedExpansion(student)}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+          {filteredStudents.length > visibleStudentLimit && (
+            <div className="py-4 text-center">
+              <button
+                type="button"
+                onClick={() => setVisibleStudentLimit((prev) => prev + 30)}
+                className="min-h-[44px] px-6 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm shadow-sm cursor-pointer transition-colors"
+              >
+                Carregar mais estudantes ({filteredStudents.length - visibleStudentLimit} restantes)
+              </button>
+            </div>
+          )}
         </div>
       )}
 

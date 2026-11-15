@@ -57,6 +57,19 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   const [quickFilter, setQuickFilter] = useState<'all' | 'faltas' | 'atestados'>('all');
   const [attendanceViewMode, setAttendanceViewMode] = useState<'compact' | 'cards'>('compact');
 
+  // Estado de feedback visual de salvamento com animação flash e transição de cores
+  const [saveFlashState, setSaveFlashState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [lastSavedStudentId, setLastSavedStudentId] = useState<string | null>(null);
+  const saveFlashTimerRef = React.useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (saveFlashTimerRef.current !== null) {
+        window.clearTimeout(saveFlashTimerRef.current);
+      }
+    };
+  }, []);
+
   const selectedMonthMeta = useMemo(
     () => MONTHLY_SCHOOL_DAYS_2027.find((m) => m.month === selectedMonthName),
     [selectedMonthName]
@@ -96,10 +109,17 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   const commitInstantUpdate = (
     nextStudents: Student[],
     customMonthDays: number = diasLetivosMes,
-    customMonthName: string = selectedMonthName
+    customMonthName: string = selectedMonthName,
+    studentIdSaved?: string
   ) => {
     setStudents(nextStudents);
     if (!effectiveCanEdit) return;
+
+    if (studentIdSaved) {
+      setLastSavedStudentId(studentIdSaved);
+    }
+    // Estado de loading/saving com alteração de cor suave
+    setSaveFlashState('saving');
 
     const tempClass: ClassGroup = {
       ...classGroup,
@@ -116,6 +136,19 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       statusText: `Fechamento de ${customMonthName}: Sincronizado (${classMetrics.presenceRate}% de presença)`,
     };
     onSaveMonthlyAttendance(updatedClass);
+
+    if (saveFlashTimerRef.current !== null) {
+      window.clearTimeout(saveFlashTimerRef.current);
+    }
+
+    // Transição para o estado 'saved' com sutil animação flash esmeralda confirmando gravação
+    saveFlashTimerRef.current = window.setTimeout(() => {
+      setSaveFlashState('saved');
+      saveFlashTimerRef.current = window.setTimeout(() => {
+        setSaveFlashState('idle');
+        setLastSavedStudentId(null);
+      }, 2200);
+    }, 150);
   };
 
   const handleMonthChange = (monthName: string) => {
@@ -223,7 +256,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     });
 
     if (!blocked) {
-      commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName);
+      commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName, studentId);
     }
   };
 
@@ -269,7 +302,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
     });
 
     if (!blocked) {
-      commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName);
+      commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName, studentId);
     }
   };
 
@@ -309,7 +342,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           : undefined,
       };
     });
-    commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName);
+    commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName, studentId);
   };
 
   // Digitação direta do número de Atestados no teclado
@@ -336,7 +369,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         monthlyAttendanceByMonth: nextMonthMap,
       };
     });
-    commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName);
+    commitInstantUpdate(nextStudents, diasLetivosMes, selectedMonthName, studentId);
   };
 
   // Indicativos e Contadores Consolidados da Turma no Mês
@@ -451,85 +484,104 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </span>
       </div>
 
-      {/* Painel de Faltas do Mês */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 lg:p-7 shadow-sm space-y-5 min-w-0">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
-          <div className="space-y-1.5 min-w-0 flex-1">
+      {/* Painel Coeso de Faltas do Mês & Controles (Alunos Visíveis Imediatamente) */}
+      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm space-y-3.5 min-w-0">
+        {/* Linha 1: Contexto da Turma + Mês de Referência + Badge de Salvamento com Animação Flash + Concluir */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
+          <div className="space-y-1 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="font-bold text-slate-950">{classGroup.name}</span>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-950 tracking-tight break-words">
+                Faltas do Mês — {selectedMonthName}
+              </h1>
+              <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-lg break-words">
+                Turma {classGroup.name}
+              </span>
               {classGroup.turmaAbrev && (
-                <>
-                  <span aria-hidden="true" className="text-slate-300">·</span>
-                  <span className="font-mono font-bold text-slate-950 bg-slate-100 px-2 py-0.5 rounded-lg">{classGroup.turmaAbrev}</span>
-                </>
+                <span className="font-mono font-bold text-slate-950 bg-slate-100 px-2 py-0.5 rounded-lg">
+                  {classGroup.turmaAbrev}
+                </span>
               )}
-              <span aria-hidden="true" className="text-slate-300">·</span>
-              <span className="font-semibold text-slate-700">{classGroup.shift.replace('Turno ', '')}</span>
-              <span aria-hidden="true" className="text-slate-300">·</span>
-              <span className="font-semibold text-slate-700">{classGroup.room}</span>
-              <span aria-hidden="true" className="text-slate-300">·</span>
-              <span className="text-emerald-950 font-bold text-xs bg-emerald-100 px-2.5 py-0.5 rounded-lg">
-                {instantSyncStatus === 'syncing' ? 'Sincronizando...' : '✓ Salvo automaticamente'}
+              <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">
+                {classGroup.shift.replace('Turno ', '')} · {classGroup.room}
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-950 tracking-tight leading-tight break-words">
-              Informar Faltas do Mês — {selectedMonthName}
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed break-words">
-              Turma {classGroup.name} · {classGroup.pronoun || 'Prof.'} {classGroup.teacherName || 'Regente'} · {detailedIndicators.ativosCount} estudantes · {diasLetivosMes} dias letivos
+            <p className="text-xs text-slate-600 font-medium break-words leading-relaxed">
+              <span className="font-bold text-slate-800">Regente:</span> {classGroup.teacherName || 'Docente Regente'} · {detailedIndicators.ativosCount} estudantes ativos · {diasLetivosMes} dias letivos
             </p>
           </div>
 
-          {/* Seletor de Mês Responsivo */}
-          <div className="w-full lg:w-auto flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-100 p-2 sm:px-3.5 sm:py-2 rounded-2xl shadow-2xs min-w-0 shrink-0">
-            <div className="flex items-center justify-between gap-1.5 min-w-0 flex-1">
+          {/* Feedback Visual Flash / Salvamento no Banco + Seletor de Mês + Concluir */}
+          <div className="flex flex-wrap items-center gap-2 justify-between lg:justify-end shrink-0">
+            {/* Badge Dinâmico com Animação Flash e Alteração de Cor */}
+            {saveFlashState === 'saving' ? (
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-950 font-bold text-xs shadow-xs animate-pulse transition-all duration-200"
+                title="Gravando no banco de dados local e nuvem..."
+              >
+                <span className="material-symbols-outlined text-[16px] animate-spin text-amber-800">
+                  sync
+                </span>
+                <span>Salvando no banco...</span>
+              </div>
+            ) : saveFlashState === 'saved' ? (
+              <div
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-md ring-2 ring-emerald-400/60 scale-105 transition-all duration-300"
+                title="Dados persistidos com sucesso no banco de dados e nuvem!"
+              >
+                <span className="material-symbols-outlined text-[17px] text-white">
+                  check_circle
+                </span>
+                <span>✓ Salvo com sucesso!</span>
+              </div>
+            ) : (
+              <div
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-900 font-semibold text-xs"
+                title="Dados sincronizados e seguros"
+              >
+                <span className="material-symbols-outlined text-[15px] text-emerald-700">
+                  cloud_done
+                </span>
+                <span>{instantSyncStatus === 'syncing' ? 'Sincronizando...' : '✓ Sincronizado'}</span>
+              </div>
+            )}
+
+            {/* Seletor de Mês Compacto */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               {previousPeriodName && (
                 <button
                   type="button"
                   onClick={() => handleMonthChange(previousPeriodName)}
-                  className="min-h-[40px] px-3 rounded-xl bg-white hover:bg-slate-200/80 text-slate-900 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs shrink-0"
-                  title={`Ir para ${previousPeriodName}`}
+                  className="min-h-[34px] px-2 rounded-lg bg-white hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center cursor-pointer transition-colors shadow-2xs"
+                  title={`Mês anterior: ${previousPeriodName}`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                  <span className="hidden md:inline">{previousPeriodName}</span>
+                  <span className="material-symbols-outlined text-[16px]">chevron_left</span>
                 </button>
               )}
 
-              <div className="flex items-center gap-2 min-w-0 flex-1 px-1">
-                <span className="material-symbols-outlined text-[20px] text-slate-600 shrink-0">
-                  calendar_month
-                </span>
-                <div className="min-w-0 flex-1">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider leading-tight">
-                    Mês de Referência
-                  </label>
-                  <select
-                    value={selectedMonthName}
-                    onChange={(e) => handleMonthChange(e.target.value)}
-                    className="w-full min-w-0 bg-transparent text-slate-950 font-bold text-sm focus:outline-none cursor-pointer pr-1"
-                  >
-                    {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
-                      const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
-                      return (
-                        <option key={m.month} value={m.month}>
-                          {m.month} ({daysForClass} dias)
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
+              <select
+                value={selectedMonthName}
+                onChange={(e) => handleMonthChange(e.target.value)}
+                className="bg-transparent text-slate-950 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer px-2 py-1"
+              >
+                {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
+                  const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
+                  return (
+                    <option key={m.month} value={m.month}>
+                      {m.month} ({daysForClass}d)
+                    </option>
+                  );
+                })}
+              </select>
 
               {nextPeriodName && (
                 <button
                   type="button"
                   onClick={() => handleMonthChange(nextPeriodName)}
-                  className="min-h-[40px] px-3 rounded-xl bg-white hover:bg-slate-200/80 text-slate-900 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs shrink-0"
-                  title={`Ir para ${nextPeriodName}`}
+                  className="min-h-[34px] px-2 rounded-lg bg-white hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center cursor-pointer transition-colors shadow-2xs"
+                  title={`Próximo mês: ${nextPeriodName}`}
                 >
-                  <span className="hidden md:inline">{nextPeriodName}</span>
-                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                  <span className="material-symbols-outlined text-[16px]">chevron_right</span>
                 </button>
               )}
             </div>
@@ -537,160 +589,80 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             <button
               type="button"
               onClick={onBack}
-              className="w-full sm:w-auto min-h-[42px] px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-[13px] flex items-center justify-center gap-1.5 cursor-pointer transition-colors shrink-0 sm:ml-1"
-              title="Salvo automaticamente. Concluir e voltar às turmas"
+              className="min-h-[36px] px-3.5 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+              title="Salvo automaticamente. Concluir e voltar à turma"
             >
-              <span className="material-symbols-outlined text-[18px] text-emerald-400">check</span>
+              <span className="material-symbols-outlined text-[16px] text-emerald-400">check</span>
               <span>Concluir</span>
             </button>
           </div>
         </div>
 
-        {/* Indicadores de Faltas do Mês */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 pt-1">
-          {/* Indicativo 1: Taxa de Presença */}
-          <div className="rounded-2xl bg-slate-100 p-4 flex flex-col justify-between shadow-2xs min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs sm:text-[13px] font-bold text-slate-700">
-                Presença Mês
-              </span>
-              <span className="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-mono text-xs font-bold shrink-0">
-                {diasLetivosMes}d
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between gap-2 mt-2">
-              <span className="text-2xl sm:text-3xl font-bold text-slate-950 tabular-nums">
-                {liveClassMetrics.presenceRate}%
-              </span>
-              <span className="text-xs text-slate-600 font-semibold tabular-nums">
-                {liveClassMetrics.totalPresencasTurma}/{liveClassMetrics.totalDiasMatriculadosTurma}
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden mt-2.5">
-              <div
-                className="h-full bg-emerald-600 rounded-full transition-all"
-                style={{ width: `${Math.min(100, liveClassMetrics.presenceRate)}%` }}
-              />
-            </div>
+        {/* Linha 2: Faixa de Indicadores Rápidos em Linha Única (Sem 4 Cards Gigantes) */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5 min-w-0">
+          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-[#005035] flex items-center gap-1.5">
+            <span>Presença Mês:</span>
+            <span className="tabular-nums font-black">{liveClassMetrics.presenceRate}%</span>
+            <span className="text-[11px] opacity-75">
+              ({liveClassMetrics.totalPresencasTurma}/{liveClassMetrics.totalDiasMatriculadosTurma} dias)
+            </span>
           </div>
 
-          {/* Indicativo 2: Total de Faltas */}
-          <div className="rounded-2xl bg-slate-100 p-4 flex flex-col justify-between shadow-2xs min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs sm:text-[13px] font-bold text-slate-700">
-                Faltas no Mês
-              </span>
-              <span className="px-2 py-0.5 rounded-lg bg-rose-200 text-rose-950 font-mono text-xs font-bold shrink-0">
-                {detailedIndicators.pctFaltaTurma}%
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between gap-2 mt-2">
-              <span className="text-2xl sm:text-3xl font-bold text-rose-700 tabular-nums">
-                {liveClassMetrics.totalFaltasTurma}
-              </span>
-              <span className="text-xs text-slate-600 font-semibold tabular-nums">
-                {detailedIndicators.countWithFaltas} estudantes
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-semibold text-slate-700 mt-2.5">
-              <span>Sem atestado: {detailedIndicators.faltasSemAtestadoTurma}</span>
-              <span>Com atestado: {liveClassMetrics.totalAtestadosTurma}</span>
-            </div>
+          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold bg-rose-50 text-rose-950 flex items-center gap-1.5">
+            <span>Total Faltas:</span>
+            <span className="tabular-nums font-black">{liveClassMetrics.totalFaltasTurma}</span>
+            <span className="text-[11px] opacity-80">
+              ({detailedIndicators.faltasSemAtestadoTurma} s/ atestado · {liveClassMetrics.totalAtestadosTurma} atestados)
+            </span>
           </div>
 
-          {/* Indicativo 3: Atestados */}
-          <div className="rounded-2xl bg-slate-100 p-4 flex flex-col justify-between shadow-2xs min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs sm:text-[13px] font-bold text-slate-700">
-                Atestados Médicos
+          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-800 flex items-center gap-1.5">
+            <span>Assiduidade:</span>
+            <span className="tabular-nums font-bold text-slate-950">
+              {detailedIndicators.countZeroFaltas} sem faltas
+            </span>
+            {detailedIndicators.countBelowLegal > 0 && (
+              <span className="text-rose-700 font-bold text-[11px]">
+                · {detailedIndicators.countBelowLegal} &lt; {minLegalPresence}%
               </span>
-              <span className="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-mono text-xs font-bold shrink-0">
-                {detailedIndicators.pctAtestadosSobreFaltas}%
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between gap-2 mt-2">
-              <span className="text-2xl sm:text-3xl font-bold text-slate-950 tabular-nums">
-                {liveClassMetrics.totalAtestadosTurma}
-              </span>
-              <span className="text-xs text-slate-600 font-semibold tabular-nums">
-                {detailedIndicators.countWithAtestados} estudantes
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden mt-2.5">
-              <div
-                className="h-full bg-slate-800 rounded-full transition-all"
-                style={{ width: `${Math.min(100, detailedIndicators.pctAtestadosSobreFaltas)}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Indicativo 4: Assiduidade */}
-          <div className="rounded-2xl bg-slate-100 p-4 flex flex-col justify-between shadow-2xs min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs sm:text-[13px] font-bold text-slate-700">
-                Assiduidade Legal
-              </span>
-              <span className="px-2 py-0.5 rounded-lg bg-slate-200 text-slate-900 font-mono text-xs font-bold shrink-0">
-                Mín. {minLegalPresence}%
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between gap-2 mt-2">
-              <div>
-                <span className="text-2xl sm:text-3xl font-bold text-slate-950 tabular-nums">
-                  {detailedIndicators.countZeroFaltas}
-                </span>
-                <span className="text-xs text-slate-600 font-semibold ml-1">
-                  sem faltas
-                </span>
-              </div>
-              <span
-                className={`px-2 py-0.5 rounded-lg font-mono text-xs font-bold shrink-0 ${
-                  detailedIndicators.countBelowLegal > 0
-                    ? 'bg-rose-200 text-rose-950'
-                    : 'bg-emerald-200 text-emerald-950'
-                }`}
-              >
-                {detailedIndicators.countBelowLegal} &lt; {minLegalPresence}%
-              </span>
-            </div>
-            <div className="text-xs font-medium text-slate-500 mt-2.5">
-              Controles — e + por estudante
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Barra Minimalista: Busca + Filtro Rápido + 2 Modos Limpos (Lista Rápida / Cards) */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 min-w-0">
-          <div className="relative flex-1 min-w-0 w-full">
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748b] text-[20px]">
+        {/* Linha 3: Busca Rápida + Filtros + Alternador de Visualização */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 min-w-0">
+          <div className="relative flex-1 min-w-0">
+            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[19px]">
               search
             </span>
             <input
               type="text"
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
-              placeholder="Buscar por Nº da chamada ou nome do(a) estudante..."
-              className="w-full min-h-[48px] pl-11 pr-9 bg-[#f1f5f9] text-[#0f172a] text-sm rounded-xl border border-transparent focus:border-[#006644]/40 focus:bg-white focus:outline-none font-medium placeholder:text-[#64748b]"
+              placeholder="Buscar por Nº da chamada ou nome do estudante..."
+              className="w-full min-h-[44px] pl-10 pr-9 bg-slate-100 text-slate-950 text-xs sm:text-sm rounded-xl font-semibold placeholder:text-slate-500 focus:outline-none focus:bg-slate-200/70 transition-colors"
             />
             {searchName && (
               <button
                 type="button"
                 onClick={() => setSearchName('')}
                 aria-label="Limpar busca"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a] cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">cancel</span>
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto min-w-0">
-            <div className="ios-segmented w-full sm:w-auto">
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 shrink-0">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setQuickFilter('all')}
-                className={`ios-segmented-item flex-1 sm:flex-initial ${
-                  quickFilter === 'all' ? 'ios-segmented-item-active' : ''
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  quickFilter === 'all'
+                    ? 'bg-white text-slate-950 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-950'
                 }`}
               >
                 Todos ({students.length})
@@ -698,8 +670,10 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               <button
                 type="button"
                 onClick={() => setQuickFilter('faltas')}
-                className={`ios-segmented-item flex-1 sm:flex-initial ${
-                  quickFilter === 'faltas' ? 'ios-segmented-item-active text-[#be123c]' : ''
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  quickFilter === 'faltas'
+                    ? 'bg-rose-700 text-white shadow-xs'
+                    : 'text-rose-900 hover:bg-rose-100'
                 }`}
               >
                 Com Faltas ({detailedIndicators.countWithFaltas})
@@ -707,20 +681,24 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               <button
                 type="button"
                 onClick={() => setQuickFilter('atestados')}
-                className={`ios-segmented-item flex-1 sm:flex-initial ${
-                  quickFilter === 'atestados' ? 'ios-segmented-item-active text-[#0369a1]' : ''
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  quickFilter === 'atestados'
+                    ? 'bg-blue-800 text-white shadow-xs'
+                    : 'text-blue-900 hover:bg-blue-100'
                 }`}
               >
-                Com Atestados ({detailedIndicators.countWithAtestados})
+                Atestados ({detailedIndicators.countWithAtestados})
               </button>
             </div>
 
-            <div className="ios-segmented w-full sm:w-auto">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setAttendanceViewMode('compact')}
-                className={`ios-segmented-item flex-1 sm:flex-initial flex items-center justify-center gap-1 ${
-                  attendanceViewMode === 'compact' ? 'ios-segmented-item-active' : ''
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                  attendanceViewMode === 'compact'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 font-medium'
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">view_list</span>
@@ -729,8 +707,10 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               <button
                 type="button"
                 onClick={() => setAttendanceViewMode('cards')}
-                className={`ios-segmented-item flex-1 sm:flex-initial flex items-center justify-center gap-1 ${
-                  attendanceViewMode === 'cards' ? 'ios-segmented-item-active' : ''
+                className={`min-h-[34px] px-2.5 sm:px-3 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                  attendanceViewMode === 'cards'
+                    ? 'bg-white text-slate-950 font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 font-medium'
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">grid_view</span>
@@ -759,11 +739,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             const isOtherNonActive =
               !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
 
+            const isJustSaved = lastSavedStudentId === student.id && saveFlashState === 'saved';
+            const isSavingThis = lastSavedStudentId === student.id && saveFlashState === 'saving';
+
             return (
               <div
                 key={student.id}
-                className={`p-4 sm:px-6 rounded-2xl shadow-sm hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all min-w-0 ${
-                  isTransferred
+                className={`p-4 sm:px-6 rounded-2xl shadow-sm hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-300 min-w-0 ${
+                  isJustSaved
+                    ? 'bg-emerald-50 ring-2 ring-emerald-500 shadow-md text-emerald-950 scale-[1.01]'
+                    : isSavingThis
+                    ? 'bg-amber-50 ring-2 ring-amber-400 text-amber-950 opacity-90'
+                    : isTransferred
                     ? 'bg-amber-100/90 text-amber-950'
                     : isRemanejado
                     ? 'bg-purple-100/90 text-purple-950'
@@ -781,7 +768,9 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 >
                   <span
                     className={`w-9 h-9 rounded-xl text-white font-mono font-bold text-sm flex items-center justify-center shrink-0 tabular-nums shadow-xs ${
-                      isTransferred
+                      isJustSaved
+                        ? 'bg-emerald-700'
+                        : isTransferred
                         ? 'bg-amber-900'
                         : isRemanejado
                         ? 'bg-purple-900'
@@ -803,6 +792,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                       <span className="font-bold text-base sm:text-lg text-slate-950 break-words leading-snug">
                         {student.name}
                       </span>
+                      {isJustSaved && (
+                        <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 animate-pulse">
+                          <span className="material-symbols-outlined text-[13px]">check</span>
+                          <span>Salvo!</span>
+                        </span>
+                      )}
+                      {isSavingThis && (
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 text-xs font-bold flex items-center gap-1 animate-pulse">
+                          <span className="material-symbols-outlined text-[13px] animate-spin">sync</span>
+                          <span>Salvando...</span>
+                        </span>
+                      )}
                       {isTransferred && (
                         <span className="px-2.5 py-0.5 rounded-lg bg-amber-900 text-white text-xs font-bold uppercase tracking-wide">
                           Transferido
@@ -976,11 +977,18 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             const isOtherNonActive =
               !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
 
+            const isJustSaved = lastSavedStudentId === student.id && saveFlashState === 'saved';
+            const isSavingThis = lastSavedStudentId === student.id && saveFlashState === 'saving';
+
             return (
               <div
                 key={student.id}
-                className={`rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md space-y-3.5 transition-all min-w-0 ${
-                  isTransferred
+                className={`rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md space-y-3.5 transition-all duration-300 min-w-0 ${
+                  isJustSaved
+                    ? 'bg-emerald-50 ring-2 ring-emerald-500 shadow-md text-emerald-950 scale-[1.01]'
+                    : isSavingThis
+                    ? 'bg-amber-50 ring-2 ring-amber-400 text-amber-950 opacity-90'
+                    : isTransferred
                     ? 'bg-amber-100/90 text-amber-950'
                     : isRemanejado
                     ? 'bg-purple-100/90 text-purple-950'
@@ -1003,9 +1011,23 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="px-2.5 py-0.5 rounded-lg bg-slate-950 text-white font-mono text-xs font-bold tabular-nums">
+                        <span className={`px-2.5 py-0.5 rounded-lg text-white font-mono text-xs font-bold tabular-nums ${
+                          isJustSaved ? 'bg-emerald-700' : 'bg-slate-950'
+                        }`}>
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
+                        {isJustSaved && (
+                          <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1 animate-pulse">
+                            <span className="material-symbols-outlined text-[13px]">check</span>
+                            <span>Salvo!</span>
+                          </span>
+                        )}
+                        {isSavingThis && (
+                          <span className="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 text-xs font-bold flex items-center gap-1 animate-pulse">
+                            <span className="material-symbols-outlined text-[13px] animate-spin">sync</span>
+                            <span>Salvando...</span>
+                          </span>
+                        )}
                         {isTransferred && (
                           <span className="px-2.5 py-0.5 rounded-lg bg-amber-900 text-white text-xs font-bold uppercase">
                             Transferido

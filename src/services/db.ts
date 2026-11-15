@@ -3574,7 +3574,7 @@ export const exportSchoolDataToJsonFile = (
   const totalStudents = classes.reduce((acc, c) => acc + (c.students?.length || 0), 0);
   const backup: SchoolJsonBackup = {
     version: 1,
-    app: 'Candelário Gestão · EMEB Prof. Joaquim Candelário de Freitas',
+    app: 'Lista Piloto Candelário 2027 · EMEB Prof. Joaquim Candelário de Freitas',
     school: 'EMEB Prof. Joaquim Candelário de Freitas (SME Jundiaí)',
     exportedAtISO: new Date().toISOString(),
     exportedBy: userEmail,

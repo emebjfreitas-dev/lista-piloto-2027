@@ -1,6 +1,6 @@
 {
-  "name": "Candelário Gestão — EMEB Prof. Joaquim Candelário de Freitas",
-  "description": "Candelário Gestão — Portal de Gestão Escolar, Frequência Mensal e Busca Ativa da EMEB Prof. Joaquim Candelário de Freitas (Jundiaí/SP) - Ano Letivo 2027.",
+  "name": "Lista Piloto Candelário 2027 — EMEB Prof. Joaquim Candelário de Freitas",
+  "description": "Lista Piloto Candelário 2027 — Portal de Gestão Escolar, Frequência Mensal e Busca Ativa da EMEB Prof. Joaquim Candelário de Freitas (Jundiaí/SP) - Ano Letivo 2027.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

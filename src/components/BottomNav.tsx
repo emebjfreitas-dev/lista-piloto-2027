@@ -86,8 +86,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       icon: Home,
     },
     {
-      id: 'turmas',
-      label: 'Turmas',
+      id: userRole === 'usuario' ? 'detalhes' : 'turmas',
+      label: userRole === 'usuario' ? 'Minha Turma' : 'Turmas',
       icon: Users,
     },
     ...(userRole !== 'peb2'

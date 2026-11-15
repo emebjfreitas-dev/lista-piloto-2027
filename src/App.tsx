@@ -386,6 +386,17 @@ export default function App() {
     return () => unsubQueue();
   }, []);
 
+  const prevSheetSyncStatusRef = React.useRef(instantSheetSyncStatus);
+  useEffect(() => {
+    if (prevSheetSyncStatusRef.current !== 'synced' && instantSheetSyncStatus === 'synced') {
+      toast.success('Sincronização com Planilha Oficial Concluída!', {
+        description: 'Dados enviados com sucesso para a planilha oficial e banco em nuvem.',
+        duration: 3500,
+      });
+    }
+    prevSheetSyncStatusRef.current = instantSheetSyncStatus;
+  }, [instantSheetSyncStatus]);
+
   const handleSaveAuthorizedUsers = (updatedUsers: AuthorizedUser[]) => {
     setAuthorizedUsers(updatedUsers);
     saveStoredAuthorizedUsers(updatedUsers);
@@ -657,22 +668,6 @@ export default function App() {
     };
   }, [currentScreen, currentUserEmail]);
 
-  // Keep selectedClass restricted when userRole is 'usuario'
-  useEffect(() => {
-    if (userRole === 'usuario') {
-      const allowedIds =
-        assignedClassIds.length > 0 ? assignedClassIds : [assignedClassId];
-      if (!allowedIds.includes(selectedClass.id)) {
-        const target =
-          classes.find((c) => c.id === allowedIds[0]) ||
-          classes.find((c) => c.id === assignedClassId);
-        if (target) {
-          setSelectedClass(target);
-        }
-      }
-    }
-  }, [userRole, assignedClassId, assignedClassIds, classes]);
-
   // Modal states
   const [isStudentListModalOpen, setIsStudentListModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
@@ -695,8 +690,36 @@ export default function App() {
 
   // Permission helper (respects role AND the attendance launch window: last school day + 2 first school days of next month, or exceptional override)
   const windowStatus = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
-  const allowedUsuarioClassIds =
-    assignedClassIds.length > 0 ? assignedClassIds : [assignedClassId];
+
+  const allowedUsuarioClassIds = useMemo(() => {
+    if (userRole !== 'usuario') return [];
+    // Strict PEB 1 scoping: only their assigned class, never 'all'
+    const validCandidate =
+      (assignedClassId && assignedClassId.toLowerCase() !== 'all' ? assignedClassId : null) ||
+      (assignedClassIds.find((id) => id && id.toLowerCase() !== 'all') ?? null);
+
+    if (validCandidate) {
+      const matched = classes.find(
+        (c) =>
+          c.id.toLowerCase() === validCandidate.toLowerCase() ||
+          c.name.toLowerCase() === validCandidate.toLowerCase()
+      );
+      if (matched) return [matched.id];
+      return [validCandidate];
+    }
+    return classes.length > 0 ? [classes[0].id] : ['g04a'];
+  }, [userRole, assignedClassId, assignedClassIds, classes]);
+
+  const visibleClasses = useMemo(() => {
+    if (userRole === 'admin' || userRole === 'peb2') {
+      return classes;
+    }
+    // userRole === 'usuario' (PEB 1): strictly only their own assigned class
+    const targetId = allowedUsuarioClassIds[0];
+    const found = classes.find((c) => c.id === targetId);
+    if (found) return [found];
+    return classes.length > 0 ? [classes[0]] : [];
+  }, [userRole, allowedUsuarioClassIds, classes]);
 
   const canEditClass = (classId: string): boolean => {
     if (!windowStatus.isAllowedToLaunch) return false;
@@ -705,28 +728,15 @@ export default function App() {
     return false; // 'peb2' is strictly view-only
   };
 
-  const visibleClasses = useMemo(() => {
-    if (userRole === 'admin' || userRole === 'peb2') {
-      return classes;
+  // Keep selectedClass restricted to their own class when userRole is 'usuario' (PEB 1)
+  useEffect(() => {
+    if (userRole === 'usuario') {
+      const targetClass = visibleClasses[0] || classes[0];
+      if (targetClass && selectedClass.id !== targetClass.id) {
+        setSelectedClass(targetClass);
+      }
     }
-    const normalizedAllowed = allowedUsuarioClassIds.map((id) =>
-      String(id || '').trim().toLowerCase()
-    );
-    const filtered = classes.filter((c) => {
-      const cId = String(c.id || '').trim().toLowerCase();
-      const cName = String(c.name || '').trim().toLowerCase();
-      return (
-        normalizedAllowed.includes(cId) ||
-        normalizedAllowed.includes(cName) ||
-        normalizedAllowed.some((allowed) => allowed && cName.includes(allowed))
-      );
-    });
-
-    if (filtered.length === 0) {
-      return classes.length > 0 ? [classes[0]] : classes;
-    }
-    return filtered;
-  }, [userRole, allowedUsuarioClassIds, classes]);
+  }, [userRole, visibleClasses, classes, selectedClass.id]);
 
   // Screen navigation handlers
   const handleSelectClassForDetails = (cls: ClassGroup) => {
@@ -1420,7 +1430,7 @@ export default function App() {
             teacherRoleType={activeTeacherRoleType}
             userEmail={simulatedTeacherEmail || currentUserEmail}
             userName={currentUserName}
-            classes={classes}
+            classes={userRole === 'usuario' ? visibleClasses : classes}
             assignedClassId={assignedClassId}
             assignedClassIds={assignedClassIds}
             attendanceWindowConfig={attendanceWindowConfig}
@@ -1532,7 +1542,7 @@ export default function App() {
 
         {currentScreen === 'turmas' && (
           <MinhasTurmasScreen
-            classes={classes}
+            classes={userRole === 'usuario' ? visibleClasses : classes}
             userRole={userRole}
             userEmail={simulatedTeacherEmail || currentUserEmail}
             userName={currentUserName}
@@ -1856,7 +1866,7 @@ export default function App() {
             </div>
             <h2 className="text-xl font-bold text-slate-950 break-words">Base Oficial SED 100% Integrada</h2>
             <p className="text-sm text-slate-600 leading-relaxed break-words">
-              O portal Candelário Gestão opera diretamente na base institucional da escola, com turmas e estudantes carregados com segurança máxima.
+              O portal Lista Piloto Candelário 2027 opera diretamente na base institucional da escola, com turmas e estudantes carregados com segurança máxima.
             </p>
             <button
               type="button"
