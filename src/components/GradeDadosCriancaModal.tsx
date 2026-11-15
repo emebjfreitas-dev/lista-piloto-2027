@@ -11,6 +11,7 @@ import {
   triggerConsecutiveAbsencePushNotification,
 } from '../services/pushNotificationService';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
+import { StudentAvatar } from './StudentAvatar';
 import {
   findPhotoInDiscoveredCache,
   toEmbeddableDrivePhotoUrl,
@@ -22,6 +23,7 @@ import {
   maskSensitiveText,
   getStoredLgpdConfig,
   addSecurityAuditLog,
+  getStoredClasses,
 } from '../services/db';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
@@ -151,6 +153,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   const [portraitFallbackIdx, setPortraitFallbackIdx] = useState(0);
   const [portraitImgError, setPortraitImgError] = useState(false);
   const internalPhotoInputRef = useRef<HTMLInputElement>(null);
+  const activeStudentThumbRef = useRef<HTMLButtonElement>(null);
   const [isLgpdRevealed, setIsLgpdRevealed] = useState(false);
 
   useModalScrollLock(isOpen);
@@ -285,6 +288,16 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     setPortraitFallbackIdx(0);
     setPortraitImgError(false);
   }, [student]);
+
+  useEffect(() => {
+    if (activeStudentThumbRef.current) {
+      activeStudentThumbRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  }, [draft?.id]);
 
   useEffect(() => {
     if (!isOpen || !onSelectStudent || editingKey !== null || isLightboxOpen) return;
@@ -481,14 +494,69 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     }, 2500);
   };
 
+  const detectedSiblings = React.useMemo(() => {
+    if (!draft) return [];
+    const cleanStr = (s?: string) =>
+      (s || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/^(mae|pai|responsavel|filiacao\s*\d*)\s*[:\-\u2013]\s*/i, '')
+        .trim()
+        .toUpperCase();
+
+    const myMother = cleanStr(draft.filiacao1);
+    const myFather = cleanStr(draft.filiacao2);
+
+    if (!myMother && !myFather) return [];
+
+    const allClasses = getStoredClasses();
+    const siblingMap = new Map<string, { student: Student; className: string; relation: string }>();
+
+    for (const cls of allClasses) {
+      for (const st of cls.students || []) {
+        if (st.id === draft.id) continue;
+        const stMother = cleanStr(st.filiacao1);
+        const stFather = cleanStr(st.filiacao2);
+
+        const sameMother = Boolean(myMother && stMother && (myMother === stMother || myMother.includes(stMother) || stMother.includes(myMother)));
+        const sameFather = Boolean(myFather && stFather && (myFather === stFather || myFather.includes(stFather) || stFather.includes(myFather)));
+
+        if (sameMother || sameFather) {
+          let relation = 'Mesma Família';
+          if (sameMother && sameFather) relation = 'Mesma Mãe e Pai (Irmãos)';
+          else if (sameMother) relation = 'Mesma Mãe';
+          else if (sameFather) relation = 'Mesmo Pai';
+
+          siblingMap.set(st.id, {
+            student: st,
+            className: cls.name,
+            relation,
+          });
+        }
+      }
+    }
+
+    return Array.from(siblingMap.values());
+  }, [draft]);
+
   const filteredFields = SED_GRID_FIELDS.filter((f) => {
     const matchesCat = activeCategory === 'todos' || f.category === activeCategory;
-    const valStr = String(draft[f.key] ?? '').toLowerCase();
+    const rawVal = draft[f.key];
+    const hasText =
+      rawVal !== undefined &&
+      rawVal !== null &&
+      String(rawVal).trim() !== '' &&
+      String(rawVal).trim() !== '—';
+    const valStr = String(rawVal ?? '').toLowerCase();
     const matchesSearch =
       searchField.trim() === '' ||
       f.label.toLowerCase().includes(searchField.toLowerCase()) ||
       valStr.includes(searchField.toLowerCase());
-    return matchesCat && matchesSearch;
+
+    if (searchField.trim() !== '') {
+      return matchesCat && matchesSearch && hasText;
+    }
+    return matchesCat && hasText;
   });
 
   const whatsappLinks = buildWhatsAppLinksFromPhoneString(
@@ -599,6 +667,47 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
           </div>
         </div>
 
+        {/* Carousel / Switcher dos Estudantes da Turma com Efeito Tátil Suave */}
+        {orderedList.length > 1 && onSelectStudent && (
+          <div className="px-4 sm:px-6 py-2 bg-[#f4f5f8] overflow-x-auto modal-scroll-body flex items-center gap-2 shrink-0 select-none">
+            <span className="text-[11px] font-semibold text-slate-600 shrink-0 mr-1 hidden sm:inline">
+              Estudantes:
+            </span>
+            {orderedList.map((st) => {
+              const isSelected = st.id === draft.id;
+              return (
+                <button
+                  key={st.id}
+                  ref={isSelected ? activeStudentThumbRef : undefined}
+                  type="button"
+                  onClick={() => onSelectStudent(st)}
+                  className={`shrink-0 px-2.5 py-1.5 rounded-2xl flex items-center gap-2 transition-all duration-150 ease-out cursor-pointer text-left min-w-[125px] sm:min-w-[145px] max-w-[195px] ${
+                    isSelected
+                      ? 'bg-white shadow-xs opacity-100 scale-[1.02] text-[#0b3b8c]'
+                      : 'bg-white/70 hover:bg-white opacity-80 hover:opacity-100 hover:scale-[1.03] active:scale-[0.97] active:opacity-90 text-slate-700 hover:text-slate-950 shadow-2xs'
+                  }`}
+                  title={`Nº ${st.number.toString().padStart(2, '0')} · ${st.name}`}
+                >
+                  <StudentAvatar
+                    student={st}
+                    size="xs"
+                    className="shrink-0 border-0 bg-slate-100"
+                    expandableOnClick={false}
+                  />
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <span className="text-[10px] font-semibold tabular-nums text-slate-500 block">
+                      Nº {st.number.toString().padStart(2, '0')}
+                    </span>
+                    <span className="text-xs font-semibold truncate block">
+                      {st.name}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Main Organic & Visual Profile Layout */}
         <div className="modal-scroll-body flex-1 p-4 sm:p-7 space-y-6">
           {/* BANNER DE ALERTA NO TOPO DA GRADE DE DADOS — EXCEDEU 3 FALTAS CONSECUTIVAS */}
@@ -630,19 +739,19 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
               {/* Informações Resumidas do Contato */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs min-w-0">
-                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words">
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95">
                   <span className="text-[11px] font-bold uppercase text-slate-600 block">Datas de Ausência</span>
                   <span className="font-semibold text-slate-950 block mt-0.5 break-words tabular-nums" title={datesList}>
                     {datesList}
                   </span>
                 </div>
-                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words">
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95">
                   <span className="text-[11px] font-medium uppercase text-slate-500 block">Responsável Principal</span>
                   <span className="font-semibold text-slate-900 block mt-0.5 break-words" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
                     {guardian1Info.parentesco}: {guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}
                   </span>
                 </div>
-                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words">
+                <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95">
                   <span className="text-[11px] font-medium uppercase text-slate-500 block">Status do Acompanhamento</span>
                   <span className={`font-semibold block mt-0.5 break-words ${hasFamilyFeedback ? 'text-emerald-900' : 'text-orange-950'}`}>
                     {hasFamilyFeedback ? `Feedback: "${familyFeedbackText}"` : 'Pendente de contato'}
@@ -742,7 +851,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   if (hasPhoto) setIsLightboxOpen(true);
                   else internalPhotoInputRef.current?.click();
                 }}
-                className="relative w-full flex-1 min-h-[320px] sm:min-h-[380px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#1d1d1f] to-[#2c2c2e] shadow-md flex items-center justify-center group cursor-pointer"
+                className="relative w-full flex-1 min-h-[320px] sm:min-h-[380px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#1d1d1f] to-[#2c2c2e] shadow-md flex items-center justify-center group cursor-pointer transition-all duration-150 ease-out hover:scale-[1.01] active:scale-[0.99] hover:opacity-95"
               >
                 {hasPhoto ? (
                   <>
@@ -868,7 +977,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                 {/* Cartões Visuais de Números-Chave (RA, Nascimento, Frequência e Faltas Seguidas) */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 min-w-0">
-                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 opacity-100 cursor-default">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Registro (RA)
                     </span>
@@ -877,7 +986,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 opacity-100 cursor-default">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Nascimento
                     </span>
@@ -886,7 +995,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words">
+                  <div className="rounded-2xl bg-slate-100 p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 opacity-100 cursor-default">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                       Frequência no Mês
                     </span>
@@ -902,7 +1011,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                   {/* Card Dedicado de Faltas Consecutivas (Marcas de 3, 5 e 10 dias) */}
                   <div
-                    className={`rounded-2xl p-3 shadow-2xs min-w-0 break-words ${
+                    className={`rounded-2xl p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 opacity-100 cursor-default ${
                       currentConsecutiveDaysCount >= 10
                         ? 'bg-rose-100 text-rose-950'
                         : currentConsecutiveDaysCount >= 5
@@ -958,7 +1067,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 {/* Alerta Contextual de Datas Faltosas e Retorno da Família se houver Faltas Seguidas */}
                 {isConsecutiveRisk && latestConsecutiveOccurrence && (
                   <div
-                    className={`rounded-2xl p-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+                    className={`rounded-2xl p-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs transition-all duration-150 ease-out hover:scale-[1.01] active:scale-[0.99] hover:opacity-95 ${
                       latestConsecutiveOccurrence.familyFeedback
                         ? 'bg-emerald-100 text-emerald-950'
                         : 'bg-rose-100 text-rose-950'
@@ -999,7 +1108,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onOpenStudentPdf(draft)}
-                  className={`w-full min-w-0 p-4 rounded-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all cursor-pointer shadow-xs active:scale-[0.99] ${
+                  className={`w-full min-w-0 p-4 rounded-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all duration-150 ease-out hover:scale-[1.015] active:scale-[0.985] hover:opacity-95 cursor-pointer shadow-xs ${
                     hasPdf
                       ? 'bg-[#0052cc] hover:bg-[#0b3b8c] text-white'
                       : 'bg-rose-50 hover:bg-rose-100 text-rose-950'
@@ -1091,6 +1200,32 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     );
                   })()}
                 </div>
+
+                {/* Irmãos Detectados na Escola (mediante nome da mãe, pai ou de ambos) */}
+                {detectedSiblings.length > 0 && (
+                  <div className="pt-2 border-t border-slate-100">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 block mb-1.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[15px]">family_restroom</span>
+                      <span>Irmãos Identificados na Escola ({detectedSiblings.length})</span>
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {detectedSiblings.map((sib, idx) => (
+                        <div
+                          key={`sib-${idx}`}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-950 text-xs font-semibold flex items-center gap-2 shadow-2xs"
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-emerald-700">child_care</span>
+                          <div>
+                            <span>{sib.student.name}</span>
+                            <span className="text-[10px] text-emerald-800 font-normal block">
+                              Turma {sib.className} · {sib.relation}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Linha de Telefones com Botões Diretos de WhatsApp */}
                 <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5">
@@ -1295,12 +1430,12 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           setEditingKey(field.key);
                         }
                       }}
-                      className={`p-2.5 rounded-xl transition-all shadow-2xs ${
+                      className={`p-2.5 rounded-xl shadow-2xs transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 ${
                         isEditingThis
-                          ? 'bg-white ring-2 ring-[#0071e3]'
+                          ? 'bg-white ring-2 ring-[#0071e3] scale-[1.01] opacity-100'
                           : canEdit
-                          ? 'bg-slate-100 hover:bg-slate-200 cursor-pointer'
-                          : 'bg-slate-100'
+                          ? 'bg-slate-100 hover:bg-slate-200 cursor-pointer opacity-100'
+                          : 'bg-slate-100 opacity-100'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1">
@@ -1411,7 +1546,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       {extraEntries.map(([extraKey, extraVal]) => (
                         <div
                           key={`extra-${extraKey}`}
-                          className="p-2.5 rounded-xl bg-[#eef2f7] shadow-2xs min-w-0 break-words"
+                          className="p-2.5 rounded-xl bg-[#eef2f7] shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95"
                         >
                           <span className="text-xs font-semibold text-slate-600 uppercase tracking-tight block break-words">
                             {extraKey}
