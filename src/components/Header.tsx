@@ -29,6 +29,7 @@ import {
 import { APP_LOGO_URL, APP_LOGO_FALLBACK_URL, SCHOOL_NAME } from '../data/mockData';
 import { StudentAvatar } from './StudentAvatar';
 import { PushNotificationCenter } from './PushNotificationCenter';
+import { PWAInstallButton } from './PWAInstallButton';
 import {
   subscribeToSyncStatus,
   SyncStatusSnapshot,
@@ -486,6 +487,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Zona 3: Ações Essenciais & Perfil (Sem ícone de nuvem) */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Instalação do Aplicativo (PWA) */}
+            <PWAInstallButton variant="header" />
+
             {/* Busca Rápida */}
             {onOpenSpotlightSearch && (
               <button
@@ -596,6 +600,8 @@ export const Header: React.FC<HeaderProps> = ({
                         <span>Acessos &amp; Segurança</span>
                       </button>
                     )}
+
+                    <PWAInstallButton variant="menu" />
 
                     <button
                       type="button"

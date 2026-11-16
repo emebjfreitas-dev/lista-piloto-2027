@@ -1,12 +1,136 @@
-/* Service Worker Oficial — EMEB Joaquim Candelário de Freitas (FCM Web Push & Alertas de Fechamento) */
-const SW_VERSION = 'candelario-fcm-sw-v3';
+/* Service Worker Oficial — EMEB Joaquim Candelário de Freitas (PWA Offline & Web Push) */
+const SW_VERSION = 'candelario-pwa-v4';
+const CACHE_NAME = 'candelario-offline-v4';
 
-self.addEventListener('install', () => {
-  self.skipWaiting();
+const PRECACHE_ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './favicon.ico',
+  './favicon.svg',
+  './favicon-32x32.png',
+  './favicon-16x16.png',
+  './apple-touch-icon.png',
+  './pwa-192x192.png',
+  './pwa-512x512.png',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => {
+        return cache.addAll(PRECACHE_ASSETS).catch((err) => {
+          console.warn('Aviso ao pré-carregar cache PWA:', err);
+        });
+      })
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => {
+        return Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_NAME) {
+              return caches.delete(key);
+            }
+          })
+        );
+      })
+      .then(() => self.clients.claim())
+  );
+});
+
+/**
+ * Estratégia de Cache Offline:
+ * - Requisições para API (/api/), Firebase, Google Docs/Sheets e autenticação vão direto para a rede (sem cache)
+ * - Navegações HTML: Network First com fallback para index.html em cache
+ * - Assets estáticos (JS, CSS, imagens locais, fontes): Stale-While-Revalidate / Cache First
+ */
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+
+  // Aceita apenas requisições GET
+  if (req.method !== 'GET') return;
+
+  const url = new URL(req.url);
+
+  // Ignora APIs, WebSocket, extensões de navegador e serviços externos em nuvem
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.hostname.includes('firestore.googleapis.com') ||
+    url.hostname.includes('identitytoolkit.googleapis.com') ||
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('google.com') ||
+    url.protocol.startsWith('chrome-extension')
+  ) {
+    return;
+  }
+
+  // Requisições de navegação (páginas HTML)
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((networkRes) => {
+          if (networkRes && networkRes.status === 200) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
+          return networkRes;
+        })
+        .catch(async () => {
+          const cached = await caches.match(req);
+          if (cached) return cached;
+          const fallback =
+            (await caches.match('./index.html')) ||
+            (await caches.match('/index.html')) ||
+            (await caches.match('./'));
+          if (fallback) return fallback;
+          return new Response('Modo Offline — Lista Piloto Candelário 2027', {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          });
+        })
+    );
+    return;
+  }
+
+  // Assets estáticos da mesma origem (JS, CSS, imagens, fontes)
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(req).then((cachedRes) => {
+        if (cachedRes) {
+          // Revalida em segundo plano (Stale-While-Revalidate)
+          fetch(req)
+            .then((networkRes) => {
+              if (networkRes && networkRes.status === 200) {
+                caches.open(CACHE_NAME).then((cache) => cache.put(req, networkRes));
+              }
+            })
+            .catch(() => {});
+          return cachedRes;
+        }
+
+        return fetch(req)
+          .then((networkRes) => {
+            if (networkRes && networkRes.status === 200) {
+              const clone = networkRes.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+            }
+            return networkRes;
+          })
+          .catch(() => {
+            // Fallback para imagens
+            if (req.destination === 'image') {
+              return caches.match('./pwa-192x192.png');
+            }
+          });
+      })
+    );
+  }
 });
 
 /**

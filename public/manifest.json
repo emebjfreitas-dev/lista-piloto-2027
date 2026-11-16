@@ -1,31 +1,45 @@
 {
-  "id": "/",
-  "name": "ListaPilotoCandelario2027 — EMEB Prof. Joaquim Candelário de Freitas",
-  "short_name": "ListaPilotoCandelario2027",
-  "description": "ListaPilotoCandelario2027 — Gestão de Frequência Escolar, Busca Ativa e Fichas Informativas — EMEB Prof. Joaquim Candelário de Freitas.",
-  "theme_color": "#f5f5f7",
-  "background_color": "#f5f5f7",
+  "id": "./",
+  "name": "Lista Piloto Candelário 2027",
+  "short_name": "Lista Piloto",
+  "description": "Gestão de Frequência Escolar, Busca Ativa e Fichas Informativas — EMEB Prof. Joaquim Candelário de Freitas.",
+  "theme_color": "#002b5c",
+  "background_color": "#002b5c",
   "display": "standalone",
-  "start_url": "/",
-  "scope": "/",
+  "orientation": "any",
+  "start_url": "./",
+  "scope": "./",
+  "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/pwa-192x192.png",
+      "src": "./pwa-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa-512x512.png",
+      "src": "./pwa-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

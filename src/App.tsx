@@ -86,6 +86,7 @@ import { SpotlightCommandModal } from './components/SpotlightCommandModal';
 import { AtualizarDadosJsonModal } from './components/AtualizarDadosJsonModal';
 import { AdminArrasteFotosModal } from './components/AdminArrasteFotosModal';
 import { AdminArrastePdfsModal } from './components/AdminArrastePdfsModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import { Toaster, toast } from 'sonner';
 
 const ADMIN_ONLY_SCREENS: ScreenType[] = [
@@ -2247,6 +2248,9 @@ export default function App() {
           else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
         }}
       />
+
+      {/* Offline Connectivity Indicator */}
+      <OfflineIndicator />
 
       {/* Global Notifications with Sonner (Open-source, light & accessible) */}
       <Toaster
