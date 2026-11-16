@@ -637,7 +637,7 @@ export default function App() {
         if (document.visibilityState === 'visible') {
           syncFromBackendServer();
         }
-      }, 60000);
+      }, 300000);
     }
 
     // Ensure Cloud Firestore transitions to the clean zero-data epoch on authenticated institutional sign-in
