@@ -1362,7 +1362,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     });
     setIsExportXlsModalOpen(false);
     setExportSuccessToast(
-      `Planilha_${classGroup.name.replace(/\s+/g, '_')}_2027.${exportFileFormat} baixada com ${selectedColumnIds.length} colunas!`
+      `Relatorio_${classGroup.name.replace(/\s+/g, '_')}_2027.${exportFileFormat} baixado com ${selectedColumnIds.length} colunas!`
     );
     window.setTimeout(() => setExportSuccessToast(null), 4000);
   };
@@ -2296,7 +2296,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                       </span>
                     </div>
                     <h2 className="text-[18px] sm:text-[20px] font-semibold text-[#0f172a] tracking-[-0.022em] leading-tight mt-0.5 break-words">
-                      Planilha · {classGroup.name}
+                      Exportação · {classGroup.name}
                     </h2>
                   </div>
                 </div>
@@ -2710,7 +2710,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               {/* Rodapé do Modal */}
               <div className="bg-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
                 <div className="text-[12px] text-[#64748b] font-medium tabular-nums">
-                  Planilha_{classGroup.name.replace(/\s+/g, '_')}_2027.{exportFileFormat}
+                  Relatorio_{classGroup.name.replace(/\s+/g, '_')}_2027.{exportFileFormat}
                 </div>
 
                 <div className="flex items-center gap-2">

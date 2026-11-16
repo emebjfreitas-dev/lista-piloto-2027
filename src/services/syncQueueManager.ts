@@ -12,12 +12,15 @@ import {
   enqueuePendingSyncOperation,
   markSyncOperationSuccess,
   setSyncingActiveState,
+  saveClassesToFirestoreCloud,
   saveConfigMetaToFirestoreCloud,
 } from './firebaseSync';
 import {
   writeAttendanceOnlyToGoogleSheet,
   syncAuthorizedUsersToGoogleSheet,
   syncGenderDictionaryToGoogleSheet,
+  getSavedSpreadsheetInfo,
+  getDriveAuthState,
 } from './googleSheetsApi';
 import {
   NameGenderEntry,
@@ -334,7 +337,7 @@ class CentralizedSyncQueueManager {
   }
 
   /**
-   * Enqueues an AuthorizedUsers & AccessSessionLogs write to Google Sheets.
+   * Enqueues an AuthorizedUsers & AccessSessionLogs write to Cloud Firestore (and optional Google Sheet if linked).
    * Coalesces under `users:all` so concurrent heartbeats or admin edits never overlap or duplicate rows.
    */
   public enqueueUsersAccessWrite(params?: {
@@ -346,7 +349,7 @@ class CentralizedSyncQueueManager {
     const dedupeKey = 'users:all';
     const existingIdx = this.queue.findIndex((t) => t.dedupeKey === dedupeKey);
     const description =
-      params?.description || 'Sincronização de Acessos e Sessões na Planilha Google';
+      params?.description || 'Sincronização de Acessos e Sessões na Nuvem da Escola';
 
     if (existingIdx >= 0) {
       const prev = this.queue[existingIdx];
@@ -457,28 +460,56 @@ class CentralizedSyncQueueManager {
         this.persistToStorage();
 
         try {
+          const hasLinkedSheet = Boolean(
+            getSavedSpreadsheetInfo().spreadsheetId && getDriveAuthState().hasValidToken
+          );
+
           if (taskSnapshot.category === 'users_access') {
             const latestUsers = getStoredAuthorizedUsers();
             const latestLogs = getStoredAccessSessionLogs();
-            const ok = await syncAuthorizedUsersToGoogleSheet(latestUsers, latestLogs);
-            if (!ok) {
+            const firestoreOk = await saveConfigMetaToFirestoreCloud({
+              authorizedUsers: latestUsers,
+              accessSessionLogs: latestLogs,
+            });
+            if (hasLinkedSheet) {
+              await syncAuthorizedUsersToGoogleSheet(latestUsers, latestLogs).catch(() => false);
+            }
+            if (!firestoreOk) {
               throw new Error(
-                'Sincronização de acessos pendente — aguardando reconexão ou planilha.'
+                'Sincronização de acessos pendente — aguardando conexão com o banco na nuvem.'
               );
             }
           } else if (taskSnapshot.category === 'gender_dictionary') {
             const latestClasses = getStoredClasses();
             const latestEntries = getStoredNameGenderEntries();
-            await saveConfigMetaToFirestoreCloud({ genderDictionary: latestEntries });
-            await syncGenderDictionaryToGoogleSheet(latestClasses, latestEntries);
+            const firestoreOk = await saveConfigMetaToFirestoreCloud({
+              genderDictionary: latestEntries,
+            });
+            if (hasLinkedSheet) {
+              await syncGenderDictionaryToGoogleSheet(latestClasses, latestEntries).catch(() => false);
+            }
+            if (!firestoreOk) {
+              throw new Error(
+                'Sincronização do dicionário pendente — aguardando conexão com a nuvem.'
+              );
+            }
           } else {
             // Always read the latest persisted state from local storage so we write an atomic, up-to-date snapshot
             const latestClasses = getStoredClasses();
+            const firestoreOk = await saveClassesToFirestoreCloud(
+              latestClasses,
+              taskSnapshot.updatedAtMs || Date.now()
+            );
             const targetClass =
               latestClasses.find((c) => c.id === taskSnapshot.classId) ||
               latestClasses[0];
-            if (targetClass) {
-              await writeAttendanceOnlyToGoogleSheet(targetClass, latestClasses);
+            if (targetClass && hasLinkedSheet) {
+              await writeAttendanceOnlyToGoogleSheet(targetClass, latestClasses).catch(() => undefined);
+            }
+            if (!firestoreOk) {
+              throw new Error(
+                'Falha ao salvar dados na nuvem da escola — retentativa agendada.'
+              );
             }
           }
 
@@ -510,7 +541,7 @@ class CentralizedSyncQueueManager {
           const nextAttempts = (taskSnapshot.attempts || 0) + 1;
           const backoffMs = this.computeExponentialBackoffMs(nextAttempts);
           const errorMessage =
-            err?.message || 'Falha de comunicação com Google Sheets — retentativa agendada';
+            err?.message || 'Falha de comunicação com a nuvem — retentativa agendada';
 
           const currentIdx = this.queue.findIndex(
             (t) => t.dedupeKey === taskSnapshot.dedupeKey

@@ -43,7 +43,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           authorizedUsers.find((u) => u.email.trim().toLowerCase() === ADMIN_OFFICIAL_EMAIL) ||
           INITIAL_AUTHORIZED_USERS.find((u) => u.email.trim().toLowerCase() === ADMIN_OFFICIAL_EMAIL) || {
             id: 'usr-admin-emeb',
-            name: 'EMEB Prof. Joaquim Candelário de Freitas (Direção)',
+            name: 'Equipe Administrativa',
             email: ADMIN_OFFICIAL_EMAIL,
             role: 'admin' as const,
             teacherRoleType: 'admin' as const,
@@ -90,7 +90,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         authorizedUsers.find((u) => u.email.trim().toLowerCase() === ADMIN_OFFICIAL_EMAIL) ||
         INITIAL_AUTHORIZED_USERS.find((u) => u.email.trim().toLowerCase() === ADMIN_OFFICIAL_EMAIL) || {
           id: 'usr-admin-emeb',
-          name: 'EMEB Prof. Joaquim Candelário de Freitas (Direção)',
+          name: 'Equipe Administrativa',
           email: ADMIN_OFFICIAL_EMAIL,
           role: 'admin' as const,
           teacherRoleType: 'admin' as const,
@@ -173,11 +173,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </svg>
             )}
           </span>
-          <span>{loading ? 'Conectando...' : 'Entrar com Google Workspace'}</span>
+          <span>{loading ? 'Conectando...' : 'Entrar com minha conta Google'}</span>
         </button>
 
-        <p className="text-xs text-slate-500 mt-5 font-medium text-balance break-words leading-relaxed max-w-[32ch]">
-          Acesso restrito a contas institucionais autorizadas
+        <p className="text-xs text-slate-600 mt-5 font-medium text-balance break-words leading-relaxed max-w-[34ch]">
+          Use sua conta Google{' '}
+          <span className="font-bold text-[#0b3b8c] select-all">@educacao.jundiai.sp.gov.br</span>{' '}
+          autorizada
         </p>
 
         {errorMsg && (

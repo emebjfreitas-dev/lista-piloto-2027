@@ -1,11 +1,14 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
   collection,
   doc,
+  getDoc,
   getDocs,
   getDocFromServer,
   setDoc,
+  deleteDoc,
   writeBatch,
   onSnapshot,
 } from 'firebase/firestore';
@@ -22,6 +25,8 @@ import {
   NameGenderEntry,
   saveStoredNameGenderEntries,
 } from '../utils/genderDictionary';
+
+export const CLEAN_DB_RESET_EPOCH_ID = 'clean_zero_data_2026_11_16_v1';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
@@ -259,13 +264,141 @@ export const saveClassesToFirestoreCloud = async (
     const metaRef = doc(firestoreDb, 'school_meta_2027', 'state');
     batch.set(
       metaRef,
-      { classesUpdatedAtMs: updatedAtMs, updatedAtISO: new Date(updatedAtMs).toISOString() },
+      {
+        updatedAtMs,
+        classesUpdatedAtMs: updatedAtMs,
+        updatedAtISO: new Date(updatedAtMs).toISOString(),
+        cleanResetEpochId: CLEAN_DB_RESET_EPOCH_ID,
+      },
       { merge: true }
     );
     await batch.commit();
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'school_classes_2027');
+    return false;
+  }
+};
+
+let isWipingFirestoreInFlight = false;
+
+/**
+ * Wipes ONLY school data in Cloud Firestore (students, absences, notices, logs, PDF/photo caches, alerts)
+ * while preserving institutional accounts (authorizedUsers), attendance window, and Google Drive links.
+ */
+export const wipeFirestoreSchoolDataOnly = async (
+  baseClasses: ClassGroup[],
+  epochId: string = CLEAN_DB_RESET_EPOCH_ID
+): Promise<boolean> => {
+  const auth = getAuth(app);
+  if (!auth.currentUser) {
+    return false;
+  }
+  if (isWipingFirestoreInFlight) {
+    return false;
+  }
+  isWipingFirestoreInFlight = true;
+  try {
+    const nowMs = Date.now();
+    const zeroedClasses: ClassGroup[] = baseClasses.map((c) => ({
+      ...c,
+      students: [],
+      totalStudents: 0,
+      monthlyAbsences: 0,
+      presenceRate: 0,
+      statusText: 'Aguardando importação de estudantes',
+      isPending: false,
+      weeklyPerformance: [],
+      pedagogicalNotes: '',
+      updatedAtMs: nowMs,
+    }));
+
+    const validClassIds = new Set(zeroedClasses.map((c) => c.id));
+    const existingClassesSnap = await getDocs(collection(firestoreDb, 'school_classes_2027'));
+
+    const batch = writeBatch(firestoreDb);
+    zeroedClasses.forEach((cls) => {
+      if (!cls || !cls.id) return;
+      const ref = doc(firestoreDb, 'school_classes_2027', cls.id);
+      batch.set(ref, cls);
+    });
+
+    const configRef = doc(firestoreDb, 'school_meta_2027', 'config');
+    batch.set(
+      configRef,
+      {
+        updatedAtMs: nowMs,
+        accessSessionLogs: [],
+        schoolNotices: [],
+        discoveredNominalPdfs: [],
+        discoveredDrivePhotos: [],
+        genderDictionary: [],
+        cleanResetEpochId: epochId,
+      },
+      { merge: true }
+    );
+
+    const stateRef = doc(firestoreDb, 'school_meta_2027', 'state');
+    batch.set(
+      stateRef,
+      {
+        updatedAtMs: nowMs,
+        classesUpdatedAtMs: nowMs,
+        updatedAtISO: new Date(nowMs).toISOString(),
+        cleanResetEpochId: epochId,
+      },
+      { merge: true }
+    );
+
+    await batch.commit();
+
+    // Clean up any non-matrix class documents or FCM alerts if user is Admin
+    const deletePromises: Promise<void>[] = [];
+    existingClassesSnap.forEach((d) => {
+      if (!validClassIds.has(d.id)) {
+        deletePromises.push(deleteDoc(d.ref).catch(() => {}));
+      }
+    });
+    try {
+      const alertsSnap = await getDocs(collection(firestoreDb, 'school_fcm_alerts_2027'));
+      alertsSnap.forEach((d) => {
+        deletePromises.push(deleteDoc(d.ref).catch(() => {}));
+      });
+    } catch {
+      // ignore if alerts collection empty or restricted
+    }
+    if (deletePromises.length > 0) {
+      await Promise.all(deletePromises);
+    }
+
+    return true;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'school_classes_2027');
+    return false;
+  } finally {
+    isWipingFirestoreInFlight = false;
+  }
+};
+
+/**
+ * Ensures Cloud Firestore has transitioned past CLEAN_DB_RESET_EPOCH_ID when signed in.
+ */
+export const ensureFirestoreCleanEpoch = async (
+  baseClasses: ClassGroup[]
+): Promise<boolean> => {
+  const auth = getAuth(app);
+  if (!auth.currentUser) {
+    return false;
+  }
+  try {
+    const stateSnap = await getDoc(doc(firestoreDb, 'school_meta_2027', 'state'));
+    const currentEpoch = stateSnap.exists() ? stateSnap.data()?.cleanResetEpochId : undefined;
+    if (currentEpoch !== CLEAN_DB_RESET_EPOCH_ID) {
+      return await wipeFirestoreSchoolDataOnly(baseClasses, CLEAN_DB_RESET_EPOCH_ID);
+    }
+    return true;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'school_meta_2027/state');
     return false;
   }
 };
@@ -324,24 +457,13 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
   discoveredNominalPdfs?: any[];
   discoveredDrivePhotos?: any[];
   genderDictionary?: NameGenderEntry[];
+  cleanResetEpochId?: string;
 } | null> => {
   try {
     const [classesSnap, metaSnap] = await Promise.all([
       getDocs(collection(firestoreDb, 'school_classes_2027')),
       getDocs(collection(firestoreDb, 'school_meta_2027')),
     ]);
-
-    const classes: ClassGroup[] = [];
-    let maxClassUpdatedAt = 0;
-    classesSnap.forEach((d) => {
-      const data = d.data() as ClassGroup;
-      if (data && data.id && Array.isArray(data.students)) {
-        classes.push(data);
-        if ((data.updatedAtMs || 0) > maxClassUpdatedAt) {
-          maxClassUpdatedAt = data.updatedAtMs || 0;
-        }
-      }
-    });
 
     let configData: Record<string, any> = {};
     let stateData: Record<string, any> = {};
@@ -350,7 +472,23 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
       if (d.id === 'state') stateData = d.data() || {};
     });
 
-    if (Array.isArray(configData.genderDictionary) && configData.genderDictionary.length > 0) {
+    const isCleanEpoch = stateData.cleanResetEpochId === CLEAN_DB_RESET_EPOCH_ID;
+
+    const classes: ClassGroup[] = [];
+    let maxClassUpdatedAt = 0;
+    if (isCleanEpoch) {
+      classesSnap.forEach((d) => {
+        const data = d.data() as ClassGroup;
+        if (data && data.id && Array.isArray(data.students)) {
+          classes.push(data);
+          if ((data.updatedAtMs || 0) > maxClassUpdatedAt) {
+            maxClassUpdatedAt = data.updatedAtMs || 0;
+          }
+        }
+      });
+    }
+
+    if (isCleanEpoch && Array.isArray(configData.genderDictionary) && configData.genderDictionary.length > 0) {
       saveStoredNameGenderEntries(configData.genderDictionary);
     }
 
@@ -367,13 +505,14 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
       classes: classes.length > 0 ? classes : undefined,
       classesUpdatedAtMs,
       authorizedUsers: configData.authorizedUsers,
-      accessSessionLogs: configData.accessSessionLogs,
+      accessSessionLogs: isCleanEpoch ? configData.accessSessionLogs : [],
       attendanceWindowConfig: configData.attendanceWindowConfig,
-      schoolNotices: configData.schoolNotices,
+      schoolNotices: isCleanEpoch ? configData.schoolNotices : [],
       cloudLinks: configData.cloudLinks,
-      discoveredNominalPdfs: configData.discoveredNominalPdfs,
-      discoveredDrivePhotos: configData.discoveredDrivePhotos,
-      genderDictionary: configData.genderDictionary,
+      discoveredNominalPdfs: isCleanEpoch ? configData.discoveredNominalPdfs : [],
+      discoveredDrivePhotos: isCleanEpoch ? configData.discoveredDrivePhotos : [],
+      genderDictionary: isCleanEpoch ? configData.genderDictionary : [],
+      cleanResetEpochId: stateData.cleanResetEpochId,
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, 'school_classes_2027');
@@ -395,8 +534,52 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
   }) => void;
 }): (() => void) => {
   const unsubs: Array<() => void> = [];
+  let isFirestoreCleanEpochConfirmed = false;
+  let pendingClasses: { classes: ClassGroup[]; updatedAtMs: number } | null = null;
+  let pendingMetaData: Record<string, any> | null = null;
+
+  const flushMetaConfig = (data: Record<string, any>) => {
+    const cleanOnly = isFirestoreCleanEpochConfirmed;
+    if (cleanOnly && Array.isArray(data.genderDictionary) && data.genderDictionary.length > 0) {
+      saveStoredNameGenderEntries(data.genderDictionary);
+    }
+    if (callbacks.onMetaConfigUpdate) {
+      callbacks.onMetaConfigUpdate({
+        authorizedUsers: data.authorizedUsers,
+        accessSessionLogs: cleanOnly ? data.accessSessionLogs : [],
+        attendanceWindowConfig: data.attendanceWindowConfig,
+        schoolNotices: cleanOnly ? data.schoolNotices : [],
+        cloudLinks: data.cloudLinks,
+        discoveredNominalPdfs: cleanOnly ? data.discoveredNominalPdfs : [],
+        discoveredDrivePhotos: cleanOnly ? data.discoveredDrivePhotos : [],
+        genderDictionary: cleanOnly ? data.genderDictionary : [],
+      });
+    }
+  };
 
   try {
+    const unsubState = onSnapshot(
+      doc(firestoreDb, 'school_meta_2027', 'state'),
+      (stateSnap) => {
+        const data = stateSnap.exists() ? stateSnap.data() || {} : {};
+        isFirestoreCleanEpochConfirmed = data.cleanResetEpochId === CLEAN_DB_RESET_EPOCH_ID;
+        if (isFirestoreCleanEpochConfirmed) {
+          if (pendingClasses && callbacks.onClassesUpdate) {
+            callbacks.onClassesUpdate(pendingClasses.classes, pendingClasses.updatedAtMs);
+            pendingClasses = null;
+          }
+          if (pendingMetaData) {
+            flushMetaConfig(pendingMetaData);
+            pendingMetaData = null;
+          }
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, 'school_meta_2027/state');
+      }
+    );
+    unsubs.push(unsubState);
+
     const unsubClasses = onSnapshot(
       collection(firestoreDb, 'school_classes_2027'),
       (snap) => {
@@ -412,8 +595,13 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
             }
           }
         });
-        if (classes.length > 0 && callbacks.onClassesUpdate) {
-          callbacks.onClassesUpdate(classes, maxUpdatedAt || Date.now());
+        if (classes.length > 0) {
+          const updatedAtMs = maxUpdatedAt || Date.now();
+          if (isFirestoreCleanEpochConfirmed) {
+            callbacks.onClassesUpdate?.(classes, updatedAtMs);
+          } else {
+            pendingClasses = { classes, updatedAtMs };
+          }
         }
       },
       (error) => {
@@ -427,21 +615,8 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
       (docSnap) => {
         if (!docSnap.exists()) return;
         const data = docSnap.data() || {};
-        if (Array.isArray(data.genderDictionary) && data.genderDictionary.length > 0) {
-          saveStoredNameGenderEntries(data.genderDictionary);
-        }
-        if (callbacks.onMetaConfigUpdate) {
-          callbacks.onMetaConfigUpdate({
-            authorizedUsers: data.authorizedUsers,
-            accessSessionLogs: data.accessSessionLogs,
-            attendanceWindowConfig: data.attendanceWindowConfig,
-            schoolNotices: data.schoolNotices,
-            cloudLinks: data.cloudLinks,
-            discoveredNominalPdfs: data.discoveredNominalPdfs,
-            discoveredDrivePhotos: data.discoveredDrivePhotos,
-            genderDictionary: data.genderDictionary,
-          });
-        }
+        pendingMetaData = isFirestoreCleanEpochConfirmed ? null : data;
+        flushMetaConfig(data);
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, 'school_meta_2027/config');

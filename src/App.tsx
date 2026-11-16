@@ -31,11 +31,13 @@ import {
   addSecurityAuditLog,
   getStoredLgpdConfig,
 } from './services/db';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
   subscribeToFirestoreRealtimeState,
   subscribeToSyncStatus,
   SyncStatusSnapshot,
   saveClassesToFirestoreCloud,
+  ensureFirestoreCleanEpoch,
 } from './services/firebaseSync';
 import {
   SyncQueueManager,
@@ -45,7 +47,7 @@ import {
   probeBackendAvailability,
   isBackendApiAvailable,
 } from './services/apiEnvironment';
-import { OFFICIAL_OCTOBER_DAYS } from './data/mockData';
+import { OFFICIAL_OCTOBER_DAYS, INITIAL_CLASSES } from './data/mockData';
 import { getClassAttendanceMetrics, haveClassesChanged } from './utils/attendanceRules';
 import {
   getAccessToken,
@@ -250,11 +252,19 @@ export default function App() {
   const [currentUserEmail, setCurrentUserEmail] = useState<string>(
     initialSavedSession?.email || 'emebjfreitas@jundiai.sp.gov.br'
   );
-  const [currentUserName, setCurrentUserName] = useState<string>(
-    matchedInitialUser?.name ||
-      initialSavedSession?.name ||
-      'EMEB Professor Joaquim Candelário de Freitas (Direção / Admin)'
-  );
+  const [currentUserName, setCurrentUserName] = useState<string>(() => {
+    const email = initialSavedSession?.email || 'emebjfreitas@jundiai.sp.gov.br';
+    if (email.trim().toLowerCase().startsWith('emebjfreitas')) {
+      return 'Equipe Administrativa';
+    }
+    return matchedInitialUser?.name || initialSavedSession?.name || 'Equipe Administrativa';
+  });
+
+  useEffect(() => {
+    if (currentUserEmail.trim().toLowerCase().startsWith('emebjfreitas')) {
+      setCurrentUserName('Equipe Administrativa');
+    }
+  }, [currentUserEmail]);
   const [userRole, setUserRole] = useState<UserRole>(effectiveInitialRole);
   const [assignedClassId, setAssignedClassId] = useState<string>(
     effectiveInitialAssignedClassId
@@ -473,8 +483,8 @@ export default function App() {
   const prevSheetSyncStatusRef = React.useRef(instantSheetSyncStatus);
   useEffect(() => {
     if (prevSheetSyncStatusRef.current !== 'synced' && instantSheetSyncStatus === 'synced') {
-      toast.success('Sincronização com Planilha Oficial Concluída!', {
-        description: 'Dados enviados com sucesso para a planilha oficial e banco em nuvem.',
+      toast.success('Sincronização com a Nuvem Concluída!', {
+        description: 'Alterações salvas com segurança no banco de dados da escola.',
         duration: 3500,
       });
     }
@@ -606,7 +616,7 @@ export default function App() {
         });
       }
 
-      if (shared.accessSessionLogs && shared.accessSessionLogs.length > 0) {
+      if (Array.isArray(shared.accessSessionLogs)) {
         setAccessSessionLogs(shared.accessSessionLogs);
       }
 
@@ -628,6 +638,19 @@ export default function App() {
           syncFromBackendServer();
         }
       }, 60000);
+    }
+
+    // Ensure Cloud Firestore transitions to the clean zero-data epoch on authenticated institutional sign-in
+    let unsubAuthEpoch: (() => void) | undefined;
+    try {
+      const auth = getAuth();
+      unsubAuthEpoch = onAuthStateChanged(auth, (fbUser) => {
+        if (fbUser && active) {
+          void ensureFirestoreCleanEpoch(INITIAL_CLASSES);
+        }
+      });
+    } catch {
+      // ignore auth listener setup errors when Firebase auth is unavailable
     }
 
     // Instant <200ms Real-Time Push via Cloud Firestore onSnapshot
@@ -660,7 +683,7 @@ export default function App() {
           setSchoolNotices(cfg.schoolNotices);
           saveStoredSchoolNotices(cfg.schoolNotices);
         }
-        if (Array.isArray(cfg.accessSessionLogs) && cfg.accessSessionLogs.length > 0) {
+        if (Array.isArray(cfg.accessSessionLogs)) {
           setAccessSessionLogs(cfg.accessSessionLogs);
           saveStoredAccessSessionLogs(cfg.accessSessionLogs);
         }
@@ -670,6 +693,7 @@ export default function App() {
     return () => {
       active = false;
       if (pollId !== null) window.clearInterval(pollId);
+      if (unsubAuthEpoch) unsubAuthEpoch();
       unsubFirestore();
     };
   }, []);
@@ -678,12 +702,15 @@ export default function App() {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (
+        e.key === 'emeb_candelario_authorized_users_2027_v4' ||
         e.key === 'emeb_candelario_authorized_users_2027_v3' ||
         e.key === 'emeb_candelario_authorized_users_2027_v2'
       ) {
         const freshUsers = getStoredAuthorizedUsers();
         setAuthorizedUsers(freshUsers);
       } else if (
+        e.key === 'emeb_candelario_sed_classes_2027_v8' ||
+        e.key === 'emeb_candelario_sed_classes_2027_v7' ||
         e.key === 'emeb_candelario_sed_classes_2027_v6' ||
         e.key === 'emeb_candelario_sed_classes_2027_v5' ||
         e.key === 'emeb_candelario_discovered_drive_photos_2027_v1'
@@ -1138,7 +1165,7 @@ export default function App() {
       frequencia_mensal: 'Informar Faltas do Mês',
       faltas_consecutivas: 'Faltas Consecutivas',
       bolsa_familia: 'Bolsa Família',
-      planilha: '3. Planilha & Fotos',
+      planilha: '3. Nuvem, Drive & Fotos',
       dias_letivos: '4. 200 Dias',
       usuarios_acesso: '5. Acessos',
       resumo: 'Resumo Mensal',
@@ -1363,7 +1390,7 @@ export default function App() {
     })();
 
     toast.promise(syncPromise, {
-      loading: 'Sincronizando com Google Sheets & Google Drive...',
+      loading: 'Sincronizando com a Nuvem e Google Drive...',
       success: 'Dados sincronizados com sucesso!',
       error: 'Não foi possível sincronizar no momento. Tente novamente.',
     });
@@ -1392,7 +1419,7 @@ export default function App() {
             : currentScreen === 'resumo'
             ? 'Fechamento'
             : currentScreen === 'planilha'
-            ? 'Planilha Oficial'
+            ? 'Nuvem & Drive'
             : currentScreen === 'usuarios_acesso'
             ? 'Professores & Acessos'
             : currentScreen === 'diagnostico_bd'

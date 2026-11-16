@@ -276,7 +276,7 @@ export function runSchoolDataDiagnostics(
         currentValue: `Status: ${syncStatus.status || 'Erro'}`,
         expectedValue: 'Sincronizado (synced)',
         description: `Há falha registrada na sincronização com Firebase: "${syncStatus.lastError || 'Conexão instável'}"`,
-        suggestedAction: 'Verificar conexão e tocar em Sincronizar Tudo na tela da Planilha Google.',
+        suggestedAction: 'Verificar conexão e tocar em Sincronizar Tudo na tela Nuvem & Google Drive.',
         firebaseStatus: 'pending',
       });
     } else if (syncStatus.pendingCount && syncStatus.pendingCount > 0) {
@@ -392,7 +392,7 @@ export function buildDiagnosticoInconsistenciasSheetValues(
         'TODOS OS CAMPOS CADASTRAIS',
         'DADOS CONFORMES',
         'CONFORME PROTOCOLO SME',
-        'Nenhuma inconsistência detectada. Dados do App, Firestore Firebase e Google Sheets operando em perfeita sincronia.',
+        'Nenhuma inconsistência detectada. Dados do App, Firestore Firebase e Google Drive operando em perfeita sincronia.',
         '100% SINCRONIZADO',
         nowStr,
       ],

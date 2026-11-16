@@ -1,6 +1,5 @@
 import { ClassGroup, Student, GoogleSheetConfig, SheetRowData, SchoolDay, AuthorizedUser } from '../types';
-import { getStudentAttendanceMetrics, getClassAttendanceMetrics, getStudentConsecutiveAlertInfo } from '../utils/attendanceRules';
-import { OFFICIAL_SED_STUDENTS_MAP } from './officialSedStudents';
+import { getStudentAttendanceMetrics, getStudentConsecutiveAlertInfo } from '../utils/attendanceRules';
 
 export const CITY_NAME = 'Prefeitura do Município de Jundiaí';
 export const SECRETARY_NAME = 'SME · Secretaria Municipal de Educação de Jundiaí';
@@ -10,7 +9,7 @@ export const INSTITUTIONAL_EMAIL_DOMAIN = '@educacao.jundiai.sp.gov.br';
 const formatDisplayNameFromEmail = (email: string): string => {
   const prefix = email.split('@')[0] || '';
   if (prefix === 'emebjfreitas') {
-    return 'EMEB Professor Joaquim Candelário de Freitas (Direção / Admin)';
+    return 'Equipe Administrativa';
   }
   return prefix
     .replace(/\d+/g, '')
@@ -1293,141 +1292,55 @@ export const OFFICIAL_2027_CLASSES_CONFIG = OFFICIAL_SCHOOL_MATRIX_2027.map((row
   totalStudents: row.sedExpectedStudents,
 }));
 
-export const INITIAL_CLASSES: ClassGroup[] = OFFICIAL_SCHOOL_MATRIX_2027.map((cfg) => {
-  const realSedStudents = OFFICIAL_SED_STUDENTS_MAP[cfg.id];
-  const mergedRealG4a =
-    cfg.id === 'g04a' && realSedStudents && realSedStudents.length > 0
-      ? realSedStudents.map((sedSt) => {
-          const normSedName = (sedSt.name || '')
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toUpperCase()
-            .trim();
-          const richMatch = REAL_G4A_STUDENTS.find((r) => {
-            const normRichName = (r.name || '')
-              .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .toUpperCase()
-              .trim();
-            return (
-              (sedSt.ra && r.ra && r.ra === sedSt.ra) ||
-              (normRichName && normRichName === normSedName)
-            );
-          });
-          if (!richMatch) return sedSt;
-          return {
-            ...richMatch,
-            ...sedSt,
-            ra: richMatch.ra || sedSt.ra,
-            digRa: richMatch.digRa || sedSt.digRa,
-            dataNascimento: richMatch.dataNascimento || sedSt.dataNascimento,
-            cpf: richMatch.cpf || sedSt.cpf,
-            tipoSanguineo: richMatch.tipoSanguineo || sedSt.tipoSanguineo,
-            filiacao1: richMatch.filiacao1 || sedSt.filiacao1,
-            filiacao2: richMatch.filiacao2 || sedSt.filiacao2,
-            telefones: richMatch.telefones || richMatch.guardianPhone || sedSt.telefones,
-            guardianName: richMatch.guardianName || sedSt.guardianName,
-            guardianPhone: richMatch.guardianPhone || sedSt.guardianPhone,
-            logradouro: richMatch.logradouro || sedSt.logradouro,
-            numeroResidencia: richMatch.numeroResidencia || sedSt.numeroResidencia,
-            complemento: richMatch.complemento || sedSt.complemento,
-            bairro: richMatch.bairro || sedSt.bairro,
-            cidade: richMatch.cidade || sedSt.cidade,
-            uf: richMatch.uf || sedSt.uf,
-            cep: richMatch.cep || sedSt.cep,
-            emailMunicipal: richMatch.emailMunicipal || sedSt.emailMunicipal,
-            procedenciaEscolar: richMatch.procedenciaEscolar || sedSt.procedenciaEscolar,
-            idade: richMatch.idade || sedSt.idade,
-            arquivo: richMatch.arquivo || sedSt.arquivo,
-            racaCor: richMatch.racaCor || sedSt.racaCor,
-            nacionalidade: richMatch.nacionalidade || sedSt.nacionalidade,
-            municipioNascimento: richMatch.municipioNascimento || sedSt.municipioNascimento,
-            deficiencia: richMatch.deficiencia || sedSt.deficiencia,
-            rg: richMatch.rg || sedSt.rg,
-            nis: richMatch.nis || sedSt.nis,
-            cartaoSus: richMatch.cartaoSus || sedSt.cartaoSus,
-            initials: richMatch.initials || sedSt.initials,
-          };
-        })
-      : realSedStudents;
+export const INITIAL_CLASSES: ClassGroup[] = OFFICIAL_SCHOOL_MATRIX_2027.map((cfg) => ({
+  id: cfg.id,
+  name: cfg.name,
+  turmaAbrev: cfg.turmaAbrev,
+  grade: cfg.grade,
+  shift: cfg.shift,
+  room: cfg.room,
+  teacherName: cfg.teacherName,
+  teacherEmail: cfg.teacherEmail,
+  pronoun: cfg.pronoun,
+  teacherFirstName: cfg.teacherFirstName,
+  sedClassName: cfg.sedClassName,
+  sedExpectedStudents: cfg.sedExpectedStudents,
+  classeSedCode: cfg.classeSedCode,
+  artTeacher: cfg.artTeacher,
+  peTeacher: cfg.peTeacher,
+  englishTeacher: cfg.englishTeacher,
+  totalStudents: 0,
+  presenceRate: 0,
+  statusText: 'Aguardando importação de estudantes',
+  isPending: false,
+  students: [],
+  monthlyAbsences: 0,
+  classesHeld: 20,
+  classesPlanned: 20,
+  monthlySchoolDays: getDefaultMonthlySchoolDaysMap(),
+  weeklyPerformance: [],
+  pedagogicalNotes: '',
+  isVaga: Boolean(cfg.isVaga),
+  periodo: cfg.periodo,
+}));
 
-  const students = (mergedRealG4a && mergedRealG4a.length > 0)
-    ? mergedRealG4a
-    : generateSedStudentsForClass(
-        cfg.id,
-        cfg.name,
-        cfg.grade,
-        cfg.shift,
-        cfg.sedExpectedStudents
-      );
-  const tempClass: ClassGroup = {
-    id: cfg.id,
-    name: cfg.name,
-    turmaAbrev: cfg.turmaAbrev,
-    grade: cfg.grade,
-    shift: cfg.shift,
-    room: cfg.room,
-    teacherName: cfg.teacherName,
-    teacherEmail: cfg.teacherEmail,
-    pronoun: cfg.pronoun,
-    teacherFirstName: cfg.teacherFirstName,
-    sedClassName: cfg.sedClassName,
-    sedExpectedStudents: cfg.sedExpectedStudents,
-    classeSedCode: cfg.classeSedCode,
-    artTeacher: cfg.artTeacher,
-    peTeacher: cfg.peTeacher,
-    englishTeacher: cfg.englishTeacher,
-    totalStudents: students.length,
-    presenceRate: cfg.presenceRate,
-    statusText: '',
-    isPending: cfg.isPending,
-    students,
-    monthlyAbsences: 0,
-    classesHeld: 20,
-    classesPlanned: 20,
-    monthlySchoolDays: getDefaultMonthlySchoolDaysMap(),
-    weeklyPerformance: [],
-    pedagogicalNotes: '',
-    isVaga: Boolean(cfg.isVaga),
-    periodo: cfg.periodo,
-  };
-
-  const classMetrics = getClassAttendanceMetrics(tempClass, OFFICIAL_OCTOBER_DAYS);
-
-  return {
-    ...tempClass,
-    presenceRate: classMetrics.presenceRate,
-    monthlyAbsences: classMetrics.totalFaltasTurma,
-    statusText: cfg.isPending
-      ? 'Fechamento de Outubro: Pendente'
-      : 'Fechamento de Outubro: Concluído (Sincronizado na Planilha)',
-    weeklyPerformance: [
-      { week: '1ª Semana (01 a 04)', rate: Math.min(100, classMetrics.presenceRate + 1) },
-      { week: '2ª Semana (07 a 11)', rate: Math.max(0, classMetrics.presenceRate - 1) },
-      { week: '3ª Semana (14 a 19)', rate: Math.min(100, classMetrics.presenceRate + 2) },
-      { week: '4ª Semana (21 a 31)', rate: Math.max(0, classMetrics.presenceRate - 1) },
-    ],
-    pedagogicalNotes: `Acompanhamento pedagógico regular para a turma ${cfg.name} (${cfg.sedClassName} • Cód. SED ${cfg.classeSedCode}) — Regente: ${cfg.pronoun} ${cfg.teacherName}.`,
-  };
-});
-
-export const TOTAL_STUDENTS_COUNT = INITIAL_CLASSES.reduce((acc, c) => acc + c.totalStudents, 0);
+export const TOTAL_STUDENTS_COUNT = 0;
 
 export const DEFAULT_SHEET_CONFIG: GoogleSheetConfig = {
   sheetUrl: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit',
   sheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
   sheetName: 'Diário_Oficial_EMEB_Joaquim_Candelario_2027',
-  lastSync: 'Hoje às 11h42',
+  lastSync: 'Aguardando sincronização',
   status: 'connected',
-  rowsCount: TOTAL_STUDENTS_COUNT,
+  rowsCount: 0,
   isAutoSyncEnabled: true,
   activeTabId: 'frequencia',
   tabs: [
     {
       id: 'frequencia',
-      name: 'Frequência_Mensal_Outubro_2027',
-      description: `Registro consolidado com modelagem SED dos ${TOTAL_STUDENTS_COUNT} estudantes das 40 turmas`,
-      rowsCount: TOTAL_STUDENTS_COUNT,
+      name: 'Frequência_Mensal_2027',
+      description: 'Registro consolidado com modelagem SED dos estudantes das 40 turmas',
+      rowsCount: 0,
     },
     {
       id: 'dias_letivos',

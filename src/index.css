@@ -449,40 +449,5 @@ svg.lucide {
   }
 }
 
-/* Modo de Alto Contraste (Acessibilidade) */
-.high-contrast {
-  background-color: #000000 !important;
-  color: #ffffff !important;
-}
-.high-contrast section,
-.high-contrast article,
-.high-contrast .bg-white,
-.high-contrast div[class*="bg-white"] {
-  background-color: #0a0e17 !important;
-  color: #ffffff !important;
-  border-color: #38bdf8 !important;
-}
-.high-contrast h1,
-.high-contrast h2,
-.high-contrast h3,
-.high-contrast h4,
-.high-contrast span,
-.high-contrast strong,
-.high-contrast .text-slate-950,
-.high-contrast .text-slate-900,
-.high-contrast .text-slate-800,
-.high-contrast .text-slate-700 {
-  color: #ffffff !important;
-}
-.high-contrast p,
-.high-contrast .text-slate-600,
-.high-contrast .text-slate-500 {
-  color: #e2e8f0 !important;
-}
-.high-contrast input,
-.high-contrast select {
-  background-color: #1e293b !important;
-  color: #ffffff !important;
-  border: 2px solid #38bdf8 !important;
-}
+
 

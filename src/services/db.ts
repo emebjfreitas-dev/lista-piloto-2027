@@ -44,6 +44,8 @@ import {
   markSyncOperationSuccess,
   setSyncingActiveState,
   registerOfflineFlushHandler,
+  CLEAN_DB_RESET_EPOCH_ID,
+  wipeFirestoreSchoolDataOnly,
 } from './firebaseSync';
 import {
   resolveStudentGender,
@@ -57,12 +59,80 @@ const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v4';
 const ATTENDANCE_WINDOW_STORAGE_KEY = 'emeb_candelario_attendance_window_2027_v1';
 const ACCESS_LOGS_STORAGE_KEY = 'emeb_candelario_access_session_logs_2027_v1';
 const NOTICES_STORAGE_KEY = 'emeb_candelario_school_notices_2027_v1';
+const DB_CLEAN_EPOCH_STORAGE_KEY = 'emeb_candelario_db_clean_epoch_v1';
 
 // In-memory cache so even if browser localStorage quota is full, the app never loses runtime state or throws errors
 let memoryCachedClasses: ClassGroup[] | null = null;
 let memoryCachedUsers: AuthorizedUser[] | null = null;
 let memoryCachedLogs: UserAccessSessionLog[] | null = null;
 let memoryCachedNotices: SchoolNotice[] | null = null;
+
+const clearLocalSchoolDataOnly = (): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+  try {
+    const dataKeys = [
+      STORAGE_KEY,
+      'emeb_candelario_sed_classes_2027_v7',
+      'emeb_candelario_sed_classes_2027_v6',
+      'emeb_candelario_sed_classes_2027_v5',
+      'emeb_candelario_classes_updated_at_ms_2027',
+      ACCESS_LOGS_STORAGE_KEY,
+      NOTICES_STORAGE_KEY,
+      'emeb_candelario_security_audit_logs_2027_v1',
+      'emeb_candelario_name_gender_dict_2027_v1',
+      'emeb_candelario_discovered_drive_photos_2027_v1',
+      'emeb_candelario_discovered_nominal_pdfs_2027_v1',
+      'emeb_candelario_offline_sync_queue_2027_v1',
+      'emeb_candelario_sheet_sync_queue_v2',
+      'emeb_candelario_sheet_sync_lock_v2',
+    ];
+    dataKeys.forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch {
+        // ignore
+      }
+    });
+
+    // Reset access counters on stored authorized users while preserving accounts, roles, and class assignments
+    const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (rawUsers) {
+      const parsedUsers = JSON.parse(rawUsers);
+      if (Array.isArray(parsedUsers)) {
+        const cleanedUsers = parsedUsers.map((u: AuthorizedUser) => ({
+          ...u,
+          totalAccessCount: 0,
+          totalDurationSeconds: 0,
+          lastSessionDurationSeconds: 0,
+          lastLoginAt: undefined,
+          lastActiveAt: undefined,
+          lastScreenVisited: undefined,
+        }));
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(cleanedUsers));
+      }
+    }
+  } catch {
+    // ignore storage access issues
+  }
+  memoryCachedClasses = null;
+  memoryCachedUsers = null;
+  memoryCachedLogs = [];
+  memoryCachedNotices = [];
+};
+
+const ensureCleanDatabaseEpochLocal = (): void => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+  try {
+    if (localStorage.getItem(DB_CLEAN_EPOCH_STORAGE_KEY) !== CLEAN_DB_RESET_EPOCH_ID) {
+      clearLocalSchoolDataOnly();
+      localStorage.setItem(DB_CLEAN_EPOCH_STORAGE_KEY, CLEAN_DB_RESET_EPOCH_ID);
+    }
+  } catch {
+    // ignore storage access issues
+  }
+};
+
+ensureCleanDatabaseEpochLocal();
 
 // Clean up obsolete legacy storage keys from earlier versions to free localStorage space
 const purgeLegacyStorageKeys = (preserveKeys: string[]): void => {
@@ -74,6 +144,7 @@ const purgeLegacyStorageKeys = (preserveKeys: string[]): void => {
       ATTENDANCE_WINDOW_STORAGE_KEY,
       ACCESS_LOGS_STORAGE_KEY,
       NOTICES_STORAGE_KEY,
+      DB_CLEAN_EPOCH_STORAGE_KEY,
       'emeb_candelario_name_gender_dict_2027_v1',
       'emeb_candelario_active_session_2027_v1',
       'emeb_candelario_linked_spreadsheet_id_2027',
@@ -127,6 +198,7 @@ export const getActiveUserAuthHeaders = (): Record<string, string> => {
           'x-user-email': email,
           'x-user-role': role,
           'x-user-name': encodeURIComponent(String(parsed.name || '')),
+          'x-clean-epoch': CLEAN_DB_RESET_EPOCH_ID,
         };
       }
     }
@@ -139,6 +211,7 @@ export const getActiveUserAuthHeaders = (): Record<string, string> => {
   return {
     'x-user-email': email,
     'x-user-role': isAdmin ? 'admin' : 'usuario',
+    'x-clean-epoch': CLEAN_DB_RESET_EPOCH_ID,
   };
 };
 
@@ -603,36 +676,7 @@ export const pushSessionLogsToServer = async (
   }
 };
 
-export const INITIAL_SCHOOL_NOTICES: SchoolNotice[] = [
-  {
-    id: 'notice-2027-fechamento-mensal',
-    title: 'Janela de Lançamento de Frequência Mensal e Busca Ativa',
-    content:
-      'Solicitamos a todos os professores regentes (PEB I) que mantenham o registro de faltas do mês e as ocorrências de 3, 5 e 10 dias consecutivos atualizados para acompanhamento imediato da Secretaria.',
-    priority: 'importante',
-    authorName: 'Direção & Secretaria Escolar',
-    authorEmail: 'emebjfreitas@jundiai.sp.gov.br',
-    createdAtISO: '2026-10-09T08:00:00.000Z',
-    updatedAtMs: 1791532800000,
-    pinned: true,
-    active: true,
-    targetAudience: 'all',
-  },
-  {
-    id: 'notice-2027-fichas-pdf-drive',
-    title: 'Conferência das Fichas Nominais Escaneadas (PDF) e Fotos',
-    content:
-      'As fichas informativas digitalizadas no Google Drive e as fotos oficiais já estão integradas por turma. Caso algum estudante recém-transferido esteja sem vínculo, utilize a busca manual no modal do aluno.',
-    priority: 'informativo',
-    authorName: 'Coordenação Pedagógica',
-    authorEmail: 'emebjfreitas@jundiai.sp.gov.br',
-    createdAtISO: '2026-10-08T10:30:00.000Z',
-    updatedAtMs: 1791455400000,
-    pinned: false,
-    active: true,
-    targetAudience: 'all',
-  },
-];
+export const INITIAL_SCHOOL_NOTICES: SchoolNotice[] = [];
 
 export const getStoredSchoolNotices = (): SchoolNotice[] => {
   if (memoryCachedNotices && memoryCachedNotices.length > 0) {
@@ -1048,7 +1092,7 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
       result.authorizedUsers = sanitized;
     }
 
-    if (Array.isArray(data?.accessSessionLogs) && data.accessSessionLogs.length > 0) {
+    if (Array.isArray(data?.accessSessionLogs)) {
       const sliced = data.accessSessionLogs.slice(0, 200);
       memoryCachedLogs = sliced;
       safeSetLocalStorage(ACCESS_LOGS_STORAGE_KEY, JSON.stringify(sliced));
@@ -1268,9 +1312,8 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
       loadedMap.get(normalizeClassLookupKey(off.name));
     if (!loaded) return off;
 
-    // Preserva integralmente os estudantes carregados/importados (independentemente do prefixo do ID)
-    const baseStudents =
-      Array.isArray(loaded.students) && loaded.students.length > 0 ? loaded.students : off.students;
+    // Preserva integralmente os estudantes carregados/importados (inclusive lista vazia [])
+    const baseStudents = Array.isArray(loaded.students) ? loaded.students : off.students;
     const seenStudentKeysInClass = new Set<string>();
     const deduplicatedBaseStudents: Student[] = [];
     baseStudents.forEach((st) => {
@@ -1317,22 +1360,12 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
           ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
           : studentNameClean.slice(0, 2).toUpperCase();
 
-      const defaultNis =
-        st.nis !== undefined && st.nis !== ''
-          ? st.nis
-          : officialFallback?.nis ||
-            (num % 3 === 0 || num === 2 || num === 7 || num === 11
-              ? `207.${41000 + num * 17}.${80 + (num % 19)}-${num % 9}`
-              : '');
-      const defaultRota =
+      const resolvedNis =
+        st.nis !== undefined && st.nis !== '' ? st.nis : officialFallback?.nis || '';
+      const resolvedRota =
         st.rotaOnibus !== undefined && st.rotaOnibus !== ''
           ? st.rotaOnibus
-          : officialFallback?.rotaOnibus ||
-            (num % 4 === 0 || num === 1 || num === 7 || num === 9 || num === 11
-              ? num % 2 === 0
-                ? 'ROTA 01 - RESIDENCIAL TERRA DA UVA / SANTOS DUMONT'
-                : 'ROTA 02 - JARDIM BÚFALO / CIDADE LUIZA / VILA HORTOLÂNDIA'
-              : '');
+          : officialFallback?.rotaOnibus || '';
 
       return {
         ...(officialFallback || {}),
@@ -1342,10 +1375,12 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
         numeroChamada: st.numeroChamada || num,
         initials: st.initials || officialFallback?.initials || computedInitials,
         genero: st.genero || officialFallback?.genero || resolveStudentGender(st),
-        nis: defaultNis || undefined,
-        rotaOnibus: defaultRota || undefined,
+        nis: resolvedNis || undefined,
+        rotaOnibus: resolvedRota || undefined,
       };
     });
+
+    const isEmptyClass = enrichedStudents.length === 0;
 
     return {
       ...loaded,
@@ -1355,10 +1390,11 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
       classesHeld: loaded.classesHeld ?? off.classesHeld,
       classesPlanned: loaded.classesPlanned ?? off.classesPlanned,
       monthlySchoolDays: loaded.monthlySchoolDays || off.monthlySchoolDays,
-      pedagogicalNotes: loaded.pedagogicalNotes || off.pedagogicalNotes,
+      pedagogicalNotes: isEmptyClass ? loaded.pedagogicalNotes || '' : loaded.pedagogicalNotes || off.pedagogicalNotes,
       statusText: loaded.statusText || off.statusText,
-      monthlyAbsences: loaded.monthlyAbsences ?? off.monthlyAbsences,
-      presenceRate: loaded.presenceRate ?? off.presenceRate,
+      monthlyAbsences: isEmptyClass ? 0 : (loaded.monthlyAbsences ?? off.monthlyAbsences),
+      presenceRate: isEmptyClass ? 0 : (loaded.presenceRate ?? off.presenceRate),
+      weeklyPerformance: isEmptyClass ? [] : (loaded.weeklyPerformance || off.weeklyPerformance),
       driveFolderUrl: loaded.driveFolderUrl || off.driveFolderUrl,
       updatedAtMs: Math.max(loaded.updatedAtMs || 0, off.updatedAtMs || 0),
     };
@@ -2060,7 +2096,7 @@ export const downloadSpreadsheetXLSX = (
   }
 
   // Generate binary and trigger download
-  XLSX.writeFile(wb, 'Planilha_Oficial_SED_EMEB_Candelario_Freitas_2027.xlsx');
+  XLSX.writeFile(wb, 'Base_Oficial_SED_EMEB_Candelario_Freitas_2027.xlsx');
 };
 
 export type ClassExportCategory =
@@ -2899,7 +2935,7 @@ export const downloadClassCustomXLS = (
   }
 
   const format = options.fileFormat || 'xls';
-  const cleanFileName = `Planilha_${cls.name.replace(/\s+/g, '_')}_2027.${format}`;
+  const cleanFileName = `Relatorio_${cls.name.replace(/\s+/g, '_')}_2027.${format}`;
 
   if (format === 'xls') {
     XLSX.writeFile(wb, cleanFileName, { bookType: 'biff8' });
@@ -3299,34 +3335,7 @@ export const RBAC_ROLE_DEFINITIONS: RbacRoleDefinition[] = [
   },
 ];
 
-const INITIAL_SECURITY_AUDIT_LOGS: SecurityAuditLogEntry[] = [
-  {
-    id: 'sec-audit-001',
-    timestampISO: new Date(Date.now() - 3600000 * 2).toISOString(),
-    userEmail: 'emebjfreitas@jundiai.sp.gov.br',
-    userName: 'Administrador Escolar Candelário',
-    userRole: 'admin',
-    eventType: 'MFA_CHALLENGE_VERIFIED',
-    actionTitle: 'Sessão Administrativa Autenticada',
-    details: 'Login institucional com validação de token institucional seguro e verificação de privilégios.',
-    targetResource: 'Painel Central Administrativo',
-    severity: 'info',
-    clientIp: '189.19.42.11 (Jundiaí - SP)',
-  },
-  {
-    id: 'sec-audit-002',
-    timestampISO: new Date(Date.now() - 3600000 * 1.5).toISOString(),
-    userEmail: 'emebjfreitas@jundiai.sp.gov.br',
-    userName: 'Administrador Escolar Candelário',
-    userRole: 'admin',
-    eventType: 'DATA_MASKING_TOGGLED',
-    actionTitle: 'Política LGPD Aplicada',
-    details: 'Proteção de dados sensíveis de menores (CPF, NIS, Endereço e Laudos) ativada conforme Art. 14 da LGPD.',
-    targetResource: 'Cadastro de Estudantes SED',
-    severity: 'info',
-    clientIp: '189.19.42.11 (Jundiaí - SP)',
-  },
-];
+const INITIAL_SECURITY_AUDIT_LOGS: SecurityAuditLogEntry[] = [];
 
 let memorySecurityAuditLogs: SecurityAuditLogEntry[] | null = null;
 let memoryLgpdConfig: LgpdProtectionConfig | null = null;
@@ -3449,11 +3458,11 @@ export const saveStoredLgpdConfig = (
 
 export const maskSensitiveText = (
   text: string | undefined | null,
-  type: 'cpf' | 'nis' | 'phone' | 'rg' | 'address' = 'cpf'
+  type: 'cpf' | 'nis' | 'phone' | 'rg' | 'address' | 'sus' | 'cep' = 'cpf'
 ): string => {
   if (!text || typeof text !== 'string') return '—';
   const clean = text.trim();
-  if (clean.length < 3) return clean;
+  if (clean.length < 3) return '***';
 
   if (type === 'cpf') {
     // 123.456.789-00 -> ***.456.789-**
@@ -3461,7 +3470,7 @@ export const maskSensitiveText = (
     if (digits.length === 11) {
       return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
     }
-    return `***.${clean.slice(3, -2)}***`;
+    return `***.***.***-${digits.slice(-2) || '**'}`;
   }
 
   if (type === 'nis') {
@@ -3470,20 +3479,55 @@ export const maskSensitiveText = (
     if (digits.length >= 10) {
       return `***.${digits.slice(3, 8)}.***-*`;
     }
-    return `***${clean.slice(3, -2)}***`;
+    return `***.*****.***-*`;
+  }
+
+  if (type === 'sus') {
+    // 700 0000 0000 1234 -> *** **** **** 1234
+    const digits = clean.replace(/\D/g, '');
+    if (digits.length >= 4) {
+      return `*** **** **** ${digits.slice(-4)}`;
+    }
+    return `*** **** **** ****`;
   }
 
   if (type === 'phone') {
-    // (11) 98765-4321 -> (11) *****-4321
+    // (11) 98765-4321 -> (11) *****-4321 (suporta múltiplos telefones separados)
+    const parts = clean.split(/[/;,|]+/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      return parts
+        .map((part) => {
+          const digits = part.replace(/\D/g, '');
+          if (digits.length >= 10) return `(${digits.slice(0, 2)}) *****-${digits.slice(-4)}`;
+          if (digits.length >= 4) return `*****-${digits.slice(-4)}`;
+          return '(**) *****-****';
+        })
+        .join(' · ');
+    }
     const digits = clean.replace(/\D/g, '');
     if (digits.length >= 10) {
       return `(${digits.slice(0, 2)}) *****-${digits.slice(-4)}`;
     }
-    return `(11) *****-${clean.slice(-4)}`;
+    if (digits.length >= 4) {
+      return `(11) *****-${digits.slice(-4)}`;
+    }
+    return '(**) *****-****';
   }
 
   if (type === 'rg') {
-    return `**.***.${clean.slice(-3)}`;
+    const alnum = clean.replace(/[^a-zA-Z0-9]/g, '');
+    if (alnum.length >= 3) {
+      return `**.***.***-${alnum.slice(-1).toUpperCase()}`;
+    }
+    return `**.***.***-*`;
+  }
+
+  if (type === 'cep') {
+    const digits = clean.replace(/\D/g, '');
+    if (digits.length === 8) {
+      return `*****-${digits.slice(-3)}`;
+    }
+    return `*****-***`;
   }
 
   if (type === 'address') {
@@ -3491,7 +3535,7 @@ export const maskSensitiveText = (
     return clean.replace(/\d+/g, '***');
   }
 
-  return `***${clean.slice(clean.length / 2)}***`;
+  return `***${clean.slice(Math.ceil(clean.length / 2))}`;
 };
 
 /**
@@ -4132,41 +4176,38 @@ export const importSchoolDataFromJson = async (
 };
 
 /**
- * Redefine todos os dados de todo o app para um estado limpo de fábrica
+ * Limpa apenas os dados do banco de dados (estudantes, faltas, alertas, avisos, logs e mídias),
+ * mantendo contas autorizadas, estrutura das 40 turmas e calendário de 200 dias intactos.
  */
 export const resetEntireAppData = async (
-  userEmail = 'emebjfreitas@jundiai.sp.gov.br'
+  _userEmail = 'emebjfreitas@jundiai.sp.gov.br'
 ): Promise<ClassGroup[]> => {
-  // Limpar chaves locais
+  const nowMs = Date.now();
+  clearLocalSchoolDataOnly();
+  memorySecurityAuditLogs = [];
   try {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(NOTICES_STORAGE_KEY);
-    localStorage.removeItem(LGPD_CONFIG_STORAGE_KEY);
-  } catch (e) {
-    console.error('Erro ao limpar localStorage:', e);
+    localStorage.setItem(DB_CLEAN_EPOCH_STORAGE_KEY, CLEAN_DB_RESET_EPOCH_ID);
+  } catch {
+    // ignore storage errors
   }
 
-  // Gera turmas limpas da matriz oficial com zero faltas
+  // Gera turmas limpas sem estudantes e com métricas zeradas
   const pristineClasses: ClassGroup[] = INITIAL_CLASSES.map((c) => ({
     ...c,
+    students: [],
+    totalStudents: 0,
     monthlyAbsences: 0,
-    presenceRate: 100,
+    presenceRate: 0,
+    statusText: 'Aguardando importação de estudantes',
+    isPending: false,
+    weeklyPerformance: [],
     pedagogicalNotes: '',
-    students: c.students.map((s) => ({
-      ...s,
-      totalAbsencesMonth: 0,
-      consecutiveDays: 0,
-      consecutiveTier: 'none',
-      consecutiveSelectedDates: [],
-      presenceDates: [],
-      absentDates: [],
-      justifiedAbsenceDates: [],
-    })),
+    updatedAtMs: nowMs,
   }));
 
-  const enriched = enrichClassesWithOfficialMatrix(pristineClasses);
-  memoryCachedClasses = enriched;
-  saveStoredClasses(enriched, true);
+  memoryCachedClasses = pristineClasses;
+  saveStoredClasses(pristineClasses, true);
+  setLocalClassesUpdatedAtMs(nowMs);
 
   // Notificar backend
   if (isBackendApiAvailable()) {
@@ -4177,31 +4218,21 @@ export const resetEntireAppData = async (
           'Content-Type': 'application/json',
           ...getActiveUserAuthHeaders(),
         },
-        body: JSON.stringify({ freshClasses: enriched }),
+        body: JSON.stringify({ freshClasses: pristineClasses }),
       });
     } catch (e) {
       console.warn('Aviso: falha na rota /api/school-state/reset:', e);
     }
   }
 
-  // Sincronizar com Firestore Cloud
+  // Limpar apenas os dados no Firestore Cloud
   try {
-    await saveClassesToFirestoreCloud(enriched, Date.now());
+    await wipeFirestoreSchoolDataOnly(pristineClasses, CLEAN_DB_RESET_EPOCH_ID);
   } catch (e) {
-    console.warn('Aviso: falha ao sincronizar reset com Firestore:', e);
+    console.warn('Aviso: falha ao limpar dados no Firestore:', e);
   }
 
-  addSecurityAuditLog({
-    userEmail,
-    userName: 'Administrador Escolar Candelário',
-    userRole: 'admin',
-    eventType: 'DATABASE_FACTORY_RESET',
-    actionTitle: 'Redefinição Completa de Todos os Dados',
-    details: 'Reset completo executado: 40 turmas restauradas na base limpa oficial com 0 faltas e sem ocorrências.',
-    severity: 'warning',
-  });
-
-  return enriched;
+  return pristineClasses;
 };
 
 /**

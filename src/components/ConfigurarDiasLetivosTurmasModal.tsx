@@ -231,7 +231,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               Configuração dos 200 Dias Letivos por Turma
             </h2>
             <p className="text-xs text-slate-500 break-words">
-              Calendário oficial sincronizado com a aba <span className="font-mono text-slate-700 font-medium">Dias_Letivos_SME_2027</span> da Planilha Oficial e Firebase Firestore.
+              Calendário oficial sincronizado em tempo real com o banco na nuvem (Firebase Firestore).
             </p>
           </div>
 
@@ -247,7 +247,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
 
         {/* Scrollable Content */}
         <div className="modal-scroll-body flex-1 p-5 sm:p-6 space-y-5 bg-slate-50/50">
-          {/* 1. Direct Links Box: Planilha Manual & Pasta de Fotos Google Drive */}
+          {/* 1. Direct Links Box: Exportação Excel & Pasta de Fotos Google Drive */}
           <section className="bg-white rounded-xl p-5 border border-slate-200/80 shadow-xs space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[18px] text-slate-500">
@@ -256,14 +256,14 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               <span>Exportação Oficial &amp; Armazenamento de Fotos (Drive)</span>
             </h3>
 
-            {/* Exportação Excel (.xlsx) das 40 Turmas e 1.237 Alunos */}
+            {/* Exportação Excel (.xlsx) das Turmas e Estudantes */}
             <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold text-slate-900">
                   Backup Completo da Base Oficial SED Jundiaí
                 </p>
                 <p className="text-xs text-slate-500 break-words">
-                  Exporta todas as 40 turmas e 1.237 estudantes em planilha estruturada (.xlsx).
+                  Exporta todas as {draftClasses.length} turmas e {draftClasses.reduce((acc, c) => acc + c.students.length, 0)} estudantes em arquivo Excel estruturado (.xlsx).
                 </p>
               </div>
               <button
@@ -272,7 +272,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                 className="h-9 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
               >
                 <span className="material-symbols-outlined text-[16px]">download</span>
-                <span>Exportar Planilha SED (.xlsx)</span>
+                <span>Exportar Base SED (.xlsx)</span>
               </button>
             </div>
 

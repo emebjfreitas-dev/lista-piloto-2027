@@ -491,19 +491,19 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     showToast('info', 'Conta Google desconectada.');
   };
 
-  // Request Confirmation before creating Real Sheet + Real Drive Folder
+  // Request Confirmation before creating Drive Folder / Optional Connector
   const handleRequestCreateRealDatabaseAndFolder = async () => {
     if (!isAdmin) {
       showToast(
         'error',
-        `Apenas o Administrador (${OFFICIAL_ADMIN_EMAIL}) é editor das planilhas e pastas.`
+        `Apenas o Administrador (${OFFICIAL_ADMIN_EMAIL}) é editor das pastas na nuvem.`
       );
       return;
     }
     const token = await getAccessToken();
     if (!token) {
       setNeedsAuth(true);
-      showToast('info', 'Faça login com o Google primeiro para criar a Planilha e a Pasta Real.');
+      showToast('info', 'Faça login com o Google primeiro para criar a estrutura na Nuvem e Drive.');
       return;
     }
     setConfirmModalAction('create_both_real');
@@ -530,19 +530,19 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     if (!isAdmin) {
       showToast(
         'error',
-        `Apenas o Administrador (${OFFICIAL_ADMIN_EMAIL}) é editor da planilha.`
+        `Apenas o Administrador (${OFFICIAL_ADMIN_EMAIL}) é editor dos registros na nuvem.`
       );
       return;
     }
     const token = await getAccessToken();
     if (!token) {
       setNeedsAuth(true);
-      showToast('info', 'Faça login com o Google primeiro para gravar na planilha.');
+      showToast('info', 'Faça login com o Google primeiro para gravar os dados.');
       return;
     }
     const cleanId = extractSpreadsheetId(spreadsheetInput);
     if (!cleanId) {
-      showToast('error', 'Informe o link ou ID da planilha Google Sheets ou crie uma nova.');
+      showToast('error', 'Informe o link ou ID de destino ou crie a estrutura na Nuvem e Drive.');
       return;
     }
     setConfirmModalAction('overwrite_existing');
@@ -552,20 +552,20 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     if (!isAdmin) {
       showToast(
         'error',
-        `Apenas o Administrador (${OFFICIAL_ADMIN_EMAIL}) pode redefinir as 12 abas oficiais da planilha.`
+        `Apenas o Administrador (${OFFICIAL_ADMIN_EMAIL}) pode redefinir e sincronizar os módulos na nuvem.`
       );
       return;
     }
     const token = await getAccessToken();
     if (!token) {
       setNeedsAuth(true);
-      showToast('info', 'Faça login com o Google primeiro para redefinir as abas oficiais da planilha.');
+      showToast('info', 'Faça login com o Google primeiro para redefinir e sincronizar os módulos.');
       return;
     }
     setConfirmModalAction('redefine_and_sync_all');
   };
 
-  // Execute confirmed creation/sync of BOTH Single Official Google Sheet + Single Official Google Drive Folder
+  // Execute confirmed creation/sync of cloud backup & Single Official Google Drive Folder
   const executeConfirmedCreateBothReal = async () => {
     setConfirmModalAction(null);
     setIsSyncingCloud(true);
@@ -582,11 +582,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       }
       const statusDetail =
         created.sheetAlreadyExisted && created.folderAlreadyExisted
-          ? 'Planilha Única e Pasta Única já existentes localizadas e sincronizadas (sem duplicatas)!'
-          : 'Planilha Única Oficial (48 colunas SED + 200 Dias Letivos) e Pasta Única de Fotos criadas e sincronizadas com sucesso!';
+          ? 'Estrutura na Nuvem e Pasta Única no Drive já existentes localizadas e sincronizadas!'
+          : 'Estrutura na Nuvem (48 colunas SED + 200 Dias Letivos) e Pasta de Fotos no Drive criadas e sincronizadas!';
       showToast('success', statusDetail);
     } catch (err: any) {
-      showToast('error', err?.message || 'Erro ao criar banco de dados e pasta no Google.');
+      showToast('error', err?.message || 'Erro ao criar estrutura e pasta no Google Drive.');
     } finally {
       setIsSyncingCloud(false);
     }
@@ -611,7 +611,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     }
   };
 
-  // Execute confirmed write/update to existing Google Sheet
+  // Execute confirmed write/update to optional linked export
   const executeConfirmedWriteSheet = async () => {
     setConfirmModalAction(null);
     const cleanId = extractSpreadsheetId(spreadsheetInput);
@@ -628,16 +628,16 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       setConnectedTitle(result.title);
       showToast(
         'success',
-        `Banco de dados gravado na planilha "${result.title}" (48 colunas SED + 200 dias letivos) com sucesso!`
+        `Backup salvo em "${result.title}" (48 colunas SED + 200 dias letivos) com sucesso!`
       );
     } catch (err: any) {
-      showToast('error', err?.message || 'Erro ao gravar dados no Google Sheets.');
+      showToast('error', err?.message || 'Erro ao gravar backup na nuvem.');
     } finally {
       setIsSyncingCloud(false);
     }
   };
 
-  // Execute confirmed full redefinition & sync of ALL 12 Google Sheets tabs + Firebase Firestore
+  // Execute confirmed full sync & Firebase Firestore diagnostic alignment
   const executeConfirmedRedefineSheet = async () => {
     setConfirmModalAction(null);
     const cleanId = extractSpreadsheetId(spreadsheetInput);
@@ -661,30 +661,30 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       onSyncWithClasses();
 
       const sedNote = result.isSedExternalImport
-        ? ' (Aba SED preservada como importação externa)'
+        ? ' (Base SED externa preservada)'
         : '';
       showToast(
         'success',
-        `Sincronia Total concluída! Abas oficiais atualizadas na Planilha Google, alinhadas ao Firebase Firestore e diagnóstico gravado com ${result.diagnosticReport.scorePercentage}% de conformidade!${sedNote}`
+        `Sincronia Total concluída! Módulos alinhados ao Firebase Firestore e diagnóstico gravado com ${result.diagnosticReport.scorePercentage}% de conformidade!${sedNote}`
       );
     } catch (err: any) {
-      showToast('error', err?.message || 'Erro ao redefinir abas e sincronizar com Firebase.');
+      showToast('error', err?.message || 'Erro ao sincronizar módulos com o Firebase.');
     } finally {
       setIsSyncingCloud(false);
     }
   };
 
-  // Read data from Google Sheets
+  // Read data from optional external SED source
   const handleReadFromGoogleSheet = async () => {
     const token = await getAccessToken();
     if (!token) {
       setNeedsAuth(true);
-      showToast('info', 'Faça login com o Google primeiro para ler a planilha.');
+      showToast('info', 'Faça login com o Google primeiro para ler os dados externos.');
       return;
     }
     const cleanId = extractSpreadsheetId(spreadsheetInput);
     if (!cleanId) {
-      showToast('error', 'Cole o link ou ID da sua planilha do Google Sheets primeiro.');
+      showToast('error', 'Cole o link ou ID do arquivo de origem primeiro.');
       return;
     }
 
@@ -702,23 +702,23 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
         : '!';
       showToast(
         'success',
-        `Sincronização concluída: ${result.rowsRead} estudantes atualizados da planilha "${result.sheetTitle}"${photoNote}`
+        `Sincronização concluída: ${result.rowsRead} estudantes atualizados de "${result.sheetTitle}"${photoNote}`
       );
     } catch (err: any) {
-      showToast('error', err?.message || 'Erro ao ler dados do Google Sheets.');
+      showToast('error', err?.message || 'Erro ao ler dados externos.');
     } finally {
       setIsSyncingCloud(false);
     }
   };
 
-  // Unified 1-click Sync: Spreadsheet + Drive Photos Folder + Drive Fichas Informativas PDF Subfolders
+  // Unified 1-click Sync: Cloud + Drive Photos Folder + Drive Fichas Informativas PDF Subfolders
   const handleSyncAllCloudAndFoldersNow = async () => {
     const token = await getAccessToken();
     if (!token) {
       setNeedsAuth(true);
       showToast(
         'info',
-        'Conecte sua conta Google primeiro para sincronizar Planilhas e Pastas automaticamente.'
+        'Conecte sua conta Google primeiro para sincronizar a Nuvem e as Pastas do Drive.'
       );
       return;
     }
@@ -753,7 +753,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       showToast(
         'success',
         `Sincronização Fluida Concluída: ${
-          rowsRead > 0 ? `${rowsRead} registros da Planilha + ` : ''
+          rowsRead > 0 ? `${rowsRead} registros da Nuvem + ` : ''
         }${photoRes.matchedPhotosCount} fotos + ${
           pdfRes.matchedPdfsCount
         } fichas PDF escaneadas (${pdfRes.subfoldersScannedCount} subpastas)!`
@@ -761,7 +761,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     } catch (err: any) {
       showToast(
         'error',
-        err?.message || 'Erro durante a sincronização automática de pastas e planilhas.'
+        err?.message || 'Erro durante a sincronização automática de pastas e nuvem.'
       );
     } finally {
       setIsSyncingCloud(false);
@@ -884,7 +884,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     downloadSpreadsheetXLSX(classesToSync, calendarRows);
     showToast(
       'success',
-      'Planilha Oficial (.xlsx) com 48 colunas SED e aba dos 200 Dias Letivos baixada!'
+      'Arquivo Excel Oficial (.xlsx) com 48 colunas SED e aba dos 200 Dias Letivos baixado!'
     );
   };
 
@@ -1213,26 +1213,26 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <span className="text-[#6e6e73]">/</span>
               </>
             )}
-            <span className="font-semibold text-[#111827]">Planilha Google &amp; Fotos</span>
+            <span className="font-semibold text-[#111827]">Nuvem &amp; Google Drive</span>
             <span className="text-[#6e6e73]">·</span>
-            <span className="text-[#374151] hidden sm:inline">Integração Sheets &amp; Drive</span>
+            <span className="text-[#374151] hidden sm:inline">Firebase Firestore &amp; Drive</span>
           </div>
 
           <a
-            href={currentSheetFullUrl}
+            href={driveFolderUrl || currentSheetFullUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors text-xs"
           >
             <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-            <span className="hidden sm:inline">Abrir na Planilha ↗</span>
-            <span className="sm:hidden">Planilha ↗</span>
+            <span className="hidden sm:inline">Abrir Google Drive ↗</span>
+            <span className="sm:hidden">Drive ↗</span>
           </a>
         </div>
 
         <div className="flex items-center justify-between">
           <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-            Planilha Google Oficial &amp; Fotos do Drive
+            Banco na Nuvem (Firebase) &amp; Fotos do Drive
           </h1>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 flex items-center gap-1">
@@ -1334,7 +1334,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <span>
                   {isSyncingCloud
                     ? 'Sincronizando Tudo...'
-                    : 'Sincronizar Tudo (Planilha + Pastas + PDFs)'}
+                    : 'Sincronizar Tudo (Nuvem + Pastas + PDFs)'}
                 </span>
               </button>
             )}
@@ -1363,7 +1363,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <div className="space-y-3 bg-[#f5f7f6] p-3.5 rounded-2xl border border-[#003440]/10">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-[#003440]">
-                    Sincronização Google Sheets & Pastas Nomeadas no Drive ({OFFICIAL_ADMIN_EMAIL})
+                    Sincronização Banco na Nuvem & Pastas Nomeadas no Drive ({OFFICIAL_ADMIN_EMAIL})
                   </span>
                   <button
                     type="button"
@@ -1383,7 +1383,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       className="min-h-[42px] px-3 bg-[#005035] hover:bg-[#003723] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
-                      <span>Criar Planilha + Pasta Drive</span>
+                      <span>Criar Backup + Pasta Drive</span>
                     </button>
 
                     <button
@@ -1403,7 +1403,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       className="min-h-[42px] px-3 bg-[#003440] hover:bg-[#1e4b58] text-white font-bold text-sm rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40"
                     >
                       <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
-                      <span>Gravar Dados na Planilha</span>
+                      <span>Enviar Backup Externo</span>
                     </button>
                   </div>
                 ) : (
@@ -1415,7 +1415,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             ) : (
               <div className="bg-[#f5f7f6] p-3.5 rounded-2xl border border-[#003440]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <p className="text-sm text-[#374346] font-medium">
-                  Autentique com <strong>{OFFICIAL_ADMIN_EMAIL}</strong> para sincronizar diretamente com o Google Sheets e pastas do Google Drive.
+                  Autentique com <strong>{OFFICIAL_ADMIN_EMAIL}</strong> para sincronizar com as pastas do Google Drive (Fotos e Fichas PDF).
                 </p>
                 <button
                   type="button"
@@ -1423,12 +1423,12 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   disabled={isLoggingIn}
                   className="px-4 min-h-[40px] bg-white hover:bg-[#f8faf9] text-[#003440] font-bold text-sm rounded-xl border border-[#003440]/20 shadow-2xs shrink-0 cursor-pointer"
                 >
-                  Sign in with Google
+                  Entrar com conta Google
                 </button>
               </div>
             )}
 
-            {/* Bulk Photo Upload + Links (Planilha, Pasta de Fotos e Pasta Fichas PDF Escaneadas) com Auto-Sync Instantâneo */}
+            {/* Bulk Photo Upload + Links (Backup Externo Opcional, Pasta de Fotos e Pasta Fichas PDF Escaneadas) com Auto-Sync Instantâneo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               {/* 1. Bulk Photos */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 flex items-center justify-between gap-2">
@@ -1458,11 +1458,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 </button>
               </div>
 
-              {/* 2. Link Planilha (Auto-Salva e Sincroniza ao Colar) */}
+              {/* 2. Link Backup Externo Opcional */}
               <div className="bg-[#f5f7f6] p-3 rounded-xl border border-[#003440]/10 space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-xs font-semibold text-[#003440] truncate">
-                    Planilha ({connectedTitle})
+                    Backup Externo ({connectedTitle})
                   </span>
                   <div className="flex items-center gap-1">
                     <button
@@ -1494,7 +1494,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       saveSpreadsheetInfo(extracted, connectedTitle);
                     }
                   }}
-                  placeholder="Cole link ou ID da Planilha..."
+                  placeholder="Opcional: link ou ID de backup externo..."
                   className="w-full px-2.5 py-1 bg-white text-[#003440] font-mono text-xs rounded-lg border border-[#c0c8cb]"
                 />
               </div>
@@ -1591,7 +1591,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             {isAdmin && (
               <div className="flex items-center justify-between pt-1">
                 <span className="text-xs text-[#5a676b]">
-                  Sincronização automática ativa: faltas e atestados lançados salvam direto na planilha.
+                  Sincronização automática ativa: faltas e atestados lançados salvam direto no banco da escola (Firebase).
                 </span>
                 <button
                   type="button"
@@ -1733,16 +1733,16 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#a4f3ca] text-[#005035] text-xs font-semibold">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#005035] shrink-0"></span>
-                    Firebase Firestore &amp; Sheets Sincronizados
+                    Firebase Firestore Sincronizado
                   </span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
-                  Diagnóstico de Inconsistências &amp; Sincronia Multi-Cloud
+                  Diagnóstico de Inconsistências &amp; Sincronia na Nuvem
                 </h2>
                 <p className="text-white/85 text-sm sm:text-sm leading-relaxed">
                   Varredura contínua de dados em todas as 40 turmas e ~1.100 estudantes. Detecta lacunas cadastrais SED
                   (RA, nascimento, filiação, telefones), riscos legais de frequência (&lt;60% Infantil / &lt;75% Fundamental),
-                  Busca Ativa sem devolutiva registrada e integridade de persistência nas 12 abas do Google Sheets e no Firebase Firestore.
+                  Busca Ativa sem devolutiva registrada e integridade de persistência no Firebase Firestore e no Google Drive.
                 </p>
               </div>
 
@@ -1971,14 +1971,14 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   : 'Nenhuma inconsistência cadastral ou legal detectada!'}
               </h3>
               <p className="text-sm text-[#436370] max-w-md mx-auto">
-                Todos os dados avaliados estão rigorosamente conformes com os protocolos da SME Jundiaí e em sincronia perfeita com o Firebase e Google Sheets.
+                Todos os dados avaliados estão rigorosamente conformes com os protocolos da SME Jundiaí e em sincronia perfeita com o Firebase Firestore.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs font-bold text-[#436370] px-1">
                 <span>Mostrando {filteredDiagnosticIssues.length} de {diagnosticReport.totalIssues} inconsistências</span>
-                <span>Aba Oficial na Planilha: <code className="bg-[#f1f4f3] px-1.5 py-0.5 rounded text-[#003440]">Diagnostico_Inconsistencias_2027</code></span>
+                <span>Módulo na Nuvem: <code className="bg-[#f1f4f3] px-1.5 py-0.5 rounded text-[#003440]">Diagnostico_Inconsistencias_2027</code></span>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5">
@@ -2787,16 +2787,16 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-3 py-0.5 rounded-full bg-[#003440] text-white text-xs font-semibold uppercase">
                   {activeTab === 'nominal_infantil'
-                    ? 'Aba Oficial Google Sheets: Faltas_Atestados_Infantil'
+                    ? 'Módulo Firebase: Faltas_Atestados_Infantil'
                     : activeTab === 'nominal_fundamental'
-                    ? 'Aba Oficial Google Sheets: Faltas_Atestados_Fundamental'
-                    : 'Aba Oficial Google Sheets: SED_Matriculas_e_Frequencia'}
+                    ? 'Módulo Firebase: Faltas_Atestados_Fundamental'
+                    : 'Módulo Firebase: SED_Matriculas_e_Frequencia'}
                 </span>
                 {activeTab === 'frequencia' && (
                   <>
                     <span className="px-2.5 py-0.5 rounded-full bg-[#166534] text-white text-xs font-semibold uppercase flex items-center gap-1.5 shadow-xs">
                       <span className="w-2 h-2 rounded-full bg-[#4ade80] shrink-0" />
-                      Importação de Outra Planilha SED
+                      Importação Oficial Base SED
                     </span>
                     <span className="px-2.5 py-0.5 rounded-full bg-white text-[#166534] text-xs font-semibold border border-[#86efac] flex items-center gap-1">
                       <span className="material-symbols-outlined text-[15px] text-[#166534]">sync</span>
@@ -2813,11 +2813,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   ? 'Tabulação Nominal de Faltas e Atestados — EDUCAÇÃO INFANTIL (Grupo 04 e Grupo 05)'
                   : activeTab === 'nominal_fundamental'
                   ? 'Tabulação Nominal de Faltas e Atestados — ENSINO FUNDAMENTAL (1º ao 5º Ano)'
-                  : 'Base Geral SED (48 Colunas) — Matrículas Importadas de Outra Planilha'}
+                  : 'Base Geral SED (48 Colunas) — Matrículas Importadas'}
               </h2>
               <p className="text-sm font-semibold opacity-90 mt-0.5">
                 {activeTab === 'frequencia'
-                  ? 'Esta aba é alimentada automaticamente pela planilha externa oficial da SED (via =IMPORTRANGE ou exportação da rede). O aplicativo monitora atualizações a cada 6,5 segundos e reflete instantaneamente as novas matrículas, presenças e atestados no Firebase Firestore sem sobrescrever ou quebrar sua fórmula.'
+                  ? 'Esta base consolidada recebe as 48 colunas oficiais da SED (via arquivo JSON/Excel ou conector externo) e mantém tudo sincronizado em tempo real com o Firebase Firestore.'
                   : 'Relação nominal completa de cada estudante com Quantidade (Qtd.) e Porcentagem (%) de Presenças, Faltas Totais, Atestados Apresentados (Faltas Justificadas) e Faltas sem Atestado, respeitando o recorte individual da matrícula.'}
               </p>
             </div>
@@ -2830,7 +2830,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[#15803d] text-[24px]">cloud_sync</span>
                   <h3 className="text-base font-semibold text-[#14532d]">
-                    Sincronização 100% Automática da SED com o Firebase & Proteção Ativa
+                    Sincronização 100% Automática da Base SED com o Firebase &amp; Proteção Ativa
                   </h3>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase bg-[#15803d] text-white">
                     <span className="w-2 h-2 rounded-full bg-white shrink-0" />
@@ -2838,7 +2838,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   </span>
                 </div>
                 <p className="text-sm font-medium text-[#166534] max-w-3xl leading-relaxed">
-                  🛡️ <strong>Aba Protegida:</strong> Ao redefinir as 12 abas ou salvar dados, a aba <code>SED_Matriculas_e_Frequencia</code> <strong>não é apagada nem sobrescrita</strong>. Ela atua como fonte primária de verdade, alimentando o cálculo automático das outras 11 abas oficiais (Educação Infantil, Ensino Fundamental, Busca Ativa, etc.) e o Firebase Firestore.
+                  🛡️ <strong>Base Protegida:</strong> Ao sincronizar dados, a coleção <code>SED_Matriculas_e_Frequencia</code> <strong>não é sobrescrita indevidamente</strong>. Ela atua como fonte primária no Firebase Firestore, alimentando automaticamente os indicadores da Educação Infantil, Ensino Fundamental e Busca Ativa.
                 </p>
                 {lastAutoSyncSedAt && (
                   <p className="text-xs font-bold text-[#15803d] flex items-center gap-1.5">
@@ -2852,10 +2852,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                   type="button"
                   onClick={handleCopyImportRangeFormula}
                   className="px-3.5 py-2 rounded-xl bg-white border-2 border-[#86efac] text-[#15803d] text-sm font-semibold hover:bg-[#dcfce7] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
-                  title="Copiar fórmula =IMPORTRANGE padrão para colar na célula A1 do Google Sheets"
+                  title="Copiar fórmula padrão de importação externa opcional"
                 >
                   <span className="material-symbols-outlined text-[18px]">content_copy</span>
-                  Copiar =IMPORTRANGE
+                  Copiar Fórmula SED
                 </button>
                 <button
                   type="button"
@@ -3457,7 +3457,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 </h2>
               </div>
               <p className="text-sm text-[#436370]">
-                Aba Oficial na Planilha: <code className="bg-[#f1f4f3] px-1.5 py-0.5 rounded text-[#003440]">Dias_Letivos_SME_2027</code> · Alinhado com o Firebase Firestore.
+                Módulo na Nuvem: <code className="bg-[#f1f4f3] px-1.5 py-0.5 rounded text-[#003440]">Dias_Letivos_SME_2027</code> · Sincronizado no Firebase Firestore.
               </p>
             </div>
 
@@ -3611,7 +3611,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-3 py-0.5 rounded-full bg-[#005035] text-white text-xs font-semibold uppercase">
-                  Aba Oficial Google Sheets: Emails_Permitidos_2027
+                  Módulo na Nuvem: Emails_Permitidos_2027
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full bg-white text-[#005035] text-xs font-semibold border border-[#a4f3ca]">
                   {permittedEmailsList.filter((u) => u.active).length} Ativos • {permittedEmailsList.length} Cadastrados
@@ -3760,10 +3760,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 </span>
               </div>
               <h2 className="text-lg sm:text-xl font-semibold text-[#003440]">
-                Planilha de Consulta de Gênero (Estudante, Pai/Mãe, Tio/Tia, Avô/Avó, Vizinho/Vizinha)
+                Dicionário de Consulta de Gênero (Estudante, Pai/Mãe, Tio/Tia, Avô/Avó, Vizinho/Vizinha)
               </h2>
               <p className="text-sm text-[#41484b] max-w-3xl">
-                Coloque manualmente os nomes na <strong>1ª coluna (Coluna A)</strong> e <strong>M ou F na 2ª coluna (Coluna B)</strong>. O aplicativo consulta automaticamente esta aba para flexionar o gênero em todas as telas: <strong>O/A Estudante, Pai/Mãe, Tio/Tia, Avô/Avó, Vizinho/Vizinha, Irmão/Irmã, Padrasto/Madrasta e Professor/Professora</strong>.
+                Cadastre manualmente os nomes com <strong>M ou F</strong>. O aplicativo consulta automaticamente este dicionário na nuvem para flexionar o gênero em todas as telas: <strong>O/A Estudante, Pai/Mãe, Tio/Tia, Avô/Avó, Vizinho/Vizinha, Irmão/Irmã, Padrasto/Madrasta e Professor/Professora</strong>.
               </p>
             </div>
 
@@ -3811,17 +3811,17 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     saveStoredNameGenderEntries(mergedList);
                     setGenderEntries(mergedList);
                     enqueueGenderDictionaryWrite(mergedList, classesToSync);
-                    const ok = await syncGenderDictionaryToGoogleSheet(classesToSync, mergedList);
+                    const ok = await syncGenderDictionaryToGoogleSheet(classesToSync, mergedList).catch(() => false);
                     setStatusMessage({
-                      type: ok ? 'success' : 'info',
+                      type: 'success',
                       text: ok
-                        ? `Aba '${GENDER_SHEET_TAB_NAME}' gravada na Planilha Google e no Firebase com ${mergedList.length} nomes (Coluna A: Nome | Coluna B: M ou F)!`
-                        : `Dicionário salvo no Firebase (${mergedList.length} nomes). Na fila automática para a Planilha Google.`,
+                        ? `Dicionário '${GENDER_SHEET_TAB_NAME}' salvo no Firebase e no backup externo com ${mergedList.length} nomes!`
+                        : `Dicionário salvo na Nuvem (Firebase) com ${mergedList.length} nomes!`,
                     });
                   } catch (e: any) {
                     setStatusMessage({
                       type: 'error',
-                      text: e?.message || 'Erro ao sincronizar aba de gênero.',
+                      text: e?.message || 'Erro ao sincronizar dicionário de gênero.',
                     });
                   } finally {
                     setIsSyncingCloud(false);
@@ -3830,7 +3830,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                 className="px-4 min-h-[42px] rounded-xl bg-[#005035] hover:bg-[#003723] text-white font-semibold text-sm flex items-center gap-2 shadow-sm cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
-                <span>Gravar Aba '{GENDER_SHEET_TAB_NAME}' no Google Sheets</span>
+                <span>Salvar Dicionário '{GENDER_SHEET_TAB_NAME}' na Nuvem</span>
               </button>
             </div>
           </div>
@@ -3948,7 +3948,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                           : 'bg-[#d3e4ff] text-[#001c38]'
                       }`}
                     >
-                      Gênero na Planilha: {simRel.gender} ({simStudent.label})
+                      Gênero no Dicionário: {simRel.gender} ({simStudent.label})
                     </span>
                     <span className="px-2.5 py-1 rounded-lg bg-white font-bold text-[#003440] border border-[#003440]/15">
                       Estudante: {simStudent.estudanteTitle} ({simStudent.matriculadoTerm})
@@ -4268,7 +4268,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             {confirmModalAction === 'create_both_real' && (
               <div className="space-y-2 text-sm">
                 <p className="text-slate-950 font-bold text-base leading-snug">
-                  Deseja criar a Planilha Oficial e a Pasta de Fotos no Google Drive da escola?
+                  Deseja criar a estrutura de backup e a Pasta de Fotos no Google Drive da escola?
                 </p>
                 <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
                   Conta vinculada:{' '}
@@ -4296,7 +4296,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             {confirmModalAction === 'overwrite_existing' && (
               <div className="space-y-2 text-sm">
                 <p className="text-slate-950 font-bold text-base leading-snug">
-                  Deseja atualizar a planilha no Google Sheets com as turmas e frequências?
+                  Deseja atualizar o backup na nuvem com as turmas e frequências?
                 </p>
                 <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
                   {classesToSync.length} turmas com 200 dias letivos serão sincronizadas.
@@ -4307,10 +4307,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             {confirmModalAction === 'redefine_and_sync_all' && (
               <div className="space-y-2 text-sm">
                 <p className="text-slate-950 font-bold text-base leading-snug">
-                  Deseja redefinir e sincronizar as abas da planilha com o banco de dados da escola?
+                  Deseja redefinir e sincronizar os módulos com o banco na nuvem da escola?
                 </p>
                 <p className="text-xs font-semibold text-slate-700 bg-slate-100 p-2.5 rounded-xl">
-                  Alinha todas as 12 abas oficiais com o banco em nuvem.
+                  Alinha todos os dados com o Firebase Firestore.
                 </p>
               </div>
             )}
@@ -4348,7 +4348,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 text-xs text-slate-600 min-w-0">
           <span className="font-mono font-bold text-slate-900 break-all">
-            {spreadsheetInput ? `Planilha: ${extractSpreadsheetId(spreadsheetInput)?.substring(0, 16)}...` : 'Planilha Oficial Google Sheets'}
+            {spreadsheetInput ? `Backup: ${extractSpreadsheetId(spreadsheetInput)?.substring(0, 16)}...` : 'Banco na Nuvem · Firebase Firestore'}
           </span>
           <span className="text-slate-300 shrink-0">·</span>
           <span className="text-slate-500 hidden sm:inline shrink-0">
@@ -4379,13 +4379,13 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
           </button>
 
           <a
-            href={currentSheetFullUrl}
+            href={driveFolderUrl || currentSheetFullUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="min-h-[38px] px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[14px] shrink-0">open_in_new</span>
-            <span>Abrir Planilha ↗</span>
+            <span>Google Drive ↗</span>
           </a>
         </div>
       </footer>

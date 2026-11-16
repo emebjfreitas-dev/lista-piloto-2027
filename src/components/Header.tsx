@@ -298,15 +298,15 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             </button>
 
-            {/* Indicador de Status Google Sheets (Pulsante e Discreto) */}
+            {/* Indicador de Status de Sincronização (Banco na Nuvem) */}
             <div
               className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/80 border border-slate-200/60 text-xs font-medium text-slate-600 shrink-0"
               title={
                 instantSheetSyncStatus === 'syncing'
-                  ? 'Sincronizando dados com a Planilha Oficial...'
+                  ? 'Salvando alterações no banco da escola na nuvem...'
                   : instantSheetSyncStatus === 'synced'
-                  ? 'Planilha Oficial Sincronizada'
-                  : 'Sincronização em segundo plano pronta'
+                  ? 'Alterações salvas no banco da escola na nuvem'
+                  : 'Conexão com o banco na nuvem pronta'
               }
             >
               <span className="relative flex h-2 w-2">
@@ -328,10 +328,10 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               <span className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">
                 {instantSheetSyncStatus === 'syncing'
-                  ? 'Sincronizando Sheets...'
+                  ? 'Salvando...'
                   : instantSheetSyncStatus === 'synced'
-                  ? 'Sheets Sincronizado'
-                  : 'Sheets Pronto'}
+                  ? 'Tudo salvo'
+                  : 'Nuvem pronta'}
               </span>
             </div>
           </div>
@@ -558,7 +558,7 @@ export const Header: React.FC<HeaderProps> = ({
                         </p>
                         <p className="text-xs text-[#6e6e73] mt-0.5">
                           {isAdmin
-                            ? 'Direção / Administração'
+                            ? 'Equipe Administrativa'
                             : teacherRoleType === 'aee'
                             ? 'Educação Especial (AEE)'
                             : teacherRoleType === 'apoio'

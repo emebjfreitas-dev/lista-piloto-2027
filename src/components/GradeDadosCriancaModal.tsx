@@ -500,14 +500,23 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
       (s || '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/^(mae|pai|responsavel|filiacao\s*\d*)\s*[:\-\u2013]\s*/i, '')
+        .replace(/^(mae|pai|responsavel(?:\s*\d*)?|filiacao\s*\d*)\s*[:\-\u2013]?\s*/i, '')
+        .replace(/\((mae|pai|responsavel|av[oa]|ti[oa])\)/gi, '')
+        .replace(/\s+/g, ' ')
         .trim()
         .toUpperCase();
+
+    const isUsableName = (name: string) =>
+      name.length >= 6 &&
+      !['NAO INFORMADO', 'NAO CONSTA', 'SEM DECLARACAO', 'DESCONHECIDO'].includes(name);
 
     const myMother = cleanStr(draft.filiacao1);
     const myFather = cleanStr(draft.filiacao2);
 
-    if (!myMother && !myFather) return [];
+    const validMyMother = isUsableName(myMother) ? myMother : '';
+    const validMyFather = isUsableName(myFather) ? myFather : '';
+
+    if (!validMyMother && !validMyFather) return [];
 
     const allClasses = getStoredClasses();
     const siblingMap = new Map<string, { student: Student; className: string; relation: string }>();
@@ -518,12 +527,24 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         const stMother = cleanStr(st.filiacao1);
         const stFather = cleanStr(st.filiacao2);
 
-        const sameMother = Boolean(myMother && stMother && (myMother === stMother || myMother.includes(stMother) || stMother.includes(myMother)));
-        const sameFather = Boolean(myFather && stFather && (myFather === stFather || myFather.includes(stFather) || stFather.includes(myFather)));
+        const sameMother = Boolean(
+          validMyMother &&
+            isUsableName(stMother) &&
+            (validMyMother === stMother ||
+              validMyMother.includes(stMother) ||
+              stMother.includes(validMyMother))
+        );
+        const sameFather = Boolean(
+          validMyFather &&
+            isUsableName(stFather) &&
+            (validMyFather === stFather ||
+              validMyFather.includes(stFather) ||
+              stFather.includes(validMyFather))
+        );
 
         if (sameMother || sameFather) {
           let relation = 'Mesma Família';
-          if (sameMother && sameFather) relation = 'Mesma Mãe e Pai (Irmãos)';
+          if (sameMother && sameFather) relation = 'Mesma Mãe e Mesmo Pai';
           else if (sameMother) relation = 'Mesma Mãe';
           else if (sameFather) relation = 'Mesmo Pai';
 
@@ -539,24 +560,49 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     return Array.from(siblingMap.values());
   }, [draft]);
 
+  const effectiveIrmaosText = React.useMemo(() => {
+    const manual = (draft?.irmaos || '').trim();
+    if (detectedSiblings.length === 0) return manual;
+    const autoText = detectedSiblings
+      .map((s) => `${s.student.name} [${s.className} · ${s.relation}]`)
+      .join(' | ');
+    if (!manual || manual === '—') return autoText;
+    const manualUpper = manual.toUpperCase();
+    const missingAuto = detectedSiblings.filter(
+      (s) => !manualUpper.includes(s.student.name.toUpperCase())
+    );
+    if (missingAuto.length === 0) return manual;
+    return `${manual} | ${missingAuto
+      .map((s) => `${s.student.name} [${s.className} · ${s.relation}]`)
+      .join(' | ')}`;
+  }, [draft?.irmaos, detectedSiblings]);
+
+  const getFieldDisplayRawValue = (key: keyof Student): string => {
+    if (key === 'irmaos') return effectiveIrmaosText;
+    const v = draft[key];
+    return v !== undefined && v !== null ? String(v).trim() : '';
+  };
+
+  const hasPopulatedText = (val: string): boolean => {
+    const t = val.trim();
+    return t !== '' && t !== '—' && t.toLowerCase() !== 'null' && t.toLowerCase() !== 'undefined';
+  };
+
+  const populatedFieldsCount = SED_GRID_FIELDS.filter((f) =>
+    hasPopulatedText(getFieldDisplayRawValue(f.key))
+  ).length;
+
   const filteredFields = SED_GRID_FIELDS.filter((f) => {
     const matchesCat = activeCategory === 'todos' || f.category === activeCategory;
-    const rawVal = draft[f.key];
-    const hasText =
-      rawVal !== undefined &&
-      rawVal !== null &&
-      String(rawVal).trim() !== '' &&
-      String(rawVal).trim() !== '—';
-    const valStr = String(rawVal ?? '').toLowerCase();
+    const rawStr = getFieldDisplayRawValue(f.key);
+    const hasText = hasPopulatedText(rawStr);
+    const valStr = rawStr.toLowerCase();
     const matchesSearch =
       searchField.trim() === '' ||
       f.label.toLowerCase().includes(searchField.toLowerCase()) ||
       valStr.includes(searchField.toLowerCase());
 
-    if (searchField.trim() !== '') {
-      return matchesCat && matchesSearch && hasText;
-    }
-    return matchesCat && hasText;
+    return matchesCat && matchesSearch && hasText;
   });
 
   const whatsappLinks = buildWhatsAppLinksFromPhoneString(
@@ -1203,25 +1249,32 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                 {/* Irmãos Detectados na Escola (mediante nome da mãe, pai ou de ambos) */}
                 {detectedSiblings.length > 0 && (
-                  <div className="pt-2 border-t border-slate-100">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 block mb-1.5 flex items-center gap-1">
+                  <div className="pt-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 mb-1.5 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[15px]">family_restroom</span>
                       <span>Irmãos Identificados na Escola ({detectedSiblings.length})</span>
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {detectedSiblings.map((sib, idx) => (
-                        <div
+                        <button
                           key={`sib-${idx}`}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-950 text-xs font-semibold flex items-center gap-2 shadow-2xs"
+                          type="button"
+                          onClick={() => onSelectStudent?.(sib.student)}
+                          disabled={!onSelectStudent}
+                          className={`px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-950 text-xs font-semibold flex items-center gap-2 shadow-2xs text-left transition-all duration-150 ease-out ${
+                            onSelectStudent
+                              ? 'hover:bg-emerald-100 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
+                              : 'cursor-default'
+                          }`}
                         >
-                          <span className="material-symbols-outlined text-[14px] text-emerald-700">child_care</span>
-                          <div>
-                            <span>{sib.student.name}</span>
-                            <span className="text-[10px] text-emerald-800 font-normal block">
+                          <span className="material-symbols-outlined text-[15px] text-emerald-700 shrink-0">child_care</span>
+                          <div className="min-w-0">
+                            <span className="block truncate">{sib.student.name}</span>
+                            <span className="text-[10px] text-emerald-800 font-medium block">
                               Turma {sib.className} · {sib.relation}
                             </span>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -1311,10 +1364,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm sm:text-base font-bold text-slate-950 break-words">
-                    Todos os Dados do Estudante (48 Informações)
+                    Dados Preenchidos do Estudante ({populatedFieldsCount} Campos)
                   </h3>
                   <p className="text-xs text-slate-500 font-medium break-words">
-                    Toque em uma categoria abaixo ou pesquise um dado específico
+                    Exibindo apenas os campos com informação registrada · Toque em uma categoria ou pesquise
                   </p>
                 </div>
               </div>
@@ -1342,7 +1395,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
               <div className="flex flex-wrap gap-1.5">
                 {[
-                  { id: 'todos', label: 'Todos (48)' },
+                  { id: 'todos', label: `Todos (${populatedFieldsCount})` },
                   { id: 'escolar', label: 'Escola e Turma' },
                   { id: 'pessoal', label: 'Documentos e Saúde' },
                   { id: 'familia', label: 'Família e Telefones' },
@@ -1403,21 +1456,31 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 pt-1">
                 {filteredFields.map((field) => {
-                  const rawVal = draft[field.key];
-                  let displayVal =
-                    rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== ''
-                      ? String(rawVal)
-                      : '—';
+                  const rawVal = getFieldDisplayRawValue(field.key);
+                  let displayVal = rawVal || '—';
 
-                  // Mascaramento Automático LGPD para campos sensíveis quando não revelado
-                  const isSensitiveField = ['cpf', 'nis', 'rg', 'cartaoSus', 'telefones', 'logradouro'].includes(String(field.key));
+                  // Mascaramento Automático LGPD uniforme para todos os campos sensíveis quando não revelado
+                  const isSensitiveField = [
+                    'cpf',
+                    'nis',
+                    'rg',
+                    'cartaoSus',
+                    'telefones',
+                    'logradouro',
+                    'numeroResidencia',
+                    'complemento',
+                    'cep',
+                  ].includes(String(field.key));
+
                   if (isSensitiveField && !isLgpdRevealed && rawVal) {
-                    if (field.key === 'cpf') displayVal = maskSensitiveText(String(rawVal), 'cpf');
-                    else if (field.key === 'nis') displayVal = maskSensitiveText(String(rawVal), 'nis');
-                    else if (field.key === 'telefones') displayVal = maskSensitiveText(String(rawVal), 'phone');
-                    else if (field.key === 'rg') displayVal = maskSensitiveText(String(rawVal), 'rg');
-                    else if (field.key === 'logradouro') displayVal = maskSensitiveText(String(rawVal), 'address');
-                    else displayVal = maskSensitiveText(String(rawVal), 'cpf');
+                    if (field.key === 'cpf') displayVal = maskSensitiveText(rawVal, 'cpf');
+                    else if (field.key === 'nis') displayVal = maskSensitiveText(rawVal, 'nis');
+                    else if (field.key === 'cartaoSus') displayVal = maskSensitiveText(rawVal, 'sus');
+                    else if (field.key === 'telefones') displayVal = maskSensitiveText(rawVal, 'phone');
+                    else if (field.key === 'rg') displayVal = maskSensitiveText(rawVal, 'rg');
+                    else if (field.key === 'cep') displayVal = maskSensitiveText(rawVal, 'cep');
+                    else if (field.key === 'logradouro') displayVal = maskSensitiveText(rawVal, 'address');
+                    else displayVal = '***';
                   }
 
                   const isEditingThis = editingKey === field.key && canEdit;
@@ -1430,7 +1493,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           setEditingKey(field.key);
                         }
                       }}
-                      className={`p-2.5 rounded-xl shadow-2xs transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 ${
+                      className={`p-3 rounded-xl shadow-2xs min-h-[70px] flex flex-col justify-between transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 ${
                         isEditingThis
                           ? 'bg-white ring-2 ring-[#0071e3] scale-[1.01] opacity-100'
                           : canEdit
@@ -1438,17 +1501,17 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           : 'bg-slate-100 opacity-100'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-medium text-slate-500 uppercase tracking-tight flex items-center gap-1 break-words">
+                      <div className="flex items-start justify-between gap-1">
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight flex items-center gap-1 break-words leading-snug">
                           {isSensitiveField && (
-                            <span className="material-symbols-outlined text-[14px] text-amber-700 shrink-0" title="Dado Pessoal Sensível (LGPD Art. 14)">
+                            <span className="material-symbols-outlined text-[13px] text-amber-700 shrink-0" title="Dado Pessoal Sensível (LGPD Art. 14)">
                               lock
                             </span>
                           )}
                           <span>{field.label}</span>
                         </span>
                         {canEdit && (
-                          <span className="material-symbols-outlined text-[13px] text-slate-400">
+                          <span className="material-symbols-outlined text-[13px] text-slate-400 shrink-0">
                             edit
                           </span>
                         )}
@@ -1465,14 +1528,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') setEditingKey(null);
                           }}
-                          className="w-full mt-1 px-2 py-1 bg-white text-slate-950 font-semibold text-sm tabular-nums rounded-lg ring-2 ring-[#0071e3] focus:outline-none"
+                          className="w-full mt-1.5 px-2 py-1 bg-white text-slate-950 font-semibold text-sm tabular-nums rounded-lg ring-2 ring-[#0071e3] focus:outline-none"
                         />
                       ) : (
-                        <p
-                          className={`text-sm font-semibold tabular-nums mt-0.5 break-words ${
-                            displayVal === '—' ? 'text-slate-400 font-normal' : 'text-slate-900'
-                          } ${isSensitiveField && !isLgpdRevealed ? 'font-mono tracking-wider' : ''}`}
-                        >
+                        <p className="text-sm font-semibold tabular-nums mt-1.5 break-words text-slate-900 leading-snug">
                           {displayVal}
                         </p>
                       )}
@@ -1528,7 +1587,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     if (knownSedKeys.has(k) || internalSkipKeys.has(k)) return false;
                     if (v === undefined || v === null || typeof v === 'object') return false;
                     const strVal = String(v).trim();
-                    if (!strVal) return false;
+                    if (!hasPopulatedText(strVal)) return false;
                     if (searchField.trim() !== '') {
                       const q = searchField.toLowerCase();
                       return k.toLowerCase().includes(q) || strVal.toLowerCase().includes(q);
@@ -1543,19 +1602,54 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       Dados Complementares Importados do JSON ({extraEntries.length})
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5">
-                      {extraEntries.map(([extraKey, extraVal]) => (
-                        <div
-                          key={`extra-${extraKey}`}
-                          className="p-2.5 rounded-xl bg-[#eef2f7] shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95"
-                        >
-                          <span className="text-xs font-semibold text-slate-600 uppercase tracking-tight block break-words">
-                            {extraKey}
-                          </span>
-                          <p className="text-sm font-semibold text-slate-950 tabular-nums mt-0.5 break-words">
-                            {String(extraVal)}
-                          </p>
-                        </div>
-                      ))}
+                      {extraEntries.map(([extraKey, extraVal]) => {
+                        const rawStr = String(extraVal).trim();
+                        const keyLow = extraKey.toLowerCase();
+                        let displayExtra = rawStr;
+                        let isExtraSensitive = false;
+                        if (!isLgpdRevealed) {
+                          if (keyLow.includes('cpf')) {
+                            displayExtra = maskSensitiveText(rawStr, 'cpf');
+                            isExtraSensitive = true;
+                          } else if (keyLow.includes('nis')) {
+                            displayExtra = maskSensitiveText(rawStr, 'nis');
+                            isExtraSensitive = true;
+                          } else if (keyLow.includes('sus')) {
+                            displayExtra = maskSensitiveText(rawStr, 'sus');
+                            isExtraSensitive = true;
+                          } else if (keyLow.includes('tel') || keyLow.includes('cel') || keyLow.includes('fone') || keyLow.includes('whats')) {
+                            displayExtra = maskSensitiveText(rawStr, 'phone');
+                            isExtraSensitive = true;
+                          } else if (keyLow === 'rg' || keyLow.includes('_rg') || keyLow.includes('identidade')) {
+                            displayExtra = maskSensitiveText(rawStr, 'rg');
+                            isExtraSensitive = true;
+                          } else if (keyLow.includes('cep')) {
+                            displayExtra = maskSensitiveText(rawStr, 'cep');
+                            isExtraSensitive = true;
+                          } else if (keyLow.includes('ender') || keyLow.includes('lograd') || keyLow.includes('rua')) {
+                            displayExtra = maskSensitiveText(rawStr, 'address');
+                            isExtraSensitive = true;
+                          }
+                        }
+                        return (
+                          <div
+                            key={`extra-${extraKey}`}
+                            className="p-3 rounded-xl bg-slate-100 shadow-2xs min-h-[70px] flex flex-col justify-between min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95"
+                          >
+                            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight flex items-center gap-1 break-words leading-snug">
+                              {isExtraSensitive && (
+                                <span className="material-symbols-outlined text-[13px] text-amber-700 shrink-0" title="Dado Pessoal Sensível (LGPD Art. 14)">
+                                  lock
+                                </span>
+                              )}
+                              <span>{extraKey}</span>
+                            </span>
+                            <p className="text-sm font-semibold text-slate-900 tabular-nums mt-1.5 break-words leading-snug">
+                              {displayExtra}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );

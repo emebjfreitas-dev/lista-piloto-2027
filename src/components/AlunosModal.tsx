@@ -273,7 +273,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
                   <div className="min-[400px]:col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf] min-w-0">
                     <span className="text-xs font-semibold text-[#647073] uppercase block">
-                      Filiação / Responsáveis (Gênero &amp; Vínculo via Planilha)
+                      Filiação / Responsáveis (Gênero &amp; Vínculo)
                     </span>
                     {(() => {
                       const g1 = resolveGuardianRelationshipInfo(

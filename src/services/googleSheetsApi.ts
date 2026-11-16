@@ -3389,7 +3389,7 @@ export const flushPendingAttendanceSheetQueue = async (): Promise<{
     const classNames = classesSnapshot.map((c) => c.name).join(', ');
     enqueuePendingSyncOperation(
       'save_classes',
-      `Sincronização de Faltas na Planilha Google (${classNames || 'Turmas'})`,
+      `Sincronização de Faltas na Nuvem (${classNames || 'Turmas'})`,
       e?.message || 'Falha de rede — aguardando próximo ciclo (5s)'
     );
     console.warn(

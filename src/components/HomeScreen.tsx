@@ -34,6 +34,7 @@ import {
   ShieldCheck,
   Images,
   FileText,
+  ArrowUpDown,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -41,6 +42,7 @@ import {
   Bar,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
   Cell,
   ReferenceLine,
@@ -114,6 +116,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [showAllClassesGrid, setShowAllClassesGrid] = useState(false);
   const [activeHubTab, setActiveHubTab] = useState<'prazos' | 'busca_ativa'>('prazos');
   const [chartFilterShift, setChartFilterShift] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
+  const [chartSortMode, setChartSortMode] = useState<'default' | 'asc'>('default');
 
   const referencePeriod = useMemo(() => getDefaultReferencePeriod(new Date()), []);
   const windowEval = useMemo(
@@ -165,7 +168,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       else afternoonCount++;
     });
 
-    const avgPresence = countedClasses > 0 ? Math.round(sumPresence / countedClasses) : 95;
+    const avgPresence = countedClasses > 0 ? Math.round(sumPresence / countedClasses) : 0;
 
     return {
       totalClasses: visibleBaseClasses.length,
@@ -218,14 +221,58 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       return (c.shift || '').toUpperCase().includes(chartFilterShift);
     });
 
-    return filtered.map((c) => ({
-      id: c.id,
-      name: c.name,
-      presence: typeof c.presenceRate === 'number' && c.presenceRate > 0 ? c.presenceRate : 92,
-      studentsCount: c.students.length,
-      shift: c.shift || 'Integral',
-    }));
-  }, [visibleBaseClasses, chartFilterShift]);
+    const mapped = filtered.map((c) => {
+      const compactLabel =
+        c.turmaAbrev ||
+        c.name
+          .replace(/GRUPO\s*0?(\d)\s*/i, 'G$1')
+          .replace(/(\d+º)\s*ANO\s*/i, '$1')
+          .replace(/\s+/g, '');
+      const presenceVal =
+        c.students.length === 0
+          ? 0
+          : typeof c.presenceRate === 'number' && !Number.isNaN(c.presenceRate)
+          ? Math.max(0, Math.min(100, Math.round(c.presenceRate)))
+          : 0;
+      return {
+        id: c.id,
+        classRef: c,
+        name: c.name,
+        shortName: compactLabel,
+        presence: presenceVal,
+        studentsCount: c.students.length,
+        shift: c.shift || 'Integral',
+        teacherName: c.teacherName || 'Regente atribuído',
+      };
+    });
+
+    if (chartSortMode === 'asc') {
+      return [...mapped].sort((a, b) => a.presence - b.presence);
+    }
+    return mapped;
+  }, [visibleBaseClasses, chartFilterShift, chartSortMode]);
+
+  const chartBandSummary = useMemo(() => {
+    if (chartData.length === 0) {
+      return { avg: 0, regular: 0, attention: 0, below: 0 };
+    }
+    let sum = 0;
+    let regular = 0;
+    let attention = 0;
+    let below = 0;
+    chartData.forEach((d) => {
+      sum += d.presence;
+      if (d.presence < 75) below++;
+      else if (d.presence < 85) attention++;
+      else regular++;
+    });
+    return {
+      avg: Math.round(sum / chartData.length),
+      regular,
+      attention,
+      below,
+    };
+  }, [chartData]);
 
   const todayFormatted = useMemo(() => {
     try {
@@ -252,7 +299,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }, [userName]);
 
   const roleLabel = isStrictAdmin
-    ? 'Direção / Administração'
+    ? 'Equipe Administrativa'
     : teacherRoleType === 'aee'
     ? 'Educação Especial (AEE)'
     : teacherRoleType === 'apoio'
@@ -706,8 +753,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0 pt-0.5">
-                    <span className="font-mono text-xs sm:text-[13px] font-bold text-[#047857] tabular-nums">
-                      {cls.presenceRate}%
+                    <span
+                      className={`font-mono text-xs sm:text-[13px] font-bold tabular-nums ${
+                        cls.students.length === 0 ? 'text-slate-400' : 'text-[#047857]'
+                      }`}
+                    >
+                      {cls.students.length === 0 ? '—' : `${cls.presenceRate}%`}
                     </span>
                     <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[#0b3b8c] group-hover:translate-x-0.5 transition-all" />
                   </div>
@@ -830,27 +881,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 5. GRÁFICO COMPARATIVO POR TURMA (Exibido apenas para múltiplas turmas) */}
       {userRole !== 'usuario' && visibleBaseClasses.length > 1 && (
-      <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4 min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 min-w-0">
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-5 min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
           <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl font-semibold text-[#111827] flex flex-wrap items-center gap-2 min-w-0 break-words">
-              <BarChart3 className="w-5 h-5 text-[#111827] shrink-0" />
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-950 flex items-center gap-2.5 min-w-0">
+              <BarChart3 className="w-5 h-5 text-[#0b3b8c] shrink-0" />
               <span>Frequência das Turmas — Meta LDB</span>
             </h2>
-            <p className="text-xs sm:text-sm text-[#48484a] mt-0.5 break-words">
-              Comparativo por turma com referência mínima de 75%
+            <p className="text-xs sm:text-sm text-slate-600 mt-0.5 break-words">
+              Comparativo por turma com referência mínima de 75% · Clique em uma barra para abrir a turma
             </p>
           </div>
 
-          {visibleBaseClasses.length > 1 && (
-            <div className="flex flex-wrap sm:inline-flex w-full sm:w-auto max-w-full min-w-0 p-1.5 bg-[#f2f2f7] rounded-2xl text-xs sm:text-[13px] font-semibold gap-1">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setChartSortMode((prev) => (prev === 'default' ? 'asc' : 'default'))}
+              className={`min-h-[40px] px-3.5 py-2 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                chartSortMode === 'asc'
+                  ? 'bg-slate-900 border-slate-900 text-white'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+              title="Alternar entre ordem das turmas e menor frequência primeiro"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 shrink-0" />
+              <span>{chartSortMode === 'asc' ? 'Menor % primeiro' : 'Ordem das turmas'}</span>
+            </button>
+
+            <div className="inline-flex p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold gap-1 shrink-0">
               <button
                 type="button"
                 onClick={() => setChartFilterShift('all')}
-                className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-1.5 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
+                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-colors duration-100 cursor-pointer ${
                   chartFilterShift === 'all'
-                    ? 'bg-[#111827] text-white'
-                    : 'text-[#374151] hover:bg-[#e5e5ea]'
+                    ? 'bg-[#0b3b8c] text-white shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200/70'
                 }`}
               >
                 Todas ({schoolStats.totalClasses})
@@ -858,10 +923,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setChartFilterShift('MANHÃ')}
-                className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-1.5 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
+                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-colors duration-100 cursor-pointer ${
                   chartFilterShift === 'MANHÃ'
-                    ? 'bg-[#111827] text-white'
-                    : 'text-[#374151] hover:bg-[#e5e5ea]'
+                    ? 'bg-[#0b3b8c] text-white shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200/70'
                 }`}
               >
                 Manhã ({schoolStats.morningCount})
@@ -869,99 +934,203 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setChartFilterShift('TARDE')}
-                className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-1.5 rounded-xl text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
+                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-colors duration-100 cursor-pointer ${
                   chartFilterShift === 'TARDE'
-                    ? 'bg-[#111827] text-white'
-                    : 'text-[#374151] hover:bg-[#e5e5ea]'
+                    ? 'bg-[#0b3b8c] text-white shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200/70'
                 }`}
               >
                 Tarde ({schoolStats.afternoonCount})
               </button>
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="w-full h-[260px] sm:h-[300px] pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 12, right: 12, left: -18, bottom: 26 }}
-            >
-              <XAxis
-                dataKey="name"
-                interval={0}
-                angle={-40}
-                textAnchor="end"
-                height={48}
-                tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }}
-              />
-              <YAxis
-                domain={[50, 100]}
-                tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }}
-                unit="%"
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload;
+        {/* Faixa de Indicadores Quantitativos (Tipografia Tabular Sem Poluição) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-3 border-y border-slate-100 text-xs sm:text-[13px]">
+          <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
+            <span className="text-slate-500 font-medium">Média do recorte</span>
+            <span className="font-mono font-bold text-slate-950 text-sm sm:text-base tabular-nums">
+              {chartBandSummary.avg}%
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
+            <span className="text-slate-500 font-medium">Regular (≥ 85%)</span>
+            <span className="font-mono font-bold text-[#047857] text-sm sm:text-base tabular-nums">
+              {chartBandSummary.regular}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
+            <span className="text-slate-500 font-medium">Atenção (75–84%)</span>
+            <span className="font-mono font-bold text-[#b45309] text-sm sm:text-base tabular-nums">
+              {chartBandSummary.attention}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
+            <span className="text-slate-500 font-medium">Abaixo de 75%</span>
+            <span className="font-mono font-bold text-[#b91c1c] text-sm sm:text-base tabular-nums">
+              {chartBandSummary.below}
+            </span>
+          </div>
+        </div>
+
+        <div className="w-full overflow-x-auto pb-1">
+          <div className="min-w-[680px] sm:min-w-0 w-full h-[270px] sm:h-[310px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 16, right: 64, left: -12, bottom: 14 }}
+                barCategoryGap="18%"
+              >
+                <CartesianGrid
+                  vertical={false}
+                  stroke="#e2e8f0"
+                  strokeDasharray="3 3"
+                />
+                <XAxis
+                  dataKey="shortName"
+                  interval={0}
+                  axisLine={{ stroke: '#cbd5e1' }}
+                  tickLine={false}
+                  height={44}
+                  tick={(props: any) => {
+                    const { x, y, payload } = props;
+                    const item = chartData.find((d) => d.shortName === payload?.value);
+                    const isBelow = item ? item.presence < 75 : false;
                     return (
-                      <div className="bg-[#111827] text-white px-4 py-3 rounded-2xl text-xs sm:text-[13px] shadow-xl space-y-0.5">
-                        <div className="font-semibold text-white">{data.name}</div>
-                        <div className="text-white/75">{data.shift}</div>
-                        <div className="text-[#34d399] font-semibold tabular-nums">
-                          Frequência: {data.presence}%
-                        </div>
-                        <div className="text-white/70 tabular-nums">
-                          {data.studentsCount} estudantes
-                        </div>
-                      </div>
+                      <g transform={`translate(${x},${y})`}>
+                        <text
+                          x={0}
+                          y={0}
+                          dy={10}
+                          textAnchor="end"
+                          fill={isBelow ? '#b91c1c' : '#475569'}
+                          fontSize={10.5}
+                          fontWeight={isBelow ? 700 : 600}
+                          transform="rotate(-35)"
+                        >
+                          {payload?.value}
+                        </text>
+                      </g>
                     );
-                  }
-                  return null;
-                }}
-              />
-              <ReferenceLine
-                y={75}
-                stroke="#b91c1c"
-                strokeWidth={2}
-                strokeDasharray="4 4"
-                label={{
-                  value: 'Meta 75%',
-                  fill: '#b91c1c',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  position: 'insideTopLeft',
-                }}
-              />
-              <Bar dataKey="presence" radius={[6, 6, 0, 0]}>
-                {chartData.map((entry) => {
-                  let barColor = '#047857';
-                  if (entry.presence < 75) barColor = '#b91c1c';
-                  else if (entry.presence < 85) barColor = '#b45309';
-                  return <Cell key={`cell-${entry.id}`} fill={barColor} />;
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                  }}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  ticks={[0, 25, 50, 75, 100]}
+                  axisLine={false}
+                  tickLine={false}
+                  width={44}
+                  tick={{
+                    fontSize: 11,
+                    fill: '#64748b',
+                    fontWeight: 600,
+                  }}
+                  unit="%"
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(11, 59, 140, 0.06)' }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      const statusText =
+                        data.presence < 75
+                          ? 'Abaixo da meta LDB'
+                          : data.presence < 85
+                          ? 'Em atenção'
+                          : 'Frequência regular';
+                      const statusColor =
+                        data.presence < 75
+                          ? 'text-rose-300'
+                          : data.presence < 85
+                          ? 'text-amber-300'
+                          : 'text-emerald-300';
+                      return (
+                        <div className="bg-slate-950 text-white px-4 py-3 rounded-2xl text-xs sm:text-[13px] shadow-xl border border-slate-800 space-y-1 min-w-[200px]">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-bold text-white">{data.name}</span>
+                            <span className={`font-mono font-bold tabular-nums ${statusColor}`}>
+                              {data.presence}%
+                            </span>
+                          </div>
+                          <div className="text-slate-300 text-xs">
+                            {data.shift} · {data.teacherName}
+                          </div>
+                          <div className="pt-1 border-t border-slate-800 flex items-center justify-between gap-3 text-[11px]">
+                            <span className={`font-semibold ${statusColor}`}>
+                              {statusText}
+                            </span>
+                            <span className="text-slate-400 tabular-nums">
+                              {data.studentsCount} estudantes
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <ReferenceLine
+                  y={75}
+                  stroke="#dc2626"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                  label={{
+                    value: 'Meta 75%',
+                    fill: '#dc2626',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    position: 'right',
+                  }}
+                />
+                <Bar
+                  dataKey="presence"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={26}
+                  className="cursor-pointer"
+                  onClick={(barEntry: any) => {
+                    const cls = barEntry?.payload?.classRef || barEntry?.classRef;
+                    if (cls) {
+                      if (onSelectClassForDetails) onSelectClassForDetails(cls);
+                      else onNavigateToScreen('detalhes');
+                    }
+                  }}
+                >
+                  {chartData.map((entry) => {
+                    let barColor = '#059669';
+                    if (entry.presence < 75) barColor = '#dc2626';
+                    else if (entry.presence < 85) barColor = '#d97706';
+                    return (
+                      <Cell
+                        key={`cell-${entry.id}`}
+                        fill={barColor}
+                        className="hover:opacity-85 transition-opacity"
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between text-xs text-[#374151] pt-2 gap-3">
+        <div className="flex flex-wrap items-center justify-between text-xs text-slate-600 pt-1 gap-3">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <span className="flex items-center gap-2 font-medium">
-              <span className="w-2.5 h-2.5 rounded-xs bg-[#047857] shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#059669] shrink-0" />
               ≥ 85% (Regular)
             </span>
             <span className="flex items-center gap-2 font-medium">
-              <span className="w-2.5 h-2.5 rounded-xs bg-[#b45309] shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#d97706] shrink-0" />
               75% a 84% (Atenção)
             </span>
             <span className="flex items-center gap-2 font-medium">
-              <span className="w-2.5 h-2.5 rounded-xs bg-[#b91c1c] shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#dc2626] shrink-0" />
               &lt; 75% (Abaixo da Meta)
             </span>
           </div>
-          <span className="font-semibold text-[#111827] tabular-nums">
-            {chartData.length} turma(s)
+          <span className="font-semibold text-slate-900 tabular-nums">
+            {chartData.length} turma(s) exibida(s)
           </span>
         </div>
       </section>

@@ -234,7 +234,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
     XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
     const fileName = `Listas_Nominais_${currentBimester.id}_2027.xls`;
     XLSX.writeFile(wb, fileName, { bookType: 'biff8' });
-    showToast(`Planilha ${fileName} exportada (${exportObjects.length} estudantes por turma).`);
+    showToast(`Arquivo ${fileName} exportado (${exportObjects.length} estudantes por turma).`);
   };
 
   if (userRole !== 'admin') {

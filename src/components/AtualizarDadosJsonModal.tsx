@@ -38,6 +38,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [confirmResetPending, setConfirmResetPending] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -170,15 +171,6 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
   };
 
   const handleResetEntireApp = async () => {
-    const confirmed = window.confirm(
-      'ATENÇÃO: Deseja redefinir TODOS os dados de todo o app para testar o recurso de importação JSON do zero?\n\n' +
-      '• Todas as 40 turmas serão restauradas para a base oficial limpa.\n' +
-      '• Todas as faltas de todos os estudantes serão zeradas.\n' +
-      '• O banco de dados no servidor e no Firebase serão resetados.\n\n' +
-      'Confirma o reset completo de teste?'
-    );
-    if (!confirmed) return;
-
     setIsResetting(true);
     setErrorMessage(null);
     try {
@@ -187,11 +179,12 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
       setValidatedData(null);
       setSelectedFileName(null);
       setSelectedFileSize(null);
+      setConfirmResetPending(false);
       setFeedbackSuccess(
-        '✓ Todos os dados de todo o app foram resetados com sucesso! Base limpa oficial pronta para teste.'
+        '✓ Todos os dados foram limpos com sucesso! Contas autorizadas, 40 turmas e calendário de 200 dias foram preservados para você começar do zero.'
       );
     } catch (err: any) {
-      setErrorMessage(`Falha ao resetar banco escolar: ${err?.message || 'Erro inesperado'}`);
+      setErrorMessage(`Falha ao limpar banco escolar: ${err?.message || 'Erro inesperado'}`);
     } finally {
       setIsResetting(false);
     }
@@ -318,7 +311,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
             <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-600 font-medium pt-1">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[14px]">description</span>
-                Backup Escolar ou Planilha SED em .json
+                Backup Escolar ou Base SED em .json
               </span>
               <span>·</span>
               <span className="flex items-center gap-1">
@@ -446,30 +439,56 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
                 </button>
               </div>
 
-              {/* Resetar Todo o App */}
+              {/* Limpar Apenas os Dados do Banco */}
               <div className="p-4 rounded-2xl bg-rose-50 flex flex-col justify-between gap-2.5">
                 <div>
                   <h4 className="text-xs font-bold text-rose-950 flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[16px] text-rose-700">
                       restart_alt
                     </span>
-                    <span>Resetar Todo o App (Base Limpa)</span>
+                    <span>Limpar Apenas os Dados (Começar do Zero)</span>
                   </h4>
                   <p className="text-[11px] text-rose-900/80 mt-0.5 leading-relaxed">
-                    Restaura as 40 turmas com 0 faltas e dados limpos no navegador e servidor para testar o arraste e solte.
+                    Remove estudantes, faltas, alertas, avisos e logs mantendo contas, 40 turmas e calendário intactos.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleResetEntireApp}
-                  disabled={isResetting}
-                  className="min-h-[40px] px-3 rounded-xl bg-[#be123c] hover:bg-[#9f1239] disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer w-full shadow-2xs"
-                >
-                  <span className="material-symbols-outlined text-[16px]">
-                    {isResetting ? 'progress_activity' : 'delete_sweep'}
-                  </span>
-                  <span>{isResetting ? 'Resetando...' : 'Resetar Dados Agora'}</span>
-                </button>
+                {confirmResetPending ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold text-rose-950">
+                      Confirmar limpeza completa dos dados do banco?
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmResetPending(false)}
+                        disabled={isResetting}
+                        className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-semibold text-xs flex-1 cursor-pointer transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetEntireApp}
+                        disabled={isResetting}
+                        className="min-h-[38px] px-3 rounded-xl bg-[#be123c] hover:bg-[#9f1239] disabled:opacity-50 text-white font-bold text-xs flex-1 cursor-pointer transition-colors"
+                      >
+                        {isResetting ? 'Limpando...' : 'Confirmar Limpeza'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmResetPending(true)}
+                    disabled={isResetting}
+                    className="min-h-[40px] px-3 rounded-xl bg-[#be123c] hover:bg-[#9f1239] disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer w-full shadow-2xs"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      delete_sweep
+                    </span>
+                    <span>Limpar Dados Agora</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

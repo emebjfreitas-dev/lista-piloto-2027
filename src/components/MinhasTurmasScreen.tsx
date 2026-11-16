@@ -58,25 +58,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   const [selectedShift, setSelectedShift] = useState<'Todos' | 'Turno Manhã' | 'Turno Tarde'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [turmasViewMode, setTurmasViewMode] = useState<'grid' | 'table'>('grid');
-  const [isHighContrast, setIsHighContrast] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('emeb_high_contrast_v1') === 'true';
-    } catch {
-      return false;
-    }
-  });
 
-  const handleToggleHighContrast = () => {
-    setIsHighContrast((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('emeb_high_contrast_v1', String(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  };
 
   const manhaCount = useMemo(
     () => classes.filter((c) => c.shift === 'Turno Manhã').length,
@@ -188,7 +170,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   ]);
 
   return (
-    <div className={`flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-16 animate-gentle-fade text-[#1d1d1f] ${isHighContrast ? 'high-contrast' : ''}`}>
+    <div className="flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-16 animate-gentle-fade text-[#1d1d1f]">
       {/* Cabeçalho Institucional */}
       <section className="bg-white border border-slate-200 rounded-3xl px-5 py-5 sm:px-6 sm:py-6 shadow-xs min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
@@ -225,21 +207,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto min-w-0 shrink-0">
-            {/* Seletor Visual de Alto Contraste (Acessibilidade) */}
-            <button
-              type="button"
-              onClick={handleToggleHighContrast}
-              title={isHighContrast ? 'Desativar modo alto contraste' : 'Ativar modo alto contraste (Acessibilidade)'}
-              aria-label="Alternar modo de alto contraste"
-              className={`min-h-[40px] px-3.5 py-2 rounded-2xl border font-bold text-xs sm:text-[13px] flex items-center gap-2 cursor-pointer transition-colors shadow-2xs ${
-                isHighContrast
-                  ? 'bg-[#38bdf8] text-slate-950 border-[#38bdf8]'
-                  : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[17px]">contrast</span>
-              <span>{isHighContrast ? 'Alto Contraste: Ativo' : 'Alto Contraste'}</span>
-            </button>
+
 
             {userRole === 'admin' && (
               <>

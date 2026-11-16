@@ -507,7 +507,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             )}
             <span className="text-[#374151] font-medium inline-flex items-center gap-1.5 text-xs bg-[#e9e9ef] px-2.5 py-1 rounded-lg">
               <span className="material-symbols-outlined text-[16px] text-[#006644]">verified</span>
-              <span className="hidden sm:inline">Base Oficial SED (1.237 Alunos)</span>
+              <span className="hidden sm:inline">Base Oficial SED 2027</span>
             </span>
           </div>
         </div>

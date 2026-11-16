@@ -23,8 +23,7 @@ import {
   saveStoredLgpdConfig,
   exportSecurityAuditLogsCSV,
   RBAC_ROLE_DEFINITIONS,
-  resetDatabase,
-  pushClassesToServer,
+  resetEntireAppData,
   exportSchoolDataToJsonFile,
 } from '../services/db';
 import { StudentAvatar } from './StudentAvatar';
@@ -941,30 +940,20 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     if (!canManage || isResettingDb) return;
     setIsResettingDb(true);
     try {
-      const freshClasses = resetDatabase();
+      const freshClasses = await resetEntireAppData(currentUserEmail);
       if (onUpdateClasses) {
         onUpdateClasses(freshClasses);
       }
-      await pushClassesToServer(freshClasses);
-      const newEntry = addSecurityAuditLog({
-        userEmail: currentUserEmail,
-        userName: 'Administrador Escolar',
-        userRole: 'admin',
-        eventType: 'DATABASE_FACTORY_RESET',
-        actionTitle: 'Redefinição de Fábrica SED',
-        details: 'Restauração completa da base oficial SED (1.237 estudantes e 40 turmas).',
-        severity: 'warning',
-      });
-      setSecurityLogs((prev) => [newEntry, ...prev]);
+      setSecurityLogs([]);
       setConfirmResetModalOpen(false);
       triggerFeedback(
         'success',
-        'Base oficial SED restaurada (1.237 estudantes e 40 turmas).'
+        'Banco de dados limpo com sucesso (apenas os dados foram removidos; turmas, contas e calendário preservados).'
       );
     } catch (err: any) {
       triggerFeedback(
         'error',
-        `Falha ao redefinir banco escolar: ${err?.message || 'Erro desconhecido'}`
+        `Falha ao limpar banco escolar: ${err?.message || 'Erro desconhecido'}`
       );
     } finally {
       setIsResettingDb(false);
@@ -1360,7 +1349,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               type="button"
               onClick={() => {
                 exportOfficialMatrixToXLS(classes, authorizedUsers);
-                triggerFeedback('success', 'Planilha do Quadro Oficial (.xls) baixada.');
+                triggerFeedback('success', 'Arquivo do Quadro Oficial (.xls) baixado.');
               }}
               className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
             >
@@ -1408,7 +1397,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-[#047857] shrink-0" />
-                <span className="break-words">Planilha</span>
+                <span className="break-words">Nuvem &amp; Drive</span>
               </button>
             )}
 
@@ -4071,10 +4060,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               </div>
               <div className="space-y-1">
                 <h2 id="reset-sed-title" className="text-base font-semibold text-[#111827]">
-                  Restaurar base oficial SED?
+                  Limpar apenas os dados do banco?
                 </h2>
                 <p className="text-xs text-[#48484a] leading-relaxed">
-                  Os 1.237 estudantes e as 40 turmas oficiais serão restaurados para a configuração padrão. As fotos vinculadas continuam preservadas.
+                  Todos os estudantes, faltas, alertas de busca ativa, avisos e logs serão removidos para começar do zero. As 40 turmas, contas autorizadas e o calendário de 200 dias serão preservados.
                 </p>
               </div>
             </div>
@@ -4094,7 +4083,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 onClick={executeResetAllSchoolData}
                 className="min-h-[40px] px-4 rounded-xl bg-[#b3261e] hover:bg-[#991b1b] text-white text-xs font-semibold cursor-pointer"
               >
-                {isResettingDb ? 'Restaurando...' : 'Confirmar Restauração'}
+                {isResettingDb ? 'Limpando...' : 'Confirmar Limpeza'}
               </button>
             </div>
           </div>

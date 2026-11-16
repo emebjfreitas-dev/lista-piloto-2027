@@ -242,7 +242,10 @@ const __dirname = path.dirname(__filename);
 const STATE_FILE_PATH = path.join(os.tmpdir(), 'emeb_candelario_shared_school_state_2027_v2.json');
 const LEGACY_STATE_FILE_PATH = path.join(__dirname, 'shared_school_state_2027_v2.json');
 
+const SERVER_CLEAN_RESET_EPOCH_ID = 'clean_zero_data_2026_11_16_v1';
+
 interface SharedSchoolState {
+  cleanResetEpochId?: string;
   authorizedUsers?: any[];
   accessSessionLogs?: any[];
   attendanceWindowConfig?: any;
@@ -447,6 +450,59 @@ const readSharedState = (): SharedSchoolState => {
           ];
         }
 
+        let needsCleanEpochPersist = false;
+        if (parsed.cleanResetEpochId !== SERVER_CLEAN_RESET_EPOCH_ID) {
+          needsCleanEpochPersist = true;
+          const nowEpochMs = Date.now();
+          parsed.cleanResetEpochId = SERVER_CLEAN_RESET_EPOCH_ID;
+          parsed.classesUpdatedAtMs = nowEpochMs;
+          parsed.updatedAtMs = nowEpochMs;
+          parsed.accessSessionLogs = [];
+          parsed.schoolNotices = [];
+          parsed.securityAuditLogs = [];
+          parsed.discoveredNominalPdfs = [];
+          parsed.discoveredDrivePhotos = [];
+          parsed.fcmAlerts = [];
+          if (Array.isArray(parsed.classes)) {
+            parsed.classes = parsed.classes.map((cls: any) => ({
+              ...cls,
+              students: [],
+              totalStudents: 0,
+              monthlyAbsences: 0,
+              presenceRate: 0,
+              statusText: 'Aguardando importação de estudantes',
+              isPending: false,
+              weeklyPerformance: [],
+              pedagogicalNotes: '',
+              updatedAtMs: nowEpochMs,
+            }));
+          }
+          if (Array.isArray(parsed.authorizedUsers)) {
+            parsed.authorizedUsers = parsed.authorizedUsers.map((u: any) => ({
+              ...u,
+              totalAccessCount: 0,
+              totalDurationSeconds: 0,
+              lastSessionDurationSeconds: 0,
+              lastLoginAt: undefined,
+              lastActiveAt: undefined,
+              lastScreenVisited: undefined,
+            }));
+          }
+        }
+
+        if (needsCleanEpochPersist) {
+          try {
+            const tmpPath = `${STATE_FILE_PATH}.tmp`;
+            const bakPath = `${STATE_FILE_PATH}.bak`;
+            const jsonContent = JSON.stringify(parsed, null, 2);
+            fs.writeFileSync(tmpPath, jsonContent, 'utf-8');
+            fs.renameSync(tmpPath, STATE_FILE_PATH);
+            fs.copyFileSync(STATE_FILE_PATH, bakPath);
+          } catch {
+            // ignore epoch persist error
+          }
+        }
+
         return parsed;
       }
     }
@@ -563,7 +619,7 @@ const extractRequestUser = (req: express.Request): RequestUser => {
   return {
     email,
     role: isAdmin ? 'admin' : (role || 'usuario'),
-    name: name || (isAdmin ? 'Direção / Administração Escolar' : email.split('@')[0] || 'Usuário'),
+    name: name || (isAdmin ? 'Equipe Administrativa' : email.split('@')[0] || 'Usuário'),
     isAdmin,
     isInstitutional: isInst,
   };
@@ -583,7 +639,7 @@ const recordSecurityAuditLog = (
     timestampISO: new Date().toISOString(),
     eventType,
     userEmail: user.email || 'ANONYMOUS',
-    userName: user.name || (user.email === 'emebjfreitas@jundiai.sp.gov.br' ? 'Direção / Secretaria' : 'Usuário'),
+    userName: user.name || (user.email === 'emebjfreitas@jundiai.sp.gov.br' ? 'Equipe Administrativa' : 'Usuário'),
     clientIp,
     details,
     status,
@@ -638,6 +694,23 @@ const requireAdminAuth = (
     res.status(403).json({
       error: 'Acesso negado. Esta operação exige privilégios de Administrador Escolar (Direção / Secretaria).',
       code: 'ADMIN_ROLE_REQUIRED',
+    });
+    return;
+  }
+  next();
+};
+
+// Middleware: Rejeita gravações de abas antigas em cache anteriores à limpeza do banco
+const requireCurrentCleanEpoch = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  const clientEpoch = String(req.headers['x-clean-epoch'] || '').trim();
+  if (clientEpoch !== SERVER_CLEAN_RESET_EPOCH_ID) {
+    res.status(409).json({
+      error: 'Estado anterior à limpeza do banco ignorado. Recarregue a aplicação.',
+      code: 'STALE_EPOCH_REJECTED',
     });
     return;
   }
@@ -1151,7 +1224,7 @@ async function startServer() {
   });
 
   // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS, Ônibus Fretado e Links de PDFs Escaneados em tempo real com controle de concorrência por turma/estudante
-  app.post('/api/school-state/classes', requireInstitutionalAuth, (req, res) => {
+  app.post('/api/school-state/classes', requireInstitutionalAuth, requireCurrentCleanEpoch, (req, res) => {
     const {
       classes,
       classesUpdatedAtMs,
@@ -1294,7 +1367,7 @@ async function startServer() {
   });
 
   // API: Sincronizar Links de Pastas (Fotos / Fichas Informativas PDF) e Planilha Oficial Google Sheets (Admin Only)
-  app.post('/api/school-state/links', requireAdminAuth, (req, res) => {
+  app.post('/api/school-state/links', requireAdminAuth, requireCurrentCleanEpoch, (req, res) => {
     const { cloudLinks, discoveredNominalPdfs, discoveredDrivePhotos } = req.body || {};
     const current = readSharedState();
     const patch: Partial<SharedSchoolState> = {};
@@ -1393,50 +1466,78 @@ async function startServer() {
     return val;
   };
 
-  // API: Redefinir Banco de Dados Escolar para a Base Limpa SED (Admin Only)
+  // API: Limpar Apenas os Dados do Banco Escolar (Manter turmas, usuários autorizados e calendário intactos) (Admin Only)
   app.post('/api/school-state/reset', requireAdminAuth, (req, res) => {
     const { freshClasses } = req.body || {};
     const user = extractRequestUser(req);
     const nowMs = Date.now();
 
-    let targetClasses = freshClasses;
-    if (!Array.isArray(targetClasses) || targetClasses.length === 0) {
-      const current = readSharedState();
-      targetClasses = (current.classes || []).map((c: any) => ({
-        ...c,
-        monthlyAbsences: 0,
-        presenceRate: 100,
-        pedagogicalNotes: '',
-        students: (c.students || []).map((s: any) => ({
-          ...s,
-          totalAbsencesMonth: 0,
-          consecutiveDays: 0,
-          consecutiveTier: 'none',
-          consecutiveSelectedDates: [],
-          presenceDates: [],
-          absentDates: [],
-          justifiedAbsenceDates: [],
-        })),
-      }));
+    // Remove temporary uploaded student photos and PDFs from disk
+    for (const dirPath of [PHOTOS_DIR, PDFS_DIR]) {
+      try {
+        if (fs.existsSync(dirPath)) {
+          for (const file of fs.readdirSync(dirPath)) {
+            try {
+              fs.unlinkSync(path.join(dirPath, file));
+            } catch {
+              // ignore individual file delete failure
+            }
+          }
+        }
+      } catch {
+        // ignore directory cleanup error
+      }
     }
 
-    const saved = writeSharedState({
+    const current = readSharedState();
+    const baseClasses =
+      Array.isArray(freshClasses) && freshClasses.length > 0
+        ? freshClasses
+        : current.classes || [];
+
+    const targetClasses = baseClasses.map((c: any) => ({
+      ...c,
+      students: [],
+      totalStudents: 0,
+      monthlyAbsences: 0,
+      presenceRate: 0,
+      statusText: 'Aguardando importação de estudantes',
+      isPending: false,
+      weeklyPerformance: [],
+      pedagogicalNotes: '',
+      updatedAtMs: nowMs,
+    }));
+
+    const cleanedUsers = Array.isArray(current.authorizedUsers)
+      ? current.authorizedUsers.map((u: any) => ({
+          ...u,
+          totalAccessCount: 0,
+          totalDurationSeconds: 0,
+          lastSessionDurationSeconds: 0,
+          lastLoginAt: undefined,
+          lastActiveAt: undefined,
+          lastScreenVisited: undefined,
+        }))
+      : current.authorizedUsers;
+
+    writeSharedState({
+      cleanResetEpochId: SERVER_CLEAN_RESET_EPOCH_ID,
       classes: targetClasses,
       classesUpdatedAtMs: nowMs,
+      authorizedUsers: cleanedUsers,
+      accessSessionLogs: [],
       schoolNotices: [],
+      securityAuditLogs: [],
+      discoveredNominalPdfs: [],
+      discoveredDrivePhotos: [],
+      fcmAlerts: [],
     });
-    recordSecurityAuditLog(
-      'DATABASE_FACTORY_RESET',
-      `Base escolar de 40 turmas e 1.237 estudantes redefinida para a base limpa da SED por ${user.email}`,
-      req,
-      'SUCCESS',
-      user
-    );
-    res.json({ ok: true, classesUpdatedAtMs: nowMs, totalClasses: targetClasses.length });
+
+    res.json({ ok: true, classesUpdatedAtMs: nowMs, totalClasses: targetClasses.length, user: user.email });
   });
 
   // API: Importar e Atualizar Base Escolar via Arquivo JSON (Admin Only, Validação Estrita & Auditoria)
-  app.post('/api/school-state/import-json', requireAdminAuth, (req, res) => {
+  app.post('/api/school-state/import-json', requireAdminAuth, requireCurrentCleanEpoch, (req, res) => {
     const { payload, fileName, fileSize } = req.body || {};
     if (!payload) {
       res.status(400).json({ error: 'Conteúdo JSON não fornecido ou vazio.' });
@@ -1499,7 +1600,7 @@ async function startServer() {
   });
 
   // API: Atualizar Logs de Sessão e Tempo Conectado
-  app.post('/api/school-state/logs', (req, res) => {
+  app.post('/api/school-state/logs', requireCurrentCleanEpoch, (req, res) => {
     const { accessSessionLogs, authorizedUsers } = req.body || {};
     const current = readSharedState();
 
@@ -1587,7 +1688,7 @@ async function startServer() {
   });
 
   // API: Publicar / Atualizar Comunicados do Quadro de Avisos Institucional
-  app.post('/api/school-state/notices', requireInstitutionalAuth, (req, res) => {
+  app.post('/api/school-state/notices', requireInstitutionalAuth, requireCurrentCleanEpoch, (req, res) => {
     const { schoolNotices } = req.body || {};
     if (!Array.isArray(schoolNotices)) {
       res.status(400).json({ error: 'Lista de avisos inválida' });
