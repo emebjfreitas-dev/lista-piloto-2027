@@ -24,7 +24,7 @@ const rechartsPath = resolveModuleDir('recharts');
 
 export default defineConfig(() => {
   return {
-    base: './',
+    base: '/lista-piloto-2027/',
     plugins: [react(), tailwindcss()],
     resolve: {
       dedupe: ['react', 'react-dom', 'react-is', 'recharts'],

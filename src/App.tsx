@@ -227,15 +227,16 @@ export default function App() {
     return initialClasses[0];
   });
 
+  const redirectParam = initialUrlParams?.get('p');
   useEffect(() => {
-    if (typeof window !== 'undefined' && (requestedScreenParam || requestedClassIdParam)) {
+    if (typeof window !== 'undefined' && (requestedScreenParam || requestedClassIdParam || redirectParam)) {
       try {
         window.history.replaceState({}, '', window.location.pathname);
       } catch {
         // ignore history API restriction
       }
     }
-  }, [requestedScreenParam, requestedClassIdParam]);
+  }, [requestedScreenParam, requestedClassIdParam, redirectParam]);
   const [instantSheetSyncStatus, setInstantSheetSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
   const sheetWriteTimerRef = React.useRef<number | null>(null);
 
