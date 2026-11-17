@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   ScreenType,
   ClassGroup,
@@ -26,6 +26,7 @@ import {
   pushSessionLogsToServer,
   pushAttendanceWindowToServer,
   pullSharedSchoolStateFromServer,
+  pushClassesToServer,
   mergeClassesWithConcurrencyControl,
   getLocalClassesUpdatedAtMs,
   addSecurityAuditLog,
@@ -39,9 +40,11 @@ import {
   subscribeToSyncStatus,
   SyncStatusSnapshot,
   saveClassesToFirestoreCloud,
-  ensureFirestoreCleanEpoch,
-  validateFirestoreConnectionOnBoot,
   fetchStateFromFirestoreCloud,
+  beginBootIntegrityCheck,
+  monitorFirestoreIntegrityOnBoot,
+  shouldAllowRemoteClassesOverwrite,
+  getFirestoreIntegrityReport,
 } from './services/firebaseSync';
 import {
   SyncQueueManager,
@@ -247,7 +250,6 @@ export default function App() {
     }
   }, [requestedScreenParam, requestedClassIdParam, redirectParam]);
   const [instantSheetSyncStatus, setInstantSheetSyncStatus] = useState<'idle' | 'syncing' | 'synced'>('idle');
-  const sheetWriteTimerRef = React.useRef<number | null>(null);
 
   // Role-Based Access Control (ADMIN, USUÁRIO - Sua Turma, PEB II - Só Visualização) & Registered Institutional Users (@educacao.jundiai.sp.gov.br)
   const [authorizedUsers, setAuthorizedUsers] = useState<AuthorizedUser[]>(() =>
@@ -540,9 +542,78 @@ export default function App() {
     }
   };
 
-  // Real-time synchronization of the logged-in teacher's profile whenever authorizedUsers changes (including cross-tab storage events)
+  // Refs estáveis para que callbacks de Firestore/Storage/Intervalos leiam o estado atual sem recriar assinaturas nem gerar loops
+  const classesRef = useRef<ClassGroup[]>(classes);
+  classesRef.current = classes;
+  const selectedClassRef = useRef<ClassGroup>(selectedClass);
+  selectedClassRef.current = selectedClass;
+  const currentScreenRef = useRef<ScreenType>(currentScreen);
+  currentScreenRef.current = currentScreen;
+  const authorizedUsersRef = useRef<AuthorizedUser[]>(authorizedUsers);
+  authorizedUsersRef.current = authorizedUsers;
+  const accessSessionLogsRef = useRef<UserAccessSessionLog[]>(accessSessionLogs);
+  accessSessionLogsRef.current = accessSessionLogs;
+  const userRoleRef = useRef<UserRole>(userRole);
+  userRoleRef.current = userRole;
+  const assignedClassIdRef = useRef<string>(assignedClassId);
+  assignedClassIdRef.current = assignedClassId;
+  const assignedClassIdsRef = useRef<string[]>(assignedClassIds);
+  assignedClassIdsRef.current = assignedClassIds;
+
+  const skipNextClassesSaveRef = useRef<boolean>(false);
+  const isServerSyncInFlightRef = useRef<boolean>(false);
+  const lastFocusSyncAtRef = useRef<number>(0);
+  const lastMetaSignatureRef = useRef<{
+    users?: string;
+    window?: string;
+    notices?: string;
+    logs?: string;
+  }>({});
+
+  const applyRemoteClassesSafely = useCallback(
+    (incomingClasses: ClassGroup[], hydratePhotos: boolean = true) => {
+      if (!Array.isArray(incomingClasses) || incomingClasses.length === 0) return;
+      const hydrated = hydratePhotos
+        ? attachPhotosFromDiscoveredCache(incomingClasses)
+        : incomingClasses;
+
+      if (!haveClassesChanged(classesRef.current, hydrated)) {
+        return;
+      }
+
+      skipNextClassesSaveRef.current = true;
+      saveStoredClasses(hydrated, true);
+      setClasses(hydrated);
+
+      const currentSel = selectedClassRef.current;
+      const matchedSelected = hydrated.find((c) => c.id === currentSel.id);
+      if (matchedSelected && haveClassesChanged([currentSel], [matchedSelected])) {
+        setSelectedClass(matchedSelected);
+      }
+    },
+    []
+  );
+
+  const applyAuthorizedUsersIfChanged = useCallback(
+    (incomingUsers: AuthorizedUser[], persistLocal: boolean = true) => {
+      if (!Array.isArray(incomingUsers) || incomingUsers.length === 0) return;
+      const sig = incomingUsers
+        .map(
+          (u) =>
+            `${u.id}:${u.email}:${u.role}:${u.teacherRoleType || ''}:${u.active}:${u.assignedClassId}:${(u.assignedClassIds || []).join(',')}:${u.totalAccessCount || 0}:${u.totalDurationSeconds || 0}`
+        )
+        .join('|');
+      if (lastMetaSignatureRef.current.users === sig) return;
+      lastMetaSignatureRef.current.users = sig;
+      if (persistLocal) saveStoredAuthorizedUsers(incomingUsers);
+      setAuthorizedUsers(incomingUsers);
+    },
+    []
+  );
+
+  // Real-time synchronization of the logged-in teacher's profile whenever authorizedUsers changes (sem depender de classes)
   useEffect(() => {
-    if (currentScreen === 'login') return;
+    if (!isAuthVerified || currentScreenRef.current === 'login' || !currentUserEmail) return;
     const lookupEmail = (simulatedTeacherEmail || currentUserEmail).trim().toLowerCase();
     const matched = authorizedUsers.find(
       (u) => u.email.trim().toLowerCase() === lookupEmail
@@ -557,7 +628,7 @@ export default function App() {
       currentUserEmail.trim().toLowerCase().startsWith('emebjfreitas@') &&
       !simulatedTeacherEmail;
 
-    if (!isMainAdminAccount && matched.role !== userRole) {
+    if (!isMainAdminAccount && matched.role !== userRoleRef.current) {
       setUserRole(matched.role);
       if (matched.role === 'usuario') {
         setCurrentScreen('detalhes');
@@ -576,13 +647,13 @@ export default function App() {
           ? [matched.assignedClassId]
           : [];
       if (nextIds.length > 0) {
-        const joinedCurrent = assignedClassIds.join(',');
+        const joinedCurrent = assignedClassIdsRef.current.join(',');
         const joinedNext = nextIds.join(',');
-        if (joinedCurrent !== joinedNext || assignedClassId !== nextIds[0]) {
+        if (joinedCurrent !== joinedNext || assignedClassIdRef.current !== nextIds[0]) {
           setAssignedClassIds(nextIds);
           setAssignedClassId(nextIds[0]);
-          if (!nextIds.includes(selectedClass.id)) {
-            const targetCls = classes.find((c) => c.id === nextIds[0]);
+          if (!nextIds.includes(selectedClassRef.current.id)) {
+            const targetCls = classesRef.current.find((c) => c.id === nextIds[0]);
             if (targetCls) {
               setSelectedClass(targetCls);
             }
@@ -590,7 +661,7 @@ export default function App() {
         }
       }
     }
-  }, [authorizedUsers, currentUserEmail, simulatedTeacherEmail, classes]);
+  }, [isAuthVerified, authorizedUsers, currentUserEmail, simulatedTeacherEmail, currentUserName]);
 
   // Mandatory Firebase Auth session verification on boot and auth state changes
   useEffect(() => {
@@ -675,13 +746,28 @@ export default function App() {
           setAssignedClassIds(nextIds);
           setAssignedClassId(primaryId);
         }
+        const localClassesTs = getLocalClassesUpdatedAtMs();
+        const hasLocalStudents = classesRef.current.some(
+          (c) => Array.isArray(c.students) && c.students.length > 0
+        );
+        // Ativa barreira de integridade antes de liberar listeners/sync para evitar sobrescrita pós-recarga
+        beginBootIntegrityCheck(localClassesTs);
+
         setIsAuthVerified(true);
         setIsAuthChecking(false);
 
         setCurrentScreen((prev) => (prev === 'login' ? 'home' : prev));
 
-        void validateFirestoreConnectionOnBoot();
-        void ensureFirestoreCleanEpoch(INITIAL_CLASSES);
+        void monitorFirestoreIntegrityOnBoot({
+          baseClasses: INITIAL_CLASSES,
+          localClassesUpdatedAtMs: localClassesTs,
+          hasLocalStudents,
+        }).then((report) => {
+          if (!active) return;
+          if (report.status === 'local_newer_preserved') {
+            void pushClassesToServer(classesRef.current);
+          }
+        });
       });
 
       return () => {
@@ -696,70 +782,108 @@ export default function App() {
     }
   }, []);
 
-  // Real-time Cross-Browser & Cross-Device Synchronization (ONLY when genuinely authenticated)
+  // Sincronização unificada (Firestore onSnapshot + Backend + Focus + Storage) com deduplicação por ref
   useEffect(() => {
-    if (!isAuthVerified || currentScreen === 'login') return;
+    if (!isAuthVerified) return;
     let active = true;
 
     const syncFromBackendServer = async () => {
-      const shared = await pullSharedSchoolStateFromServer();
-      if (!active || !shared) return;
-
-      if (shared.authorizedUsers && shared.authorizedUsers.length > 0) {
-        setAuthorizedUsers(shared.authorizedUsers);
-      } else {
-        const currentLocal = getStoredAuthorizedUsers();
-        if (currentLocal.length > 0) {
-          pushAuthorizedUsersToServer(currentLocal);
-        }
-      }
-
-      if (shared.classes && shared.classes.length > 0) {
-        const hydratedClasses = attachPhotosFromDiscoveredCache(shared.classes);
-        setClasses(hydratedClasses);
-        setSelectedClass((prev) => {
-          const found = hydratedClasses.find((c) => c.id === prev.id);
-          return found || prev;
-        });
-      } else if (shared.discoveredDrivePhotos) {
-        setClasses((prevClasses) => {
-          const hydratedClasses = attachPhotosFromDiscoveredCache(prevClasses);
-          setSelectedClass((prevSel) => {
-            const found = hydratedClasses.find((c) => c.id === prevSel.id);
-            return found || prevSel;
+      if (!active || !isBackendApiAvailable() || isServerSyncInFlightRef.current) return;
+      isServerSyncInFlightRef.current = true;
+      try {
+        if (getFirestoreIntegrityReport().status === 'checking') {
+          await monitorFirestoreIntegrityOnBoot({
+            baseClasses: INITIAL_CLASSES,
+            localClassesUpdatedAtMs: getLocalClassesUpdatedAtMs(),
+            hasLocalStudents: classesRef.current.some(
+              (c) => Array.isArray(c.students) && c.students.length > 0
+            ),
           });
-          return hydratedClasses;
-        });
-      }
+        }
+        if (!active) return;
 
-      if (Array.isArray(shared.accessSessionLogs)) {
-        setAccessSessionLogs(shared.accessSessionLogs);
-      }
+        const shared = await pullSharedSchoolStateFromServer();
+        if (!active || !shared) return;
 
-      if (shared.attendanceWindowConfig) {
-        setAttendanceWindowConfig(shared.attendanceWindowConfig);
-      }
+        if (shared.authorizedUsers && shared.authorizedUsers.length > 0) {
+          applyAuthorizedUsersIfChanged(shared.authorizedUsers, true);
+        } else {
+          const currentLocal = getStoredAuthorizedUsers();
+          if (currentLocal.length > 0) {
+            pushAuthorizedUsersToServer(currentLocal);
+          }
+        }
 
-      if (Array.isArray(shared.schoolNotices)) {
-        setSchoolNotices(shared.schoolNotices);
+        if (
+          shared.classes &&
+          shared.classes.length > 0 &&
+          shouldAllowRemoteClassesOverwrite({
+            remoteUpdatedAtMs: shared.classesUpdatedAtMs,
+            fromCache: false,
+          })
+        ) {
+          applyRemoteClassesSafely(shared.classes, true);
+        } else if (shared.discoveredDrivePhotos) {
+          applyRemoteClassesSafely(classesRef.current, true);
+        }
+
+        if (Array.isArray(shared.accessSessionLogs)) {
+          const logsSig = `${shared.accessSessionLogs.length}:${shared.accessSessionLogs[0]?.id || ''}:${shared.accessSessionLogs[0]?.lastHeartbeatISO || ''}`;
+          if (lastMetaSignatureRef.current.logs !== logsSig) {
+            lastMetaSignatureRef.current.logs = logsSig;
+            setAccessSessionLogs(shared.accessSessionLogs);
+          }
+        }
+
+        if (shared.attendanceWindowConfig) {
+          const winSig = JSON.stringify(shared.attendanceWindowConfig);
+          if (lastMetaSignatureRef.current.window !== winSig) {
+            lastMetaSignatureRef.current.window = winSig;
+            setAttendanceWindowConfig(shared.attendanceWindowConfig);
+          }
+        }
+
+        if (Array.isArray(shared.schoolNotices)) {
+          const noticesSig = JSON.stringify(shared.schoolNotices);
+          if (lastMetaSignatureRef.current.notices !== noticesSig) {
+            lastMetaSignatureRef.current.notices = noticesSig;
+            setSchoolNotices(shared.schoolNotices);
+          }
+        }
+      } catch (err) {
+        console.warn('Sincronização institucional de estado escolar:', err);
+      } finally {
+        isServerSyncInFlightRef.current = false;
       }
     };
 
     let pollId: number | null = null;
     if (isBackendApiAvailable()) {
-      syncFromBackendServer();
+      void syncFromBackendServer();
       pollId = window.setInterval(() => {
         if (document.visibilityState === 'visible') {
-          syncFromBackendServer();
+          void syncFromBackendServer();
         }
       }, 300000);
     }
 
-    // Instant <200ms Real-Time Push via Cloud Firestore onSnapshot
+    const handleWindowFocus = () => {
+      if (!isBackendApiAvailable() || document.visibilityState !== 'visible') return;
+      const nowMs = Date.now();
+      if (nowMs - lastFocusSyncAtRef.current < 15000) return;
+      lastFocusSyncAtRef.current = nowMs;
+      void syncFromBackendServer();
+    };
+    window.addEventListener('focus', handleWindowFocus);
+
+    // Instant <200ms Real-Time Push via Cloud Firestore onSnapshot (com controle de concorrência, epoch integrity e diff via ref)
     const unsubFirestore = subscribeToFirestoreRealtimeState({
       onClassesUpdate: (remoteClasses, remoteUpdatedAtMs) => {
         if (!active || !remoteClasses || remoteClasses.length === 0) return;
-        const localClasses = getStoredClasses();
+        if (!shouldAllowRemoteClassesOverwrite({ remoteUpdatedAtMs, fromCache: false })) {
+          return;
+        }
+        const localClasses = classesRef.current;
         const localUpdatedAtMs = getLocalClassesUpdatedAtMs();
         const merged = mergeClassesWithConcurrencyControl(
           remoteClasses,
@@ -767,31 +891,36 @@ export default function App() {
           remoteUpdatedAtMs,
           localUpdatedAtMs
         );
-        const hydrated = attachPhotosFromDiscoveredCache(merged);
-        saveStoredClasses(hydrated, true);
-        setClasses(hydrated);
-        setSelectedClass((prev) => {
-          const found = hydrated.find((c) => c.id === prev.id);
-          return found || prev;
-        });
+        applyRemoteClassesSafely(merged, true);
       },
       onMetaConfigUpdate: (cfg) => {
         if (!active) return;
         if (Array.isArray(cfg.authorizedUsers) && cfg.authorizedUsers.length > 0) {
-          setAuthorizedUsers(cfg.authorizedUsers);
-          saveStoredAuthorizedUsers(cfg.authorizedUsers);
+          applyAuthorizedUsersIfChanged(cfg.authorizedUsers, true);
         }
         if (cfg.attendanceWindowConfig) {
-          setAttendanceWindowConfig(cfg.attendanceWindowConfig);
-          saveStoredAttendanceWindowConfig(cfg.attendanceWindowConfig);
+          const winSig = JSON.stringify(cfg.attendanceWindowConfig);
+          if (lastMetaSignatureRef.current.window !== winSig) {
+            lastMetaSignatureRef.current.window = winSig;
+            setAttendanceWindowConfig(cfg.attendanceWindowConfig);
+            saveStoredAttendanceWindowConfig(cfg.attendanceWindowConfig);
+          }
         }
         if (Array.isArray(cfg.schoolNotices)) {
-          setSchoolNotices(cfg.schoolNotices);
-          saveStoredSchoolNotices(cfg.schoolNotices);
+          const noticesSig = JSON.stringify(cfg.schoolNotices);
+          if (lastMetaSignatureRef.current.notices !== noticesSig) {
+            lastMetaSignatureRef.current.notices = noticesSig;
+            setSchoolNotices(cfg.schoolNotices);
+            saveStoredSchoolNotices(cfg.schoolNotices);
+          }
         }
         if (Array.isArray(cfg.accessSessionLogs)) {
-          setAccessSessionLogs(cfg.accessSessionLogs);
-          saveStoredAccessSessionLogs(cfg.accessSessionLogs);
+          const logsSig = `${cfg.accessSessionLogs.length}:${cfg.accessSessionLogs[0]?.id || ''}:${cfg.accessSessionLogs[0]?.lastHeartbeatISO || ''}`;
+          if (lastMetaSignatureRef.current.logs !== logsSig) {
+            lastMetaSignatureRef.current.logs = logsSig;
+            setAccessSessionLogs(cfg.accessSessionLogs);
+            saveStoredAccessSessionLogs(cfg.accessSessionLogs);
+          }
         }
       },
     });
@@ -799,11 +928,12 @@ export default function App() {
     return () => {
       active = false;
       if (pollId !== null) window.clearInterval(pollId);
+      window.removeEventListener('focus', handleWindowFocus);
       unsubFirestore();
     };
-  }, [isAuthVerified, currentScreen === 'login']);
+  }, [isAuthVerified, applyRemoteClassesSafely, applyAuthorizedUsersIfChanged]);
 
-  // Listen to localStorage changes from other browser tabs so when any tab updates classes, users, or links, all tabs update in 0ms!
+  // Listen to localStorage changes from other browser tabs without ping-pong re-saves
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (
@@ -811,8 +941,7 @@ export default function App() {
         e.key === 'emeb_candelario_authorized_users_2027_v3' ||
         e.key === 'emeb_candelario_authorized_users_2027_v2'
       ) {
-        const freshUsers = getStoredAuthorizedUsers();
-        setAuthorizedUsers(freshUsers);
+        applyAuthorizedUsersIfChanged(getStoredAuthorizedUsers(), false);
       } else if (
         e.key === 'emeb_candelario_sed_classes_2027_v8' ||
         e.key === 'emeb_candelario_sed_classes_2027_v7' ||
@@ -821,68 +950,48 @@ export default function App() {
         e.key === 'emeb_candelario_discovered_drive_photos_2027_v1'
       ) {
         const freshClasses = attachPhotosFromDiscoveredCache(getStoredClasses());
-        setClasses(freshClasses);
-        setSelectedClass((prev) => {
-          const found = freshClasses.find((c) => c.id === prev.id);
-          return found || prev;
-        });
+        if (haveClassesChanged(classesRef.current, freshClasses)) {
+          skipNextClassesSaveRef.current = true;
+          setClasses(freshClasses);
+          const curSel = selectedClassRef.current;
+          const found = freshClasses.find((c) => c.id === curSel.id);
+          if (found && haveClassesChanged([curSel], [found])) {
+            setSelectedClass(found);
+          }
+        }
       } else if (e.key === 'emeb_candelario_attendance_window_2027_v1') {
-        setAttendanceWindowConfig(getStoredAttendanceWindowConfig());
+        const nextWin = getStoredAttendanceWindowConfig();
+        const sig = JSON.stringify(nextWin);
+        if (lastMetaSignatureRef.current.window !== sig) {
+          lastMetaSignatureRef.current.window = sig;
+          setAttendanceWindowConfig(nextWin);
+        }
       } else if (e.key === 'emeb_candelario_school_notices_2027_v1') {
-        setSchoolNotices(getStoredSchoolNotices());
+        const nextNotices = getStoredSchoolNotices();
+        const sig = JSON.stringify(nextNotices);
+        if (lastMetaSignatureRef.current.notices !== sig) {
+          lastMetaSignatureRef.current.notices = sig;
+          setSchoolNotices(nextNotices);
+        }
       } else if (e.key === 'emeb_candelario_access_session_logs_2027_v1') {
         setAccessSessionLogs(getStoredAccessSessionLogs());
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [applyAuthorizedUsersIfChanged]);
 
-  // Debounced persist classes to local database & server for instant UI responsiveness (0ms lag on + / - clicks)
+  // Debounced persist classes to local database only when triggered by local user mutations
   useEffect(() => {
+    if (skipNextClassesSaveRef.current) {
+      skipNextClassesSaveRef.current = false;
+      return;
+    }
     const timer = window.setTimeout(() => {
       saveStoredClasses(classes);
     }, 90);
     return () => window.clearTimeout(timer);
   }, [classes]);
-
-  // Sincronização segura e direta com o servidor institucional da escola (Base Oficial SED)
-  useEffect(() => {
-    let isMounted = true;
-
-    const pullOfficialSchoolState = async () => {
-      try {
-        const serverState = await pullSharedSchoolStateFromServer();
-        if (serverState && isMounted) {
-          if (serverState.classes && serverState.classes.length > 0) {
-            setClasses(serverState.classes);
-            saveStoredClasses(serverState.classes);
-          }
-          if (serverState.authorizedUsers && serverState.authorizedUsers.length > 0) {
-            setAuthorizedUsers(serverState.authorizedUsers);
-            saveStoredAuthorizedUsers(serverState.authorizedUsers);
-          }
-
-        }
-      } catch (err) {
-        console.warn('Sincronização institucional de estado escolar:', err);
-      }
-    };
-
-    pullOfficialSchoolState();
-
-    const handleWindowFocus = () => {
-      if (document.visibilityState === 'visible') {
-        pullOfficialSchoolState();
-      }
-    };
-
-    window.addEventListener('focus', handleWindowFocus);
-    return () => {
-      isMounted = false;
-      window.removeEventListener('focus', handleWindowFocus);
-    };
-  }, [currentScreen, currentUserEmail]);
 
   // Modal states
   const [isStudentListModalOpen, setIsStudentListModalOpen] = useState(false);
@@ -906,35 +1015,59 @@ export default function App() {
   // Permission helper (respects role AND the attendance launch window: last school day + 2 first school days of next month, or exceptional override)
   const windowStatus = evaluateAttendanceLaunchWindow(attendanceWindowConfig);
 
+  // Memoization seletiva por assinatura estrutural (evita recálculo de permissões a cada clique em faltas)
+  const classesStructureKey = useMemo(
+    () => classes.map((c) => `${c.id}:${c.name}`).join('|'),
+    [classes]
+  );
+
+  const prevAllowedIdsRef = useRef<string[]>([]);
   const allowedUsuarioClassIds = useMemo(() => {
-    if (userRole !== 'usuario') return [];
-    // Strict PEB 1 scoping: only their assigned class, never 'all'
+    if (userRole !== 'usuario') {
+      if (prevAllowedIdsRef.current.length === 0) return prevAllowedIdsRef.current;
+      prevAllowedIdsRef.current = [];
+      return prevAllowedIdsRef.current;
+    }
+
     const validCandidate =
       (assignedClassId && assignedClassId.toLowerCase() !== 'all' ? assignedClassId : null) ||
       (assignedClassIds.find((id) => id && id.toLowerCase() !== 'all') ?? null);
 
+    let nextIds: string[];
+    const currentList = classesRef.current;
     if (validCandidate) {
-      const matched = classes.find(
+      const matched = currentList.find(
         (c) =>
           c.id.toLowerCase() === validCandidate.toLowerCase() ||
           c.name.toLowerCase() === validCandidate.toLowerCase()
       );
-      if (matched) return [matched.id];
-      return [validCandidate];
+      nextIds = matched ? [matched.id] : [validCandidate];
+    } else {
+      nextIds = currentList.length > 0 ? [currentList[0].id] : ['g04a'];
     }
-    return classes.length > 0 ? [classes[0].id] : ['g04a'];
-  }, [userRole, assignedClassId, assignedClassIds, classes]);
+
+    if (
+      prevAllowedIdsRef.current.length === nextIds.length &&
+      prevAllowedIdsRef.current.every((id, idx) => id === nextIds[idx])
+    ) {
+      return prevAllowedIdsRef.current;
+    }
+    prevAllowedIdsRef.current = nextIds;
+    return nextIds;
+  }, [userRole, assignedClassId, assignedClassIds, classesStructureKey]);
+
+  const targetUsuarioClass = useMemo(() => {
+    if (userRole !== 'usuario') return null;
+    const targetId = allowedUsuarioClassIds[0];
+    return classes.find((c) => c.id === targetId) || classes[0] || null;
+  }, [userRole, allowedUsuarioClassIds, classes]);
 
   const visibleClasses = useMemo(() => {
     if (userRole === 'admin' || userRole === 'peb2') {
       return classes;
     }
-    // userRole === 'usuario' (PEB 1): strictly only their own assigned class
-    const targetId = allowedUsuarioClassIds[0];
-    const found = classes.find((c) => c.id === targetId);
-    if (found) return [found];
-    return classes.length > 0 ? [classes[0]] : [];
-  }, [userRole, allowedUsuarioClassIds, classes]);
+    return targetUsuarioClass ? [targetUsuarioClass] : [];
+  }, [userRole, classes, targetUsuarioClass]);
 
   const canEditClass = (classId: string): boolean => {
     if (!windowStatus.isAllowedToLaunch) return false;
@@ -945,13 +1078,12 @@ export default function App() {
 
   // Keep selectedClass restricted to their own class when userRole is 'usuario' (PEB 1)
   useEffect(() => {
-    if (userRole === 'usuario') {
-      const targetClass = visibleClasses[0] || classes[0];
-      if (targetClass && selectedClass.id !== targetClass.id) {
-        setSelectedClass(targetClass);
+    if (userRole === 'usuario' && targetUsuarioClass) {
+      if (selectedClassRef.current.id !== targetUsuarioClass.id) {
+        setSelectedClass(targetUsuarioClass);
       }
     }
-  }, [userRole, visibleClasses, classes, selectedClass.id]);
+  }, [userRole, targetUsuarioClass]);
 
   // Screen navigation handlers
   const handleSelectClassForDetails = (cls: ClassGroup) => {
@@ -979,18 +1111,13 @@ export default function App() {
     description?: string
   ) => {
     setInstantSheetSyncStatus('syncing');
-    if (sheetWriteTimerRef.current) {
-      window.clearTimeout(sheetWriteTimerRef.current);
-    }
-    sheetWriteTimerRef.current = window.setTimeout(() => {
-      SyncQueueManager.enqueueClassWrite({
-        category,
-        updatedClass,
-        allClasses: nextClasses,
-        studentId,
-        description,
-      });
-    }, 150);
+    SyncQueueManager.enqueueClassWrite({
+      category,
+      updatedClass,
+      allClasses: nextClasses,
+      studentId,
+      description,
+    });
   };
 
   const handleSaveMonthlyAttendance = (updatedClass: ClassGroup) => {
@@ -1002,8 +1129,9 @@ export default function App() {
     };
     setClasses((prev) => {
       const next = prev.map((c) => (c.id === stampedClass.id ? stampedClass : c));
-      saveStoredClasses(next);
-      // Atualização instantânea via SyncQueueManager com retry exponencial e proteção contra fechamento
+      skipNextClassesSaveRef.current = true;
+      saveStoredClasses(next, 'local_with_timestamp');
+      // Agrupamento (coalescing 500ms) por turma via SyncQueueManager
       triggerDebouncedSheetWrite(
         stampedClass,
         next,
@@ -1071,7 +1199,8 @@ export default function App() {
         }
         return finalCls;
       });
-      saveStoredClasses(next);
+      skipNextClassesSaveRef.current = true;
+      saveStoredClasses(next, 'local_with_timestamp');
       if (targetUpdatedClass) {
         triggerDebouncedSheetWrite(
           targetUpdatedClass,
@@ -1132,7 +1261,8 @@ export default function App() {
         updatedTargetClass = updatedCls;
         return updatedCls;
       });
-      saveStoredClasses(next);
+      skipNextClassesSaveRef.current = true;
+      saveStoredClasses(next, 'local_with_timestamp');
       if (updatedTargetClass) {
         triggerDebouncedSheetWrite(
           updatedTargetClass,
@@ -1259,9 +1389,9 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  // Real-time session duration tracker (ticks every 5 seconds while logged in, even after F5 refresh!)
+  // Real-time session duration tracker (sem reiniciar ao trocar de tela e sem setState aninhado)
   useEffect(() => {
-    if (!isAuthVerified || currentScreen === 'login' || !currentUserEmail) return;
+    if (!isAuthVerified || currentScreenRef.current === 'login' || !currentUserEmail) return;
 
     const trackedEmail = (simulatedTeacherEmail || currentUserEmail).trim().toLowerCase();
 
@@ -1281,9 +1411,10 @@ export default function App() {
       importar_deficiencias_htm: 'Subir Deficiências (.HTM)',
     };
 
-    const currentLog = accessSessionLogs.find((l) => l.id === activeSessionIdRef.current);
+    const currentLog = accessSessionLogsRef.current.find(
+      (l) => l.id === activeSessionIdRef.current
+    );
 
-    // If session was restored from F5, or user switched to simulatedTeacherEmail, bootstrap an active session log immediately
     if (
       !activeSessionIdRef.current ||
       !currentLog ||
@@ -1295,8 +1426,8 @@ export default function App() {
       const newSessId = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       activeSessionIdRef.current = newSessId;
 
-      const currentScreenLabel = screenLabelMap[currentScreen] || '1. Turmas';
-      const matchedUser = authorizedUsers.find(
+      const currentScreenLabel = screenLabelMap[currentScreenRef.current] || '1. Turmas';
+      const matchedUser = authorizedUsersRef.current.find(
         (u) => u.email.trim().toLowerCase() === trackedEmail
       );
 
@@ -1304,12 +1435,12 @@ export default function App() {
         id: newSessId,
         email: matchedUser?.email || trackedEmail,
         name: matchedUser?.name || currentUserName,
-        role: matchedUser?.role || userRole,
+        role: matchedUser?.role || userRoleRef.current,
         assignedClassName:
           matchedUser?.assignedClassName ||
-          (userRole === 'admin'
+          (userRoleRef.current === 'admin'
             ? 'Todas as 40 Turmas (Acesso Pleno)'
-            : selectedClass?.name || 'Turma'),
+            : selectedClassRef.current?.name || 'Turma'),
         loginTimeISO: nowISO,
         lastHeartbeatISO: nowISO,
         durationSeconds: 1,
@@ -1321,25 +1452,23 @@ export default function App() {
       setAccessSessionLogs(nextLogs);
       saveStoredAccessSessionLogs(nextLogs);
 
-      setAuthorizedUsers((prevUsers) => {
-        const nextUsers = prevUsers.map((u) => {
-          if (u.email.trim().toLowerCase() !== trackedEmail) {
-            return u;
-          }
-          return {
-            ...u,
-            totalAccessCount: Math.max(1, (u.totalAccessCount || 0) + 1),
-            totalDurationSeconds: (u.totalDurationSeconds || 0) + 1,
-            lastSessionDurationSeconds: 1,
-            lastLoginAt: u.lastLoginAt || nowFormatted,
-            lastActiveAt: nowFormatted,
-            lastScreenVisited: currentScreenLabel,
-          };
-        });
-        saveStoredAuthorizedUsers(nextUsers);
-        pushSessionLogsToServer(nextLogs, nextUsers);
-        return nextUsers;
+      const nextUsers = authorizedUsersRef.current.map((u) => {
+        if (u.email.trim().toLowerCase() !== trackedEmail) {
+          return u;
+        }
+        return {
+          ...u,
+          totalAccessCount: Math.max(1, (u.totalAccessCount || 0) + 1),
+          totalDurationSeconds: (u.totalDurationSeconds || 0) + 1,
+          lastSessionDurationSeconds: 1,
+          lastLoginAt: u.lastLoginAt || nowFormatted,
+          lastActiveAt: nowFormatted,
+          lastScreenVisited: currentScreenLabel,
+        };
       });
+      setAuthorizedUsers(nextUsers);
+      saveStoredAuthorizedUsers(nextUsers);
+      pushSessionLogsToServer(nextLogs, nextUsers);
     }
 
     let tickCounter = 0;
@@ -1352,71 +1481,69 @@ export default function App() {
       const now = new Date();
       const nowISO = now.toISOString();
       const nowFormatted = now.toLocaleString('pt-BR');
-      const currentScreenLabel = screenLabelMap[currentScreen] || '1. Turmas';
+      const currentScreenLabel = screenLabelMap[currentScreenRef.current] || '1. Turmas';
 
-      setAccessSessionLogs((prevLogs) => {
-        const targetLog = prevLogs.find((l) => l.id === sessId);
-        if (!targetLog) return prevLogs;
+      const prevLogs = accessSessionLogsRef.current;
+      const targetLog = prevLogs.find((l) => l.id === sessId);
+      if (!targetLog) return;
 
-        const elapsedSecs = Math.max(
-          1,
-          Math.round((now.getTime() - new Date(targetLog.loginTimeISO).getTime()) / 1000)
-        );
-        const deltaSecs = Math.max(0, elapsedSecs - (targetLog.durationSeconds || 0));
+      const elapsedSecs = Math.max(
+        1,
+        Math.round((now.getTime() - new Date(targetLog.loginTimeISO).getTime()) / 1000)
+      );
+      const deltaSecs = Math.max(0, elapsedSecs - (targetLog.durationSeconds || 0));
 
-        const updatedLogs = prevLogs.map((l) =>
-          l.id === sessId
-            ? {
-                ...l,
-                lastHeartbeatISO: nowISO,
-                durationSeconds: elapsedSecs,
-                lastScreen: currentScreenLabel,
-                isOnlineNow: true,
-              }
-            : l
-        );
-        saveStoredAccessSessionLogs(updatedLogs);
-
-        if (deltaSecs > 0) {
-          setAuthorizedUsers((prevUsers) => {
-            const updatedUsers = prevUsers.map((u) => {
-              if (u.email.trim().toLowerCase() !== targetLog.email.trim().toLowerCase()) {
-                return u;
-              }
-              return {
-                ...u,
-                totalAccessCount: Math.max(1, u.totalAccessCount || 1),
-                totalDurationSeconds: (u.totalDurationSeconds || 0) + deltaSecs,
-                lastSessionDurationSeconds: elapsedSecs,
-                lastLoginAt: u.lastLoginAt || nowFormatted,
-                lastActiveAt: nowFormatted,
-                lastScreenVisited: currentScreenLabel,
-              };
-            });
-            saveStoredAuthorizedUsers(updatedUsers);
-            // Throttle server and Google Sheets access-log sync: once on first tick, then every 3 minutes (180 ticks)
-            if (tickCounter === 1 || tickCounter % 180 === 0) {
-              pushSessionLogsToServer(updatedLogs, updatedUsers);
-              SyncQueueManager.enqueueUsersAccessWrite({
-                users: updatedUsers,
-                sessionLogs: updatedLogs,
-                description: 'Heartbeat de Sessão Ativa',
-              });
+      const updatedLogs = prevLogs.map((l) =>
+        l.id === sessId
+          ? {
+              ...l,
+              lastHeartbeatISO: nowISO,
+              durationSeconds: elapsedSecs,
+              lastScreen: currentScreenLabel,
+              isOnlineNow: true,
             }
-            return updatedUsers;
+          : l
+      );
+      setAccessSessionLogs(updatedLogs);
+      saveStoredAccessSessionLogs(updatedLogs);
+
+      if (deltaSecs > 0) {
+        const updatedUsers = authorizedUsersRef.current.map((u) => {
+          if (u.email.trim().toLowerCase() !== targetLog.email.trim().toLowerCase()) {
+            return u;
+          }
+          return {
+            ...u,
+            totalAccessCount: Math.max(1, u.totalAccessCount || 1),
+            totalDurationSeconds: (u.totalDurationSeconds || 0) + deltaSecs,
+            lastSessionDurationSeconds: elapsedSecs,
+            lastLoginAt: u.lastLoginAt || nowFormatted,
+            lastActiveAt: nowFormatted,
+            lastScreenVisited: currentScreenLabel,
+          };
+        });
+        saveStoredAuthorizedUsers(updatedUsers);
+        // Atualiza React state apenas quando necessário (ou a cada 3 min) para evitar re-renders a cada 15s
+        if (tickCounter === 1 || tickCounter % 12 === 0) {
+          setAuthorizedUsers(updatedUsers);
+        }
+        if (tickCounter === 1 || tickCounter % 180 === 0) {
+          pushSessionLogsToServer(updatedLogs, updatedUsers);
+          SyncQueueManager.enqueueUsersAccessWrite({
+            users: updatedUsers,
+            sessionLogs: updatedLogs,
+            description: 'Heartbeat de Sessão Ativa',
           });
         }
+      }
 
-        if (SyncQueueManager.hasPendingTasks()) {
-          void SyncQueueManager.processQueue();
-        }
-
-        return updatedLogs;
-      });
+      if (SyncQueueManager.hasPendingTasks()) {
+        void SyncQueueManager.processQueue();
+      }
     }, 15000);
 
     return () => window.clearInterval(intervalId);
-  }, [currentScreen, currentUserEmail, simulatedTeacherEmail]);
+  }, [isAuthVerified, currentUserEmail, simulatedTeacherEmail, currentUserName]);
 
   const handleLogout = async () => {
     try {
@@ -1461,6 +1588,7 @@ export default function App() {
         sessionLogs: nextLogs,
         description: `Logout registrado — ${currentUserEmail}`,
       });
+      void SyncQueueManager.flushNow();
       activeSessionIdRef.current = null;
     }
 
@@ -2313,7 +2441,8 @@ export default function App() {
               updatedCls = nextCls;
               return nextCls;
             });
-            saveStoredClasses(next);
+            skipNextClassesSaveRef.current = true;
+            saveStoredClasses(next, 'local_with_timestamp');
             if (updatedCls) {
               triggerDebouncedSheetWrite(
                 updatedCls,

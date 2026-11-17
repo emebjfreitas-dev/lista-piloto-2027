@@ -45,7 +45,12 @@ import {
   setSyncingActiveState,
   registerOfflineFlushHandler,
   CLEAN_DB_RESET_EPOCH_ID,
+  DB_CLEAN_EPOCH_STORAGE_KEY as SYNC_DB_CLEAN_EPOCH_KEY,
+  DB_EPOCH_META_STORAGE_KEY,
+  CLASSES_UPDATED_AT_STORAGE_KEY,
   wipeFirestoreSchoolDataOnly,
+  touchLocalEpochState,
+  shouldAllowRemoteClassesOverwrite,
 } from './firebaseSync';
 import {
   resolveStudentGender,
@@ -59,7 +64,7 @@ const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v4';
 const ATTENDANCE_WINDOW_STORAGE_KEY = 'emeb_candelario_attendance_window_2027_v1';
 const ACCESS_LOGS_STORAGE_KEY = 'emeb_candelario_access_session_logs_2027_v1';
 const NOTICES_STORAGE_KEY = 'emeb_candelario_school_notices_2027_v1';
-const DB_CLEAN_EPOCH_STORAGE_KEY = 'emeb_candelario_db_clean_epoch_v1';
+const DB_CLEAN_EPOCH_STORAGE_KEY = SYNC_DB_CLEAN_EPOCH_KEY;
 
 // In-memory cache so even if browser localStorage quota is full, the app never loses runtime state or throws errors
 let memoryCachedClasses: ClassGroup[] | null = null;
@@ -76,6 +81,7 @@ const clearLocalSchoolDataOnly = (): void => {
       'emeb_candelario_sed_classes_2027_v6',
       'emeb_candelario_sed_classes_2027_v5',
       'emeb_candelario_classes_updated_at_ms_2027',
+      DB_EPOCH_META_STORAGE_KEY,
       ACCESS_LOGS_STORAGE_KEY,
       NOTICES_STORAGE_KEY,
       'emeb_candelario_security_audit_logs_2027_v1',
@@ -126,6 +132,7 @@ const ensureCleanDatabaseEpochLocal = (): void => {
     if (localStorage.getItem(DB_CLEAN_EPOCH_STORAGE_KEY) !== CLEAN_DB_RESET_EPOCH_ID) {
       clearLocalSchoolDataOnly();
       localStorage.setItem(DB_CLEAN_EPOCH_STORAGE_KEY, CLEAN_DB_RESET_EPOCH_ID);
+      touchLocalEpochState(0, CLEAN_DB_RESET_EPOCH_ID);
     }
   } catch {
     // ignore storage access issues
@@ -145,6 +152,8 @@ const purgeLegacyStorageKeys = (preserveKeys: string[]): void => {
       ACCESS_LOGS_STORAGE_KEY,
       NOTICES_STORAGE_KEY,
       DB_CLEAN_EPOCH_STORAGE_KEY,
+      DB_EPOCH_META_STORAGE_KEY,
+      CLASSES_UPDATED_AT_STORAGE_KEY,
       'emeb_candelario_name_gender_dict_2027_v1',
       'emeb_candelario_active_session_2027_v1',
       'emeb_candelario_linked_spreadsheet_id_2027',
@@ -784,7 +793,7 @@ export interface SharedCloudLinks {
   updatedAtMs?: number;
 }
 
-const CLASSES_UPDATED_AT_KEY = 'emeb_candelario_classes_updated_at_ms_2027';
+const CLASSES_UPDATED_AT_KEY = CLASSES_UPDATED_AT_STORAGE_KEY;
 
 export const getLocalClassesUpdatedAtMs = (): number => {
   try {
@@ -796,6 +805,7 @@ export const getLocalClassesUpdatedAtMs = (): number => {
 
 export const setLocalClassesUpdatedAtMs = (ts: number): void => {
   safeSetLocalStorage(CLASSES_UPDATED_AT_KEY, String(ts));
+  touchLocalEpochState(ts, CLEAN_DB_RESET_EPOCH_ID);
 };
 
 /**
@@ -1156,7 +1166,13 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
     if (Array.isArray(data?.classes) && data.classes.length > 0) {
       const srvClassesTime = data.classesUpdatedAtMs || 0;
       const locClassesTime = getLocalClassesUpdatedAtMs();
-      if (locClassesTime === 0 || srvClassesTime >= locClassesTime) {
+      const allowIntegrityOverwrite = shouldAllowRemoteClassesOverwrite({
+        remoteUpdatedAtMs: srvClassesTime,
+        remoteEpochId: data.cleanResetEpochId,
+        remoteEpochVersion: data.epochVersion,
+        fromCache: false,
+      });
+      if (allowIntegrityOverwrite && (locClassesTime === 0 || srvClassesTime >= locClassesTime)) {
         const currentLocal = memoryCachedClasses || getStoredClasses();
         const merged = mergeClassesWithConcurrencyControl(
           data.classes,
@@ -1423,18 +1439,20 @@ let serverClassesPushTimer: number | null = null;
 // Save classes to localStorage safely without throwing QuotaExceededError + auto-broadcast to server
 export const saveStoredClasses = (
   classes: ClassGroup[],
-  skipServerPush = false
+  skipServerPush: boolean | 'local_with_timestamp' = false
 ): void => {
   const enriched = enrichClassesWithOfficialMatrix(classes);
   memoryCachedClasses = enriched;
-  if (!skipServerPush && typeof window !== 'undefined') {
+  if (skipServerPush !== true && typeof window !== 'undefined') {
     setLocalClassesUpdatedAtMs(Date.now());
-    if (serverClassesPushTimer) {
-      window.clearTimeout(serverClassesPushTimer);
+    if (skipServerPush === false) {
+      if (serverClassesPushTimer) {
+        window.clearTimeout(serverClassesPushTimer);
+      }
+      serverClassesPushTimer = window.setTimeout(() => {
+        pushClassesToServer(enriched);
+      }, 500);
     }
-    serverClassesPushTimer = window.setTimeout(() => {
-      pushClassesToServer(enriched);
-    }, 180);
   }
   try {
     const serialized = JSON.stringify(enriched);

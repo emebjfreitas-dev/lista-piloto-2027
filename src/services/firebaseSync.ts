@@ -4,7 +4,6 @@ import {
   getFirestore,
   collection,
   doc,
-  getDoc,
   getDocs,
   getDocFromServer,
   setDoc,
@@ -27,6 +26,9 @@ import {
 } from '../utils/genderDictionary';
 
 export const CLEAN_DB_RESET_EPOCH_ID = 'clean_zero_data_2026_11_16_v1';
+export const DB_CLEAN_EPOCH_STORAGE_KEY = 'emeb_candelario_db_clean_epoch_v1';
+export const DB_EPOCH_META_STORAGE_KEY = 'emeb_candelario_db_epoch_meta_v1';
+export const CLASSES_UPDATED_AT_STORAGE_KEY = 'emeb_candelario_classes_updated_at_ms_2027';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
@@ -61,36 +63,605 @@ export interface FirestoreErrorInfo {
   };
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): FirestoreErrorInfo {
+export function handleFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null
+): FirestoreErrorInfo {
+  let currentUser = null;
+  try {
+    currentUser = getAuth(app).currentUser;
+  } catch {
+    currentUser = null;
+  }
+
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: null,
-      email: null,
-      emailVerified: null,
-      isAnonymous: null,
-      tenantId: null,
-      providerInfo: [],
+      userId: currentUser?.uid ?? null,
+      email: currentUser?.email ?? null,
+      emailVerified: currentUser?.emailVerified ?? null,
+      isAnonymous: currentUser?.isAnonymous ?? null,
+      tenantId: currentUser?.tenantId ?? null,
+      providerInfo:
+        currentUser?.providerData?.map((provider) => ({
+          providerId: provider.providerId,
+          email: provider.email,
+        })) || [],
     },
     operationType,
     path,
   };
-  console.warn('Firestore Error Audit:', JSON.stringify(errInfo));
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
   return errInfo;
+}
+
+export interface LocalEpochMetadata {
+  epochId: string;
+  epochVersion: number;
+  epochUpdatedAtMs: number;
+  classesUpdatedAtMs: number;
+}
+
+export type FirestoreEpochResolution =
+  | 'checking'
+  | 'aligned'
+  | 'local_newer_preserved'
+  | 'remote_newer_accepted'
+  | 'remote_epoch_initialized'
+  | 'offline_local_preserved';
+
+export interface FirestoreIntegrityReport {
+  status: FirestoreEpochResolution;
+  connected: boolean;
+  checkedAtISO: string | null;
+  localEpochId: string;
+  remoteEpochId: string | null;
+  localEpochVersion: number;
+  remoteEpochVersion: number;
+  localEpochUpdatedAtMs: number;
+  remoteEpochUpdatedAtMs: number;
+  localClassesUpdatedAtMs: number;
+  remoteClassesUpdatedAtMs: number;
+  pendingLocalOperations: number;
+  preventedRemoteOverwrite: boolean;
+  protectedLocalWatermarkMs: number;
+  reason: string;
+}
+
+/**
+ * Extracts a deterministic comparable revision number from epoch IDs such as
+ * `clean_zero_data_2026_11_16_v1` -> 2026111601.
+ */
+export const parseEpochRevisionNumber = (epochId?: string | null): number => {
+  if (!epochId || typeof epochId !== 'string') return 0;
+  const match = epochId.match(/(\d{4})_(\d{2})_(\d{2})_v(\d+)/i);
+  if (match) {
+    const ymd = Number(`${match[1]}${match[2]}${match[3]}`);
+    const rev = Number(match[4]);
+    if (Number.isFinite(ymd) && Number.isFinite(rev)) {
+      return ymd * 100 + Math.min(99, Math.max(0, rev));
+    }
+  }
+  const trailingVersion = epochId.match(/v(\d+)$/i);
+  return trailingVersion ? Number(trailingVersion[1]) || 0 : 0;
+};
+
+const readStoredClassesUpdatedAtMsDirect = (): number => {
+  try {
+    if (typeof localStorage === 'undefined') return 0;
+    return parseInt(localStorage.getItem(CLASSES_UPDATED_AT_STORAGE_KEY) || '0', 10) || 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const getLocalEpochMetadata = (fallbackClassesUpdatedAtMs?: number): LocalEpochMetadata => {
+  const defaultVersion = parseEpochRevisionNumber(CLEAN_DB_RESET_EPOCH_ID);
+  const directClassesTs = Math.max(
+    fallbackClassesUpdatedAtMs || 0,
+    readStoredClassesUpdatedAtMsDirect()
+  );
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const storedEpochId =
+        localStorage.getItem(DB_CLEAN_EPOCH_STORAGE_KEY) || CLEAN_DB_RESET_EPOCH_ID;
+      const rawMeta = localStorage.getItem(DB_EPOCH_META_STORAGE_KEY);
+      if (rawMeta) {
+        const parsed = JSON.parse(rawMeta) as Partial<LocalEpochMetadata>;
+        const epochId =
+          typeof parsed.epochId === 'string' && parsed.epochId.trim()
+            ? parsed.epochId
+            : storedEpochId;
+        const parsedRevision = parseEpochRevisionNumber(epochId);
+        return {
+          epochId,
+          epochVersion: Math.max(
+            typeof parsed.epochVersion === 'number' ? parsed.epochVersion : 0,
+            parsedRevision,
+            defaultVersion
+          ),
+          epochUpdatedAtMs:
+            typeof parsed.epochUpdatedAtMs === 'number' ? parsed.epochUpdatedAtMs : directClassesTs,
+          classesUpdatedAtMs: Math.max(
+            typeof parsed.classesUpdatedAtMs === 'number' ? parsed.classesUpdatedAtMs : 0,
+            directClassesTs
+          ),
+        };
+      }
+      return {
+        epochId: storedEpochId,
+        epochVersion: Math.max(parseEpochRevisionNumber(storedEpochId), defaultVersion),
+        epochUpdatedAtMs: directClassesTs,
+        classesUpdatedAtMs: directClassesTs,
+      };
+    }
+  } catch {
+    // fallback below
+  }
+  return {
+    epochId: CLEAN_DB_RESET_EPOCH_ID,
+    epochVersion: defaultVersion,
+    epochUpdatedAtMs: directClassesTs,
+    classesUpdatedAtMs: directClassesTs,
+  };
+};
+
+export const updateLocalEpochMetadata = (
+  patch: Partial<LocalEpochMetadata>
+): LocalEpochMetadata => {
+  const current = getLocalEpochMetadata();
+  const nextEpochId = patch.epochId || current.epochId || CLEAN_DB_RESET_EPOCH_ID;
+  const next: LocalEpochMetadata = {
+    epochId: nextEpochId,
+    epochVersion: Math.max(
+      patch.epochVersion ?? current.epochVersion,
+      parseEpochRevisionNumber(nextEpochId)
+    ),
+    epochUpdatedAtMs: Math.max(
+      patch.epochUpdatedAtMs ?? 0,
+      patch.epochUpdatedAtMs === 0 ? 0 : current.epochUpdatedAtMs
+    ),
+    classesUpdatedAtMs: Math.max(
+      patch.classesUpdatedAtMs ?? 0,
+      patch.classesUpdatedAtMs === 0 ? 0 : current.classesUpdatedAtMs,
+      readStoredClassesUpdatedAtMsDirect()
+    ),
+  };
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(DB_CLEAN_EPOCH_STORAGE_KEY, next.epochId);
+      localStorage.setItem(DB_EPOCH_META_STORAGE_KEY, JSON.stringify(next));
+    }
+  } catch {
+    // ignore storage quota errors
+  }
+  return next;
+};
+
+export const touchLocalEpochState = (
+  classesUpdatedAtMs: number = Date.now(),
+  epochId: string = CLEAN_DB_RESET_EPOCH_ID
+): LocalEpochMetadata => {
+  return updateLocalEpochMetadata({
+    epochId,
+    epochVersion: parseEpochRevisionNumber(epochId),
+    epochUpdatedAtMs: classesUpdatedAtMs,
+    classesUpdatedAtMs,
+  });
+};
+
+type IntegrityListener = (report: FirestoreIntegrityReport) => void;
+const integrityListeners = new Set<IntegrityListener>();
+
+const initialLocalMeta = getLocalEpochMetadata();
+let currentIntegrityReport: FirestoreIntegrityReport = {
+  status: 'aligned',
+  connected: true,
+  checkedAtISO: null,
+  localEpochId: initialLocalMeta.epochId,
+  remoteEpochId: null,
+  localEpochVersion: initialLocalMeta.epochVersion,
+  remoteEpochVersion: 0,
+  localEpochUpdatedAtMs: initialLocalMeta.epochUpdatedAtMs,
+  remoteEpochUpdatedAtMs: 0,
+  localClassesUpdatedAtMs: initialLocalMeta.classesUpdatedAtMs,
+  remoteClassesUpdatedAtMs: 0,
+  pendingLocalOperations: 0,
+  preventedRemoteOverwrite: false,
+  protectedLocalWatermarkMs: initialLocalMeta.classesUpdatedAtMs,
+  reason: 'Aguardando verificação de integridade no boot.',
+};
+
+const notifyIntegrityListeners = (): void => {
+  const snapshot = { ...currentIntegrityReport };
+  integrityListeners.forEach((cb) => {
+    try {
+      cb(snapshot);
+    } catch {
+      // ignore listener errors
+    }
+  });
+};
+
+const setIntegrityReport = (next: FirestoreIntegrityReport): FirestoreIntegrityReport => {
+  currentIntegrityReport = next;
+  notifyIntegrityListeners();
+  return { ...currentIntegrityReport };
+};
+
+export const getFirestoreIntegrityReport = (): FirestoreIntegrityReport => ({
+  ...currentIntegrityReport,
+});
+
+export const subscribeToFirestoreIntegrity = (listener: IntegrityListener): (() => void) => {
+  integrityListeners.add(listener);
+  listener(getFirestoreIntegrityReport());
+  return () => {
+    integrityListeners.delete(listener);
+  };
+};
+
+/**
+ * Synchronously activates boot verification barrier before realtime listeners / polling start,
+ * preventing cached snapshots from overwriting newer local edits during app reload.
+ */
+export const beginBootIntegrityCheck = (localClassesUpdatedAtMs?: number): void => {
+  const localMeta = getLocalEpochMetadata(localClassesUpdatedAtMs);
+  const queue = loadOfflineSyncQueue();
+  const watermark = Math.max(localMeta.classesUpdatedAtMs, localMeta.epochUpdatedAtMs);
+  setIntegrityReport({
+    ...currentIntegrityReport,
+    status: 'checking',
+    localEpochId: localMeta.epochId,
+    localEpochVersion: localMeta.epochVersion,
+    localEpochUpdatedAtMs: localMeta.epochUpdatedAtMs,
+    localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+    pendingLocalOperations: queue.length,
+    preventedRemoteOverwrite: true,
+    protectedLocalWatermarkMs: watermark,
+    reason: 'Verificando integridade de conexão e precedência do epoch local antes da sincronização.',
+  });
+};
+
+/**
+ * Evaluates whether an incoming remote snapshot/pull is allowed to overwrite or merge into
+ * local class state, protecting newer local epochs and offline modifications during boot.
+ */
+export const shouldAllowRemoteClassesOverwrite = (params: {
+  remoteUpdatedAtMs?: number;
+  remoteEpochId?: string | null;
+  remoteEpochVersion?: number;
+  fromCache?: boolean;
+}): boolean => {
+  const report = currentIntegrityReport;
+  const remoteEpochRank = Math.max(
+    params.remoteEpochVersion || 0,
+    parseEpochRevisionNumber(params.remoteEpochId)
+  );
+  const localMeta = getLocalEpochMetadata();
+  const localEpochRank = Math.max(
+    localMeta.epochVersion,
+    parseEpochRevisionNumber(localMeta.epochId)
+  );
+
+  // If the remote source carries a strictly older epoch revision than local, never overwrite local
+  if (params.remoteEpochId && remoteEpochRank > 0 && remoteEpochRank < localEpochRank) {
+    return false;
+  }
+
+  // Always allow a genuinely newer remote epoch ID/version from server
+  if (!params.fromCache && remoteEpochRank > localEpochRank) {
+    return true;
+  }
+
+  if (report.status === 'checking') {
+    return false;
+  }
+
+  if (report.status === 'offline_local_preserved') {
+    return !params.fromCache && (params.remoteUpdatedAtMs || 0) > report.protectedLocalWatermarkMs;
+  }
+
+  if (report.status === 'local_newer_preserved' && report.preventedRemoteOverwrite) {
+    if (params.fromCache) return false;
+    const incomingTs = params.remoteUpdatedAtMs || 0;
+    // Allow only when Firestore advances strictly past our protected local watermark
+    if (incomingTs > report.protectedLocalWatermarkMs) {
+      return true;
+    }
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Marks cloud state as reconciled once local newer data is successfully pushed to Firestore.
+ */
+export const markCloudAlignedWithLocalEpoch = (syncedAtMs: number): void => {
+  const localMeta = touchLocalEpochState(syncedAtMs, CLEAN_DB_RESET_EPOCH_ID);
+  if (
+    currentIntegrityReport.status === 'local_newer_preserved' ||
+    currentIntegrityReport.status === 'offline_local_preserved' ||
+    currentIntegrityReport.preventedRemoteOverwrite
+  ) {
+    setIntegrityReport({
+      ...currentIntegrityReport,
+      status: 'aligned',
+      connected: true,
+      checkedAtISO: new Date().toISOString(),
+      localEpochId: localMeta.epochId,
+      remoteEpochId: localMeta.epochId,
+      localEpochVersion: localMeta.epochVersion,
+      remoteEpochVersion: localMeta.epochVersion,
+      localEpochUpdatedAtMs: syncedAtMs,
+      remoteEpochUpdatedAtMs: syncedAtMs,
+      localClassesUpdatedAtMs: syncedAtMs,
+      remoteClassesUpdatedAtMs: syncedAtMs,
+      pendingLocalOperations: loadOfflineSyncQueue().length,
+      preventedRemoteOverwrite: false,
+      protectedLocalWatermarkMs: syncedAtMs,
+      reason: 'Base local mais recente reconciliada e confirmada no Cloud Firestore.',
+    });
+  }
+};
+
+let inFlightIntegrityMonitorPromise: Promise<FirestoreIntegrityReport> | null = null;
+
+/**
+ * Boot-time Firestore connection & epoch integrity monitor.
+ * Uses `getDocFromServer` to inspect live server state before allowing any boot overwrite,
+ * comparing local vs remote epoch revisions, timestamps, and pending offline queue items.
+ */
+export async function monitorFirestoreIntegrityOnBoot(options?: {
+  baseClasses?: ClassGroup[];
+  localClassesUpdatedAtMs?: number;
+  hasLocalStudents?: boolean;
+}): Promise<FirestoreIntegrityReport> {
+  if (inFlightIntegrityMonitorPromise) {
+    return inFlightIntegrityMonitorPromise;
+  }
+
+  const run = async (): Promise<FirestoreIntegrityReport> => {
+    const testPath = 'school_meta_2027/state';
+    const localMeta = getLocalEpochMetadata(options?.localClassesUpdatedAtMs);
+    const pendingQueue = loadOfflineSyncQueue();
+    const localWatermark = Math.max(
+      localMeta.classesUpdatedAtMs,
+      localMeta.epochUpdatedAtMs,
+      options?.localClassesUpdatedAtMs || 0
+    );
+
+    beginBootIntegrityCheck(localWatermark);
+
+    try {
+      const stateSnap = await getDocFromServer(doc(firestoreDb, 'school_meta_2027', 'state'));
+      const remoteExists = stateSnap.exists();
+      const remoteData = remoteExists ? stateSnap.data() || {} : {};
+
+      const remoteEpochId =
+        typeof remoteData.cleanResetEpochId === 'string' && remoteData.cleanResetEpochId.trim()
+          ? remoteData.cleanResetEpochId
+          : null;
+      const remoteEpochRank = parseEpochRevisionNumber(remoteEpochId);
+      const localEpochRank = parseEpochRevisionNumber(localMeta.epochId);
+      const remoteEpochVersion = Math.max(
+        typeof remoteData.epochVersion === 'number' ? remoteData.epochVersion : 0,
+        remoteEpochRank
+      );
+      const localEpochVersion = Math.max(localMeta.epochVersion, localEpochRank);
+
+      const remoteClassesUpdatedAtMs =
+        typeof remoteData.classesUpdatedAtMs === 'number'
+          ? remoteData.classesUpdatedAtMs
+          : typeof remoteData.updatedAtMs === 'number'
+          ? remoteData.updatedAtMs
+          : 0;
+      const remoteEpochUpdatedAtMs =
+        typeof remoteData.epochUpdatedAtMs === 'number'
+          ? remoteData.epochUpdatedAtMs
+          : remoteClassesUpdatedAtMs;
+
+      const checkedAtISO = new Date().toISOString();
+
+      // Case 1: Remote has a strictly newer epoch version than local -> accept remote without overwriting Firestore
+      if (
+        remoteEpochId &&
+        (remoteEpochRank > localEpochRank || remoteEpochVersion > localEpochVersion)
+      ) {
+        updateLocalEpochMetadata({
+          epochId: remoteEpochId,
+          epochVersion: remoteEpochVersion,
+          epochUpdatedAtMs: remoteEpochUpdatedAtMs,
+          classesUpdatedAtMs: remoteClassesUpdatedAtMs,
+        });
+        return setIntegrityReport({
+          status: 'remote_newer_accepted',
+          connected: true,
+          checkedAtISO,
+          localEpochId: remoteEpochId,
+          remoteEpochId,
+          localEpochVersion: remoteEpochVersion,
+          remoteEpochVersion,
+          localEpochUpdatedAtMs: localMeta.epochUpdatedAtMs,
+          remoteEpochUpdatedAtMs,
+          localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+          remoteClassesUpdatedAtMs,
+          pendingLocalOperations: pendingQueue.length,
+          preventedRemoteOverwrite: false,
+          protectedLocalWatermarkMs: remoteClassesUpdatedAtMs,
+          reason: `Epoch remoto (${remoteEpochId}) é mais recente que o local (${localMeta.epochId}). Hidratação remota autorizada.`,
+        });
+      }
+
+      // Case 2: Remote has missing or older epoch -> check whether local has newer active data before initializing
+      if (!remoteExists || !remoteEpochId || remoteEpochRank < localEpochRank) {
+        const localHasNewerData =
+          pendingQueue.length > 0 ||
+          (Boolean(options?.hasLocalStudents) && localWatermark > remoteClassesUpdatedAtMs);
+
+        if (localHasNewerData) {
+          return setIntegrityReport({
+            status: 'local_newer_preserved',
+            connected: true,
+            checkedAtISO,
+            localEpochId: localMeta.epochId,
+            remoteEpochId,
+            localEpochVersion,
+            remoteEpochVersion,
+            localEpochUpdatedAtMs: localMeta.epochUpdatedAtMs,
+            remoteEpochUpdatedAtMs,
+            localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+            remoteClassesUpdatedAtMs,
+            pendingLocalOperations: pendingQueue.length,
+            preventedRemoteOverwrite: true,
+            protectedLocalWatermarkMs: localWatermark,
+            reason:
+              'Epoch/dados locais são mais recentes que o servidor remoto. Base local protegida contra sobrescrita no boot.',
+          });
+        }
+
+        if (options?.baseClasses && options.baseClasses.length > 0) {
+          await wipeFirestoreSchoolDataOnly(options.baseClasses, CLEAN_DB_RESET_EPOCH_ID);
+        }
+
+        const syncedAtMs = Date.now();
+        return setIntegrityReport({
+          status: 'remote_epoch_initialized',
+          connected: true,
+          checkedAtISO,
+          localEpochId: CLEAN_DB_RESET_EPOCH_ID,
+          remoteEpochId: CLEAN_DB_RESET_EPOCH_ID,
+          localEpochVersion: parseEpochRevisionNumber(CLEAN_DB_RESET_EPOCH_ID),
+          remoteEpochVersion: parseEpochRevisionNumber(CLEAN_DB_RESET_EPOCH_ID),
+          localEpochUpdatedAtMs: syncedAtMs,
+          remoteEpochUpdatedAtMs: syncedAtMs,
+          localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+          remoteClassesUpdatedAtMs: syncedAtMs,
+          pendingLocalOperations: pendingQueue.length,
+          preventedRemoteOverwrite: false,
+          protectedLocalWatermarkMs: syncedAtMs,
+          reason: 'Epoch remoto inicializado com segurança para a versão atual do banco.',
+        });
+      }
+
+      // Case 3: Same epoch ID -> compare local timestamps & offline queue vs remote timestamps
+      const hasPendingClassWrite = pendingQueue.some((op) => op.type === 'save_classes');
+      const localTimestampNewer =
+        localMeta.classesUpdatedAtMs > remoteClassesUpdatedAtMs ||
+        (localMeta.epochUpdatedAtMs > remoteEpochUpdatedAtMs &&
+          Boolean(options?.hasLocalStudents));
+
+      if (hasPendingClassWrite || pendingQueue.length > 0 || localTimestampNewer) {
+        return setIntegrityReport({
+          status: 'local_newer_preserved',
+          connected: true,
+          checkedAtISO,
+          localEpochId: localMeta.epochId,
+          remoteEpochId,
+          localEpochVersion,
+          remoteEpochVersion,
+          localEpochUpdatedAtMs: localMeta.epochUpdatedAtMs,
+          remoteEpochUpdatedAtMs,
+          localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+          remoteClassesUpdatedAtMs,
+          pendingLocalOperations: pendingQueue.length,
+          preventedRemoteOverwrite: true,
+          protectedLocalWatermarkMs: localWatermark,
+          reason: hasPendingClassWrite || pendingQueue.length > 0
+            ? `Existem ${pendingQueue.length} operação(ões) locais pendentes na fila. Sobrescrita remota bloqueada durante o boot.`
+            : 'Timestamp/epoch local é mais recente do que o Firestore remoto. Estado local preservado antes do reenvio.',
+        });
+      }
+
+      if (remoteClassesUpdatedAtMs > localMeta.classesUpdatedAtMs) {
+        updateLocalEpochMetadata({
+          epochId: remoteEpochId,
+          epochVersion: remoteEpochVersion,
+          epochUpdatedAtMs: remoteEpochUpdatedAtMs,
+        });
+        return setIntegrityReport({
+          status: 'remote_newer_accepted',
+          connected: true,
+          checkedAtISO,
+          localEpochId: localMeta.epochId,
+          remoteEpochId,
+          localEpochVersion,
+          remoteEpochVersion,
+          localEpochUpdatedAtMs: localMeta.epochUpdatedAtMs,
+          remoteEpochUpdatedAtMs,
+          localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+          remoteClassesUpdatedAtMs,
+          pendingLocalOperations: 0,
+          preventedRemoteOverwrite: false,
+          protectedLocalWatermarkMs: remoteClassesUpdatedAtMs,
+          reason: 'Firestore remoto possui atualizações mais recentes. Sincronização liberada no boot.',
+        });
+      }
+
+      return setIntegrityReport({
+        status: 'aligned',
+        connected: true,
+        checkedAtISO,
+        localEpochId: localMeta.epochId,
+        remoteEpochId,
+        localEpochVersion,
+        remoteEpochVersion,
+        localEpochUpdatedAtMs: localMeta.epochUpdatedAtMs,
+        remoteEpochUpdatedAtMs,
+        localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+        remoteClassesUpdatedAtMs,
+        pendingLocalOperations: 0,
+        preventedRemoteOverwrite: false,
+        protectedLocalWatermarkMs: Math.max(localWatermark, remoteClassesUpdatedAtMs),
+        reason: 'Base local e Firestore remoto estão alinhados no mesmo epoch.',
+      });
+    } catch (error) {
+      const isOfflineErr =
+        error instanceof Error &&
+        (error.message.includes('the client is offline') ||
+          error.message.toLowerCase().includes('offline') ||
+          error.message.toLowerCase().includes('unavailable'));
+
+      if (isOfflineErr) {
+        console.warn('Firestore operando em modo cache/offline temporário. Base local preservada.');
+      } else {
+        handleFirestoreError(error, OperationType.GET, testPath);
+      }
+
+      return setIntegrityReport({
+        status: 'offline_local_preserved',
+        connected: false,
+        checkedAtISO: new Date().toISOString(),
+        localEpochId: localMeta.epochId,
+        remoteEpochId: null,
+        localEpochVersion: localMeta.epochVersion,
+        remoteEpochVersion: 0,
+        localEpochUpdatedAtMs: localMeta.epochUpdatedAtMs,
+        remoteEpochUpdatedAtMs: 0,
+        localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+        remoteClassesUpdatedAtMs: 0,
+        pendingLocalOperations: pendingQueue.length,
+        preventedRemoteOverwrite: true,
+        protectedLocalWatermarkMs: localWatermark,
+        reason: isOfflineErr
+          ? 'Dispositivo sem acesso direto ao servidor Firestore no boot — base local protegida contra cache antigo.'
+          : 'Falha ao consultar epoch no servidor Firestore — base local preservada preventivamente.',
+      });
+    }
+  };
+
+  inFlightIntegrityMonitorPromise = run().finally(() => {
+    inFlightIntegrityMonitorPromise = null;
+  });
+
+  return inFlightIntegrityMonitorPromise;
 }
 
 // Validate connection to Firestore after authenticated institutional sign-in
 export async function validateFirestoreConnectionOnBoot(): Promise<void> {
-  const testPath = 'school_meta_2027/state';
-  try {
-    await getDocFromServer(doc(firestoreDb, 'school_meta_2027', 'state'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firestore operando em modo cache/offline temporário.');
-    } else {
-      handleFirestoreError(error, OperationType.GET, testPath);
-    }
-  }
+  await monitorFirestoreIntegrityOnBoot();
 }
 
 const OFFLINE_QUEUE_STORAGE_KEY = 'emeb_candelario_offline_sync_queue_2027_v1';
@@ -253,6 +824,7 @@ export const saveClassesToFirestoreCloud = async (
   updatedAtMs: number
 ): Promise<boolean> => {
   try {
+    const localMeta = touchLocalEpochState(updatedAtMs, CLEAN_DB_RESET_EPOCH_ID);
     const batch = writeBatch(firestoreDb);
     classes.forEach((cls) => {
       if (!cls || !cls.id) return;
@@ -266,12 +838,15 @@ export const saveClassesToFirestoreCloud = async (
       {
         updatedAtMs,
         classesUpdatedAtMs: updatedAtMs,
+        epochUpdatedAtMs: updatedAtMs,
+        epochVersion: localMeta.epochVersion,
         updatedAtISO: new Date(updatedAtMs).toISOString(),
-        cleanResetEpochId: CLEAN_DB_RESET_EPOCH_ID,
+        cleanResetEpochId: localMeta.epochId,
       },
       { merge: true }
     );
     await batch.commit();
+    markCloudAlignedWithLocalEpoch(updatedAtMs);
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'school_classes_2027');
@@ -299,6 +874,7 @@ export const wipeFirestoreSchoolDataOnly = async (
   isWipingFirestoreInFlight = true;
   try {
     const nowMs = Date.now();
+    const epochVersion = parseEpochRevisionNumber(epochId);
     const zeroedClasses: ClassGroup[] = baseClasses.map((c) => ({
       ...c,
       students: [],
@@ -343,6 +919,8 @@ export const wipeFirestoreSchoolDataOnly = async (
       {
         updatedAtMs: nowMs,
         classesUpdatedAtMs: nowMs,
+        epochUpdatedAtMs: nowMs,
+        epochVersion,
         updatedAtISO: new Date(nowMs).toISOString(),
         cleanResetEpochId: epochId,
       },
@@ -370,6 +948,13 @@ export const wipeFirestoreSchoolDataOnly = async (
       await Promise.all(deletePromises);
     }
 
+    updateLocalEpochMetadata({
+      epochId,
+      epochVersion,
+      epochUpdatedAtMs: nowMs,
+      classesUpdatedAtMs: nowMs,
+    });
+
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'school_classes_2027');
@@ -380,26 +965,24 @@ export const wipeFirestoreSchoolDataOnly = async (
 };
 
 /**
- * Ensures Cloud Firestore has transitioned past CLEAN_DB_RESET_EPOCH_ID when signed in.
+ * Ensures Cloud Firestore has transitioned past CLEAN_DB_RESET_EPOCH_ID when signed in,
+ * respecting remote vs local epoch precedence so newer state is never wiped accidentally.
  */
 export const ensureFirestoreCleanEpoch = async (
-  baseClasses: ClassGroup[]
+  baseClasses: ClassGroup[],
+  localClassesUpdatedAtMs?: number,
+  hasLocalStudents?: boolean
 ): Promise<boolean> => {
   const auth = getAuth(app);
   if (!auth.currentUser) {
     return false;
   }
-  try {
-    const stateSnap = await getDoc(doc(firestoreDb, 'school_meta_2027', 'state'));
-    const currentEpoch = stateSnap.exists() ? stateSnap.data()?.cleanResetEpochId : undefined;
-    if (currentEpoch !== CLEAN_DB_RESET_EPOCH_ID) {
-      return await wipeFirestoreSchoolDataOnly(baseClasses, CLEAN_DB_RESET_EPOCH_ID);
-    }
-    return true;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.GET, 'school_meta_2027/state');
-    return false;
-  }
+  const report = await monitorFirestoreIntegrityOnBoot({
+    baseClasses,
+    localClassesUpdatedAtMs,
+    hasLocalStudents,
+  });
+  return report.connected;
 };
 
 export const saveConfigMetaToFirestoreCloud = async (payload: {
@@ -457,6 +1040,8 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
   discoveredDrivePhotos?: any[];
   genderDictionary?: NameGenderEntry[];
   cleanResetEpochId?: string;
+  epochVersion?: number;
+  epochUpdatedAtMs?: number;
 } | null> => {
   try {
     const [classesSnap, metaSnap] = await Promise.all([
@@ -471,7 +1056,19 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
       if (d.id === 'state') stateData = d.data() || {};
     });
 
-    const isCleanEpoch = stateData.cleanResetEpochId === CLEAN_DB_RESET_EPOCH_ID;
+    const localMeta = getLocalEpochMetadata();
+    const remoteEpochId = stateData.cleanResetEpochId as string | undefined;
+    const remoteEpochRank = Math.max(
+      typeof stateData.epochVersion === 'number' ? stateData.epochVersion : 0,
+      parseEpochRevisionNumber(remoteEpochId)
+    );
+    const localEpochRank = Math.max(
+      localMeta.epochVersion,
+      parseEpochRevisionNumber(localMeta.epochId)
+    );
+    const isCleanEpoch =
+      Boolean(remoteEpochId) &&
+      (remoteEpochId === localMeta.epochId || remoteEpochRank >= localEpochRank);
 
     const classes: ClassGroup[] = [];
     let maxClassUpdatedAt = 0;
@@ -511,7 +1108,9 @@ export const fetchStateFromFirestoreCloud = async (): Promise<{
       discoveredNominalPdfs: isCleanEpoch ? configData.discoveredNominalPdfs : [],
       discoveredDrivePhotos: isCleanEpoch ? configData.discoveredDrivePhotos : [],
       genderDictionary: isCleanEpoch ? configData.genderDictionary : [],
-      cleanResetEpochId: stateData.cleanResetEpochId,
+      cleanResetEpochId: remoteEpochId,
+      epochVersion: remoteEpochRank,
+      epochUpdatedAtMs: stateData.epochUpdatedAtMs || classesUpdatedAtMs,
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, 'school_classes_2027');
@@ -534,8 +1133,34 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
 }): (() => void) => {
   const unsubs: Array<() => void> = [];
   let isFirestoreCleanEpochConfirmed = false;
-  let pendingClasses: { classes: ClassGroup[]; updatedAtMs: number } | null = null;
+  let remoteEpochId: string | null = null;
+  let remoteEpochVersion = 0;
+  let pendingClasses: {
+    classes: ClassGroup[];
+    updatedAtMs: number;
+    fromCache: boolean;
+  } | null = null;
   let pendingMetaData: Record<string, any> | null = null;
+
+  const tryDeliverPendingClasses = () => {
+    if (!pendingClasses || !callbacks.onClassesUpdate || !isFirestoreCleanEpochConfirmed) {
+      return;
+    }
+    const allowed = shouldAllowRemoteClassesOverwrite({
+      remoteUpdatedAtMs: pendingClasses.updatedAtMs,
+      remoteEpochId,
+      remoteEpochVersion,
+      fromCache: pendingClasses.fromCache,
+    });
+    if (allowed) {
+      const toDeliver = pendingClasses;
+      pendingClasses = null;
+      callbacks.onClassesUpdate(toDeliver.classes, toDeliver.updatedAtMs);
+    } else if (currentIntegrityReport.status !== 'checking') {
+      // Discard stale boot snapshot when integrity monitor confirmed local state is newer
+      pendingClasses = null;
+    }
+  };
 
   const flushMetaConfig = (data: Record<string, any>) => {
     const cleanOnly = isFirestoreCleanEpochConfirmed;
@@ -557,16 +1182,34 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
   };
 
   try {
+    const unsubIntegrity = subscribeToFirestoreIntegrity((report) => {
+      if (report.status !== 'checking') {
+        tryDeliverPendingClasses();
+      }
+    });
+    unsubs.push(unsubIntegrity);
+
     const unsubState = onSnapshot(
       doc(firestoreDb, 'school_meta_2027', 'state'),
       (stateSnap) => {
         const data = stateSnap.exists() ? stateSnap.data() || {} : {};
-        isFirestoreCleanEpochConfirmed = data.cleanResetEpochId === CLEAN_DB_RESET_EPOCH_ID;
+        remoteEpochId =
+          typeof data.cleanResetEpochId === 'string' ? data.cleanResetEpochId : null;
+        remoteEpochVersion = Math.max(
+          typeof data.epochVersion === 'number' ? data.epochVersion : 0,
+          parseEpochRevisionNumber(remoteEpochId)
+        );
+        const localMeta = getLocalEpochMetadata();
+        const localEpochRank = Math.max(
+          localMeta.epochVersion,
+          parseEpochRevisionNumber(localMeta.epochId)
+        );
+        isFirestoreCleanEpochConfirmed =
+          Boolean(remoteEpochId) &&
+          (remoteEpochId === localMeta.epochId || remoteEpochVersion >= localEpochRank);
+
         if (isFirestoreCleanEpochConfirmed) {
-          if (pendingClasses && callbacks.onClassesUpdate) {
-            callbacks.onClassesUpdate(pendingClasses.classes, pendingClasses.updatedAtMs);
-            pendingClasses = null;
-          }
+          tryDeliverPendingClasses();
           if (pendingMetaData) {
             flushMetaConfig(pendingMetaData);
             pendingMetaData = null;
@@ -596,11 +1239,12 @@ export const subscribeToFirestoreRealtimeState = (callbacks: {
         });
         if (classes.length > 0) {
           const updatedAtMs = maxUpdatedAt || Date.now();
-          if (isFirestoreCleanEpochConfirmed) {
-            callbacks.onClassesUpdate?.(classes, updatedAtMs);
-          } else {
-            pendingClasses = { classes, updatedAtMs };
-          }
+          pendingClasses = {
+            classes,
+            updatedAtMs,
+            fromCache: Boolean(snap.metadata?.fromCache),
+          };
+          tryDeliverPendingClasses();
         }
       },
       (error) => {
@@ -650,4 +1294,5 @@ export const registerOfflineFlushHandler = (flushFn: () => Promise<void>): (() =
   window.addEventListener('online', handleOnline);
   return () => window.removeEventListener('online', handleOnline);
 };
+
 
