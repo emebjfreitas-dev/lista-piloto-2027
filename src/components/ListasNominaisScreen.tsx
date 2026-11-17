@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { ClassGroup, Student, UserRole } from '../types';
 import {
@@ -35,6 +35,49 @@ interface EvaluatedRow {
   worstMonthName: string;
 }
 
+export type SchoolGroupId = 'all' | 'infantil' | 'anos1e2' | 'anos3a5' | 'manha' | 'tarde';
+
+interface SchoolGroupMeta {
+  id: SchoolGroupId;
+  label: string;
+  shortLabel: string;
+  description: string;
+}
+
+const SCHOOL_GROUPS: SchoolGroupMeta[] = [
+  { id: 'all', label: 'Todas as Turmas (40)', shortLabel: 'Todas (40)', description: 'Todas as 40 turmas da escola' },
+  { id: 'infantil', label: 'Educação Infantil · G4 e G5 (16)', shortLabel: 'Ed. Infantil (16)', description: 'G4 e G5 (Manhã e Tarde)' },
+  { id: 'anos1e2', label: '1º e 2º Anos · Alfabetização (8)', shortLabel: '1º e 2º Anos (8)', description: 'Ciclo de Alfabetização' },
+  { id: 'anos3a5', label: '3º ao 5º Ano · Fundamental (12)', shortLabel: '3º ao 5º Ano (12)', description: 'Anos Iniciais do Fundamental' },
+  { id: 'manha', label: 'Turno Manhã (20)', shortLabel: 'Manhã (20)', description: 'Turmas do período matutino' },
+  { id: 'tarde', label: 'Turno Tarde (20)', shortLabel: 'Tarde (20)', description: 'Turmas do período vespertino' },
+];
+
+const isClassInSchoolGroup = (cls: ClassGroup, group: SchoolGroupId): boolean => {
+  if (group === 'all') return true;
+  const isInfantil =
+    cls.name.toUpperCase().startsWith('GRUPO') ||
+    cls.grade.toUpperCase().includes('INFANTIL');
+  if (group === 'infantil') return isInfantil;
+  if (group === 'anos1e2') {
+    return (
+      !isInfantil &&
+      (cls.name.toUpperCase().startsWith('1º') || cls.name.toUpperCase().startsWith('2º'))
+    );
+  }
+  if (group === 'anos3a5') {
+    return (
+      !isInfantil &&
+      (cls.name.toUpperCase().startsWith('3º') ||
+        cls.name.toUpperCase().startsWith('4º') ||
+        cls.name.toUpperCase().startsWith('5º'))
+    );
+  }
+  if (group === 'manha') return cls.shift === 'Turno Manhã';
+  if (group === 'tarde') return cls.shift === 'Turno Tarde';
+  return true;
+};
+
 export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   classes,
   userRole,
@@ -44,10 +87,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   onBack,
 }) => {
   const [selectedBimesterId, setSelectedBimesterId] = useState<BimesterId2027>('5bim');
+  const [selectedSchoolGroup, setSelectedSchoolGroup] = useState<SchoolGroupId>('all');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
-  const [selectedSegmentFilter, setSelectedSegmentFilter] = useState<
-    'all' | 'fundamental' | 'infantil'
-  >('all');
   const [selectedAtestadoFilter, setSelectedAtestadoFilter] = useState<
     'all' | 'com_atestado' | 'sem_atestado'
   >('all');
@@ -55,6 +96,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const tabsRowRef = useRef<HTMLDivElement>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -110,6 +153,70 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
     );
   }, [classes, selectedBimesterId]);
 
+  // Estatísticas em tempo real por turma para exibição direta nas abas
+  const classStatsMap = useMemo(() => {
+    const map = new Map<
+      string,
+      { total: number; belowTarget: number; withAtestado: number }
+    >();
+    classes.forEach((c) => {
+      map.set(c.id, { total: 0, belowTarget: 0, withAtestado: 0 });
+    });
+    allEvaluatedRows.forEach((row) => {
+      const cur = map.get(row.cls.id) || { total: 0, belowTarget: 0, withAtestado: 0 };
+      cur.total += 1;
+      if (row.isBelowTarget) cur.belowTarget += 1;
+      if (row.hasAtestado) cur.withAtestado += 1;
+      map.set(row.cls.id, cur);
+    });
+    return map;
+  }, [classes, allEvaluatedRows]);
+
+  // Turmas visíveis na barra de abas de acordo com o Grupo Escolar selecionado
+  const visibleTabClasses = useMemo(() => {
+    return classes.filter((c) => isClassInSchoolGroup(c, selectedSchoolGroup));
+  }, [classes, selectedSchoolGroup]);
+
+  // Total de alertas somados dentro do grupo visível
+  const totalBelowInVisibleGroup = useMemo(() => {
+    let sum = 0;
+    visibleTabClasses.forEach((c) => {
+      const stats = classStatsMap.get(c.id);
+      if (stats) sum += stats.belowTarget;
+    });
+    return sum;
+  }, [visibleTabClasses, classStatsMap]);
+
+  // Turma atualmente selecionada em detalhe (quando não é 'all')
+  const activeSelectedClass = useMemo(() => {
+    if (selectedClassFilter === 'all') return null;
+    return classes.find((c) => c.id === selectedClassFilter) || null;
+  }, [classes, selectedClassFilter]);
+
+  // Índice da turma ativa no grupo visível para navegação Anterior / Próxima
+  const currentClassIndex = useMemo(() => {
+    if (selectedClassFilter === 'all') return -1;
+    return visibleTabClasses.findIndex((c) => c.id === selectedClassFilter);
+  }, [selectedClassFilter, visibleTabClasses]);
+
+  const handlePrevClass = () => {
+    if (visibleTabClasses.length === 0) return;
+    if (currentClassIndex <= 0) {
+      setSelectedClassFilter(visibleTabClasses[visibleTabClasses.length - 1].id);
+    } else {
+      setSelectedClassFilter(visibleTabClasses[currentClassIndex - 1].id);
+    }
+  };
+
+  const handleNextClass = () => {
+    if (visibleTabClasses.length === 0) return;
+    if (currentClassIndex === -1 || currentClassIndex >= visibleTabClasses.length - 1) {
+      setSelectedClassFilter(visibleTabClasses[0].id);
+    } else {
+      setSelectedClassFilter(visibleTabClasses[currentClassIndex + 1].id);
+    }
+  };
+
   const counts = useMemo(() => {
     const belowTarget = allEvaluatedRows.filter((r) => r.isBelowTarget).length;
     return {
@@ -118,21 +225,20 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
     };
   }, [allEvaluatedRows]);
 
-  // Filtra estudantes mantendo suporte a busca por nome, turma, RA, NIS e responsável
+  // Filtra estudantes mantendo suporte à aba ativa, grupo escolar, busca e atestados
   const filteredRows = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
     return allEvaluatedRows.filter((row) => {
       if (onlyBelowTarget && !row.isBelowTarget) return false;
-      if (selectedClassFilter !== 'all' && row.cls.id !== selectedClassFilter) {
-        return false;
+
+      // Filtro de aba por turma individual ou por grupo escolar
+      if (selectedClassFilter !== 'all') {
+        if (row.cls.id !== selectedClassFilter) return false;
+      } else if (selectedSchoolGroup !== 'all') {
+        if (!isClassInSchoolGroup(row.cls, selectedSchoolGroup)) return false;
       }
-      if (selectedSegmentFilter === 'fundamental' && row.rep.isEducacaoInfantil) {
-        return false;
-      }
-      if (selectedSegmentFilter === 'infantil' && !row.rep.isEducacaoInfantil) {
-        return false;
-      }
+
       if (selectedAtestadoFilter === 'com_atestado' && !row.hasAtestado) {
         return false;
       }
@@ -157,7 +263,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
     allEvaluatedRows,
     onlyBelowTarget,
     selectedClassFilter,
-    selectedSegmentFilter,
+    selectedSchoolGroup,
     selectedAtestadoFilter,
     searchQuery,
   ]);
@@ -223,7 +329,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           ? `ABAIXO DA META (<${r.rep.minLegalPresencePercent}%)`
           : `DENTRO DA META (≥${r.rep.minLegalPresencePercent}%)`,
         'RA': `${r.student.ra}-${r.student.digRa}`,
-        'NIS': r.student.nis || '—',
+        'NIS (BOLSA FAMÍLIA)': r.student.nis || '—',
+        'ROTA DE TRANSPORTE': r.student.rotaOnibus || '—',
         'RESPONSÁVEL / TELEFONE': `${r.student.filiacao1 || r.student.guardianName || '—'} (${r.student.telefones || r.student.guardianPhone || '—'})`,
       };
     });
@@ -232,9 +339,9 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
     const ws = XLSX.utils.json_to_sheet(exportObjects);
     const safeSheetName = `Bolsa_${currentBimester.id.toUpperCase()}`.slice(0, 31);
     XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
-    const fileName = `Listas_Nominais_${currentBimester.id}_2027.xls`;
+    const fileName = `Listas_Nominais_Bolsa_Familia_${currentBimester.id}_2027.xls`;
     XLSX.writeFile(wb, fileName, { bookType: 'biff8' });
-    showToast(`Arquivo ${fileName} exportado (${exportObjects.length} estudantes por turma).`);
+    showToast(`Arquivo ${fileName} exportado com sucesso (${exportObjects.length} estudantes).`);
   };
 
   if (userRole !== 'admin') {
@@ -247,7 +354,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           Acesso Restrito à Gestão / Secretaria
         </h2>
         <p className="text-sm text-[#6e6e73] leading-relaxed">
-          As listas nominais consolidadas são exclusivas do perfil Administrador.
+          O acompanhamento nominal do Bolsa Família e condicionalidades LDB é exclusivo da Gestão Escolar.
         </p>
       </div>
     );
@@ -255,7 +362,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
   const hasActiveFilters =
     selectedClassFilter !== 'all' ||
-    selectedSegmentFilter !== 'all' ||
+    selectedSchoolGroup !== 'all' ||
     selectedAtestadoFilter !== 'all' ||
     !onlyBelowTarget ||
     searchQuery.trim() !== '';
@@ -273,7 +380,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         </div>
       )}
 
-      {/* CABEÇALHO ULTRA-MINIMALISTA SEM CONTORNOS (SF PRO) */}
+      {/* CABEÇALHO DA TELA BOLSA FAMÍLIA */}
       <header className="space-y-4 min-w-0">
         <div className="flex items-center justify-between gap-3 flex-wrap min-w-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -288,13 +395,17 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               </button>
             )}
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#0f172a] tracking-[-0.028em] leading-tight break-words">
-                Listas Nominais
-              </h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-bold text-[#0f172a] tracking-[-0.028em] leading-tight break-words">
+                  Bolsa Família &amp; Condicionalidades
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-lg bg-[#fef3c7] text-[#92400e] text-xs font-bold uppercase">
+                  MEC / LDB 2027
+                </span>
+              </div>
               <p className="mt-0.5 text-xs sm:text-[13px] font-medium text-[#64748b] tabular-nums tracking-[-0.008em]">
-                {currentBimester.shortLabel} · {filteredRows.length}{' '}
-                {filteredRows.length === 1 ? 'estudante' : 'estudantes'} em {groupedByClass.length}{' '}
-                {groupedByClass.length === 1 ? 'turma' : 'turmas'}
+                {currentBimester.label} · Meta MEC: ≥60% Infantil / ≥75% Fundamental · {filteredRows.length}{' '}
+                {filteredRows.length === 1 ? 'estudante' : 'estudantes'} listados
               </p>
             </div>
           </div>
@@ -349,7 +460,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           </div>
         </div>
 
-        {/* BARRA DE BUSCA RÁPIDA NO TOPO (TOTALMENTE SEM CONTORNOS) */}
+        {/* BARRA DE BUSCA RÁPIDA (NOME, RA, NIS BOLSA FAMÍLIA, RESPONSÁVEL) */}
         <div className="relative min-w-0">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[20px]">
             search
@@ -358,8 +469,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar estudante por nome, turma, RA, NIS ou responsável..."
-            aria-label="Buscar estudante nas listas nominais"
+            placeholder="Buscar por nome, RA, NIS (Bolsa Família), responsável ou rota..."
+            aria-label="Buscar estudante nas listas nominais do Bolsa Família"
             className="w-full min-h-[48px] pl-11 pr-11 rounded-2xl bg-white text-sm sm:text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#f8fafc] shadow-2xs transition-colors"
           />
           {searchQuery && (
@@ -374,7 +485,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           )}
         </div>
 
-        {/* FILTROS DISCRETOS SEM CONTORNOS (ZERO PILLS) */}
+        {/* FILTROS GERAIS: BIMESTRE, STATUS DE ALERTA E ATESTADO */}
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <select
             value={selectedBimesterId}
@@ -384,7 +495,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           >
             {OFFICIAL_BIMESTERS_2027.map((bim) => (
               <option key={bim.id} value={bim.id}>
-                {bim.shortLabel}
+                {bim.label}
               </option>
             ))}
           </select>
@@ -399,36 +510,9 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             }`}
           >
             {onlyBelowTarget
-              ? `Abaixo da meta (${counts.belowTarget})`
-              : `Todos ativos (${counts.totalEvaluated})`}
+              ? `Abaixo da Meta MEC (${counts.belowTarget})`
+              : `Todos os Alunos Ativos (${counts.totalEvaluated})`}
           </button>
-
-          <select
-            value={selectedClassFilter}
-            onChange={(e) => setSelectedClassFilter(e.target.value)}
-            aria-label="Filtrar por turma"
-            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
-          >
-            <option value="all">Todas as turmas</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={selectedSegmentFilter}
-            onChange={(e) =>
-              setSelectedSegmentFilter(e.target.value as 'all' | 'fundamental' | 'infantil')
-            }
-            aria-label="Filtrar por etapa"
-            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
-          >
-            <option value="all">Todas as etapas</option>
-            <option value="fundamental">Fundamental (&lt; 75%)</option>
-            <option value="infantil">Infantil (&lt; 60%)</option>
-          </select>
 
           <select
             value={selectedAtestadoFilter}
@@ -437,20 +521,20 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 e.target.value as 'all' | 'com_atestado' | 'sem_atestado'
               )
             }
-            aria-label="Filtrar por atestado"
+            aria-label="Filtrar por atestado médico"
             className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
           >
-            <option value="all">Atestado: todos</option>
-            <option value="com_atestado">Com atestado</option>
-            <option value="sem_atestado">Sem atestado</option>
+            <option value="all">Atestado Médico: Todos</option>
+            <option value="com_atestado">Com Atestado Registrado</option>
+            <option value="sem_atestado">Sem Atestado (Faltas Diretas)</option>
           </select>
 
           {hasActiveFilters && (
             <button
               type="button"
               onClick={() => {
+                setSelectedSchoolGroup('all');
                 setSelectedClassFilter('all');
-                setSelectedSegmentFilter('all');
                 setSelectedAtestadoFilter('all');
                 setOnlyBelowTarget(true);
                 setSearchQuery('');
@@ -463,18 +547,274 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         </div>
       </header>
 
+      {/* =====================================================================
+          SISTEMA DE ABAS POR TURMA & GRUPOS ESCOLARES (NOVA NAVEGAÇÃO RÁPIDA)
+          ===================================================================== */}
+      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-2xs space-y-4 min-w-0">
+        {/* Nível 1: Seletor Segmentado de Grupo Escolar */}
+        <div className="space-y-2 min-w-0">
+          <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[17px] text-[#0b3b8c]">folder_shared</span>
+              <span>Grupos Escolares</span>
+            </span>
+            <span className="text-xs font-medium text-[#64748b] tabular-nums">
+              {visibleTabClasses.length} turmas disponíveis · <strong className="text-rose-700">{totalBelowInVisibleGroup}</strong> em alerta no grupo
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#f1f5f9] rounded-2xl">
+            {SCHOOL_GROUPS.map((grp) => {
+              const isSelected = selectedSchoolGroup === grp.id;
+              return (
+                <button
+                  key={grp.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSchoolGroup(grp.id);
+                    if (selectedClassFilter !== 'all') {
+                      const isStillInGroup = classes
+                        .filter((c) => isClassInSchoolGroup(c, grp.id))
+                        .some((c) => c.id === selectedClassFilter);
+                      if (!isStillInGroup) {
+                        setSelectedClassFilter('all');
+                      }
+                    }
+                  }}
+                  className={`min-h-[36px] px-3.5 rounded-xl text-xs sm:text-[13px] font-semibold cursor-pointer transition-all duration-100 ${
+                    isSelected
+                      ? 'bg-[#0f172a] text-white shadow-2xs'
+                      : 'text-[#475569] hover:text-[#0f172a] hover:bg-white/60'
+                  }`}
+                  title={grp.description}
+                >
+                  {grp.shortLabel}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Nível 2: Barra de Abas Horizontais por Turma */}
+        <div className="space-y-2 min-w-0">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[17px] text-[#0b3b8c]">tab</span>
+              <span>Abas de Turmas</span>
+            </span>
+            {selectedClassFilter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setSelectedClassFilter('all')}
+                className="text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[15px]">apps</span>
+                <span>Ver Todas as Turmas Juntas</span>
+              </button>
+            )}
+          </div>
+
+          <div className="relative min-w-0" ref={tabsRowRef}>
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scroll-smooth no-scrollbar">
+              {/* Aba Consolidada: Todas as Turmas */}
+              <button
+                type="button"
+                onClick={() => setSelectedClassFilter('all')}
+                className={`min-h-[44px] px-4 rounded-2xl text-xs sm:text-[13px] font-semibold flex items-center gap-2 shrink-0 cursor-pointer transition-all duration-100 ${
+                  selectedClassFilter === 'all'
+                    ? 'bg-[#0b3b8c] text-white shadow-xs'
+                    : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                <span>Todas ({visibleTabClasses.length})</span>
+                {totalBelowInVisibleGroup > 0 && (
+                  <span
+                    className={`px-2 py-0.5 rounded-lg text-xs font-bold tabular-nums ${
+                      selectedClassFilter === 'all'
+                        ? 'bg-white/20 text-white'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {totalBelowInVisibleGroup}
+                  </span>
+                )}
+              </button>
+
+              {/* Abas Individuais para Cada Turma */}
+              {visibleTabClasses.map((cls) => {
+                const isSelected = selectedClassFilter === cls.id;
+                const stats = classStatsMap.get(cls.id) || { total: 0, belowTarget: 0, withAtestado: 0 };
+                const hasAlert = stats.belowTarget > 0;
+                const shiftAbbr = cls.shift === 'Turno Manhã' ? 'M' : 'T';
+
+                return (
+                  <button
+                    key={cls.id}
+                    type="button"
+                    onClick={() => setSelectedClassFilter(cls.id)}
+                    className={`min-h-[44px] px-3.5 rounded-2xl text-xs sm:text-[13px] font-semibold flex items-center gap-2 shrink-0 cursor-pointer transition-all duration-100 ${
+                      isSelected
+                        ? 'bg-[#0b3b8c] text-white shadow-xs'
+                        : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
+                    }`}
+                  >
+                    <span>{cls.turmaAbrev || cls.name}</span>
+                    <span
+                      className={`text-[11px] font-medium opacity-80 ${
+                        isSelected ? 'text-blue-100' : 'text-slate-500'
+                      }`}
+                    >
+                      {shiftAbbr}
+                    </span>
+                    <span
+                      className={`min-w-[20px] px-1.5 py-0.5 rounded-md text-[11px] font-bold tabular-nums text-center ${
+                        isSelected
+                          ? hasAlert
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-white/20 text-white'
+                          : hasAlert
+                          ? 'bg-[#fee2e2] text-[#991b1b]'
+                          : 'bg-slate-200/70 text-slate-600'
+                      }`}
+                      title={
+                        hasAlert
+                          ? `${stats.belowTarget} estudante(s) abaixo da meta legal`
+                          : 'Nenhum estudante abaixo da meta'
+                      }
+                    >
+                      {stats.belowTarget}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Navegação Rápida Anterior / Próxima Turma */}
+          {activeSelectedClass && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handlePrevClass}
+                  className="min-h-[38px] px-3 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  <span>Turma Anterior</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextClass}
+                  className="min-h-[38px] px-3 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <span>Próxima Turma</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs font-medium text-[#64748b]">
+                <span>
+                  Turma <strong className="text-[#0f172a]">{currentClassIndex + 1}</strong> de{' '}
+                  <strong className="text-[#0f172a]">{visibleTabClasses.length}</strong>
+                </span>
+                <span>·</span>
+                <span className="text-[#0f172a] font-semibold">{activeSelectedClass.name}</span>
+                <span>({activeSelectedClass.shift.replace('Turno ', '')})</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* PAINEL HERO DA TURMA ATIVA (QUANDO UMA TURMA INDIVIDUAL ESTÁ SELECIONADA) */}
+      {activeSelectedClass && (
+        <section className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 animate-gentle-fade">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-bold uppercase">
+                  {activeSelectedClass.shift.replace('Turno ', '').toUpperCase()}
+                </span>
+                {activeSelectedClass.room && (
+                  <span className="text-xs text-slate-300">Sala {activeSelectedClass.room}</span>
+                )}
+                <span className="text-slate-500">·</span>
+                <span className="text-xs text-slate-300">
+                  {activeSelectedClass.name.toUpperCase().startsWith('GRUPO') ||
+                  activeSelectedClass.grade.toUpperCase().includes('INFANTIL')
+                    ? 'Meta LDB Educação Infantil: ≥ 60%'
+                    : 'Meta LDB Ensino Fundamental: ≥ 75%'}
+                </span>
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                {activeSelectedClass.name}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300">
+                Regente PEB I: <strong className="text-white">{activeSelectedClass.teacherName || 'Não informado'}</strong>
+              </p>
+            </div>
+
+            {/* Contadores da Turma e Alternância Rápida de Visualização */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setOnlyBelowTarget(true)}
+                className={`min-h-[42px] px-4 rounded-2xl text-xs sm:text-[13px] font-semibold cursor-pointer transition-all duration-100 flex items-center gap-2 ${
+                  onlyBelowTarget
+                    ? 'bg-rose-500 text-white shadow-xs'
+                    : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">warning</span>
+                <span>Apenas em Alerta ({classStatsMap.get(activeSelectedClass.id)?.belowTarget || 0})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOnlyBelowTarget(false)}
+                className={`min-h-[42px] px-4 rounded-2xl text-xs sm:text-[13px] font-semibold cursor-pointer transition-all duration-100 flex items-center gap-2 ${
+                  !onlyBelowTarget
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">groups</span>
+                <span>Todos da Turma ({classStatsMap.get(activeSelectedClass.id)?.total || 0})</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ESTADO VAZIO */}
       {groupedByClass.length === 0 ? (
-        <div className="bg-white rounded-3xl p-10 text-center space-y-2 shadow-2xs">
-          <span className="material-symbols-outlined text-[36px] text-[#047857]">
-            verified
-          </span>
-          <p className="text-base font-semibold text-[#0f172a] tracking-tight">
-            Nenhum estudante encontrado para os filtros selecionados
+        <div className="bg-white rounded-3xl p-10 text-center space-y-3 shadow-2xs">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#047857] flex items-center justify-center mx-auto">
+            <span className="material-symbols-outlined text-[32px]">verified</span>
+          </div>
+          <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
+            {activeSelectedClass
+              ? `A turma ${activeSelectedClass.name} está 100% regular!`
+              : 'Nenhum estudante encontrado para os filtros selecionados'}
+          </h3>
+          <p className="text-xs sm:text-sm text-[#64748b] max-w-md mx-auto leading-relaxed">
+            {activeSelectedClass
+              ? `Todos os ${classStatsMap.get(activeSelectedClass.id)?.total || 0} estudantes desta turma cumpriram a meta de presença no ${currentBimester.label}.`
+              : 'Ajuste os filtros de busca ou alterne para visualizar todos os estudantes ativos.'}
           </p>
-          <p className="text-xs sm:text-sm text-[#64748b]">
-            Ajuste os filtros de busca ou alterne para visualizar todos os estudantes ativos.
-          </p>
+          {activeSelectedClass && onlyBelowTarget && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setOnlyBelowTarget(false)}
+                className="min-h-[40px] px-5 rounded-2xl bg-[#0f172a] hover:bg-black text-white text-xs font-semibold cursor-pointer shadow-xs"
+              >
+                Ver todos os {classStatsMap.get(activeSelectedClass.id)?.total || 0} estudantes desta turma
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-8">
@@ -485,24 +825,26 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
             return (
               <section key={group.cls.id} className="space-y-3.5 min-w-0">
-                {/* Cabeçalho da Turma */}
-                <div className="flex items-baseline justify-between gap-2 px-1">
-                  <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
-                    <h2 className="text-lg sm:text-xl font-bold text-[#0f172a] tracking-[-0.024em]">
-                      {group.cls.name}
-                    </h2>
-                    <span className="text-xs font-medium text-[#64748b] tracking-[-0.006em]">
-                      {group.cls.shift.replace('Turno ', '')} ·{' '}
-                      {isInfantil ? 'Meta legal 60%' : 'Meta legal 75%'}
+                {/* Cabeçalho da Turma no modo consolidado */}
+                {selectedClassFilter === 'all' && (
+                  <div className="flex items-baseline justify-between gap-2 px-1">
+                    <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
+                      <h2 className="text-lg sm:text-xl font-bold text-[#0f172a] tracking-[-0.024em]">
+                        {group.cls.name}
+                      </h2>
+                      <span className="text-xs font-medium text-[#64748b] tracking-[-0.006em]">
+                        {group.cls.shift.replace('Turno ', '')} ·{' '}
+                        {isInfantil ? 'Meta legal 60%' : 'Meta legal 75%'}
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold text-[#64748b] tabular-nums shrink-0">
+                      {group.rows.length}{' '}
+                      {group.rows.length === 1 ? 'estudante' : 'estudantes'}
                     </span>
                   </div>
-                  <span className="text-xs font-semibold text-[#64748b] tabular-nums shrink-0">
-                    {group.rows.length}{' '}
-                    {group.rows.length === 1 ? 'estudante' : 'estudantes'}
-                  </span>
-                </div>
+                )}
 
-                {/* MODO 1: GRADE DE CARTÕES DE ESTUDANTES (Foco Prioritário no Nome + SF Pro) */}
+                {/* MODO 1: GRADE DE CARTÕES DE ESTUDANTES */}
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 items-stretch min-w-0">
                     {group.rows.map((row) => {
@@ -527,7 +869,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                           }`}
                         >
                           <div className="space-y-2.5 min-w-0">
-                            {/* Topo do Cartão: Nome do Estudante com PRIORIDADE MÁXIMA + Avatar */}
+                            {/* Topo do Cartão: Nome do Estudante + Avatar */}
                             <div className="flex items-start gap-3.5 min-w-0">
                               <div
                                 onClick={() => onOpenPhotoModal(student, cls.name)}
@@ -562,14 +904,13 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                   </span>
                                 </div>
 
-                                {/* Nome do Aluno no Topo com Maior Peso e Hierarquia SF Pro */}
                                 <h3 className="mt-0.5 text-[17px] font-semibold text-[#0f172a] tracking-[-0.024em] leading-[1.22] break-words">
                                   {student.name}
                                 </h3>
                               </div>
                             </div>
 
-                            {/* Metadados SF Pro (Sem Espaços Vazios e Zero-Pills) */}
+                            {/* Metadados SF Pro */}
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-[#475569] tracking-[-0.008em] tabular-nums">
                               <span
                                 className={
@@ -587,7 +928,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                               {student.nis && (
                                 <>
                                   <span aria-hidden="true" className="text-slate-300">·</span>
-                                  <span>NIS {student.nis}</span>
+                                  <span className="text-[#92400e] font-semibold">NIS {student.nis}</span>
                                 </>
                               )}
                               {student.rotaOnibus && (
@@ -639,7 +980,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                             )}
                           </div>
 
-                          {/* Ações Rápidas sem Contorno no Rodapé do Cartão */}
+                          {/* Ações Rápidas no Rodapé do Cartão */}
                           <div className="grid grid-cols-3 gap-2 pt-1 mt-auto min-w-0">
                             <button
                               type="button"
@@ -738,7 +1079,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                 {student.nis && (
                                   <>
                                     <span aria-hidden="true" className="text-slate-300">·</span>
-                                    <span>NIS {student.nis}</span>
+                                    <span className="text-[#92400e] font-semibold">NIS {student.nis}</span>
                                   </>
                                 )}
                                 <span aria-hidden="true" className="text-slate-300">·</span>

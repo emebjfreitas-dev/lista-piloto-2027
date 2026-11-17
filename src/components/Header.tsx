@@ -200,13 +200,6 @@ export const Header: React.FC<HeaderProps> = ({
     tintClass: string;
   }> = [
     {
-      id: 'resumo',
-      label: 'Resumo & Mapa',
-      subtitle: 'Frequência mensal e padrão de faltas',
-      icon: BarChart3,
-      tintClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
-    },
-    {
       id: 'bolsa_familia',
       label: 'Bolsa Família & Fretado',
       subtitle: 'Condicionalidades e alertas sociais',
@@ -233,7 +226,6 @@ export const Header: React.FC<HeaderProps> = ({
     'bolsa_familia',
     'usuarios_acesso',
     'dias_letivos',
-    'resumo',
     'diagnostico_bd',
     'importar_deficiencias_htm',
   ].includes(currentScreen);

@@ -431,10 +431,20 @@ export const evaluateAttendanceLaunchWindow = (
   };
 };
 
+// E-mail institucional exclusivo de Administrador da EMEB Prof. Joaquim Candelário de Freitas
+export const isOfficialSchoolAdminEmail = (email?: string): boolean => {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  return (
+    normalized === 'emebjfreitas@jundiai.sp.gov.br' ||
+    normalized === 'emebjfreitas@educacao.jundiai.sp.gov.br'
+  );
+};
+
 // Validate institutional domain @educacao.jundiai.sp.gov.br (plus official school owner emebjfreitas@jundiai.sp.gov.br)
 export const isValidInstitutionalEmail = (email: string): boolean => {
   const normalized = email.trim().toLowerCase();
-  if (normalized === 'emebjfreitas@jundiai.sp.gov.br') {
+  if (isOfficialSchoolAdminEmail(normalized)) {
     return true;
   }
   return (
@@ -518,7 +528,28 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
   return uniqueUsers.map((u) => {
     const cleanEmail = u.email.trim().toLowerCase();
     const off = officialByEmail.get(cleanEmail);
-    if (u.role === 'usuario') {
+
+    // REGRA MANDATÓRIA: Administrador é EXCLUSIVO de emebjfreitas@jundiai.sp.gov.br (e seu alias)
+    if (isOfficialSchoolAdminEmail(cleanEmail)) {
+      return {
+        ...u,
+        email: cleanEmail,
+        role: 'admin',
+        teacherRoleType: 'admin',
+        subjectName: 'GESTÃO / ADMIN',
+        assignedClassId: 'all',
+        assignedClassIds: ['all'],
+        assignedClassName: 'Todas as 40 Turmas (Acesso Pleno)',
+        assignedClassNames: ['Todas as 40 Turmas (Acesso Pleno)'],
+        active: true,
+      };
+    }
+
+    // Se a conta não for emebjfreitas@, não pode possuir papel admin em nenhuma hipótese
+    const effectiveRole: UserRole =
+      u.role === 'admin' ? (off?.role || 'usuario') : u.role;
+
+    if (effectiveRole === 'usuario') {
       // Preserve multi-class assignments (assignedClassIds) if present!
       const rawIds: string[] =
         Array.isArray(u.assignedClassIds) && u.assignedClassIds.length > 0
@@ -561,6 +592,7 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
 
       return {
         ...u,
+        role: 'usuario',
         email: cleanEmail,
         teacherRoleType: 'peb1',
         assignedClassId: finalIds[0],
@@ -570,7 +602,7 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
       };
     }
 
-    if (u.role === 'peb2') {
+    if (effectiveRole === 'peb2') {
       const specIds =
         Array.isArray(u.assignedClassIds) &&
         u.assignedClassIds.length > 0 &&
@@ -587,6 +619,7 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
 
       return {
         ...u,
+        role: 'peb2',
         email: cleanEmail,
         teacherRoleType: u.teacherRoleType || off?.teacherRoleType || 'arte',
         subjectName: subjectLabel,
@@ -601,14 +634,16 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
       };
     }
 
+    // Fallback geral seguro para usuários docentes regulares
     return {
       ...u,
+      role: 'usuario',
       email: cleanEmail,
-      teacherRoleType: 'admin',
-      assignedClassId: 'all',
-      assignedClassIds: ['all'],
-      assignedClassName: 'Todas as 40 Turmas (Acesso Pleno)',
-      assignedClassNames: ['Todas as 40 Turmas (Acesso Pleno)'],
+      teacherRoleType: 'peb1',
+      assignedClassId: INITIAL_CLASSES[0].id,
+      assignedClassName: `${INITIAL_CLASSES[0].name} (${INITIAL_CLASSES[0].shift.replace('Turno ', '')})`,
+      assignedClassIds: [INITIAL_CLASSES[0].id],
+      assignedClassNames: [`${INITIAL_CLASSES[0].name} (${INITIAL_CLASSES[0].shift.replace('Turno ', '')})`],
     };
   });
 };

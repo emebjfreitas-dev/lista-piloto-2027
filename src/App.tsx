@@ -102,7 +102,6 @@ const ADMIN_ONLY_SCREENS: ScreenType[] = [
   'usuarios_acesso',
   'diagnostico_bd',
   'importar_deficiencias_htm',
-  'resumo',
   'bolsa_familia',
   'planilha',
 ];
@@ -190,6 +189,9 @@ export default function App() {
       return 'login';
     }
     if (requestedScreenParam && requestedScreenParam !== 'login') {
+      if (requestedScreenParam === 'resumo') {
+        return 'home';
+      }
       const canAccessRequested =
         (effectiveInitialIsStrictAdmin || !ADMIN_ONLY_SCREENS.includes(requestedScreenParam)) &&
         !(effectiveInitialRole === 'peb2' && requestedScreenParam === 'frequencia_mensal');
@@ -202,7 +204,7 @@ export default function App() {
     }
     const savedScreen = initialSavedSession.screen as string | undefined;
     if (savedScreen && savedScreen !== 'login') {
-      if (savedScreen === 'mapa_estudantes') {
+      if (savedScreen === 'mapa_estudantes' || savedScreen === 'resumo') {
         return 'home';
       }
       const typedScreen = savedScreen as ScreenType;
@@ -311,8 +313,9 @@ export default function App() {
     activeTeacherRoleType !== 'aee';
 
   const navigateToScreen = (rawNextScreen: ScreenType) => {
+    const targetScreen = rawNextScreen === 'resumo' ? 'home' : rawNextScreen;
     const nextScreen =
-      userRole === 'usuario' && rawNextScreen === 'turmas' ? 'detalhes' : rawNextScreen;
+      userRole === 'usuario' && targetScreen === 'turmas' ? 'detalhes' : targetScreen;
     if (nextScreen === currentScreen) return;
 
     // Princípio do Menor Privilégio (PoLP): Telas administrativas restritas exclusivamente ao Admin (nunca PEB I, PEB II ou AEE)
@@ -2220,62 +2223,49 @@ export default function App() {
         )}
 
         {currentScreen === 'resumo' && (
-          userRole === 'admin' ? (
-            <ResumoMensalScreen
-              currentClass={selectedClass}
-              allClasses={classes}
-              userRole={userRole}
-              onSelectClass={(cls) => setSelectedClass(cls)}
-              onSaveNotes={handleSaveNotes}
-              onOpenMonthlyLaunchForClass={(cls) => {
-                setSelectedClass(cls);
-                setCurrentScreen('frequencia_mensal');
-                window.scrollTo(0, 0);
-              }}
-              onOpenReportPrint={() => setIsReportPrintModalOpen(true)}
-              onOpenStudentPdf={(student) => {
-                const matchedClass =
-                  classes.find((c) => c.students.some((s) => s.id === student.id)) ||
-                  selectedClass;
-                setPdfModalData({ student, className: matchedClass.name });
-              }}
-              onOpenStudentGrid={(student) => {
-                const matchedClass =
-                  classes.find((c) => c.students.some((s) => s.id === student.id)) ||
-                  selectedClass;
-                setGridModalData({
-                  student,
-                  classId: matchedClass.id,
-                  className: matchedClass.name,
-                  diasLetivosMes: matchedClass.classesHeld || 20,
-                });
-              }}
-              onBack={handleBack}
-            />
-          ) : (
-            <div className="w-full min-w-0 break-words flex flex-col items-center justify-center p-6 sm:p-12 text-center bg-white rounded-3xl shadow-xs max-w-lg mx-auto my-8 sm:my-12 space-y-4 animate-gentle-fade">
-              <div className="w-16 h-16 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-700 shrink-0">
-                <span className="material-symbols-outlined text-[36px]">
-                  lock
-                </span>
-              </div>
-              <div className="space-y-1.5 min-w-0 w-full">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight break-words">
-                  Acesso Restrito à Gestão Escolar
-                </h2>
-                <p className="text-sm sm:text-base text-slate-600 max-w-sm mx-auto break-words leading-relaxed">
-                  O painel analítico Power BI (Resumo Mensal) é de uso exclusivo da Direção e Coordenação da EMEB.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleBack}
-                className="w-full sm:w-auto min-h-[46px] text-center whitespace-normal px-6 py-2.5 rounded-2xl bg-slate-900 hover:bg-black text-white text-sm font-semibold transition-all cursor-pointer shadow-xs"
-              >
-                Voltar à Página Principal
-              </button>
-            </div>
-          )
+          <HomeScreen
+            userRole={userRole}
+            teacherRoleType={activeTeacherRoleType}
+            userEmail={simulatedTeacherEmail || currentUserEmail}
+            userName={activeAuthorizedUser?.name || currentUserName}
+            classes={userRole === 'usuario' ? visibleClasses : classes}
+            assignedClassId={assignedClassId}
+            assignedClassIds={assignedClassIds}
+            attendanceWindowConfig={attendanceWindowConfig}
+            schoolNotices={schoolNotices}
+            onSaveSchoolNotices={handleSaveSchoolNotices}
+            onMarkNoticeRead={handleMarkNoticeRead}
+            onNavigateToScreen={(targetScreen) => {
+              if (targetScreen === 'turmas' && userRole === 'usuario') {
+                const targetCls = classes.find((c) => c.id === assignedClassId) || classes[0];
+                if (targetCls) setSelectedClass(targetCls);
+                navigateToScreen('detalhes');
+              } else {
+                navigateToScreen(targetScreen);
+              }
+            }}
+            onSelectClassForDetails={handleSelectClassForDetails}
+            onSelectClassForMonthlyAttendance={(cls) => {
+              setSelectedClass(cls);
+              navigateToScreen('frequencia_mensal');
+            }}
+            onSelectStudentForConsecutiveScreen={(classId) => {
+              const cls = classes.find((c) => c.id === classId);
+              if (cls) setSelectedClass(cls);
+              navigateToScreen('faltas_consecutivas');
+            }}
+            onOpenStudentGrid={(student) => {
+              const matchedClass =
+                classes.find((c) => c.students.some((s) => s.id === student.id)) ||
+                selectedClass;
+              setGridModalData({
+                student,
+                classId: matchedClass.id,
+                className: matchedClass.name,
+                diasLetivosMes: matchedClass.classesHeld || 20,
+              });
+            }}
+          />
         )}
 
         {currentScreen === 'planilha' && isStrictAdmin && (

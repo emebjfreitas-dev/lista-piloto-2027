@@ -12,6 +12,7 @@ import {
 } from '../types';
 import { INSTITUTIONAL_EMAIL_DOMAIN, INITIAL_AUTHORIZED_USERS } from '../data/mockData';
 import {
+  isOfficialSchoolAdminEmail,
   isValidInstitutionalEmail,
   evaluateAttendanceLaunchWindow,
   formatDurationHuman,
@@ -129,6 +130,7 @@ const ACCESS_LEVEL_META: Record<AccessLevelKey, AccessLevelMeta> = {
 };
 
 const ACCESS_LEVEL_ORDER: AccessLevelKey[] = ['admin', 'usuario', 'peb2', 'aee'];
+const NEW_USER_LEVEL_ORDER: AccessLevelKey[] = ['usuario', 'peb2', 'aee'];
 
 const normalizeSearchText = (value?: string): string =>
   (value || '')
@@ -138,11 +140,16 @@ const normalizeSearchText = (value?: string): string =>
     .trim();
 
 const resolveAccessLevel = (
-  u: Pick<AuthorizedUser, 'role' | 'teacherRoleType' | 'subjectName'>,
+  u: Pick<AuthorizedUser, 'email' | 'role' | 'teacherRoleType' | 'subjectName'>,
   draftLevel?: AccessLevelKey
 ): AccessLevelKey => {
-  if (draftLevel) return draftLevel;
-  if (u.role === 'admin' && u.teacherRoleType !== 'aee' && u.teacherRoleType !== 'apoio') {
+  if (draftLevel) {
+    if (draftLevel === 'admin' && !isOfficialSchoolAdminEmail(u.email)) {
+      return 'usuario';
+    }
+    return draftLevel;
+  }
+  if (isOfficialSchoolAdminEmail(u.email)) {
     return 'admin';
   }
   if (
@@ -679,6 +686,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       return;
     }
 
+    if (newAccessLevel === 'admin' && !isOfficialSchoolAdminEmail(fullEmail)) {
+      triggerFeedback(
+        'error',
+        'O perfil de Administrador é exclusivo da conta institucional da escola (emebjfreitas@jundiai.sp.gov.br).'
+      );
+      return;
+    }
+
     const targetRole: UserRole =
       newAccessLevel === 'admin'
         ? 'admin'
@@ -757,6 +772,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
     const currentLevel = resolveAccessLevel(origUser, draftEdits[userId]?.accessLevel);
     if (currentLevel === level) return;
+
+    const isSchoolAdmin = isOfficialSchoolAdminEmail(origUser.email);
+    if (level === 'admin' && !isSchoolAdmin) {
+      triggerFeedback(
+        'error',
+        'O perfil de Administrador é exclusivo da conta institucional da escola (emebjfreitas@jundiai.sp.gov.br).'
+      );
+      return;
+    }
+    if (isSchoolAdmin && level !== 'admin') {
+      triggerFeedback(
+        'error',
+        'A conta institucional da escola (emebjfreitas@jundiai.sp.gov.br) deve permanecer como Administrador.'
+      );
+      return;
+    }
 
     if (currentLevel === 'admin' && level !== 'admin') {
       const activeAdmins = authorizedUsers.filter(
@@ -889,6 +920,21 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     const origUser = authorizedUsers.find((u) => u.id === userId);
     if (!origUser) return;
     const currentLevel = resolveAccessLevel(origUser, draftEdits[userId]?.accessLevel);
+    const isSchoolAdmin = isOfficialSchoolAdminEmail(origUser.email);
+    if (preset === 'admin' && !isSchoolAdmin) {
+      triggerFeedback(
+        'error',
+        'O perfil de Administrador é exclusivo da conta institucional da escola (emebjfreitas@jundiai.sp.gov.br).'
+      );
+      return;
+    }
+    if (isSchoolAdmin && preset !== 'admin') {
+      triggerFeedback(
+        'error',
+        'A conta institucional da escola (emebjfreitas@jundiai.sp.gov.br) deve permanecer como Administrador.'
+      );
+      return;
+    }
     if (currentLevel === 'admin' && preset !== 'admin') {
       const activeAdmins = authorizedUsers.filter(
         (u) => u.active && resolveAccessLevel(u) === 'admin'
@@ -2955,10 +3001,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
                   <div className="xl:col-span-3 space-y-1">
                     <label className="block text-xs font-medium text-[#48484a]">
-                      Nível de Permissão
+                      Nível de Permissão (Docente / Equipe)
                     </label>
-                    <div className="grid grid-cols-2 min-[420px]:grid-cols-4 gap-1 p-1 rounded-xl bg-white">
-                      {ACCESS_LEVEL_ORDER.map((lvl) => {
+                    <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-white">
+                      {NEW_USER_LEVEL_ORDER.map((lvl) => {
                         const meta = ACCESS_LEVEL_META[lvl];
                         const isSelected = newAccessLevel === lvl;
                         return (
@@ -3155,17 +3201,30 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                             {ACCESS_LEVEL_ORDER.map((lvl) => {
                               const meta = ACCESS_LEVEL_META[lvl];
                               const isSelected = effectiveLevel === lvl;
+                              const isSchoolAdmin = isOfficialSchoolAdminEmail(u.email);
+                              const isLockedAdmin = !isSchoolAdmin && lvl === 'admin';
+                              const isLockedSchoolAdmin = isSchoolAdmin && lvl !== 'admin';
+                              const isDisabled = !canManage || isLockedAdmin || isLockedSchoolAdmin;
+                              const btnTitle = isLockedAdmin
+                                ? 'Perfil Administrador é exclusivo de emebjfreitas@jundiai.sp.gov.br'
+                                : isLockedSchoolAdmin
+                                ? 'Conta oficial da escola é o Administrador titular'
+                                : meta.description;
+
                               return (
                                 <button
                                   key={lvl}
                                   type="button"
-                                  disabled={!canManage}
+                                  disabled={isDisabled}
                                   onClick={() => handleSelectAccessLevel(u.id, lvl)}
+                                  title={btnTitle}
                                   className={`min-w-0 min-h-[38px] px-2 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center justify-center gap-1 transition-all duration-100 whitespace-normal text-center ${
                                     isSelected
                                       ? meta.activeSegmentClass
+                                      : isLockedAdmin
+                                      ? 'text-[#9ca3af] opacity-40 cursor-not-allowed'
                                       : 'text-[#374151] hover:bg-[#f2f2f7]'
-                                  } ${canManage ? 'cursor-pointer' : 'cursor-default'}`}
+                                  } ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                                 >
                                   {renderAccessLevelIcon(lvl)}
                                   <span className="break-words leading-tight">{meta.shortLabel}</span>

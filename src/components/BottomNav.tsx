@@ -112,13 +112,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     tintClass: string;
   }> = [
     {
-      id: 'resumo',
-      label: 'Resumo & Mapa',
-      description: 'Frequência mensal e mapa de ausências',
-      icon: BarChart3,
-      tintClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
-    },
-    {
       id: 'bolsa_familia',
       label: 'Bolsa Família & Fretado',
       description: 'Acompanhamento de condicionalidades sociais',
@@ -151,7 +144,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const isMoreActive =
     isAdmin &&
     [
-      'resumo',
       'bolsa_familia',
       'dias_letivos',
       'usuarios_acesso',

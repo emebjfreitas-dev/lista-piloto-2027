@@ -358,15 +358,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           onClick: () => onNavigateToScreen('usuarios_acesso'),
         },
         {
-          id: 'resumo',
-          title: 'Resumo Mensal e Mapa',
-          subtitle: 'Frequência consolidada por dia e turma',
-          icon: <BarChart3 className="w-6 h-6" />,
-          accentBg: 'bg-[#f2f2f7]',
-          accentText: 'text-[#111827]',
-          onClick: () => onNavigateToScreen('resumo'),
-        },
-        {
           id: 'bolsa_familia',
           title: 'Bolsa Família & Fretado',
           subtitle: 'Acompanhamento bimestral e transporte',
