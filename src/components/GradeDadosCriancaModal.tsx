@@ -1189,10 +1189,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   })()}
                 </div>
 
-                {/* Irmãos Detectados na Escola (Cruzamento de Mãe, Pai ou Ambos) */}
+                {/* Bloco Visual: Vínculos Familiares (Cruzamento de Mãe, Pai ou Ambos) */}
                 {detectedSiblings.length > 0 && (
                   <div className="pt-2">
                     <StudentSiblingsCard
+                      title="Vínculos Familiares"
                       siblings={detectedSiblings}
                       onSelectSibling={(sibSt) => onSelectStudent?.(sibSt)}
                     />

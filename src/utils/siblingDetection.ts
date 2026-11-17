@@ -310,7 +310,7 @@ export function findStudentSiblings(
 
       const match = compareStudentsForSiblingMatch(targetStudent, otherStudent);
       if (match && match.isSibling) {
-        const isSameClass = otherStudent.turma === targetStudent.turma || cls.id === targetStudent.classId;
+        const isSameClass = otherStudent.turma === targetStudent.turma;
         siblingMap.set(otherStudent.id, {
           student: otherStudent,
           classId: cls.id,

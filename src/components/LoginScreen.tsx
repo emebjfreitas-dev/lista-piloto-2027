@@ -176,11 +176,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <span>{loading ? 'Conectando...' : 'Entrar com minha conta Google'}</span>
         </button>
 
-        <p className="text-xs text-slate-600 mt-5 font-medium text-balance break-words leading-relaxed max-w-[34ch]">
-          Use sua conta Google{' '}
-          <span className="font-bold text-[#0b3b8c] select-all">@educacao.jundiai.sp.gov.br</span>{' '}
-          autorizada
-        </p>
+        {/* Aviso de Acesso Restrito e Orientações */}
+        <div className="w-full mt-5 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-left text-amber-950 text-xs leading-relaxed">
+          <p className="font-bold flex items-center gap-1.5 text-amber-900 mb-1">
+            <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Acesso Restrito · Apenas Usuários Autorizados
+          </p>
+          <p className="text-amber-900/90">
+            Este aplicativo é de uso exclusivo da <strong>Equipe Pedagógica e Administrativa da EMEB Prof. Joaquim Candelário de Freitas</strong>.
+          </p>
+          <p className="mt-1 text-amber-900/80">
+            Se o Google exibir aviso de <em>"Acesso bloqueado"</em>, certifique-se de entrar com sua conta institucional oficial (<strong className="select-all">@educacao.jundiai.sp.gov.br</strong>) cadastrada ou contate a administração escolar.
+          </p>
+        </div>
 
         {errorMsg && (
           <div className="w-full mt-4 p-3.5 rounded-xl bg-rose-100 text-rose-950 text-xs sm:text-sm font-semibold break-words">

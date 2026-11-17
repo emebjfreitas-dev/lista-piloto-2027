@@ -9,6 +9,7 @@ interface StudentSiblingsCardProps {
   onOpenSiblingFicha?: (student: Student, classId?: string) => void;
   className?: string;
   compact?: boolean;
+  title?: string;
 }
 
 export const StudentSiblingsCard: React.FC<StudentSiblingsCardProps> = ({
@@ -17,6 +18,7 @@ export const StudentSiblingsCard: React.FC<StudentSiblingsCardProps> = ({
   onOpenSiblingFicha,
   className = '',
   compact = false,
+  title = 'Irmãos Identificados na Escola',
 }) => {
   if (!siblings || siblings.length === 0) return null;
 
@@ -71,7 +73,7 @@ export const StudentSiblingsCard: React.FC<StudentSiblingsCardProps> = ({
           </div>
           <div>
             <h5 className="font-bold text-xs uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-              <span>Irmãos Identificados na Escola</span>
+              <span>{title}</span>
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-200 text-emerald-900 text-[10.5px] font-extrabold tabular-nums">
                 {siblings.length}
               </span>

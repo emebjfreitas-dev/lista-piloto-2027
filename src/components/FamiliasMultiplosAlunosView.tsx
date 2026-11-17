@@ -66,7 +66,8 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
       .map((fam) => {
         let alertCount = 0;
         const memberMetrics = fam.members.map((m) => {
-          const diasLetivos = m.classGroup.classesHeld || OFFICIAL_OCTOBER_DAYS;
+          const rawHeld = m.classGroup.classesHeld;
+          const diasLetivos = typeof rawHeld === 'number' ? rawHeld : 20;
           const metrics = getStudentAttendanceMetrics(
             m.student,
             diasLetivos,
