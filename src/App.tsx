@@ -31,6 +31,7 @@ import {
   getLocalClassesUpdatedAtMs,
   addSecurityAuditLog,
   getStoredLgpdConfig,
+  isOfficialSchoolAdminEmail,
   isValidInstitutionalEmail,
   findAuthorizedUserByEmail,
   isUserAccessExpired,
@@ -106,7 +107,8 @@ const ADMIN_ONLY_SCREENS: ScreenType[] = [
   'planilha',
 ];
 
-const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
+const ACTIVE_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_tab_session_2027_v2';
+const LEGACY_AUTH_SESSION_STORAGE_KEY = 'emeb_candelario_active_session_2027_v1';
 
 interface PersistedAuthSession {
   email: string;
@@ -122,7 +124,9 @@ interface PersistedAuthSession {
 
 const getSavedActiveAuthSession = (): PersistedAuthSession | null => {
   try {
-    const raw = localStorage.getItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+    // Limpa chave legada persistente em localStorage para evitar login automático indesejado ao abrir o app
+    localStorage.removeItem(LEGACY_AUTH_SESSION_STORAGE_KEY);
+    const raw = sessionStorage.getItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed.email === 'string' && parsed.email.includes('@')) {
@@ -148,8 +152,13 @@ export default function App() {
       )
     : undefined;
 
-  const effectiveInitialRole: UserRole =
+  const rawResolvedRole: UserRole =
     matchedInitialUser?.role || initialSavedSession?.role || 'usuario';
+  const effectiveInitialRole: UserRole = isOfficialSchoolAdminEmail(initialSavedSession?.email)
+    ? 'admin'
+    : rawResolvedRole === 'admin'
+    ? 'usuario'
+    : rawResolvedRole;
   const effectiveInitialAssignedClassIds: string[] =
     matchedInitialUser &&
     matchedInitialUser.role === 'usuario' &&
@@ -169,6 +178,7 @@ export default function App() {
 
   const effectiveInitialIsStrictAdmin =
     effectiveInitialRole === 'admin' &&
+    isOfficialSchoolAdminEmail(initialSavedSession?.email) &&
     matchedInitialUser?.teacherRoleType !== 'apoio' &&
     matchedInitialUser?.teacherRoleType !== 'aee';
 
@@ -309,6 +319,7 @@ export default function App() {
   const activeTeacherRoleType = activeAuthorizedUser?.teacherRoleType;
   const isStrictAdmin =
     userRole === 'admin' &&
+    isOfficialSchoolAdminEmail(activeAccountEmail) &&
     activeTeacherRoleType !== 'apoio' &&
     activeTeacherRoleType !== 'aee';
 
@@ -392,7 +403,7 @@ export default function App() {
         sessionId: activeSessionIdRef.current,
         simulatedTeacherEmail,
       };
-      localStorage.setItem(ACTIVE_AUTH_SESSION_STORAGE_KEY, JSON.stringify(payload));
+      sessionStorage.setItem(ACTIVE_AUTH_SESSION_STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // ignore storage write error
     }
@@ -727,12 +738,13 @@ export default function App() {
     return () => window.clearInterval(intervalId);
   }, [isAuthVerified, userRole, simulatedTeacherEmail, authorizedUsers, currentUserEmail]);
 
-  // Mandatory Firebase Auth session verification on boot and auth state changes
+  // Restore ONLY explicit tab session on reload (never auto-login from stale Firebase cache on fresh visit)
   useEffect(() => {
     let active = true;
     const clearUnauthenticatedSession = (errorMessage?: string) => {
       try {
-        localStorage.removeItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+        sessionStorage.removeItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+        localStorage.removeItem(LEGACY_AUTH_SESSION_STORAGE_KEY);
         localStorage.removeItem('emeb_candelario_last_remembered_email_2027');
       } catch {
         // ignore storage cleanup error
@@ -748,106 +760,116 @@ export default function App() {
       setCurrentScreen('login');
     };
 
+    const restoreSavedTabSession = async () => {
+      const saved = getSavedActiveAuthSession();
+      if (!saved || !saved.email) {
+        clearUnauthenticatedSession();
+        return;
+      }
+
+      const authEmail = saved.email.trim().toLowerCase();
+      if (!isValidInstitutionalEmail(authEmail)) {
+        clearUnauthenticatedSession(
+          `Acesso negado: o e-mail "${authEmail}" não pertence ao domínio institucional autorizado (@educacao.jundiai.sp.gov.br).`
+        );
+        return;
+      }
+
+      let currentPool = [...getStoredAuthorizedUsers(), ...INITIAL_AUTHORIZED_USERS];
+      let matched = findAuthorizedUserByEmail(authEmail, currentPool);
+
+      if (!matched) {
+        try {
+          const cloudState = await fetchStateFromFirestoreCloud();
+          if (cloudState?.authorizedUsers && cloudState.authorizedUsers.length > 0) {
+            saveStoredAuthorizedUsers(cloudState.authorizedUsers);
+            setAuthorizedUsers(cloudState.authorizedUsers);
+            currentPool = [...cloudState.authorizedUsers, ...INITIAL_AUTHORIZED_USERS];
+            matched = findAuthorizedUserByEmail(authEmail, currentPool);
+          }
+        } catch {
+          // fallback to local list
+        }
+      }
+
+      if (!active) return;
+
+      if (!matched || !isUserAccessEffectivelyActive(matched)) {
+        clearUnauthenticatedSession(
+          !matched
+            ? `Acesso restrito: a conta "${authEmail}" não está cadastrada como usuária autorizada pela Equipe Administrativa.`
+            : isUserAccessExpired(matched)
+            ? `Acesso expirado: a conta temporária "${authEmail}" venceu após ${formatAccessExpirationDateBR(
+                matched.accessExpiresAt
+              )} e foi revogada automaticamente.`
+            : `Acesso bloqueado: o usuário "${authEmail}" está desativado no sistema.`
+        );
+        return;
+      }
+
+      const safeRole: UserRole = isOfficialSchoolAdminEmail(matched.email)
+        ? 'admin'
+        : matched.role === 'admin'
+        ? 'usuario'
+        : matched.role;
+
+      setAuthLoginError(null);
+      setCurrentUserEmail(matched.email);
+      setCurrentUserName(
+        isOfficialSchoolAdminEmail(matched.email) ? 'Equipe Administrativa' : matched.name
+      );
+      setUserRole(safeRole);
+      if (safeRole === 'usuario') {
+        const nextIds =
+          matched.assignedClassIds && matched.assignedClassIds.length > 0
+            ? matched.assignedClassIds.filter((id) => id !== 'all')
+            : matched.assignedClassId && matched.assignedClassId !== 'all'
+            ? [matched.assignedClassId]
+            : [classes[0]?.id || 'g04a'];
+        const primaryId = nextIds[0] || classes[0]?.id || 'g04a';
+        setAssignedClassIds(nextIds);
+        setAssignedClassId(primaryId);
+      }
+
+      const localClassesTs = getLocalClassesUpdatedAtMs();
+      const hasLocalStudents = classesRef.current.some(
+        (c) => Array.isArray(c.students) && c.students.length > 0
+      );
+      beginBootIntegrityCheck(localClassesTs);
+
+      setIsAuthVerified(true);
+      setIsAuthChecking(false);
+      setCurrentScreen((prev) => (prev === 'login' ? 'home' : prev));
+
+      void monitorFirestoreIntegrityOnBoot({
+        baseClasses: INITIAL_CLASSES,
+        localClassesUpdatedAtMs: localClassesTs,
+        hasLocalStudents,
+      }).then((report) => {
+        if (!active) return;
+        if (report.status === 'local_newer_preserved') {
+          void pushClassesToServer(classesRef.current);
+        }
+      });
+    };
+
+    void restoreSavedTabSession();
+
+    // Keep Firebase Auth listener passive on boot so cached browser OAuth never bypasses LoginScreen
+    let unsubAuth: (() => void) | undefined;
     try {
       const auth = getAuth();
-      const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
-        if (!active) return;
-        if (!fbUser || !fbUser.email) {
-          clearUnauthenticatedSession();
-          return;
-        }
-
-        const authEmail = fbUser.email.trim().toLowerCase();
-        if (!isValidInstitutionalEmail(authEmail)) {
-          await logoutGoogle().catch(() => {});
-          clearUnauthenticatedSession(
-            `Acesso negado: o e-mail "${authEmail}" não pertence ao domínio institucional autorizado (@educacao.jundiai.sp.gov.br).`
-          );
-          return;
-        }
-
-        let currentPool = [...getStoredAuthorizedUsers(), ...INITIAL_AUTHORIZED_USERS];
-        let matched = findAuthorizedUserByEmail(authEmail, currentPool);
-
-        if (!matched) {
-          try {
-            const cloudState = await fetchStateFromFirestoreCloud();
-            if (cloudState?.authorizedUsers && cloudState.authorizedUsers.length > 0) {
-              saveStoredAuthorizedUsers(cloudState.authorizedUsers);
-              setAuthorizedUsers(cloudState.authorizedUsers);
-              currentPool = [...cloudState.authorizedUsers, ...INITIAL_AUTHORIZED_USERS];
-              matched = findAuthorizedUserByEmail(authEmail, currentPool);
-            }
-          } catch {
-            // fallback to local list
-          }
-        }
-
-        if (!active) return;
-
-        if (!matched || !isUserAccessEffectivelyActive(matched)) {
-          await logoutGoogle().catch(() => {});
-          clearUnauthenticatedSession(
-            !matched
-              ? `Acesso restrito: a conta "${authEmail}" não está cadastrada como usuária autorizada pela Equipe Administrativa.`
-              : isUserAccessExpired(matched)
-              ? `Acesso expirado: a conta temporária "${authEmail}" venceu após ${formatAccessExpirationDateBR(
-                  matched.accessExpiresAt
-                )} e foi revogada automaticamente.`
-              : `Acesso bloqueado: o usuário "${authEmail}" está desativado no sistema.`
-          );
-          return;
-        }
-
-        setAuthLoginError(null);
-        setCurrentUserEmail(matched.email);
-        setCurrentUserName(matched.name);
-        setUserRole(matched.role);
-        if (matched.role === 'usuario') {
-          const nextIds =
-            matched.assignedClassIds && matched.assignedClassIds.length > 0
-              ? matched.assignedClassIds.filter((id) => id !== 'all')
-              : matched.assignedClassId && matched.assignedClassId !== 'all'
-              ? [matched.assignedClassId]
-              : [classes[0]?.id || 'g04a'];
-          const primaryId = nextIds[0] || classes[0]?.id || 'g04a';
-          setAssignedClassIds(nextIds);
-          setAssignedClassId(primaryId);
-        }
-        const localClassesTs = getLocalClassesUpdatedAtMs();
-        const hasLocalStudents = classesRef.current.some(
-          (c) => Array.isArray(c.students) && c.students.length > 0
-        );
-        // Ativa barreira de integridade antes de liberar listeners/sync para evitar sobrescrita pós-recarga
-        beginBootIntegrityCheck(localClassesTs);
-
-        setIsAuthVerified(true);
-        setIsAuthChecking(false);
-
-        setCurrentScreen((prev) => (prev === 'login' ? 'home' : prev));
-
-        void monitorFirestoreIntegrityOnBoot({
-          baseClasses: INITIAL_CLASSES,
-          localClassesUpdatedAtMs: localClassesTs,
-          hasLocalStudents,
-        }).then((report) => {
-          if (!active) return;
-          if (report.status === 'local_newer_preserved') {
-            void pushClassesToServer(classesRef.current);
-          }
-        });
+      unsubAuth = onAuthStateChanged(auth, () => {
+        // Explicit user sign-in is handled directly by LoginScreen -> handleLoginSuccess
       });
-
-      return () => {
-        active = false;
-        unsubAuth();
-      };
     } catch {
-      clearUnauthenticatedSession();
-      return () => {
-        active = false;
-      };
+      // ignore Firebase Auth init edge cases
     }
+
+    return () => {
+      active = false;
+      if (unsubAuth) unsubAuth();
+    };
   }, []);
 
   // Sincronização unificada (Firestore onSnapshot + Backend + Focus + Storage) com deduplicação por ref
@@ -1402,10 +1424,24 @@ export default function App() {
   };
 
   const handleLoginSuccess = (authUser: AuthorizedUser) => {
-    const latestFromList =
+    const latestRaw =
       authorizedUsers.find(
         (u) => u.email.trim().toLowerCase() === authUser.email.trim().toLowerCase()
       ) || authUser;
+
+    const safeRole: UserRole = isOfficialSchoolAdminEmail(latestRaw.email)
+      ? 'admin'
+      : latestRaw.role === 'admin'
+      ? 'usuario'
+      : latestRaw.role;
+
+    const latestFromList: AuthorizedUser = {
+      ...latestRaw,
+      role: safeRole,
+      ...(isOfficialSchoolAdminEmail(latestRaw.email)
+        ? { name: 'Equipe Administrativa', teacherRoleType: 'admin' as const }
+        : {}),
+    };
 
     const now = new Date();
     const nowFormatted = now.toLocaleString('pt-BR');
@@ -1460,19 +1496,44 @@ export default function App() {
     setCurrentUserEmail(latestFromList.email);
     setCurrentUserName(latestFromList.name);
     setUserRole(latestFromList.role);
+
+    let nextIds: string[] = [];
+    let primaryId = selectedClass?.id || classes[0]?.id || 'g04a';
+
     if (latestFromList.role === 'usuario') {
-      const nextIds =
+      nextIds =
         latestFromList.assignedClassIds && latestFromList.assignedClassIds.length > 0
           ? latestFromList.assignedClassIds.filter((id) => id !== 'all')
           : latestFromList.assignedClassId && latestFromList.assignedClassId !== 'all'
           ? [latestFromList.assignedClassId]
           : [classes[0]?.id || 'g04a'];
-      const targetId = nextIds[0] || classes[0]?.id || 'g04a';
+      primaryId = nextIds[0] || classes[0]?.id || 'g04a';
       setAssignedClassIds(nextIds);
-      setAssignedClassId(targetId);
-      const targetClass = classes.find((c) => c.id === targetId) || classes[0];
+      setAssignedClassId(primaryId);
+      const targetClass = classes.find((c) => c.id === primaryId) || classes[0];
       if (targetClass) setSelectedClass(targetClass);
+    } else {
+      setAssignedClassIds(['all']);
+      setAssignedClassId('all');
     }
+
+    try {
+      const sessionPayload: PersistedAuthSession = {
+        email: latestFromList.email,
+        name: latestFromList.name,
+        role: latestFromList.role,
+        assignedClassId: latestFromList.role === 'usuario' ? primaryId : 'all',
+        assignedClassIds: latestFromList.role === 'usuario' ? nextIds : ['all'],
+        selectedClassId: primaryId,
+        screen: 'home',
+        sessionId,
+        simulatedTeacherEmail: null,
+      };
+      sessionStorage.setItem(ACTIVE_AUTH_SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+    } catch {
+      // ignore storage write error
+    }
+
     setCurrentScreen('home');
     window.scrollTo(0, 0);
   };
@@ -1635,7 +1696,8 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      localStorage.removeItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+      sessionStorage.removeItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_AUTH_SESSION_STORAGE_KEY);
       localStorage.removeItem('emeb_candelario_last_remembered_email_2027');
     } catch {
       // ignore

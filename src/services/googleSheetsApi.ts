@@ -82,7 +82,7 @@ import {
   SchoolDiagnosticReport,
 } from '../utils/dataDiagnostics';
 
-export const OFFICIAL_ADMIN_EMAIL = 'emebjfreitas@educacao.jundiai.sp.gov.br';
+export const OFFICIAL_ADMIN_EMAIL = 'emebjfreitas@jundiai.sp.gov.br';
 export const OFFICIAL_WORKSPACE_HOSTED_DOMAIN = 'educacao.jundiai.sp.gov.br';
 
 export const SCOPES = [

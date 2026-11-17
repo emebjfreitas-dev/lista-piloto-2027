@@ -538,7 +538,7 @@ export const Header: React.FC<HeaderProps> = ({
                           {userName || 'Professor(a)'}
                         </p>
                         <p className="text-xs text-[#0071e3] break-all leading-snug mt-0.5">
-                          {userEmail || 'emebjfreitas@jundiai.sp.gov.br'}
+                          {userEmail || ''}
                         </p>
                         <p className="text-xs text-[#6e6e73] mt-0.5">
                           {isAdmin

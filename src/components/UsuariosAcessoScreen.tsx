@@ -3399,18 +3399,30 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                 {ACCESS_LEVEL_ORDER.map((lvl) => {
                                   const meta = ACCESS_LEVEL_META[lvl];
                                   const isSelected = effectiveLevel === lvl;
+                                  const isSchoolAdmin = isOfficialSchoolAdminEmail(u.email);
+                                  const isLockedAdmin = !isSchoolAdmin && lvl === 'admin';
+                                  const isLockedSchoolAdmin = isSchoolAdmin && lvl !== 'admin';
+                                  const isDisabled = !canManage || isLockedAdmin || isLockedSchoolAdmin;
+                                  const btnTitle = isLockedAdmin
+                                    ? 'Perfil Administrador é exclusivo de emebjfreitas@jundiai.sp.gov.br'
+                                    : isLockedSchoolAdmin
+                                    ? 'Conta oficial da escola é o Administrador titular'
+                                    : meta.description;
+
                                   return (
                                     <button
                                       key={lvl}
                                       type="button"
-                                      disabled={!canManage}
+                                      disabled={isDisabled}
                                       onClick={() => handleSelectAccessLevel(u.id, lvl)}
-                                      title={meta.description}
+                                      title={btnTitle}
                                       className={`min-h-[36px] px-2.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition-all duration-100 ${
                                         isSelected
                                           ? meta.activeSegmentClass
+                                          : isLockedAdmin
+                                          ? 'text-[#9ca3af] opacity-40 cursor-not-allowed'
                                           : 'text-[#374151] hover:bg-white/70'
-                                      } ${canManage ? 'cursor-pointer' : 'cursor-default'}`}
+                                      } ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                                     >
                                       {renderAccessLevelIcon(lvl)}
                                       <span>{meta.shortLabel}</span>
@@ -4675,6 +4687,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                       { id: 'apoio', label: 'Apoio Pedagógico (Leitura)', lvl: 'peb2' as AccessLevelKey },
                     ] as const
                   ).map((preset) => {
+                    const isSchoolAdmin = isOfficialSchoolAdminEmail(assignModalUser.email);
+                    const isLockedAdmin = preset.id === 'admin' && !isSchoolAdmin;
+                    const isLockedSchoolAdmin = isSchoolAdmin && preset.id !== 'admin';
+                    const isDisabled = !canManage || isLockedAdmin || isLockedSchoolAdmin;
                     const isCurrent =
                       (preset.id === 'admin' && resolveAccessLevel(assignModalUser) === 'admin') ||
                       (preset.id === 'regente' && resolveAccessLevel(assignModalUser) === 'usuario') ||
@@ -4688,13 +4704,23 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                       <button
                         key={preset.id}
                         type="button"
+                        disabled={isDisabled}
+                        title={
+                          isLockedAdmin
+                            ? 'Perfil Administrador é exclusivo de emebjfreitas@jundiai.sp.gov.br'
+                            : isLockedSchoolAdmin
+                            ? 'A conta da escola é o Administrador titular'
+                            : undefined
+                        }
                         onClick={() =>
                           handleSetUserFunctionPreset(assignModalUser.id, preset.id)
                         }
-                        className={`min-w-0 min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold text-left inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal ${
+                        className={`min-w-0 min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold text-left inline-flex items-center gap-1.5 transition-colors duration-100 whitespace-normal ${
                           isCurrent
                             ? ACCESS_LEVEL_META[preset.lvl].activeSegmentClass
-                            : 'bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827]'
+                            : isLockedAdmin || isLockedSchoolAdmin
+                            ? 'bg-[#f2f2f7] text-[#9ca3af] opacity-45 cursor-not-allowed'
+                            : 'bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] cursor-pointer'
                         }`}
                       >
                         {renderAccessLevelIcon(preset.lvl)}

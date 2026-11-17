@@ -4,6 +4,7 @@ import {
   Student,
   SchoolDay,
   AuthorizedUser,
+  UserRole,
   AttendanceWindowConfig,
   UserAccessSessionLog,
   SchoolNotice,
