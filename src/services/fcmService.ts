@@ -35,6 +35,7 @@ import {
   handleFirestoreError,
   OperationType,
   saveConfigMetaToFirestoreCloud,
+  stripUndefinedDeep,
 } from './firebaseSync';
 import { isBackendApiAvailable } from './apiEnvironment';
 import {
@@ -535,9 +536,13 @@ export async function registerDeviceForFcm(params: {
   try {
     const auth = getAuth(app);
     if (auth.currentUser) {
-      await setDoc(doc(firestoreDb, 'school_fcm_tokens_2027', subId), subscription, {
-        merge: true,
-      });
+      await setDoc(
+        doc(firestoreDb, 'school_fcm_tokens_2027', subId),
+        stripUndefinedDeep(subscription),
+        {
+          merge: true,
+        }
+      );
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `school_fcm_tokens_2027/${subId}`);
@@ -1024,7 +1029,10 @@ export async function dispatchWindowClosingFcmAlert(params: {
   try {
     const auth = getAuth(app);
     if (auth.currentUser) {
-      await setDoc(doc(firestoreDb, 'school_fcm_alerts_2027', alertId), alert);
+      await setDoc(
+        doc(firestoreDb, 'school_fcm_alerts_2027', alertId),
+        stripUndefinedDeep(alert)
+      );
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, `school_fcm_alerts_2027/${alertId}`);

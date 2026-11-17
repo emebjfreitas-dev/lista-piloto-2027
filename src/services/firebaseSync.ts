@@ -798,11 +798,36 @@ export const setSyncingActiveState = (): void => {
 };
 
 /**
- * Strips heavy inline base64 data URLs before writing to Firestore (1MB doc limit)
+ * Recursively strips `undefined` properties/elements so Firestore `setDoc`/`writeBatch.set()`
+ * never throws `Unsupported field value: undefined`.
+ */
+export const stripUndefinedDeep = <T>(value: T): T => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => item !== undefined)
+      .map((item) => stripUndefinedDeep(item)) as unknown as T;
+  }
+  if (value !== null && typeof value === 'object') {
+    const proto = Object.getPrototypeOf(value);
+    if (proto === Object.prototype || proto === null) {
+      const cleaned: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        if (v !== undefined) {
+          cleaned[k] = stripUndefinedDeep(v);
+        }
+      }
+      return cleaned as T;
+    }
+  }
+  return value;
+};
+
+/**
+ * Strips heavy inline base64 data URLs and all `undefined` values before writing to Firestore
  * while preserving Drive IDs, Drive links, manual link flags, and compact avatars.
  */
 const sanitizeClassForFirestore = (cls: ClassGroup, nowMs: number): ClassGroup => {
-  return {
+  return stripUndefinedDeep({
     ...cls,
     updatedAtMs: cls.updatedAtMs || nowMs,
     students: (cls.students || []).map((st) => ({
@@ -812,7 +837,7 @@ const sanitizeClassForFirestore = (cls: ClassGroup, nowMs: number): ClassGroup =
           ? st.photoDriveUrl || ''
           : st.photo || '',
     })),
-  };
+  });
 };
 
 /**
@@ -824,25 +849,29 @@ export const saveClassesToFirestoreCloud = async (
   updatedAtMs: number
 ): Promise<boolean> => {
   try {
+    const auth = getAuth(app);
+    if (!auth.currentUser) {
+      return false;
+    }
     const localMeta = touchLocalEpochState(updatedAtMs, CLEAN_DB_RESET_EPOCH_ID);
     const batch = writeBatch(firestoreDb);
     classes.forEach((cls) => {
       if (!cls || !cls.id) return;
       const cleanCls = sanitizeClassForFirestore(cls, updatedAtMs);
       const ref = doc(firestoreDb, 'school_classes_2027', cls.id);
-      batch.set(ref, { ...cleanCls, updatedAtMs }, { merge: true });
+      batch.set(ref, stripUndefinedDeep({ ...cleanCls, updatedAtMs }), { merge: true });
     });
     const metaRef = doc(firestoreDb, 'school_meta_2027', 'state');
     batch.set(
       metaRef,
-      {
+      stripUndefinedDeep({
         updatedAtMs,
         classesUpdatedAtMs: updatedAtMs,
         epochUpdatedAtMs: updatedAtMs,
         epochVersion: localMeta.epochVersion,
         updatedAtISO: new Date(updatedAtMs).toISOString(),
         cleanResetEpochId: localMeta.epochId,
-      },
+      }),
       { merge: true }
     );
     await batch.commit();
@@ -875,18 +904,23 @@ export const wipeFirestoreSchoolDataOnly = async (
   try {
     const nowMs = Date.now();
     const epochVersion = parseEpochRevisionNumber(epochId);
-    const zeroedClasses: ClassGroup[] = baseClasses.map((c) => ({
-      ...c,
-      students: [],
-      totalStudents: 0,
-      monthlyAbsences: 0,
-      presenceRate: 0,
-      statusText: 'Aguardando importação de estudantes',
-      isPending: false,
-      weeklyPerformance: [],
-      pedagogicalNotes: '',
-      updatedAtMs: nowMs,
-    }));
+    const zeroedClasses: ClassGroup[] = baseClasses.map((c) =>
+      sanitizeClassForFirestore(
+        {
+          ...c,
+          students: [],
+          totalStudents: 0,
+          monthlyAbsences: 0,
+          presenceRate: 0,
+          statusText: 'Aguardando importação de estudantes',
+          isPending: false,
+          weeklyPerformance: [],
+          pedagogicalNotes: '',
+          updatedAtMs: nowMs,
+        },
+        nowMs
+      )
+    );
 
     const validClassIds = new Set(zeroedClasses.map((c) => c.id));
     const existingClassesSnap = await getDocs(collection(firestoreDb, 'school_classes_2027'));
@@ -895,13 +929,13 @@ export const wipeFirestoreSchoolDataOnly = async (
     zeroedClasses.forEach((cls) => {
       if (!cls || !cls.id) return;
       const ref = doc(firestoreDb, 'school_classes_2027', cls.id);
-      batch.set(ref, cls);
+      batch.set(ref, stripUndefinedDeep(cls));
     });
 
     const configRef = doc(firestoreDb, 'school_meta_2027', 'config');
     batch.set(
       configRef,
-      {
+      stripUndefinedDeep({
         updatedAtMs: nowMs,
         accessSessionLogs: [],
         schoolNotices: [],
@@ -909,21 +943,21 @@ export const wipeFirestoreSchoolDataOnly = async (
         discoveredDrivePhotos: [],
         genderDictionary: [],
         cleanResetEpochId: epochId,
-      },
+      }),
       { merge: true }
     );
 
     const stateRef = doc(firestoreDb, 'school_meta_2027', 'state');
     batch.set(
       stateRef,
-      {
+      stripUndefinedDeep({
         updatedAtMs: nowMs,
         classesUpdatedAtMs: nowMs,
         epochUpdatedAtMs: nowMs,
         epochVersion,
         updatedAtISO: new Date(nowMs).toISOString(),
         cleanResetEpochId: epochId,
-      },
+      }),
       { merge: true }
     );
 
@@ -996,6 +1030,10 @@ export const saveConfigMetaToFirestoreCloud = async (payload: {
   genderDictionary?: NameGenderEntry[];
 }): Promise<boolean> => {
   try {
+    const auth = getAuth(app);
+    if (!auth.currentUser) {
+      return false;
+    }
     const ref = doc(firestoreDb, 'school_meta_2027', 'config');
     const cleanPayload: Record<string, any> = {
       updatedAtMs: Date.now(),
@@ -1020,7 +1058,7 @@ export const saveConfigMetaToFirestoreCloud = async (payload: {
     if (payload.genderDictionary) {
       cleanPayload.genderDictionary = payload.genderDictionary.slice(0, 1500);
     }
-    await setDoc(ref, cleanPayload, { merge: true });
+    await setDoc(ref, stripUndefinedDeep(cleanPayload), { merge: true });
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'school_meta_2027/config');

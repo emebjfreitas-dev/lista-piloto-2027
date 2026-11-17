@@ -2,6 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Student } from '../types';
 import { findPhotoInDiscoveredCache } from '../services/googleSheetsApi';
 import { isBackendApiAvailable } from '../services/apiEnvironment';
+import {
+  buildPhotoBlobCacheKeys,
+  ensurePhotoCachedInIndexedDb,
+  extractDriveFileIdFromPhotoUrl,
+  getCachedPhotoObjectUrlSync,
+  getPersistedStudentPhotoUrlSync,
+  persistSingleStudentPhotoToIndexedDb,
+  subscribeToPhotoBlobUpdates,
+  subscribeToPhotoCacheReady,
+} from '../services/photoIndexedDbCache';
 
 interface StudentAvatarProps {
   student?: Student | null;
@@ -23,9 +33,16 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   className = '',
 }) => {
   const [imageError, setImageError] = useState(false);
+  const [cacheRevision, setCacheRevision] = useState(0);
 
   const effectiveName = name ?? student?.estudante ?? student?.name ?? 'Estudante';
   const effectiveInitials = initials ?? student?.initials;
+
+  useEffect(() => {
+    return subscribeToPhotoCacheReady(() => {
+      setCacheRevision((prev) => prev + 1);
+    });
+  }, []);
 
   const cachedDriveHit = React.useMemo(
     () =>
@@ -37,38 +54,61 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
     [effectiveName, student?.ra, student?.turma]
   );
 
+  const persistedUrlRecord = React.useMemo(
+    () =>
+      getPersistedStudentPhotoUrlSync({
+        studentId: student?.id,
+        ra: student?.ra,
+        name: effectiveName,
+      }),
+    [student?.id, student?.ra, effectiveName, cacheRevision]
+  );
+
   const rawPhoto = (
-    photo ??
-    student?.photo ??
-    student?.photoDriveUrl ??
-    cachedDriveHit?.photoUrl ??
-    cachedDriveHit?.driveLink ??
+    (photo && photo.trim()) ||
+    (student?.photo && student.photo.trim()) ||
+    (student?.photoDriveUrl && student.photoDriveUrl.trim()) ||
+    (cachedDriveHit?.photoUrl && cachedDriveHit.photoUrl.trim()) ||
+    (cachedDriveHit?.driveLink && cachedDriveHit.driveLink.trim()) ||
+    (persistedUrlRecord?.photoUrl && persistedUrlRecord.photoUrl.trim()) ||
+    (persistedUrlRecord?.photoDriveUrl && persistedUrlRecord.photoDriveUrl.trim()) ||
     ''
   ).trim();
-  // Extract Google Drive file ID if present so we can cascade through fallback image endpoints if one fails
-  const extractDriveId = (url: string): string => {
-    if (!url || url.startsWith('data:image/')) return '';
-    const m0 = url.match(/\/api\/drive-photo\/([a-zA-Z0-9-_]+)/);
-    if (m0 && m0[1]) return m0[1];
-    const m1 = url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
-    if (m1 && m1[1]) return m1[1];
-    const m2 = url.match(/[?&]id=([a-zA-Z0-9-_]+)/);
-    if (m2 && m2[1]) return m2[1];
-    const m3 = url.match(/googleusercontent\.com\/d\/([a-zA-Z0-9-_]+)/);
-    if (m3 && m3[1]) return m3[1];
-    return '';
-  };
 
   const driveFileId =
-    extractDriveId(rawPhoto) ||
-    extractDriveId(student?.photoDriveUrl || '') ||
-    extractDriveId(cachedDriveHit?.driveLink || '');
+    (student?.photoDriveId && student.photoDriveId.trim()) ||
+    extractDriveFileIdFromPhotoUrl(rawPhoto) ||
+    extractDriveFileIdFromPhotoUrl(student?.photoDriveUrl || '') ||
+    extractDriveFileIdFromPhotoUrl(cachedDriveHit?.driveLink || '') ||
+    persistedUrlRecord?.driveFileId ||
+    '';
+
+  const cachedBlobUrl = React.useMemo(
+    () => getCachedPhotoObjectUrlSync(rawPhoto, driveFileId),
+    [rawPhoto, driveFileId, cacheRevision]
+  );
+
+  useEffect(() => {
+    const keys = buildPhotoBlobCacheKeys(rawPhoto, driveFileId);
+    if (keys.length === 0) return;
+    return subscribeToPhotoBlobUpdates((updatedKey) => {
+      if (keys.includes(updatedKey)) {
+        setCacheRevision((prev) => prev + 1);
+      }
+    });
+  }, [rawPhoto, driveFileId]);
+
   const [fallbackIndex, setFallbackIndex] = useState(0);
   const [hasIntersected, setHasIntersected] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (hasIntersected) return;
+    if (hasIntersected || cachedBlobUrl) {
+      if (cachedBlobUrl && !hasIntersected) {
+        setHasIntersected(true);
+      }
+      return;
+    }
     const el = containerRef.current;
     if (!el) {
       setHasIntersected(true);
@@ -96,9 +136,12 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [hasIntersected]);
+  }, [hasIntersected, cachedBlobUrl]);
 
   const candidateUrls = React.useMemo(() => {
+    if (cachedBlobUrl) {
+      return [cachedBlobUrl];
+    }
     if (!hasIntersected) return [];
     if (!rawPhoto) return [];
     if (rawPhoto.startsWith('data:image/') || rawPhoto.startsWith('blob:')) return [rawPhoto];
@@ -124,14 +167,38 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
       return [rawPhoto];
     }
     return [];
-  }, [hasIntersected, rawPhoto, driveFileId]);
+  }, [cachedBlobUrl, hasIntersected, rawPhoto, driveFileId]);
 
   const effectivePhoto = candidateUrls[fallbackIndex] || '';
 
   useEffect(() => {
     setFallbackIndex(0);
     setImageError(false);
-  }, [rawPhoto]);
+  }, [rawPhoto, cachedBlobUrl]);
+
+  const handleImageLoad = () => {
+    // Persist the resolved student photo URL mapping in IndexedDB if not already stored or changed
+    if (
+      rawPhoto &&
+      (!persistedUrlRecord || persistedUrlRecord.photoUrl !== rawPhoto)
+    ) {
+      void persistSingleStudentPhotoToIndexedDb({
+        studentId: student?.id,
+        ra: student?.ra,
+        name: effectiveName,
+        photoUrl: rawPhoto,
+        photoDriveUrl: student?.photoDriveUrl || cachedDriveHit?.driveLink || persistedUrlRecord?.photoDriveUrl,
+        driveFileId: driveFileId || undefined,
+        isManualLink: student?.photoManualLink,
+        updatedAtMs: student?.updatedAtMs,
+      });
+    }
+
+    // Cache binary Blob in IndexedDB ONCE per key when loaded from network/data URL
+    if (!cachedBlobUrl && effectivePhoto && !effectivePhoto.startsWith('blob:')) {
+      void ensurePhotoCachedInIndexedDb(effectivePhoto, driveFileId || undefined);
+    }
+  };
 
   const handleImageError = () => {
     if (fallbackIndex + 1 < candidateUrls.length) {
@@ -161,7 +228,10 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
   };
 
   const hasValidPhoto = Boolean(
-    hasIntersected && effectivePhoto && effectivePhoto.trim().length > 0 && !imageError
+    (hasIntersected || cachedBlobUrl) &&
+      effectivePhoto &&
+      effectivePhoto.trim().length > 0 &&
+      !imageError
   );
 
   return (
@@ -177,6 +247,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
           alt={`Foto de ${effectiveName}`}
           loading="lazy"
           referrerPolicy="no-referrer"
+          onLoad={handleImageLoad}
           onError={handleImageError}
           className="w-full h-full object-cover pointer-events-none animate-gentle-fade"
         />

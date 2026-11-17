@@ -1,6 +1,9 @@
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { warmupPhotoIndexedDbCache } from './services/photoIndexedDbCache';
+
+void warmupPhotoIndexedDbCache();
 
 createRoot(document.getElementById('root')!).render(<App />);
 

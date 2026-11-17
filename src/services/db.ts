@@ -58,6 +58,15 @@ import {
   resolveGuardianRelationshipInfo,
 } from '../utils/genderDictionary';
 import { isBackendApiAvailable } from './apiEnvironment';
+import {
+  warmupPhotoIndexedDbCache,
+  persistStudentPhotoUrlsToIndexedDb,
+  clearStudentPhotoIndexedDbCache,
+} from './photoIndexedDbCache';
+
+if (typeof window !== 'undefined') {
+  void warmupPhotoIndexedDbCache();
+}
 
 const STORAGE_KEY = 'emeb_candelario_sed_classes_2027_v8';
 const USERS_STORAGE_KEY = 'emeb_candelario_authorized_users_2027_v4';
@@ -124,6 +133,7 @@ const clearLocalSchoolDataOnly = (): void => {
   memoryCachedUsers = null;
   memoryCachedLogs = [];
   memoryCachedNotices = [];
+  void clearStudentPhotoIndexedDbCache();
 };
 
 const ensureCleanDatabaseEpochLocal = (): void => {
@@ -1443,6 +1453,7 @@ export const saveStoredClasses = (
 ): void => {
   const enriched = enrichClassesWithOfficialMatrix(classes);
   memoryCachedClasses = enriched;
+  void persistStudentPhotoUrlsToIndexedDb(enriched);
   if (skipServerPush !== true && typeof window !== 'undefined') {
     setLocalClassesUpdatedAtMs(Date.now());
     if (skipServerPush === false) {
@@ -4328,6 +4339,7 @@ export const clearAllStudentPhotosViaApi = async (): Promise<{ ok: boolean; clea
     }),
   }));
   saveStoredClasses(cleared, true);
+  void clearStudentPhotoIndexedDbCache();
 
   // Notifica o Service Worker para limpar o IndexedDB de blobs de fotos
   if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {

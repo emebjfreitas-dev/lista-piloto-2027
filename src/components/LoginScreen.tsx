@@ -149,54 +149,45 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-gradient-to-b from-[#071a3d] via-[#0b2a66] to-[#081d45] flex items-center justify-center px-4 py-6 sm:p-8 select-none font-sans">
-      <div className="w-full max-w-[420px] sm:max-w-[440px] min-w-0 break-words bg-white rounded-[28px] sm:rounded-[32px] shadow-[0_24px_60px_rgba(0,0,0,0.35)] px-6 py-8 sm:px-9 sm:py-10 flex flex-col items-center text-center animate-apple-pop">
+    <div className="min-h-[100dvh] w-full bg-[#091f48] flex items-center justify-center px-4 py-6 select-none font-sans">
+      <div className="w-full max-w-[380px] min-w-0 break-words bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.28)] px-7 py-8 sm:px-9 sm:py-9 flex flex-col items-center text-center animate-apple-pop">
         {/* Brasão Oficial */}
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[#f2f6fc] p-3 flex items-center justify-center mb-5 shadow-2xs shrink-0">
-          <img
-            src={APP_LOGO_URL}
-            alt="Brasão de Jundiaí"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-            }}
-            className="w-14 h-14 sm:w-16 sm:h-16 object-contain"
-          />
-        </div>
+        <img
+          src={APP_LOGO_URL}
+          alt="Brasão de Jundiaí"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = APP_LOGO_FALLBACK_URL;
+          }}
+          className="w-14 h-14 object-contain mb-4 shrink-0"
+        />
 
-        {/* Selo Institucional */}
-        <span className="inline-block text-[11px] sm:text-xs uppercase tracking-[0.12em] font-bold text-[#0052cc] bg-[#e8f0fe] px-3.5 py-1 rounded-full break-words">
+        {/* Identificação Institucional */}
+        <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-slate-500">
           Prefeitura de Jundiaí · SME
-        </span>
+        </p>
 
-        {/* Nome do App */}
-        <h1 className="text-xl sm:text-[24px] font-extrabold tracking-tight text-[#0b3b8c] leading-tight mt-4 text-balance break-words">
+        <h1 className="text-xl sm:text-[22px] font-bold tracking-tight text-[#0b3b8c] leading-snug mt-2 text-balance">
           Lista Piloto Candelário 2027
         </h1>
 
-        {/* Unidade Escolar */}
-        <p className="text-[15px] sm:text-base font-bold text-slate-900 leading-snug mt-1.5 text-balance break-words max-w-[28ch]">
+        <p className="text-xs sm:text-[13px] font-medium text-slate-600 leading-snug mt-1 mb-7 text-balance">
           EMEB Prof. Joaquim Candelário de Freitas
         </p>
 
-        {/* Subtítulo Enxuto */}
-        <p className="text-xs sm:text-[13px] text-slate-600 font-medium mt-2 mb-7 text-balance break-words leading-relaxed max-w-[34ch]">
-          Frequência Escolar, Busca Ativa e Fichas Informativas · Ano Letivo 2027
-        </p>
-
-        {/* Botão Único Google Workspace de Alto Contraste */}
+        {/* Botão Único Google Workspace */}
         <button
           type="button"
           disabled={loading}
           onClick={handleGoogleWorkspaceLogin}
-          className="w-full min-h-[56px] py-3 px-5 bg-[#0b3b8c] hover:bg-[#082d6b] rounded-2xl text-white font-bold text-[15px] flex items-center justify-center gap-3 whitespace-normal text-center leading-snug transition-colors cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-60"
+          className="w-full min-h-[48px] py-2.5 px-5 bg-[#0b3b8c] hover:bg-[#082d6b] rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-3 whitespace-nowrap transition-colors cursor-pointer shadow-xs active:scale-[0.99] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b8c]"
         >
-          <span className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-2xs">
+          <span className="w-6 h-6 rounded-md bg-white flex items-center justify-center shrink-0">
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-[#0b3b8c]" />
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0b3b8c]" />
             ) : (
-              <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
@@ -219,27 +210,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <span>{loading ? 'Conectando...' : 'Entrar com minha conta Google'}</span>
         </button>
 
-        {/* Aviso de Acesso Restrito e Orientações */}
-        <div className="w-full mt-5 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-left text-amber-950 text-xs leading-relaxed">
-          <p className="font-bold flex items-center gap-1.5 text-amber-900 mb-1">
-            <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            Acesso Restrito · Apenas Usuários Autorizados
-          </p>
-          <p className="text-amber-900/90">
-            Este aplicativo é de uso exclusivo da <strong>Equipe Pedagógica e Administrativa da EMEB Prof. Joaquim Candelário de Freitas</strong>.
-          </p>
-          <p className="mt-1 text-amber-900/80">
-            Se o Google exibir aviso de <em>"Acesso bloqueado"</em>, certifique-se de entrar com sua conta institucional oficial (<strong className="select-all">@educacao.jundiai.sp.gov.br</strong>) cadastrada ou contate a administração escolar.
-          </p>
-        </div>
-
         {errorMsg && (
-          <div className="w-full mt-4 p-3.5 rounded-xl bg-rose-100 text-rose-950 text-xs sm:text-sm font-semibold break-words">
+          <div className="w-full mt-4 px-3.5 py-2.5 rounded-xl bg-rose-50 border border-rose-200/80 text-rose-900 text-xs font-medium leading-relaxed break-words">
             {errorMsg}
           </div>
         )}
+
+        {/* Rodapé Discreto de Acesso Restrito */}
+        <div className="w-full mt-6 pt-4 border-t border-slate-100">
+          <p className="text-[11px] text-slate-500 leading-relaxed text-balance">
+            Acesso restrito a usuários autorizados (<span className="font-medium text-slate-700">@educacao.jundiai.sp.gov.br</span>).
+          </p>
+        </div>
       </div>
     </div>
   );

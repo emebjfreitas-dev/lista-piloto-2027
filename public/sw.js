@@ -223,13 +223,16 @@ function createOfflineAvatarSvgResponse() {
  * 2. Revalidação assíncrona em segundo plano quando online (Stale-While-Revalidate)
  * 3. Fallback gracioso offline com avatar SVG neutro caso a imagem nunca tenha sido baixada
  */
+const PHOTO_REVALIDATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 async function handlePhotoRequest(event, req, url) {
   // Tenta recuperar do IndexedDB
   try {
     const cached = await findCachedPhoto(url);
     if (cached && cached.blob) {
-      // Revalida em segundo plano se houver conexão ativa
-      if (typeof self.navigator !== 'undefined' && self.navigator.onLine !== false) {
+      // Cache-First puro dentro da janela de 7 dias para evitar chamadas de rede recorrentes
+      const isStale = Date.now() - (cached.updatedAt || 0) > PHOTO_REVALIDATE_TTL_MS;
+      if (isStale && typeof self.navigator !== 'undefined' && self.navigator.onLine !== false) {
         fetch(req)
           .then(async (netRes) => {
             if (netRes && (netRes.status === 200 || netRes.type === 'opaque')) {

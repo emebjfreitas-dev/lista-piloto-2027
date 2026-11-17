@@ -46,6 +46,7 @@ import {
   shouldAllowRemoteClassesOverwrite,
   getFirestoreIntegrityReport,
 } from './services/firebaseSync';
+import { persistSingleStudentPhotoToIndexedDb } from './services/photoIndexedDbCache';
 import {
   SyncQueueManager,
   SyncQueueTaskCategory,
@@ -477,7 +478,7 @@ export default function App() {
     return () => unsubCloud();
   }, []);
 
-  // Subscribe to centralized SyncQueueManager and resume any persisted tasks recovered from a previous tab close
+  // Subscribe to centralized SyncQueueManager
   useEffect(() => {
     const unsubQueue = SyncQueueManager.subscribe((snapshot) => {
       if (snapshot.isProcessing) {
@@ -488,11 +489,16 @@ export default function App() {
         setInstantSheetSyncStatus('idle');
       }
     });
+    return () => unsubQueue();
+  }, []);
+
+  // Resume persisted queue tasks only after Firebase Auth session is verified
+  useEffect(() => {
+    if (!isAuthVerified) return;
     if (SyncQueueManager.hasPendingTasks()) {
       void SyncQueueManager.processQueue();
     }
-    return () => unsubQueue();
-  }, []);
+  }, [isAuthVerified]);
 
   const prevSheetSyncStatusRef = React.useRef(instantSheetSyncStatus);
   useEffect(() => {
@@ -981,8 +987,14 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [applyAuthorizedUsersIfChanged]);
 
-  // Debounced persist classes to local database only when triggered by local user mutations
+  // Debounced persist classes to local database only when triggered by authenticated local mutations
+  const hasMountedClassesSaveRef = useRef(false);
   useEffect(() => {
+    if (!hasMountedClassesSaveRef.current) {
+      hasMountedClassesSaveRef.current = true;
+      return;
+    }
+    if (!isAuthVerified) return;
     if (skipNextClassesSaveRef.current) {
       skipNextClassesSaveRef.current = false;
       return;
@@ -991,7 +1003,7 @@ export default function App() {
       saveStoredClasses(classes);
     }, 90);
     return () => window.clearTimeout(timer);
-  }, [classes]);
+  }, [classes, isAuthVerified]);
 
   // Modal states
   const [isStudentListModalOpen, setIsStudentListModalOpen] = useState(false);
@@ -1239,30 +1251,46 @@ export default function App() {
     const nowMs = Date.now();
     setClasses((prevClasses) => {
       let updatedTargetClass: ClassGroup | null = null;
+      let updatedTargetStudent: Student | null = null;
       const next = prevClasses.map((cls) => {
         const hasStudent = cls.students.some((s) => s.id === studentId);
         if (!hasStudent) return cls;
+        const updatedStudents = cls.students.map((s) => {
+          if (s.id !== studentId) return s;
+          const updatedStu: Student = {
+            ...s,
+            updatedAtMs: nowMs,
+            photo: newPhotoUrl,
+            photoDriveId: driveFileId !== undefined ? driveFileId : s.photoDriveId,
+            photoDriveUrl: driveLink !== undefined ? driveLink : s.photoDriveUrl,
+            photoManualLink: isManualLink,
+          };
+          updatedTargetStudent = updatedStu;
+          return updatedStu;
+        });
         const updatedCls: ClassGroup = {
           ...cls,
           updatedAtMs: nowMs,
-          students: cls.students.map((s) =>
-            s.id === studentId
-              ? {
-                  ...s,
-                  updatedAtMs: nowMs,
-                  photo: newPhotoUrl,
-                  photoDriveId: driveFileId !== undefined ? driveFileId : s.photoDriveId,
-                  photoDriveUrl: driveLink !== undefined ? driveLink : s.photoDriveUrl,
-                  photoManualLink: isManualLink,
-                }
-              : s
-          ),
+          students: updatedStudents,
         };
         updatedTargetClass = updatedCls;
         return updatedCls;
       });
       skipNextClassesSaveRef.current = true;
       saveStoredClasses(next, 'local_with_timestamp');
+      if (updatedTargetStudent) {
+        const stu: Student = updatedTargetStudent;
+        void persistSingleStudentPhotoToIndexedDb({
+          studentId,
+          ra: stu.ra,
+          name: stu.estudante || stu.name || studentId,
+          photoUrl: newPhotoUrl,
+          photoDriveUrl: driveLink !== undefined ? driveLink : stu.photoDriveUrl,
+          driveFileId: driveFileId !== undefined ? driveFileId : stu.photoDriveId,
+          isManualLink,
+          updatedAtMs: nowMs,
+        });
+      }
       if (updatedTargetClass) {
         triggerDebouncedSheetWrite(
           updatedTargetClass,

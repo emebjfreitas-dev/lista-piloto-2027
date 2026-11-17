@@ -39,6 +39,7 @@ import {
   pushCloudLinksToServer,
 } from './db';
 import { isBackendApiAvailable } from './apiEnvironment';
+import { persistDiscoveredPhotoUrlsToIndexedDb } from './photoIndexedDbCache';
 
 // Rate-limit & concurrency protection for 100 concurrent school users
 let googleSheetsRateLimitCooldownUntilMs = 0;
@@ -1791,6 +1792,15 @@ export const saveStoredDiscoveredDrivePhotos = (
   files: DiscoveredDrivePhotoFile[]
 ): void => {
   inMemoryDrivePhotosCache = files;
+  void persistDiscoveredPhotoUrlsToIndexedDb(
+    files.map((f) => ({
+      id: f.id,
+      fileName: f.name,
+      normalizedName: f.normName,
+      photoUrl: f.photoUrl,
+      driveLink: f.driveLink,
+    }))
+  );
   try {
     localStorage.setItem(DISCOVERED_PHOTOS_STORAGE_KEY, JSON.stringify(files));
     const { folderId, folderUrl } = getSavedPhotosDriveFolderInfo();
