@@ -82,8 +82,6 @@ import { ResumoMensalScreen } from './components/ResumoMensalScreen';
 import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
 import { UsuariosAcessoScreen } from './components/UsuariosAcessoScreen';
 import { ListasNominaisScreen } from './components/ListasNominaisScreen';
-import { DiagnosticoBancoDadosScreen } from './components/DiagnosticoBancoDadosScreen';
-import { ImportarDeficienciasHtmScreen } from './components/ImportarDeficienciasHtmScreen';
 import { AlunosModal } from './components/AlunosModal';
 import { RelatorioImpressaoModal } from './components/RelatorioImpressaoModal';
 import { AnotacoesModal } from './components/AnotacoesModal';
@@ -91,8 +89,6 @@ import { UploadFotoModal } from './components/UploadFotoModal';
 import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
 import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
 import { SpotlightCommandModal } from './components/SpotlightCommandModal';
-import { AtualizarDadosJsonModal } from './components/AtualizarDadosJsonModal';
-import { AdminArrasteFotosModal } from './components/AdminArrasteFotosModal';
 import { AdminArrastePdfsModal } from './components/AdminArrastePdfsModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { Toaster, toast } from 'sonner';
@@ -1009,8 +1005,6 @@ export default function App() {
   const [isStudentListModalOpen, setIsStudentListModalOpen] = useState(false);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState(false);
-  const [isJsonImportModalOpen, setIsJsonImportModalOpen] = useState(false);
-  const [isAdminPhotosModalOpen, setIsAdminPhotosModalOpen] = useState(false);
   const [isAdminPdfsModalOpen, setIsAdminPdfsModalOpen] = useState(false);
   const [photoModalStudent, setPhotoModalStudent] = useState<Student | null>(null);
   const [pdfModalData, setPdfModalData] = useState<{
@@ -1433,10 +1427,10 @@ export default function App() {
       bolsa_familia: 'Bolsa Família',
       planilha: '3. Nuvem, Drive & Fotos',
       dias_letivos: '4. 200 Dias',
-      usuarios_acesso: '5. Acessos',
+      usuarios_acesso: 'Central Admin',
       resumo: 'Resumo Mensal',
-      diagnostico_bd: 'Diagnóstico do Banco',
-      importar_deficiencias_htm: 'Subir Deficiências (.HTM)',
+      diagnostico_bd: 'Central Admin · Diagnóstico BD',
+      importar_deficiencias_htm: 'Central Admin · Upload .HTM',
     };
 
     const currentLog = accessSessionLogsRef.current.find(
@@ -1727,11 +1721,11 @@ export default function App() {
             : currentScreen === 'planilha'
             ? 'Nuvem & Drive'
             : currentScreen === 'usuarios_acesso'
-            ? 'Professores & Acessos'
+            ? 'Central Admin'
             : currentScreen === 'diagnostico_bd'
-            ? 'Diagnóstico do Banco'
+            ? 'Central Admin · Diagnóstico BD'
             : currentScreen === 'importar_deficiencias_htm'
-            ? 'Subir Deficiências (.HTM)'
+            ? 'Central Admin · Upload .HTM'
             : undefined
         }
         subtitle={
@@ -1787,9 +1781,6 @@ export default function App() {
         onQuickSyncDriveNow={handleQuickSyncDriveNow}
         onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
         onOpenConfigDaysModal={() => navigateToScreen('dias_letivos')}
-        onOpenJsonImportModal={() => isStrictAdmin && setIsJsonImportModalOpen(true)}
-        onOpenAdminPhotosModal={() => isStrictAdmin && setIsAdminPhotosModalOpen(true)}
-        onOpenAdminPdfsModal={() => isStrictAdmin && setIsAdminPdfsModalOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -1878,70 +1869,81 @@ export default function App() {
             onNavigateToAcessos={() => {
               navigateToScreen('usuarios_acesso');
             }}
-            onOpenAdminPhotosModal={() => {
-              setIsAdminPhotosModalOpen(true);
-            }}
-            onOpenAdminPdfsModal={() => {
-              setIsAdminPdfsModalOpen(true);
-            }}
           />
         )}
 
-        {currentScreen === 'usuarios_acesso' && isStrictAdmin && (
-          <UsuariosAcessoScreen
-            authorizedUsers={authorizedUsers}
-            accessSessionLogs={accessSessionLogs}
-            onClearAccessLogs={() => {
-              setAccessSessionLogs([]);
-              saveStoredAccessSessionLogs([]);
-            }}
-            classes={classes}
-            onUpdateClasses={(updatedClasses) => {
-              setClasses(updatedClasses);
-              saveStoredClasses(updatedClasses);
-              const found = updatedClasses.find((c) => c.id === selectedClass.id);
-              if (found) setSelectedClass(found);
-            }}
-            currentUserEmail={currentUserEmail}
-            userRole={userRole}
-            attendanceWindowConfig={attendanceWindowConfig}
-            onUpdateAttendanceWindowConfig={handleUpdateAttendanceWindowConfig}
-            onSaveAuthorizedUsers={handleSaveAuthorizedUsers}
-            onSelectPreviewClassId={(classId) => {
-              setAssignedClassId(classId);
-              setAssignedClassIds((prev) =>
-                prev.includes(classId) ? prev : [classId]
-              );
-              const found = classes.find((c) => c.id === classId);
-              if (found) setSelectedClass(found);
-            }}
-            onSimulateTeacherProfile={(teacher) => {
-              const nextIds =
-                teacher.role === 'usuario' &&
-                teacher.assignedClassIds &&
-                teacher.assignedClassIds.length > 0
-                  ? teacher.assignedClassIds.filter((id) => id !== 'all')
-                  : teacher.role === 'usuario' && teacher.assignedClassId !== 'all'
-                  ? [teacher.assignedClassId]
-                  : [classes[0]?.id || 'g04a'];
-              const targetId = nextIds[0] || classes[0]?.id || 'g04a';
-              const foundCls = classes.find((c) => c.id === targetId) || classes[0];
-              if (foundCls) {
-                setAssignedClassIds(nextIds);
-                setAssignedClassId(foundCls.id);
-                setSelectedClass(foundCls);
+        {(currentScreen === 'usuarios_acesso' ||
+          currentScreen === 'diagnostico_bd' ||
+          currentScreen === 'importar_deficiencias_htm') &&
+          isStrictAdmin && (
+            <UsuariosAcessoScreen
+              authorizedUsers={authorizedUsers}
+              accessSessionLogs={accessSessionLogs}
+              onClearAccessLogs={() => {
+                setAccessSessionLogs([]);
+                saveStoredAccessSessionLogs([]);
+              }}
+              classes={classes}
+              onUpdateClasses={(updatedClasses) => {
+                setClasses(updatedClasses);
+                saveStoredClasses(updatedClasses);
+                const found = updatedClasses.find((c) => c.id === selectedClass.id);
+                if (found) setSelectedClass(found);
+              }}
+              currentUserEmail={currentUserEmail}
+              userRole={userRole}
+              teacherRoleType={activeTeacherRoleType}
+              syncSnapshot={cloudSyncSnapshot}
+              attendanceWindowConfig={attendanceWindowConfig}
+              onUpdateAttendanceWindowConfig={handleUpdateAttendanceWindowConfig}
+              onSaveAuthorizedUsers={handleSaveAuthorizedUsers}
+              onSelectPreviewClassId={(classId) => {
+                setAssignedClassId(classId);
+                setAssignedClassIds((prev) =>
+                  prev.includes(classId) ? prev : [classId]
+                );
+                const found = classes.find((c) => c.id === classId);
+                if (found) setSelectedClass(found);
+              }}
+              onSimulateTeacherProfile={(teacher) => {
+                const nextIds =
+                  teacher.role === 'usuario' &&
+                  teacher.assignedClassIds &&
+                  teacher.assignedClassIds.length > 0
+                    ? teacher.assignedClassIds.filter((id) => id !== 'all')
+                    : teacher.role === 'usuario' && teacher.assignedClassId !== 'all'
+                    ? [teacher.assignedClassId]
+                    : [classes[0]?.id || 'g04a'];
+                const targetId = nextIds[0] || classes[0]?.id || 'g04a';
+                const foundCls = classes.find((c) => c.id === targetId) || classes[0];
+                if (foundCls) {
+                  setAssignedClassIds(nextIds);
+                  setAssignedClassId(foundCls.id);
+                  setSelectedClass(foundCls);
+                }
+                setSimulatedTeacherEmail(teacher.email);
+                setUserRole(teacher.role);
+                setCurrentScreen(teacher.role === 'usuario' ? 'detalhes' : 'turmas');
+                window.scrollTo(0, 0);
+              }}
+              onNavigateScreen={navigateToScreen}
+              onOpenClassDetails={(cls) => {
+                setSelectedClass(cls);
+                navigateToScreen('detalhes');
+              }}
+              initialSection={
+                currentScreen === 'diagnostico_bd'
+                  ? 'diagnostico'
+                  : currentScreen === 'importar_deficiencias_htm'
+                  ? 'uploads'
+                  : 'acesso'
               }
-              setSimulatedTeacherEmail(teacher.email);
-              setUserRole(teacher.role);
-              setCurrentScreen(teacher.role === 'usuario' ? 'detalhes' : 'turmas');
-              window.scrollTo(0, 0);
-            }}
-            onNavigateToDatabaseEmailsTab={() => navigateToScreen('planilha')}
-            onNavigateScreen={navigateToScreen}
-            onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
-            onBack={handleBack}
-          />
-        )}
+              initialUploadTool={
+                currentScreen === 'importar_deficiencias_htm' ? 'htm' : 'fotos'
+              }
+              onBack={handleBack}
+            />
+          )}
 
         {currentScreen === 'turmas' && userRole !== 'usuario' && (
           <MinhasTurmasScreen
@@ -2213,45 +2215,6 @@ export default function App() {
           )
         )}
 
-        {currentScreen === 'diagnostico_bd' && (
-          <DiagnosticoBancoDadosScreen
-            classes={classes}
-            authorizedUsers={authorizedUsers}
-            syncSnapshot={cloudSyncSnapshot}
-            userRole={userRole}
-            userEmail={currentUserEmail}
-            teacherRoleType={activeTeacherRoleType}
-            onUpdateClasses={(updatedClasses) => {
-              setClasses(updatedClasses);
-              saveStoredClasses(updatedClasses);
-              const found = updatedClasses.find((c) => c.id === selectedClass.id);
-              if (found) setSelectedClass(found);
-            }}
-            onOpenClassDetails={(cls) => {
-              setSelectedClass(cls);
-              navigateToScreen('detalhes');
-            }}
-            onNavigateScreen={navigateToScreen}
-            onBack={handleBack}
-          />
-        )}
-
-        {currentScreen === 'importar_deficiencias_htm' && (
-          <ImportarDeficienciasHtmScreen
-            classes={classes}
-            userRole={userRole}
-            userEmail={currentUserEmail}
-            teacherRoleType={activeTeacherRoleType}
-            onUpdateClasses={(updatedClasses) => {
-              setClasses(updatedClasses);
-              saveStoredClasses(updatedClasses);
-              const found = updatedClasses.find((c) => c.id === selectedClass.id);
-              if (found) setSelectedClass(found);
-            }}
-            onBack={handleBack}
-          />
-        )}
-
         {currentScreen === 'planilha' && isStrictAdmin && (
           <div className="w-full min-w-0 break-words max-w-xl mx-auto py-12 sm:py-16 px-4 text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-xs shrink-0">
@@ -2516,35 +2479,7 @@ export default function App() {
         }}
       />
 
-      {/* Modal de Atualização e Restauração via Arquivo JSON (Arraste & Solte) */}
-      <AtualizarDadosJsonModal
-        isOpen={isJsonImportModalOpen}
-        onClose={() => setIsJsonImportModalOpen(false)}
-        classes={classes}
-        onUpdateClasses={(updatedClasses) => {
-          setClasses(updatedClasses);
-          const found = updatedClasses.find((c) => c.id === selectedClass.id);
-          if (found) setSelectedClass(found);
-          else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
-        }}
-        currentUserEmail={currentUserEmail}
-      />
-
-      {/* Modal Admin de Arraste & Solte de Fotos Nomeadas */}
-      <AdminArrasteFotosModal
-        isOpen={isAdminPhotosModalOpen}
-        onClose={() => setIsAdminPhotosModalOpen(false)}
-        classes={classes}
-        onBatchPhotosSaved={(updatedClasses) => {
-          setClasses(updatedClasses);
-          saveStoredClasses(updatedClasses);
-          const found = updatedClasses.find((c) => c.id === selectedClass.id);
-          if (found) setSelectedClass(found);
-          else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
-        }}
-      />
-
-      {/* Modal Admin de Arraste & Solte em Lote de Fichas PDF dos Alunos (Método Único) */}
+      {/* Modal Admin de Arraste & Solte em Lote de Fichas PDF dos Alunos (Acesso contextual do visualizador) */}
       <AdminArrastePdfsModal
         isOpen={isAdminPdfsModalOpen}
         onClose={() => setIsAdminPdfsModalOpen(false)}

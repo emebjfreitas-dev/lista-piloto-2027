@@ -249,16 +249,28 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                 Faltas Consecutivas
               </button>
               {userRole === 'admin' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onNavigateToScreen('bolsa_familia');
-                    onClose();
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
-                >
-                  Bolsa Família
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onNavigateToScreen('bolsa_familia');
+                      onClose();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    Bolsa Família
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onNavigateToScreen('usuarios_acesso');
+                      onClose();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    Central Admin
+                  </button>
+                </>
               )}
             </div>
           )}

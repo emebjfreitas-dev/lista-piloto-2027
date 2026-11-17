@@ -14,8 +14,6 @@ import {
   HeartHandshake,
   CalendarDays,
   BarChart3,
-  Database,
-  FileCode2,
   UserCog,
   Loader2,
 } from 'lucide-react';
@@ -224,24 +222,10 @@ export const Header: React.FC<HeaderProps> = ({
     },
     {
       id: 'usuarios_acesso',
-      label: 'Acessos & Segurança',
-      subtitle: 'Permissões, auditoria e alertas FCM',
+      label: 'Central Admin',
+      subtitle: 'Segurança, acessos, banco e uploads',
       icon: ShieldCheck,
       tintClass: 'bg-[#f2f2f7] text-[#1d1d1f]',
-    },
-    {
-      id: 'diagnostico_bd',
-      label: 'Diagnóstico do Banco',
-      subtitle: 'Consistência cadastral e sincronismo',
-      icon: Database,
-      tintClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
-    },
-    {
-      id: 'importar_deficiencias_htm',
-      label: 'Deficiências (.HTM)',
-      subtitle: 'Importar registros SED para AEE',
-      icon: FileCode2,
-      tintClass: 'bg-[#eaf6ef] text-[#005035]',
     },
   ];
 
@@ -405,7 +389,11 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                       {adminEssentialItems.map((item) => {
                         const IconComp = item.icon;
-                        const active = currentScreen === item.id;
+                        const active =
+                          currentScreen === item.id ||
+                          (item.id === 'usuarios_acesso' &&
+                            (currentScreen === 'diagnostico_bd' ||
+                              currentScreen === 'importar_deficiencias_htm'));
                         return (
                           <button
                             key={item.id}
@@ -597,7 +585,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className="w-full min-h-[42px] text-left px-3.5 py-2 rounded-2xl text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
                       >
                         <ShieldCheck className="w-4 h-4 text-[#48484a] shrink-0" />
-                        <span>Acessos &amp; Segurança</span>
+                        <span>Central Admin</span>
                       </button>
                     )}
 

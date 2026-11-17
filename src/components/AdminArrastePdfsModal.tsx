@@ -11,6 +11,7 @@ interface AdminArrastePdfsModalProps {
   onClose: () => void;
   classes: ClassGroup[];
   onBatchPdfsSaved: (updatedClasses: ClassGroup[]) => void;
+  embedded?: boolean;
 }
 
 interface DroppedPdfItem {
@@ -30,6 +31,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
   onClose,
   classes,
   onBatchPdfsSaved,
+  embedded = false,
 }) => {
   const [items, setItems] = useState<DroppedPdfItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -390,37 +392,37 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
-  return (
+  const contentNode = (
     <div
-      onClick={onClose}
-      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-100"
+      onClick={embedded ? undefined : (e) => e.stopPropagation()}
+      className={
+        embedded
+          ? 'bg-white w-full rounded-3xl shadow-[0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col min-w-0'
+          : 'bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]'
+      }
     >
+      {/* Cabeçalho */}
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
+        className={`flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 shrink-0 border-b ${
+          embedded ? 'border-slate-100' : 'bg-slate-50 border-slate-200'
+        }`}
       >
-        {/* Cabeçalho do Modal */}
-        <div className="flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 shrink-0 bg-slate-50 border-b border-slate-200">
-          <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 text-[#be123c] flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[22px] shrink-0">picture_as_pdf</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-slate-950 break-words leading-snug">
-                  Arraste &amp; Solte · Ficha Informativa do Estudante (PDF)
-                </h3>
-                <span className="px-2.5 py-0.5 rounded-lg bg-rose-50 border border-rose-200 text-[#be123c] text-xs font-bold uppercase tracking-wider shrink-0">
-                  Exclusivo Admin
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 break-words leading-relaxed font-normal mt-0.5">
-                Vincule Fichas Informativas dos Estudantes em massa por RA, Nome ou Turma e sincronize com toda a escola
-              </p>
-            </div>
+        <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#be123c] flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[22px] shrink-0">picture_as_pdf</span>
           </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base sm:text-lg font-semibold text-[#1d1d1f] break-words leading-snug">
+              Importar Fichas Informativas (PDF) em Lote
+            </h3>
+            <p className="text-xs text-[#6e6e73] break-words leading-relaxed font-normal mt-0.5">
+              Vincule Fichas Informativas em massa por RA, Nome ou Turma e sincronize com toda a escola
+            </p>
+          </div>
+        </div>
+        {!embedded && (
           <button
             type="button"
             onClick={onClose}
@@ -428,10 +430,11 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
           >
             <span className="material-symbols-outlined text-[20px] shrink-0">close</span>
           </button>
-        </div>
+        )}
+      </div>
 
-        {/* Corpo com Scroll */}
-        <div className="modal-scroll-body flex-1 p-4 sm:p-6 space-y-4">
+      {/* Corpo */}
+      <div className={embedded ? 'p-4 sm:p-6 space-y-4' : 'modal-scroll-body flex-1 p-4 sm:p-6 space-y-4'}>
           {/* Status Message */}
           {statusMessage && (
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 flex items-center justify-between gap-2 shadow-2xs">
@@ -672,13 +675,15 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-h-[40px] px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs sm:text-sm rounded-xl transition-colors duration-100 cursor-pointer"
-            >
-              Fechar
-            </button>
+            {!embedded && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="min-h-[40px] px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs sm:text-sm rounded-xl transition-colors duration-100 cursor-pointer"
+              >
+                Fechar
+              </button>
+            )}
 
             <button
               type="button"
@@ -696,6 +701,18 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
           </div>
         </div>
       </div>
+  );
+
+  if (embedded) {
+    return contentNode;
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-100"
+    >
+      {contentNode}
     </div>
   );
 };

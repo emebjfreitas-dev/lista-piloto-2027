@@ -29,11 +29,7 @@ import {
   ChevronRight,
   HeartHandshake,
   CalendarDays,
-  Database,
-  FileCode2,
   ShieldCheck,
-  Images,
-  FileText,
   ArrowUpDown,
 } from 'lucide-react';
 import {
@@ -70,8 +66,6 @@ interface HomeScreenProps {
     reader: { userEmail: string; userName: string; userRole?: string }
   ) => void;
   onNavigateToAcessos?: () => void;
-  onOpenAdminPhotosModal?: () => void;
-  onOpenAdminPdfsModal?: () => void;
 }
 
 interface QuickActionItem {
@@ -103,8 +97,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSaveSchoolNotices,
   onMarkNoticeRead,
   onNavigateToAcessos,
-  onOpenAdminPhotosModal,
-  onOpenAdminPdfsModal,
 }) => {
   const isStrictAdmin =
     userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
@@ -357,22 +349,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     if (isStrictAdmin) {
       items.push(
         {
-          id: 'diagnostico_bd',
-          title: 'Diagnóstico do Banco',
-          subtitle: 'Auditoria de consistência, RAs e sincronia',
-          icon: <Database className="w-6 h-6" />,
+          id: 'usuarios_acesso',
+          title: 'Central de Segurança, Acesso e Uploads',
+          subtitle: `Docentes, LGPD, FCM, diagnóstico BD, fotos, PDFs e ${schoolStats.aeeCount} AEE`,
+          icon: <ShieldCheck className="w-6 h-6" />,
           accentBg: 'bg-[#1a4fa3]',
           accentText: 'text-white',
-          onClick: () => onNavigateToScreen('diagnostico_bd'),
-        },
-        {
-          id: 'importar_deficiencias_htm',
-          title: 'Subir Deficiências (.HTM)',
-          subtitle: `${schoolStats.aeeCount} estudante(s) AEE vinculados`,
-          icon: <FileCode2 className="w-6 h-6" />,
-          accentBg: 'bg-[#0f766e]',
-          accentText: 'text-white',
-          onClick: () => onNavigateToScreen('importar_deficiencias_htm'),
+          onClick: () => onNavigateToScreen('usuarios_acesso'),
         },
         {
           id: 'resumo',
@@ -382,15 +365,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           accentBg: 'bg-[#f2f2f7]',
           accentText: 'text-[#111827]',
           onClick: () => onNavigateToScreen('resumo'),
-        },
-        {
-          id: 'usuarios_acesso',
-          title: 'Acessos e Docentes',
-          subtitle: 'Contas, turmas e permissões RBAC',
-          icon: <ShieldCheck className="w-6 h-6" />,
-          accentBg: 'bg-[#f2f2f7]',
-          accentText: 'text-[#111827]',
-          onClick: () => onNavigateToScreen('usuarios_acesso'),
         },
         {
           id: 'bolsa_familia',
@@ -606,57 +580,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </button>
           ))}
         </div>
-
-        {/* Atalhos Compactos de Importação em Lote (Exclusivo Admin) */}
-        {isStrictAdmin && (onOpenAdminPhotosModal || onOpenAdminPdfsModal) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1 min-w-0">
-            {onOpenAdminPhotosModal && (
-              <button
-                type="button"
-                onClick={onOpenAdminPhotosModal}
-                className="w-full min-w-0 min-h-[78px] text-left bg-white hover:bg-blue-50/40 border border-slate-200 hover:border-blue-300 rounded-2xl p-4 sm:p-5 shadow-xs transition-colors duration-100 cursor-pointer flex items-center justify-between gap-3.5 group"
-              >
-                <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-[#0b3b8c] flex items-center justify-center shrink-0">
-                    <Images className="w-6 h-6" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm sm:text-base font-bold text-slate-950 break-words leading-snug">
-                      Enviar Fotos em Lote (Arraste e Solte)
-                    </h3>
-                    <p className="text-xs sm:text-[13px] text-slate-600 break-words leading-snug mt-0.5">
-                      Vincular fotos por RA, Nome ou Turma
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-[#0b3b8c] shrink-0" />
-              </button>
-            )}
-
-            {onOpenAdminPdfsModal && (
-              <button
-                type="button"
-                onClick={onOpenAdminPdfsModal}
-                className="w-full min-w-0 min-h-[78px] text-left bg-white hover:bg-rose-50/40 border border-slate-200 hover:border-rose-300 rounded-2xl p-4 sm:p-5 shadow-xs transition-colors duration-100 cursor-pointer flex items-center justify-between gap-3.5 group"
-              >
-                <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-[#be123c] flex items-center justify-center shrink-0">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm sm:text-base font-bold text-slate-950 break-words leading-snug">
-                      Enviar Fichas Informativas em Lote (Arraste e Solte)
-                    </h3>
-                    <p className="text-xs sm:text-[13px] text-slate-600 break-words leading-snug mt-0.5">
-                      Vincular Ficha Informativa do Estudante por RA, Nome ou Turma + Nº
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-[#be123c] shrink-0" />
-              </button>
-            )}
-          </div>
-        )}
       </section>
 
       {/* 3. SELETOR DIRETO DE TURMAS (Apenas para quem gerencia múltiplas turmas) */}

@@ -47,7 +47,9 @@ interface DiagnosticoBancoDadosScreenProps {
   onUpdateClasses: (updatedClasses: ClassGroup[]) => void;
   onOpenClassDetails: (cls: ClassGroup) => void;
   onNavigateScreen: (screen: ScreenType) => void;
+  onOpenHtmUpload?: () => void;
   onBack: () => void;
+  embedded?: boolean;
 }
 
 type CategoryFilter = 'all' | DiagnosticCategory | 'estrutural';
@@ -98,7 +100,9 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
   onUpdateClasses,
   onOpenClassDetails,
   onNavigateScreen,
+  onOpenHtmUpload,
   onBack,
+  embedded = false,
 }) => {
   const isStrictAdmin =
     userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
@@ -515,7 +519,13 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
   }
 
   return (
-    <div className="w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 text-[#111827] animate-gentle-fade">
+    <div
+      className={
+        embedded
+          ? 'w-full min-w-0 space-y-4 text-[#111827] animate-gentle-fade'
+          : 'w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 text-[#111827] animate-gentle-fade'
+      }
+    >
       {feedback && (
         <div
           role="status"
@@ -548,23 +558,20 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
       <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4 min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
           <div className="space-y-1 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#48484a] hover:text-[#111827] cursor-pointer transition-colors duration-100"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Voltar</span>
-            </button>
+            {!embedded && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#48484a] hover:text-[#111827] cursor-pointer transition-colors duration-100"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Voltar</span>
+              </button>
+            )}
 
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-[#111827] break-words">
-                Diagnóstico de Consistência do Banco
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-lg bg-[#e9e9ef] text-[#111827] text-xs font-semibold">
-                Exclusivo Admin
-              </span>
-            </div>
+            <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[#111827] break-words">
+              Diagnóstico de Consistência do Banco
+            </h1>
 
             <p className="text-xs sm:text-sm text-[#48484a] break-words leading-relaxed">
               Auditoria técnica de {classes.length} turmas, {structuralAnalysis.activeStudents} estudantes ativos ({structuralAnalysis.aeeCount} AEE) e sincronia Firebase · Atualizado às {lastAuditAt}
@@ -575,9 +582,9 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
             <button
               type="button"
               onClick={handleRerunCheck}
-              className="min-w-0 min-h-[44px] px-4 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs sm:text-[13px] font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
+              className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
-              <RefreshCw className="w-4 h-4 shrink-0" />
+              <RefreshCw className="w-3.5 h-3.5 shrink-0" />
               <span>Reverificar</span>
             </button>
 
@@ -585,19 +592,23 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
               type="button"
               onClick={handleForceCloudSync}
               disabled={isSyncing}
-              className="min-w-0 min-h-[44px] px-4 py-2 rounded-xl bg-[#eaf6ef] hover:bg-[#d5efe0] text-[#005035] text-xs sm:text-[13px] font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 disabled:opacity-60 whitespace-normal text-center"
+              className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#eaf6ef] hover:bg-[#d5efe0] text-[#005035] text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 disabled:opacity-60 whitespace-normal text-center"
             >
               {isSyncing ? (
-                <RefreshCw className="w-4 h-4 shrink-0 animate-spin" />
+                <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" />
               ) : (
-                <Cloud className="w-4 h-4 shrink-0" />
+                <Cloud className="w-3.5 h-3.5 shrink-0" />
               )}
               <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Nuvem'}</span>
             </button>
 
             <button
               type="button"
-              onClick={() => onNavigateScreen('importar_deficiencias_htm')}
+              onClick={() =>
+                onOpenHtmUpload
+                  ? onOpenHtmUpload()
+                  : onNavigateScreen('importar_deficiencias_htm')
+              }
               className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#e8f0fe] hover:bg-[#d6e4fc] text-[#1a4fa3] text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
               <FileCode2 className="w-3.5 h-3.5 shrink-0" />

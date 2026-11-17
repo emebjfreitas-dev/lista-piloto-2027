@@ -12,8 +12,6 @@ import {
   ChevronRight,
   LogOut,
   LucideIcon,
-  Database,
-  FileCode2,
   BarChart3,
   CalendarDays,
   CloudCheck,
@@ -136,24 +134,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'usuarios_acesso',
-      label: 'Acessos & Segurança',
-      description: 'Permissões, auditoria e alertas FCM',
+      label: 'Central Admin · Segurança e Uploads',
+      description: 'Acessos, LGPD, FCM, banco, fotos, PDFs e .HTM',
       icon: ShieldCheck,
       tintClass: 'bg-[#f2f2f7] text-[#1d1d1f]',
-    },
-    {
-      id: 'diagnostico_bd',
-      label: 'Diagnóstico do Banco',
-      description: 'Consistência cadastral e nuvem',
-      icon: Database,
-      tintClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
-    },
-    {
-      id: 'importar_deficiencias_htm',
-      label: 'Deficiências (.HTM)',
-      description: 'Importar registros SED para AEE',
-      icon: FileCode2,
-      tintClass: 'bg-[#eaf6ef] text-[#005035]',
     },
   ];
 
@@ -341,7 +325,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
             <div className="space-y-2">
               {adminMoreItems.map((item) => {
-                const isActive = currentScreen === item.id;
+                const isActive =
+                  currentScreen === item.id ||
+                  (item.id === 'usuarios_acesso' &&
+                    (currentScreen === 'diagnostico_bd' ||
+                      currentScreen === 'importar_deficiencias_htm'));
                 const IconComp = item.icon;
                 return (
                   <button

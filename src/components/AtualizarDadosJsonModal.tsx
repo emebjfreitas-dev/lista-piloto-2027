@@ -14,6 +14,7 @@ interface AtualizarDadosJsonModalProps {
   classes: ClassGroup[];
   onUpdateClasses: (updatedClasses: ClassGroup[]) => void;
   currentUserEmail?: string;
+  embedded?: boolean;
 }
 
 export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = ({
@@ -22,8 +23,9 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
   classes,
   onUpdateClasses,
   currentUserEmail = 'emebjfreitas@jundiai.sp.gov.br',
+  embedded = false,
 }) => {
-  useModalScrollLock(isOpen);
+  useModalScrollLock(isOpen && !embedded);
 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -194,39 +196,36 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
     exportSchoolDataToJsonFile(classes, currentUserEmail);
   };
 
-  return (
+  const contentNode = (
     <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
+      onClick={embedded ? undefined : (e) => e.stopPropagation()}
+      className={
+        embedded
+          ? 'bg-white w-full rounded-3xl shadow-[0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col min-w-0'
+          : 'bg-white w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] min-w-0'
+      }
     >
+      {/* Header Institucional */}
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] min-w-0"
+        className={`px-5 sm:px-6 py-4 flex items-start justify-between gap-3 shrink-0 min-w-0 ${
+          embedded ? 'border-b border-slate-100' : 'bg-[#f5f8fc]'
+        }`}
       >
-        {/* Header Institucional */}
-        <div className="px-5 sm:px-6 py-4 bg-[#f5f8fc] flex items-start justify-between gap-3 shrink-0 min-w-0">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#0b3b8c] text-white flex items-center justify-center shrink-0 mt-0.5">
-              <span className="material-symbols-outlined text-[22px]">upload_file</span>
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#0b3b8c] bg-blue-100 px-2.5 py-0.5 rounded-full">
-                  Importação &amp; Atualização Segura
-                </span>
-                <span className="text-[11px] text-slate-600 font-semibold">
-                  Protocolo SED Jundiaí
-                </span>
-              </div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-950 leading-tight mt-1 break-words">
-                Atualizar Dados via Arquivo JSON
-              </h2>
-              <p className="text-xs text-slate-600 mt-0.5 break-words">
-                Arraste e solte um <strong className="text-slate-900 font-semibold">Backup Completo (.json)</strong> ou uma <strong className="text-slate-900 font-semibold">Lista Nominal da SED (.json)</strong> para abrir e atualizar todos os campos de turmas e estudantes.
-              </p>
-            </div>
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-[#0b3b8c] text-white flex items-center justify-center shrink-0 mt-0.5">
+            <span className="material-symbols-outlined text-[22px]">upload_file</span>
           </div>
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-lg font-semibold text-[#1d1d1f] leading-tight break-words">
+              Backup e Restauração via JSON (Protocolo SED)
+            </h2>
+            <p className="text-xs text-[#6e6e73] mt-0.5 break-words">
+              Exporte backup completo ou arraste um arquivo <strong className="text-slate-900 font-semibold">.json</strong> para atualizar turmas e estudantes.
+            </p>
+          </div>
+        </div>
 
+        {!embedded && (
           <button
             type="button"
             onClick={onClose}
@@ -235,10 +234,11 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
-        </div>
+        )}
+      </div>
 
-        {/* Modal Scroll Body */}
-        <div className="modal-scroll-body flex-1 p-5 sm:p-6 space-y-5 min-w-0">
+      {/* Body */}
+      <div className={embedded ? 'p-5 sm:p-6 space-y-5 min-w-0' : 'modal-scroll-body flex-1 p-5 sm:p-6 space-y-5 min-w-0'}>
           {/* Alerta de Feedback de Sucesso */}
           {feedbackSuccess && (
             <div className="p-4 rounded-2xl bg-emerald-100 text-emerald-950 flex items-start gap-3 animate-gentle-fade">
@@ -495,20 +495,34 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
         </div>
 
         {/* Footer */}
-        <div className="px-5 sm:px-6 py-3 bg-[#f5f8fc] flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2 text-[11px] text-slate-600">
-            <span className="material-symbols-outlined text-[15px] text-slate-500">lock</span>
-            <span>Apenas Administradores Autorizados (@educacao.jundiai.sp.gov.br)</span>
+        {!embedded && (
+          <div className="px-5 sm:px-6 py-3 bg-[#f5f8fc] flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2 text-[11px] text-slate-600">
+              <span className="material-symbols-outlined text-[15px] text-slate-500">lock</span>
+              <span>Apenas Administradores Autorizados (@educacao.jundiai.sp.gov.br)</span>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-[38px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+            >
+              Fechar
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-[38px] px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
-          >
-            Fechar
-          </button>
-        </div>
+        )}
       </div>
+  );
+
+  if (embedded) {
+    return contentNode;
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
+    >
+      {contentNode}
     </div>
   );
 };

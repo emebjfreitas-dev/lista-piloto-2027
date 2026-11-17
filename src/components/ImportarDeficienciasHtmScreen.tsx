@@ -33,6 +33,7 @@ interface ImportarDeficienciasHtmScreenProps {
   teacherRoleType?: AuthorizedUser['teacherRoleType'];
   onUpdateClasses: (updatedClasses: ClassGroup[]) => void;
   onBack: () => void;
+  embedded?: boolean;
 }
 
 type PreviewFilter = 'all' | 'ready' | 'unchanged' | 'unmatched';
@@ -50,6 +51,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
   teacherRoleType,
   onUpdateClasses,
   onBack,
+  embedded = false,
 }) => {
   const isStrictAdmin =
     userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
@@ -346,7 +348,13 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
   }
 
   return (
-    <div className="w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 text-[#111827] animate-gentle-fade">
+    <div
+      className={
+        embedded
+          ? 'w-full min-w-0 space-y-4 text-[#111827] animate-gentle-fade'
+          : 'w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 text-[#111827] animate-gentle-fade'
+      }
+    >
       {feedback && (
         <div
           role="status"
@@ -379,26 +387,23 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
       <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4 min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
           <div className="space-y-1 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#48484a] hover:text-[#111827] cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Voltar</span>
-            </button>
+            {!embedded && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#48484a] hover:text-[#111827] cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Voltar</span>
+              </button>
+            )}
 
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#111827] break-words">
-                Subir Deficiências dos Estudantes (.HTM)
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-lg bg-[#e9e9ef] text-[#111827] text-xs font-semibold">
-                Exclusivo Admin
-              </span>
-            </div>
+            <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[#111827] break-words">
+              Importar Deficiências dos Estudantes (.HTM / SED)
+            </h1>
 
             <p className="text-xs sm:text-sm text-[#48484a] break-words leading-relaxed">
-              Envie arquivos .htm / .html exportados da SED para atualizar o campo Educação Especial / AEE · Atualmente <strong>{currentAeeStudentsCount}</strong> estudante(s) possuem deficiência registrada na base.
+              Envie arquivos .htm / .html exportados da SED para atualizar Educação Especial / AEE · <strong>{currentAeeStudentsCount}</strong> estudante(s) registrados na base.
             </p>
           </div>
 

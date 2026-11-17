@@ -23,10 +23,14 @@ import {
   saveStoredLgpdConfig,
   exportSecurityAuditLogsCSV,
   RBAC_ROLE_DEFINITIONS,
-  resetEntireAppData,
-  exportSchoolDataToJsonFile,
 } from '../services/db';
+import { SyncStatusSnapshot } from '../services/firebaseSync';
 import { StudentAvatar } from './StudentAvatar';
+import { AdminArrasteFotosModal } from './AdminArrasteFotosModal';
+import { AdminArrastePdfsModal } from './AdminArrastePdfsModal';
+import { ImportarDeficienciasHtmScreen } from './ImportarDeficienciasHtmScreen';
+import { DiagnosticoBancoDadosScreen } from './DiagnosticoBancoDadosScreen';
+import { AtualizarDadosJsonModal } from './AtualizarDadosJsonModal';
 import {
   ArrowLeft,
   School,
@@ -53,8 +57,6 @@ import {
   Sunset,
   Clock,
   Key,
-  RotateCcw,
-  FileSpreadsheet,
   History,
   Plus,
   Ban,
@@ -64,6 +66,8 @@ import {
   HeartHandshake,
   BellRing,
   Send,
+  Images,
+  FileText,
 } from 'lucide-react';
 import {
   FcmBackendStatus,
@@ -120,6 +124,13 @@ const ACCESS_LEVEL_META: Record<AccessLevelKey, AccessLevelMeta> = {
 };
 
 const ACCESS_LEVEL_ORDER: AccessLevelKey[] = ['admin', 'usuario', 'peb2', 'aee'];
+
+const normalizeSearchText = (value?: string): string =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
 const resolveAccessLevel = (
   u: Pick<AuthorizedUser, 'role' | 'teacherRoleType' | 'subjectName'>,
@@ -206,6 +217,9 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
   </button>
 );
 
+export type AdminCenterSection = 'acesso' | 'seguranca' | 'uploads' | 'diagnostico';
+export type AdminUploadTool = 'fotos' | 'pdfs' | 'htm' | 'json';
+
 interface UsuariosAcessoScreenProps {
   authorizedUsers: AuthorizedUser[];
   accessSessionLogs?: UserAccessSessionLog[];
@@ -214,14 +228,17 @@ interface UsuariosAcessoScreenProps {
   onUpdateClasses?: (updatedClasses: ClassGroup[]) => void;
   currentUserEmail: string;
   userRole: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
+  syncSnapshot?: SyncStatusSnapshot;
   attendanceWindowConfig: AttendanceWindowConfig;
   onUpdateAttendanceWindowConfig: (nextConfig: AttendanceWindowConfig) => void;
   onSaveAuthorizedUsers: (updatedUsers: AuthorizedUser[]) => void;
   onSelectPreviewClassId?: (classId: string) => void;
   onSimulateTeacherProfile?: (teacher: AuthorizedUser) => void;
-  onNavigateToDatabaseEmailsTab?: () => void;
   onNavigateScreen?: (screen: ScreenType) => void;
-  onOpenJsonImportModal?: () => void;
+  onOpenClassDetails?: (cls: ClassGroup) => void;
+  initialSection?: AdminCenterSection;
+  initialUploadTool?: AdminUploadTool;
   onBack: () => void;
 }
 
@@ -240,17 +257,24 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   onUpdateClasses,
   currentUserEmail,
   userRole,
+  teacherRoleType,
+  syncSnapshot,
   attendanceWindowConfig,
   onUpdateAttendanceWindowConfig,
   onSaveAuthorizedUsers,
   onSelectPreviewClassId,
   onSimulateTeacherProfile,
-  onNavigateToDatabaseEmailsTab,
   onNavigateScreen,
-  onOpenJsonImportModal,
+  onOpenClassDetails,
+  initialSection = 'acesso',
+  initialUploadTool = 'fotos',
   onBack,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<SubTabId>('quadro_turmas');
+  const [activeSection, setActiveSection] = useState<AdminCenterSection>(initialSection);
+  const [activeUploadTool, setActiveUploadTool] = useState<AdminUploadTool>(initialUploadTool);
+  const [activeSubTab, setActiveSubTab] = useState<SubTabId>(
+    initialSection === 'seguranca' ? 'seguranca_lgpd' : 'quadro_turmas'
+  );
   const [matrixShiftFilter, setMatrixShiftFilter] = useState<'ALL' | 'MANHÃ' | 'TARDE' | 'VAGAS'>('ALL');
   const [matrixSearchTerm, setMatrixSearchTerm] = useState('');
   const [editingMatrixClassId, setEditingMatrixClassId] = useState<string | null>(null);
@@ -274,6 +298,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   const [assignedClassId, setAssignedClassId] = useState<string>(classes[0]?.id || 'g04a');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | AccessLevelKey>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked'>('all');
+  const [userSortBy, setUserSortBy] = useState<'default' | 'name_asc' | 'email_asc' | 'access_desc'>('default');
   const [logSearchTerm, setLogSearchTerm] = useState('');
   const [onlyAccessedFilter, setOnlyAccessedFilter] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -308,8 +334,6 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     'all' | 'info' | 'warning' | 'security_alert'
   >('all');
   const [selectedRbacRoleKey, setSelectedRbacRoleKey] = useState<string>('admin');
-  const [confirmResetModalOpen, setConfirmResetModalOpen] = useState(false);
-  const [isResettingDb, setIsResettingDb] = useState(false);
 
   // Estados da Central Firebase Cloud Messaging (FCM)
   const [fcmStatus, setFcmStatus] = useState<FcmBackendStatus | null>(null);
@@ -319,6 +343,54 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   const [fcmAudienceTarget, setFcmAudienceTarget] = useState<'pending_only' | 'all'>('pending_only');
   const [isSendingFcmAlert, setIsSendingFcmAlert] = useState(false);
   const [isSavingFcmConfig, setIsSavingFcmConfig] = useState(false);
+
+  useEffect(() => {
+    setActiveSection(initialSection);
+    if (initialSection === 'seguranca') {
+      setActiveSubTab((prev) =>
+        prev === 'seguranca_lgpd' || prev === 'monitoramento' ? prev : 'seguranca_lgpd'
+      );
+    } else if (initialSection === 'acesso') {
+      setActiveSubTab((prev) =>
+        prev === 'quadro_turmas' || prev === 'contas_acesso' || prev === 'rbac_matriz'
+          ? prev
+          : 'quadro_turmas'
+      );
+    }
+  }, [initialSection]);
+
+  useEffect(() => {
+    setActiveUploadTool(initialUploadTool);
+  }, [initialUploadTool]);
+
+  const handleSelectSection = (section: AdminCenterSection, preferredSubTab?: SubTabId) => {
+    setActiveSection(section);
+    if (section === 'acesso') {
+      if (
+        preferredSubTab &&
+        (preferredSubTab === 'quadro_turmas' ||
+          preferredSubTab === 'contas_acesso' ||
+          preferredSubTab === 'rbac_matriz')
+      ) {
+        setActiveSubTab(preferredSubTab);
+      } else if (
+        activeSubTab !== 'quadro_turmas' &&
+        activeSubTab !== 'contas_acesso' &&
+        activeSubTab !== 'rbac_matriz'
+      ) {
+        setActiveSubTab('quadro_turmas');
+      }
+    } else if (section === 'seguranca') {
+      if (
+        preferredSubTab &&
+        (preferredSubTab === 'seguranca_lgpd' || preferredSubTab === 'monitoramento')
+      ) {
+        setActiveSubTab(preferredSubTab);
+      } else if (activeSubTab !== 'seguranca_lgpd' && activeSubTab !== 'monitoramento') {
+        setActiveSubTab('seguranca_lgpd');
+      }
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -332,7 +404,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     return () => {
       active = false;
     };
-  }, [activeSubTab]);
+  }, [activeSection, activeSubTab]);
 
   const canManage = userRole === 'admin';
 
@@ -936,30 +1008,6 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     );
   };
 
-  const executeResetAllSchoolData = async () => {
-    if (!canManage || isResettingDb) return;
-    setIsResettingDb(true);
-    try {
-      const freshClasses = await resetEntireAppData(currentUserEmail);
-      if (onUpdateClasses) {
-        onUpdateClasses(freshClasses);
-      }
-      setSecurityLogs([]);
-      setConfirmResetModalOpen(false);
-      triggerFeedback(
-        'success',
-        'Banco de dados limpo com sucesso (apenas os dados foram removidos; turmas, contas e calendário preservados).'
-      );
-    } catch (err: any) {
-      triggerFeedback(
-        'error',
-        `Falha ao limpar banco escolar: ${err?.message || 'Erro desconhecido'}`
-      );
-    } finally {
-      setIsResettingDb(false);
-    }
-  };
-
   // Filtered classes for Quadro Docente (mantendo estritamente a ordem oficial do array `classes`)
   const filteredMatrixClasses = useMemo(() => {
     const q = matrixSearchTerm.toLowerCase().trim();
@@ -995,22 +1043,71 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     [authorizedUsers]
   );
 
+  const activeUsersCount = useMemo(
+    () => authorizedUsers.filter((u) => u.active).length,
+    [authorizedUsers]
+  );
+
+  const blockedUsersCount = useMemo(
+    () => authorizedUsers.filter((u) => !u.active).length,
+    [authorizedUsers]
+  );
+
+  const hasActiveUserFilters =
+    searchTerm.trim().length > 0 ||
+    roleFilter !== 'all' ||
+    statusFilter !== 'all' ||
+    onlyAccessedFilter ||
+    userSortBy !== 'default';
+
+  const handleResetUserFilters = () => {
+    setSearchTerm('');
+    setRoleFilter('all');
+    setStatusFilter('all');
+    setOnlyAccessedFilter(false);
+    setUserSortBy('default');
+    setVisibleUsersLimit(24);
+  };
+
   const filteredUsers = useMemo(() => {
-    const q = searchTerm.toLowerCase().trim();
-    return authorizedUsers.filter((u) => {
+    const normalizedQuery = normalizeSearchText(searchTerm);
+    const queryTokens = normalizedQuery ? normalizedQuery.split(/\s+/).filter(Boolean) : [];
+
+    const matched = authorizedUsers.filter((u) => {
       const level = resolveAccessLevel(u, draftEdits[u.id]?.accessLevel);
       if (roleFilter !== 'all' && level !== roleFilter) return false;
+      if (statusFilter === 'active' && !u.active) return false;
+      if (statusFilter === 'blocked' && u.active) return false;
       if (onlyAccessedFilter && (u.totalAccessCount || 0) === 0) return false;
-      if (!q) return true;
-      return (
-        u.email.toLowerCase().includes(q) ||
-        u.name.toLowerCase().includes(q) ||
-        u.assignedClassName.toLowerCase().includes(q) ||
-        (u.subjectName || '').toLowerCase().includes(q) ||
-        (u.firstName || '').toLowerCase().includes(q)
+      if (queryTokens.length === 0) return true;
+
+      const haystack = normalizeSearchText(
+        [
+          u.name,
+          u.email,
+          u.firstName,
+          u.subjectName,
+          draftEdits[u.id]?.assignedClassName || u.assignedClassName,
+          ...(draftEdits[u.id]?.assignedClassNames || u.assignedClassNames || []),
+        ]
+          .filter(Boolean)
+          .join(' ')
       );
+      return queryTokens.every((token) => haystack.includes(token));
     });
-  }, [authorizedUsers, draftEdits, roleFilter, onlyAccessedFilter, searchTerm]);
+
+    if (userSortBy === 'default') return matched;
+
+    return [...matched].sort((a, b) => {
+      if (userSortBy === 'name_asc') {
+        return (a.name || '').localeCompare(b.name || '', 'pt-BR', { sensitivity: 'base' });
+      }
+      if (userSortBy === 'email_asc') {
+        return (a.email || '').localeCompare(b.email || '', 'pt-BR', { sensitivity: 'base' });
+      }
+      return (b.totalAccessCount || 0) - (a.totalAccessCount || 0);
+    });
+  }, [authorizedUsers, draftEdits, roleFilter, statusFilter, onlyAccessedFilter, searchTerm, userSortBy]);
 
   const filteredLogs = useMemo(() => {
     const q = logSearchTerm.toLowerCase().trim();
@@ -1143,7 +1240,42 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     0
   );
 
-  const tabs: { id: SubTabId; label: string; count?: number; icon: React.ReactNode }[] = [
+  const effectiveSyncSnapshot: SyncStatusSnapshot = syncSnapshot ?? {
+    status: 'synced',
+    pendingCount: 0,
+    lastSyncedAtISO: null,
+    lastError: null,
+    queue: [],
+  };
+
+  const primarySections: {
+    id: AdminCenterSection;
+    label: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      id: 'acesso',
+      label: 'Acesso & Docentes',
+      icon: <Users className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'seguranca',
+      label: 'Segurança & Auditoria',
+      icon: <ShieldCheck className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'uploads',
+      label: 'Central de Uploads',
+      icon: <Upload className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'diagnostico',
+      label: 'Diagnóstico do Banco',
+      icon: <Database className="w-4 h-4 shrink-0" />,
+    },
+  ];
+
+  const accessSubTabs: { id: SubTabId; label: string; count?: number; icon: React.ReactNode }[] = [
     {
       id: 'quadro_turmas',
       label: 'Quadro Docente',
@@ -1158,19 +1290,54 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     },
     {
       id: 'rbac_matriz',
-      label: 'Permissões',
+      label: 'Permissões (RBAC)',
       icon: <ShieldCheck className="w-4 h-4 shrink-0" />,
     },
+  ];
+
+  const securitySubTabs: { id: SubTabId; label: string; count?: number; icon: React.ReactNode }[] = [
     {
       id: 'seguranca_lgpd',
-      label: 'Segurança e LGPD',
+      label: 'Segurança, LGPD & FCM',
       icon: <Lock className="w-4 h-4 shrink-0" />,
     },
     {
       id: 'monitoramento',
-      label: 'Tempo de Tela',
+      label: 'Tempo de Tela & Sessões',
       count: accessSessionLogs.length,
       icon: <Activity className="w-4 h-4 shrink-0" />,
+    },
+  ];
+
+  const uploadTools: {
+    id: AdminUploadTool;
+    label: string;
+    subtitle: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      id: 'fotos',
+      label: 'Fotos em Lote',
+      subtitle: 'Vincular imagens por RA ou nome',
+      icon: <Images className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'pdfs',
+      label: 'Fichas PDF em Lote',
+      subtitle: 'Vincular PDFs nominais',
+      icon: <FileText className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'htm',
+      label: 'Deficiências .HTM (AEE)',
+      subtitle: 'Importar registros SED',
+      icon: <FileCode2 className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'json',
+      label: 'Backup & JSON',
+      subtitle: 'Exportar, restaurar ou limpar dados',
+      icon: <Upload className="w-4 h-4 shrink-0" />,
     },
   ];
 
@@ -1289,127 +1456,33 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         </div>
       )}
 
-      {/* 1. CABEÇALHO LIMPO, FLUIDO E OTIMIZADO PARA QUALQUER FORMATO */}
+      {/* 1. CABEÇALHO UNIFICADO DA CENTRAL ADMIN (LIMPO E ENXUTO) */}
       <section className="bg-white rounded-3xl px-4 py-4 sm:px-6 sm:py-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4 min-w-0">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 min-w-0">
-          <div className="space-y-1 min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#48484a] hover:text-[#111827] transition-colors duration-100 cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Voltar</span>
-            </button>
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#111827] break-words">
-              Acessos e Quadro Docente
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#48484a] tabular-nums">
-              <span>{classes.length} turmas ({manhaTurmasCount} manhã · {tardeTurmasCount} tarde)</span>
-              <span aria-hidden="true">·</span>
-              <span>{authorizedUsers.length} contas</span>
-              <span aria-hidden="true">·</span>
-              <span>{totalActiveStudentsAll} alunos ativos</span>
-              {activeNowSessionsCount > 0 && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span className="text-[#047857] font-semibold">
-                    {activeNowSessionsCount} online agora
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Ações Rápidas Responsivas (Grid fluido no mobile, linha fluida no desktop) */}
-          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full xl:w-auto">
-            {canManage && onNavigateScreen && (
-              <button
-                type="button"
-                onClick={() => onNavigateScreen('diagnostico_bd')}
-                className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#e8f0fe] hover:bg-[#d6e4fc] text-[#1a4fa3] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
-              >
-                <Database className="w-3.5 h-3.5 shrink-0" />
-                <span className="break-words">Diagnóstico BD</span>
-              </button>
-            )}
-
-            {canManage && onNavigateScreen && (
-              <button
-                type="button"
-                onClick={() => onNavigateScreen('importar_deficiencias_htm')}
-                className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#eaf6ef] hover:bg-[#d5efe0] text-[#005035] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
-              >
-                <FileCode2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="break-words">Subir .HTM (AEE)</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                exportOfficialMatrixToXLS(classes, authorizedUsers);
-                triggerFeedback('success', 'Arquivo do Quadro Oficial (.xls) baixado.');
-              }}
-              className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
-            >
-              <Download className="w-3.5 h-3.5 shrink-0" />
-              <span className="break-words">Baixar XLS</span>
-            </button>
-
-            {canManage && (
-              <button
-                type="button"
-                onClick={handleRestoreOfficialSchoolMatrix}
-                className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
-              >
-                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                <span className="break-words">Sincronizar Quadro</span>
-              </button>
-            )}
-
-            {canManage && (
-              <button
-                type="button"
-                onClick={() => exportSchoolDataToJsonFile(classes, currentUserEmail)}
-                className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
-              >
-                <Download className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
-                <span className="break-words">Backup JSON</span>
-              </button>
-            )}
-
-            {canManage && onOpenJsonImportModal && (
-              <button
-                type="button"
-                onClick={onOpenJsonImportModal}
-                className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#111827] hover:bg-black text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
-              >
-                <Upload className="w-3.5 h-3.5 shrink-0" />
-                <span className="break-words">Importar JSON</span>
-              </button>
-            )}
-
-            {onNavigateToDatabaseEmailsTab && (
-              <button
-                type="button"
-                onClick={onNavigateToDatabaseEmailsTab}
-                className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-[#047857] shrink-0" />
-                <span className="break-words">Nuvem &amp; Drive</span>
-              </button>
-            )}
-
-            {canManage && (
-              <button
-                type="button"
-                onClick={() => setConfirmResetModalOpen(true)}
-                className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#fee2e2] hover:bg-[#fecaca] text-[#991b1b] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer whitespace-normal text-center leading-tight"
-              >
-                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-                <span className="break-words">Redefinir SED</span>
-              </button>
+        <div className="space-y-1 min-w-0">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#48484a] hover:text-[#111827] transition-colors duration-100 cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Voltar</span>
+          </button>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#111827] break-words">
+            Central de Segurança, Acesso e Uploads
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#48484a] tabular-nums">
+            <span>{classes.length} turmas ({manhaTurmasCount} manhã · {tardeTurmasCount} tarde)</span>
+            <span aria-hidden="true">·</span>
+            <span>{authorizedUsers.length} contas</span>
+            <span aria-hidden="true">·</span>
+            <span>{totalActiveStudentsAll} alunos ativos</span>
+            {activeNowSessionsCount > 0 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="text-[#047857] font-semibold">
+                  {activeNowSessionsCount} online agora
+                </span>
+              </>
             )}
           </div>
         </div>
@@ -1418,7 +1491,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           <button
             type="button"
-            onClick={() => setActiveSubTab('quadro_turmas')}
+            onClick={() => handleSelectSection('acesso', 'quadro_turmas')}
             className="text-left p-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#ededf0] transition-colors duration-100 cursor-pointer min-w-0 break-words"
           >
             <span className="text-xs font-medium text-[#6e6e73] block">Turmas Oficiais</span>
@@ -1434,7 +1507,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           <button
             type="button"
             onClick={() => {
-              setActiveSubTab('contas_acesso');
+              handleSelectSection('acesso', 'contas_acesso');
               setRoleFilter('all');
             }}
             className="text-left p-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#ededf0] transition-colors duration-100 cursor-pointer min-w-0 break-words"
@@ -1450,10 +1523,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveSubTab('monitoramento')}
+            onClick={() => handleSelectSection('seguranca', 'monitoramento')}
             className="text-left p-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#ededf0] transition-colors duration-100 cursor-pointer min-w-0 break-words"
           >
-            <span className="text-xs font-medium text-[#6e6e73] block">Acessos Realizados</span>
+            <span className="text-xs font-medium text-[#6e6e73] block">Acessos &amp; Sessões</span>
             <span className="text-2xl sm:text-3xl font-semibold text-[#1d1d1f] tabular-nums block mt-0.5">
               {totalUsersWhoAccessed}/{authorizedUsers.length}
             </span>
@@ -1462,18 +1535,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             </span>
           </button>
 
-          <div className="p-3.5 rounded-2xl bg-[#f5f5f7] min-w-0 break-words">
-            <span className="text-xs font-medium text-[#6e6e73] block">Tempo Total de Uso</span>
+          <button
+            type="button"
+            onClick={() => handleSelectSection('seguranca', 'seguranca_lgpd')}
+            className="text-left p-3.5 rounded-2xl bg-[#f5f5f7] hover:bg-[#ededf0] transition-colors duration-100 cursor-pointer min-w-0 break-words"
+          >
+            <span className="text-xs font-medium text-[#6e6e73] block">Tempo Total &amp; LGPD</span>
             <span className="text-2xl sm:text-3xl font-semibold text-[#1d1d1f] tabular-nums block mt-0.5 break-words">
               {formatDurationHuman(totalPlatformDurationSeconds)}
             </span>
             <span className="text-xs text-[#6e6e73] block mt-0.5 break-words">
-              Monitorado automaticamente
+              {lgpdConfig.maskSensitiveDataByDefault ? 'Mascaramento LGPD ativo' : 'Modo auditoria aberto'}
             </span>
-          </div>
+          </button>
         </div>
 
-        {/* Controle da Janela de Lançamento de Faltas com Toggle Switch */}
+        {/* Controle da Janela de Lançamento de Faltas + Alerta Push FCM */}
         <div
           className={`p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
             windowEval.isAllowedToLaunch ? 'bg-[#eaf6ef]' : 'bg-[#fef3c7]/80'
@@ -1528,49 +1605,105 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           )}
         </div>
 
-        {/* Barra Única de Navegação das 5 Sub-Abas */}
+        {/* Barra Primária da Central Única Admin (4 Pilares) */}
         <nav
-          aria-label="Seções do gerenciamento de acessos"
-          className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 p-1.5 bg-[#f5f5f7] rounded-2xl sm:overflow-x-auto"
+          aria-label="Seções da central administrativa"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 p-1.5 bg-[#f5f5f7] rounded-2xl"
         >
-          {tabs.map((t) => {
-            const isActive = activeSubTab === t.id;
+          {primarySections.map((sec) => {
+            const isActive = activeSection === sec.id;
             return (
               <button
-                key={t.id}
+                key={sec.id}
                 type="button"
-                onClick={() => setActiveSubTab(t.id)}
-                className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-normal text-center sm:whitespace-nowrap sm:shrink-0 cursor-pointer transition-colors duration-100 ${
+                onClick={() => handleSelectSection(sec.id)}
+                className={`min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-medium inline-flex items-center justify-center gap-2 text-center cursor-pointer transition-colors duration-100 ${
                   isActive
-                    ? 'bg-white text-[#1d1d1f] font-semibold shadow-xs'
-                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                    ? 'bg-[#0b3b8c] text-white font-semibold shadow-xs'
+                    : 'text-[#48484a] hover:text-[#111827] hover:bg-white/70'
                 }`}
               >
-                {t.icon}
-                <span>{t.label}</span>
-                {typeof t.count === 'number' && (
-                  <span
-                    className={`px-1.5 py-0.5 rounded-md text-xs tabular-nums ${
-                      isActive ? 'bg-[#f5f5f7] text-[#1d1d1f]' : 'bg-black/5 text-[#6e6e73]'
-                    }`}
-                  >
-                    {t.count}
-                  </span>
-                )}
+                {sec.icon}
+                <span className="truncate">{sec.label}</span>
               </button>
             );
           })}
         </nav>
+
+        {/* Sub-navegação contextual para Acesso & Docentes ou Segurança & Auditoria */}
+        {activeSection === 'acesso' && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {accessSubTabs.map((t) => {
+              const isActive = activeSubTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveSubTab(t.id)}
+                  className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100 ${
+                    isActive
+                      ? 'bg-[#1d1d1f] text-white shadow-xs'
+                      : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+                  }`}
+                >
+                  {t.icon}
+                  <span>{t.label}</span>
+                  {typeof t.count === 'number' && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md text-[11px] tabular-nums ${
+                        isActive ? 'bg-white/15 text-white' : 'bg-black/5 text-[#6e6e73]'
+                      }`}
+                    >
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {activeSection === 'seguranca' && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {securitySubTabs.map((t) => {
+              const isActive = activeSubTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveSubTab(t.id)}
+                  className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors duration-100 ${
+                    isActive
+                      ? 'bg-[#1d1d1f] text-white shadow-xs'
+                      : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+                  }`}
+                >
+                  {t.icon}
+                  <span>{t.label}</span>
+                  {typeof t.count === 'number' && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md text-[11px] tabular-nums ${
+                        isActive ? 'bg-white/15 text-white' : 'bg-black/5 text-[#6e6e73]'
+                      }`}
+                    >
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* =====================================================================
-          SUB-ABA 1: QUADRO DOCENTE (MOBILE CARDS + TABELA DESKTOP)
+          SEÇÃO 1 · SUB-ABA 1: QUADRO DOCENTE (MOBILE CARDS + TABELA DESKTOP)
           ===================================================================== */}
-      {activeSubTab === 'quadro_turmas' && (
+      {activeSection === 'acesso' && activeSubTab === 'quadro_turmas' && (
         <div className="space-y-4">
           <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
-            {/* Barra de Filtros e Busca */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            {/* Barra de Filtros, Busca e Exportação Oficial */}
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
@@ -1621,25 +1754,52 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                 </button>
               </div>
 
-              <div className="relative flex-1 max-w-xl">
-                <Search className="w-4 h-4 text-[#86868b] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  value={matrixSearchTerm}
-                  onChange={(e) => setMatrixSearchTerm(e.target.value)}
-                  placeholder="Buscar turma, professor, sala ou código SED..."
-                  className="w-full min-h-[44px] pl-10 pr-9 rounded-2xl bg-[#f5f5f7] focus:bg-white text-sm text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none"
-                />
-                {matrixSearchTerm && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 xl:max-w-2xl justify-end">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-[#86868b] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={matrixSearchTerm}
+                    onChange={(e) => setMatrixSearchTerm(e.target.value)}
+                    placeholder="Buscar turma, professor, sala ou código SED..."
+                    className="w-full min-h-[40px] pl-10 pr-9 rounded-xl bg-[#f5f5f7] focus:bg-white text-sm text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none"
+                  />
+                  {matrixSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setMatrixSearchTerm('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] p-1 cursor-pointer"
+                      aria-label="Limpar busca"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => setMatrixSearchTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#1d1d1f] p-1 cursor-pointer"
-                    aria-label="Limpar busca"
+                    onClick={() => {
+                      exportOfficialMatrixToXLS(classes, authorizedUsers);
+                      triggerFeedback('success', 'Arquivo do Quadro Oficial (.xls) baixado.');
+                    }}
+                    className="min-h-[40px] px-3 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    <X className="w-4 h-4" />
+                    <Download className="w-3.5 h-3.5 shrink-0" />
+                    <span>Baixar XLS</span>
                   </button>
-                )}
+
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={handleRestoreOfficialSchoolMatrix}
+                      className="min-h-[40px] px-3 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                      <span>Sincronizar Quadro</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2427,99 +2587,180 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* =====================================================================
-          SUB-ABA 2: CONTAS E PERFIS (@educacao.jundiai.sp.gov.br)
+          SEÇÃO 1 · SUB-ABA 2: CONTAS E PERFIS (@educacao.jundiai.sp.gov.br)
           ===================================================================== */}
-      {activeSubTab === 'contas_acesso' && (
+      {activeSection === 'acesso' && activeSubTab === 'contas_acesso' && (
         <div className="space-y-4">
           <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
-            {/* Barra de Filtros com Badges dos 4 Níveis, Busca e Novo E-mail */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {(
-                  [
-                    {
-                      id: 'all',
-                      label: `Todos (${authorizedUsers.length})`,
-                      activeClass: 'bg-[#111827] text-white font-semibold',
-                    },
-                    {
-                      id: 'admin',
-                      label: `ADMIN (${adminCount})`,
-                      activeClass: 'bg-[#111827] text-white font-semibold',
-                    },
-                    {
-                      id: 'usuario',
-                      label: `PEB I · Usuário (${peb1Count})`,
-                      activeClass: 'bg-[#047857] text-white font-semibold',
-                    },
-                    {
-                      id: 'peb2',
-                      label: `PEB II · Visualização (${peb2Count})`,
-                      activeClass: 'bg-[#1a4fa3] text-white font-semibold',
-                    },
-                    {
-                      id: 'aee',
-                      label: `AEE (${aeeCount})`,
-                      activeClass: 'bg-[#b45309] text-white font-semibold',
-                    },
-                  ] as const
-                ).map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setRoleFilter(tab.id)}
-                    className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium cursor-pointer transition-colors duration-100 ${
-                      roleFilter === tab.id
-                        ? tab.activeClass
-                        : 'bg-[#f2f2f7] text-[#374151] hover:bg-[#e5e5ea]'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-
-                <div className="px-3 py-1.5 rounded-xl bg-[#f2f2f7] inline-flex items-center">
-                  <ToggleSwitch
-                    checked={onlyAccessedFilter}
-                    onChange={() => setOnlyAccessedFilter((prev) => !prev)}
-                    activeText={`Já acessaram (${totalUsersWhoAccessed})`}
-                    inactiveText={`Somente quem acessou (${totalUsersWhoAccessed})`}
-                    ariaLabel="Filtrar contas que já acessaram"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="relative flex-1 sm:w-72">
+            {/* Barra de Busca por Nome/E-mail, Status, Ordenação e Novo E-mail */}
+            <div className="space-y-3">
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2.5">
+                <div className="relative flex-1">
                   <Search className="w-4 h-4 text-[#86868b] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
-                    type="text"
+                    type="search"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Buscar por e-mail, nome ou turma..."
-                    className="w-full min-h-[42px] pl-10 pr-8 rounded-2xl bg-[#f5f5f7] focus:bg-white text-sm text-[#1d1d1f] placeholder:text-[#86868b] focus:outline-none"
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setVisibleUsersLimit(24);
+                    }}
+                    aria-label="Buscar usuários autorizados por nome, e-mail ou turma"
+                    placeholder="Buscar servidor por nome, e-mail (@educacao.jundiai...), disciplina ou turma..."
+                    className="w-full min-h-[44px] pl-10 pr-10 rounded-2xl bg-[#f5f5f7] focus:bg-white text-sm text-[#1d1d1f] placeholder:text-[#6e6e73] focus:outline-none focus:ring-2 focus:ring-[#0b3b8c]/20 transition-all"
                   />
                   {searchTerm && (
                     <button
                       type="button"
                       onClick={() => setSearchTerm('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#86868b] p-1 cursor-pointer"
+                      aria-label="Limpar busca de usuários"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6e6e73] hover:text-[#111827] p-1 cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
 
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAddUserForm((prev) => !prev)}
-                    className="min-h-[42px] px-4 rounded-2xl bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors duration-100"
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <div
+                    role="group"
+                    aria-label="Filtrar por status de acesso"
+                    className="inline-flex items-center p-1 rounded-xl bg-[#f2f2f7] gap-1"
                   >
-                    <UserPlus className="w-4 h-4" />
-                    <span>{showAddUserForm ? 'Fechar Cadastro' : 'Novo E-mail'}</span>
-                  </button>
-                )}
+                    {(
+                      [
+                        { id: 'all', label: `Todos (${authorizedUsers.length})` },
+                        { id: 'active', label: `Liberados (${activeUsersCount})` },
+                        { id: 'blocked', label: `Bloqueados (${blockedUsersCount})` },
+                      ] as const
+                    ).map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => {
+                          setStatusFilter(st.id);
+                          setVisibleUsersLimit(24);
+                        }}
+                        className={`min-h-[34px] px-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                          statusFilter === st.id
+                            ? st.id === 'blocked'
+                              ? 'bg-[#991b1b] text-white shadow-2xs'
+                              : st.id === 'active'
+                              ? 'bg-[#047857] text-white shadow-2xs'
+                              : 'bg-white text-[#111827] shadow-2xs'
+                            : 'text-[#48484a] hover:text-[#111827]'
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <select
+                    value={userSortBy}
+                    onChange={(e) =>
+                      setUserSortBy(
+                        e.target.value as 'default' | 'name_asc' | 'email_asc' | 'access_desc'
+                      )
+                    }
+                    aria-label="Ordenar lista de usuários"
+                    className="min-h-[42px] px-3 rounded-xl bg-[#f5f5f7] text-xs font-semibold text-[#111827] focus:outline-none cursor-pointer"
+                  >
+                    <option value="default">Ordem padrão</option>
+                    <option value="name_asc">Nome (A–Z)</option>
+                    <option value="email_asc">E-mail (A–Z)</option>
+                    <option value="access_desc">Mais acessos</option>
+                  </select>
+
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddUserForm((prev) => !prev)}
+                      className="min-h-[42px] px-4 rounded-2xl bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors duration-100"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>{showAddUserForm ? 'Fechar Cadastro' : 'Novo E-mail'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(
+                    [
+                      {
+                        id: 'all',
+                        label: `Todos (${authorizedUsers.length})`,
+                        activeClass: 'bg-[#111827] text-white font-semibold',
+                      },
+                      {
+                        id: 'admin',
+                        label: `ADMIN (${adminCount})`,
+                        activeClass: 'bg-[#111827] text-white font-semibold',
+                      },
+                      {
+                        id: 'usuario',
+                        label: `PEB I · Usuário (${peb1Count})`,
+                        activeClass: 'bg-[#047857] text-white font-semibold',
+                      },
+                      {
+                        id: 'peb2',
+                        label: `PEB II · Visualização (${peb2Count})`,
+                        activeClass: 'bg-[#1a4fa3] text-white font-semibold',
+                      },
+                      {
+                        id: 'aee',
+                        label: `AEE (${aeeCount})`,
+                        activeClass: 'bg-[#b45309] text-white font-semibold',
+                      },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setRoleFilter(tab.id);
+                        setVisibleUsersLimit(24);
+                      }}
+                      className={`min-h-[36px] px-3 rounded-xl text-xs font-medium cursor-pointer transition-colors duration-100 ${
+                        roleFilter === tab.id
+                          ? tab.activeClass
+                          : 'bg-[#f2f2f7] text-[#374151] hover:bg-[#e5e5ea]'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+
+                  <div className="px-3 py-1.5 rounded-xl bg-[#f2f2f7] inline-flex items-center">
+                    <ToggleSwitch
+                      checked={onlyAccessedFilter}
+                      onChange={() => {
+                        setOnlyAccessedFilter((prev) => !prev);
+                        setVisibleUsersLimit(24);
+                      }}
+                      activeText={`Já acessaram (${totalUsersWhoAccessed})`}
+                      inactiveText={`Somente quem acessou (${totalUsersWhoAccessed})`}
+                      ariaLabel="Filtrar contas que já acessaram"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-[#48484a] tabular-nums shrink-0">
+                  <span>
+                    Exibindo <strong className="text-[#111827]">{filteredUsers.length}</strong> de{' '}
+                    <strong className="text-[#111827]">{authorizedUsers.length}</strong> contas
+                  </span>
+                  {hasActiveUserFilters && (
+                    <button
+                      type="button"
+                      onClick={handleResetUserFilters}
+                      className="px-2.5 py-1 rounded-lg bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#0b3b8c] font-semibold cursor-pointer transition-colors"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2658,8 +2899,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             )}
 
             {filteredUsers.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-[#f5f5f7] text-center text-sm text-[#6e6e73]">
-                Nenhuma conta encontrada para o filtro informado.
+              <div className="p-8 rounded-2xl bg-[#f5f5f7] text-center space-y-2.5">
+                <p className="text-sm font-semibold text-[#111827]">
+                  Nenhuma conta encontrada para os critérios informados.
+                </p>
+                <p className="text-xs text-[#6e6e73]">
+                  Verifique a grafia do nome ou e-mail, ou limpe os filtros ativos.
+                </p>
+                {hasActiveUserFilters && (
+                  <button
+                    type="button"
+                    onClick={handleResetUserFilters}
+                    className="min-h-[38px] px-4 rounded-xl bg-[#111827] hover:bg-black text-white text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    Limpar busca e filtros
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -3010,9 +3265,9 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* =====================================================================
-          SUB-ABA 3: MATRIZ RBAC (ZERO CONTORNOS, RESPONSIVA)
+          SEÇÃO 1 · SUB-ABA 3: MATRIZ RBAC (ZERO CONTORNOS, RESPONSIVA)
           ===================================================================== */}
-      {activeSubTab === 'rbac_matriz' && (
+      {activeSection === 'acesso' && activeSubTab === 'rbac_matriz' && (
         <div className="space-y-4">
           <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -3026,7 +3281,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setActiveSubTab('seguranca_lgpd')}
+                onClick={() => handleSelectSection('seguranca', 'seguranca_lgpd')}
                 className="min-h-[40px] px-4 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
               >
                 <History className="w-3.5 h-3.5" />
@@ -3197,9 +3452,9 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* =====================================================================
-          SUB-ABA 4: SEGURANÇA & LGPD (ZERO CONTORNOS, RESPONSIVA)
+          SEÇÃO 2 · SUB-ABA 4: SEGURANÇA & LGPD (ZERO CONTORNOS, RESPONSIVA)
           ===================================================================== */}
-      {activeSubTab === 'seguranca_lgpd' && (
+      {activeSection === 'seguranca' && activeSubTab === 'seguranca_lgpd' && (
         <div className="space-y-4">
           <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -3697,9 +3952,9 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* =====================================================================
-          SUB-ABA 5: TEMPO DE TELA E SESSÕES (RESPONSIVA)
+          SEÇÃO 2 · SUB-ABA 5: TEMPO DE TELA E SESSÕES (RESPONSIVA)
           ===================================================================== */}
-      {activeSubTab === 'monitoramento' && (
+      {activeSection === 'seguranca' && activeSubTab === 'monitoramento' && (
         <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -3865,6 +4120,138 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             </>
           )}
         </section>
+      )}
+
+      {/* =====================================================================
+          SEÇÃO 3: CENTRAL DE UPLOADS & IMPORTAÇÕES (FOTOS, PDFs, .HTM, JSON)
+          ===================================================================== */}
+      {activeSection === 'uploads' && (
+        <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {uploadTools.map((tool) => {
+              const isActive = activeUploadTool === tool.id;
+              return (
+                <button
+                  key={tool.id}
+                  type="button"
+                  onClick={() => setActiveUploadTool(tool.id)}
+                  className={`min-w-0 text-left p-3.5 rounded-2xl transition-colors duration-100 cursor-pointer flex items-center gap-3 ${
+                    isActive
+                      ? 'bg-[#1d1d1f] text-white shadow-xs'
+                      : 'bg-[#f5f5f7] hover:bg-[#ededf0] text-[#1d1d1f]'
+                  }`}
+                >
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-white/15 text-white' : 'bg-white text-[#0b3b8c]'
+                    }`}
+                  >
+                    {tool.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs sm:text-sm font-semibold block break-words leading-snug">
+                      {tool.label}
+                    </span>
+                    <span
+                      className={`text-[11px] block break-words leading-snug mt-0.5 ${
+                        isActive ? 'text-white/75' : 'text-[#6e6e73]'
+                      }`}
+                    >
+                      {tool.subtitle}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="pt-1">
+            {activeUploadTool === 'fotos' && (
+              <AdminArrasteFotosModal
+                isOpen
+                embedded
+                onClose={() => handleSelectSection('acesso', 'quadro_turmas')}
+                classes={classes}
+                onBatchPhotosSaved={(updatedClasses) => {
+                  if (onUpdateClasses) onUpdateClasses(updatedClasses);
+                  triggerFeedback('success', 'Lote de fotos salvo e sincronizado.');
+                }}
+              />
+            )}
+
+            {activeUploadTool === 'pdfs' && (
+              <AdminArrastePdfsModal
+                isOpen
+                embedded
+                onClose={() => handleSelectSection('acesso', 'quadro_turmas')}
+                classes={classes}
+                onBatchPdfsSaved={(updatedClasses) => {
+                  if (onUpdateClasses) onUpdateClasses(updatedClasses);
+                  triggerFeedback('success', 'Lote de Fichas PDF vinculado com sucesso.');
+                }}
+              />
+            )}
+
+            {activeUploadTool === 'htm' && (
+              <ImportarDeficienciasHtmScreen
+                embedded
+                classes={classes}
+                userRole={userRole}
+                userEmail={currentUserEmail}
+                teacherRoleType={teacherRoleType}
+                onUpdateClasses={(updatedClasses) => {
+                  if (onUpdateClasses) onUpdateClasses(updatedClasses);
+                }}
+                onBack={() => handleSelectSection('acesso', 'quadro_turmas')}
+              />
+            )}
+
+            {activeUploadTool === 'json' && (
+              <AtualizarDadosJsonModal
+                isOpen
+                embedded
+                onClose={() => handleSelectSection('acesso', 'quadro_turmas')}
+                classes={classes}
+                onUpdateClasses={(updatedClasses) => {
+                  if (onUpdateClasses) onUpdateClasses(updatedClasses);
+                  triggerFeedback('success', 'Base de dados atualizada via JSON.');
+                }}
+                currentUserEmail={currentUserEmail}
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* =====================================================================
+          SEÇÃO 4: DIAGNÓSTICO DO BANCO & INTEGRIDADE DE SINCRONIZAÇÃO
+          ===================================================================== */}
+      {activeSection === 'diagnostico' && (
+        <DiagnosticoBancoDadosScreen
+          embedded
+          classes={classes}
+          authorizedUsers={authorizedUsers}
+          syncSnapshot={effectiveSyncSnapshot}
+          userRole={userRole}
+          userEmail={currentUserEmail}
+          teacherRoleType={teacherRoleType}
+          onUpdateClasses={(updatedClasses) => {
+            if (onUpdateClasses) onUpdateClasses(updatedClasses);
+          }}
+          onOpenClassDetails={(cls) => {
+            if (onOpenClassDetails) {
+              onOpenClassDetails(cls);
+            } else if (onNavigateScreen) {
+              onNavigateScreen('detalhes');
+            }
+          }}
+          onNavigateScreen={onNavigateScreen || (() => {})}
+          onOpenHtmUpload={() => {
+            setActiveSection('uploads');
+            setActiveUploadTool('htm');
+          }}
+          onBack={() => handleSelectSection('acesso', 'quadro_turmas')}
+        />
       )}
 
       {/* Modal Compartilhado de Vínculo de Turma(s) & Função Docente (Substitui milhares de <option> no DOM) */}
@@ -4045,50 +4432,6 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         </div>
       )}
 
-      {/* Modal Inline de Confirmação de Reset da Base SED (Sem window.confirm) */}
-      {confirmResetModalOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex items-center justify-center p-4 animate-gentle-fade"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reset-sed-title"
-        >
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#fee2e2] text-[#991b1b] flex items-center justify-center shrink-0">
-                <RotateCcw className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <h2 id="reset-sed-title" className="text-base font-semibold text-[#111827]">
-                  Limpar apenas os dados do banco?
-                </h2>
-                <p className="text-xs text-[#48484a] leading-relaxed">
-                  Todos os estudantes, faltas, alertas de busca ativa, avisos e logs serão removidos para começar do zero. As 40 turmas, contas autorizadas e o calendário de 200 dias serão preservados.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                disabled={isResettingDb}
-                onClick={() => setConfirmResetModalOpen(false)}
-                className="min-h-[40px] px-4 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={isResettingDb}
-                onClick={executeResetAllSchoolData}
-                className="min-h-[40px] px-4 rounded-xl bg-[#b3261e] hover:bg-[#991b1b] text-white text-xs font-semibold cursor-pointer"
-              >
-                {isResettingDb ? 'Limpando...' : 'Confirmar Limpeza'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
