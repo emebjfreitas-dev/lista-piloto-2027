@@ -1,6 +1,6 @@
 /* Service Worker Oficial — EMEB Joaquim Candelário de Freitas (PWA Offline & Web Push) */
-const SW_VERSION = 'candelario-pwa-v4';
-const CACHE_NAME = 'candelario-offline-v4';
+const SW_VERSION = 'candelario-pwa-v5';
+const CACHE_NAME = 'candelario-offline-v5';
 
 const PRECACHE_ASSETS = [
   './',
@@ -14,6 +14,288 @@ const PRECACHE_ASSETS = [
   './pwa-192x192.png',
   './pwa-512x512.png',
 ];
+
+/* ==========================================================================
+   INDEXEDDB BLOB STORAGE PARA FOTOS DE ESTUDANTES
+   Isola o armazenamento de fotos binárias pesadas fora do Cache Storage API,
+   evitando esgotamento de cota do navegador e acelerando o acesso offline.
+   ========================================================================== */
+const PHOTO_IDB_NAME = 'candelario_student_photos_db_v1';
+const PHOTO_IDB_VERSION = 1;
+const PHOTO_STORE_NAME = 'student_photos';
+
+let photoDbPromise = null;
+
+function getPhotoDb() {
+  if (photoDbPromise) return photoDbPromise;
+
+  photoDbPromise = new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      return reject(new Error('IndexedDB não suportado'));
+    }
+    const openReq = indexedDB.open(PHOTO_IDB_NAME, PHOTO_IDB_VERSION);
+
+    openReq.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(PHOTO_STORE_NAME)) {
+        const store = db.createObjectStore(PHOTO_STORE_NAME, { keyPath: 'url' });
+        store.createIndex('updatedAt', 'updatedAt', { unique: false });
+      }
+    };
+
+    openReq.onsuccess = (event) => {
+      const db = event.target.result;
+      db.onclose = () => { photoDbPromise = null; };
+      db.onversionchange = () => {
+        try { db.close(); } catch (_) {}
+        photoDbPromise = null;
+      };
+      resolve(db);
+    };
+
+    openReq.onerror = (event) => {
+      photoDbPromise = null;
+      reject(event.target.error || new Error('Falha ao abrir IndexedDB de fotos'));
+    };
+  });
+
+  return photoDbPromise;
+}
+
+/**
+ * Normaliza e gera chaves de busca para garantir compatibilidade entre
+ * proxy local (/api/drive-photo/ID), thumbnails do Drive e URLs completas.
+ */
+function getPhotoLookupKeys(url) {
+  const keys = [url.href];
+  if (url.pathname && url.pathname !== url.href) {
+    keys.push(url.pathname);
+  }
+  // Extrai ID do Google Drive de /api/drive-photo/:id
+  const proxyMatch = url.pathname.match(/\/api\/drive-photo\/([a-zA-Z0-9-_]+)/);
+  if (proxyMatch && proxyMatch[1]) {
+    keys.push(`drive:${proxyMatch[1]}`);
+    keys.push(`/api/drive-photo/${proxyMatch[1]}`);
+  }
+  // Extrai ID de parâmetro ?id= (thumbnails)
+  const idParam = url.searchParams.get('id');
+  if (idParam) {
+    keys.push(`drive:${idParam}`);
+  }
+  // Extrai ID de lh3.googleusercontent.com/d/:id
+  const ucMatch = url.pathname.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if (ucMatch && ucMatch[1]) {
+    keys.push(`drive:${ucMatch[1]}`);
+  }
+  return Array.from(new Set(keys));
+}
+
+async function getPhotoFromIndexedDB(key) {
+  try {
+    const db = await getPhotoDb();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(PHOTO_STORE_NAME, 'readonly');
+      const store = tx.objectStore(PHOTO_STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (_) {
+    return null;
+  }
+}
+
+async function findCachedPhoto(url) {
+  const keys = getPhotoLookupKeys(url);
+  for (const k of keys) {
+    const found = await getPhotoFromIndexedDB(k);
+    if (found && found.blob) {
+      return found;
+    }
+  }
+  return null;
+}
+
+async function savePhotoBlobToIndexedDB(urlKey, blob, contentType) {
+  if (!blob || blob.size === 0) return false;
+  try {
+    const db = await getPhotoDb();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(PHOTO_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(PHOTO_STORE_NAME);
+      const record = {
+        url: urlKey,
+        blob: blob,
+        contentType: contentType || blob.type || 'image/jpeg',
+        size: blob.size,
+        updatedAt: Date.now(),
+      };
+      const req = store.put(record);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('Aviso: falha ao persistir foto no IndexedDB:', err);
+    return false;
+  }
+}
+
+async function storePhotoBlobInAllKeys(url, blob, contentType) {
+  const keys = getPhotoLookupKeys(url);
+  for (const k of keys) {
+    await savePhotoBlobToIndexedDB(k, blob, contentType);
+  }
+}
+
+async function clearPhotosIndexedDB() {
+  try {
+    const db = await getPhotoDb();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(PHOTO_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(PHOTO_STORE_NAME);
+      const req = store.clear();
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => resolve(false);
+    });
+  } catch (_) {
+    return false;
+  }
+}
+
+function isStudentPhotoRequest(url, request) {
+  if (request.method !== 'GET') return false;
+
+  const pathname = url.pathname;
+  const hostname = url.hostname;
+
+  // 1. Endpoints do backend de fotos de estudantes e proxy do Google Drive
+  if (pathname.startsWith('/api/photos/') || pathname.startsWith('/api/drive-photo/')) {
+    return true;
+  }
+
+  // 2. Google Drive Thumbnails e visualização direta de fotos
+  if (
+    hostname.includes('drive.google.com') &&
+    (pathname.includes('/thumbnail') || pathname.includes('/uc'))
+  ) {
+    return true;
+  }
+
+  // 3. Google User Content (lh3.googleusercontent.com/d/...)
+  if (hostname.includes('googleusercontent.com') && pathname.includes('/d/')) {
+    return true;
+  }
+
+  // 4. Imagens com parâmetros ou caminhos explícitos de identificação estudantil
+  if (
+    request.destination === 'image' &&
+    (pathname.includes('/student-photos/') ||
+      pathname.includes('/fotos-estudantes/') ||
+      url.searchParams.has('studentPhoto'))
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function createOfflineAvatarSvgResponse() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+    <rect width="100" height="100" fill="#f1f5f9"/>
+    <circle cx="50" cy="38" r="20" fill="#cbd5e1"/>
+    <path d="M18 90c0-17.673 14.327-32 32-32s32 14.327 32 32z" fill="#cbd5e1"/>
+  </svg>`;
+  return new Response(svg, {
+    status: 200,
+    statusText: 'OK',
+    headers: {
+      'Content-Type': 'image/svg+xml; charset=utf-8',
+      'X-Cache-Fallback': 'Offline-Avatar-SVG',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
+/**
+ * Estratégia de Cache para Fotos de Estudantes:
+ * 1. Cache-First inteligente via IndexedDB (resposta em <5ms a partir de Blob binário)
+ * 2. Revalidação assíncrona em segundo plano quando online (Stale-While-Revalidate)
+ * 3. Fallback gracioso offline com avatar SVG neutro caso a imagem nunca tenha sido baixada
+ */
+async function handlePhotoRequest(event, req, url) {
+  // Tenta recuperar do IndexedDB
+  try {
+    const cached = await findCachedPhoto(url);
+    if (cached && cached.blob) {
+      // Revalida em segundo plano se houver conexão ativa
+      if (typeof self.navigator !== 'undefined' && self.navigator.onLine !== false) {
+        fetch(req)
+          .then(async (netRes) => {
+            if (netRes && (netRes.status === 200 || netRes.type === 'opaque')) {
+              try {
+                const clone = netRes.clone();
+                const ct = clone.headers.get('content-type') || cached.contentType;
+                const blob = await clone.blob();
+                if (blob && blob.size > 0) {
+                  await storePhotoBlobInAllKeys(url, blob, ct);
+                }
+              } catch (_) {}
+            }
+          })
+          .catch(() => {});
+      }
+
+      return new Response(cached.blob, {
+        status: 200,
+        statusText: 'OK',
+        headers: {
+          'Content-Type': cached.contentType || 'image/jpeg',
+          'X-Cache-Provider': 'IndexedDB-BlobStore',
+          'X-Cache-Hit': 'true',
+          'Cache-Control': 'public, max-age=604800, stale-while-revalidate=86400',
+        },
+      });
+    }
+  } catch (err) {
+    console.warn('Aviso: falha na leitura do IndexedDB de fotos:', err);
+  }
+
+  // Se não estiver no IndexedDB, busca na rede e persiste
+  try {
+    const networkRes = await fetch(req);
+    if (networkRes && (networkRes.status === 200 || networkRes.type === 'opaque')) {
+      try {
+        const clone = networkRes.clone();
+        const contentType = clone.headers.get('content-type') || 'image/jpeg';
+        const blob = await clone.blob();
+        if (blob && blob.size > 0) {
+          storePhotoBlobInAllKeys(url, blob, contentType).catch(() => {});
+        }
+      } catch (_) {
+        // Respostas opacas podem impedir clonagem de blob em alguns navegadores
+      }
+    }
+    return networkRes;
+  } catch (netErr) {
+    // Modo Offline: tenta recuperação de emergência no IDB antes do fallback SVG
+    try {
+      const fallbackCached = await findCachedPhoto(url);
+      if (fallbackCached && fallbackCached.blob) {
+        return new Response(fallbackCached.blob, {
+          status: 200,
+          statusText: 'OK',
+          headers: {
+            'Content-Type': fallbackCached.contentType || 'image/jpeg',
+            'X-Cache-Provider': 'IndexedDB-BlobStore',
+            'X-Cache-Offline': 'true',
+          },
+        });
+      }
+    } catch (_) {}
+
+    return createOfflineAvatarSvgResponse();
+  }
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -46,10 +328,11 @@ self.addEventListener('activate', (event) => {
 });
 
 /**
- * Estratégia de Cache Offline:
- * - Requisições para API (/api/), Firebase, Google Docs/Sheets e autenticação vão direto para a rede (sem cache)
+ * Estratégia de Roteamento de Requisições:
+ * - Fotos de estudantes (/api/photos/, /api/drive-photo/, thumbnails): IndexedDB Blob Cache
+ * - Demais APIs dinâmicas (/api/), Firebase, Google APIs: Rede direta (sem cache)
  * - Navegações HTML: Network First com fallback para index.html em cache
- * - Assets estáticos (JS, CSS, imagens locais, fontes): Stale-While-Revalidate / Cache First
+ * - Assets estáticos (JS, CSS, imagens de UI, fontes): Stale-While-Revalidate
  */
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -59,7 +342,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  // Ignora APIs, WebSocket, extensões de navegador e serviços externos em nuvem
+  // 1. Interceptação prioritária de Fotos de Estudantes via IndexedDB
+  if (isStudentPhotoRequest(url, req)) {
+    event.respondWith(handlePhotoRequest(event, req, url));
+    return;
+  }
+
+  // 2. Ignora APIs dinâmicas, WebSocket, extensões de navegador e autenticação
   if (
     url.pathname.startsWith('/api/') ||
     url.hostname.includes('firestore.googleapis.com') ||
@@ -71,7 +360,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Requisições de navegação (páginas HTML)
+  // 3. Requisições de navegação (páginas HTML)
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
@@ -98,7 +387,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets estáticos da mesma origem (JS, CSS, imagens, fontes)
+  // 4. Assets estáticos da mesma origem (JS, CSS, imagens, fontes)
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.match(req).then((cachedRes) => {
@@ -226,6 +515,26 @@ self.addEventListener('push', (event) => {
 self.addEventListener('message', (event) => {
   const msg = event.data;
   if (!msg || typeof msg !== 'object') return;
+
+  if (msg.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
+  // Limpa o cache IndexedDB de fotos quando o administrador solicita reset de fotos
+  if (msg.type === 'CLEAR_STUDENT_PHOTOS_CACHE') {
+    event.waitUntil(clearPhotosIndexedDB());
+    return;
+  }
+
+  // Permite que o cliente armazene diretamente um Blob de foto no IndexedDB
+  if (msg.type === 'CACHE_STUDENT_PHOTO_BLOB' && msg.url && msg.blob) {
+    try {
+      const parsedUrl = new URL(msg.url, self.location.origin);
+      event.waitUntil(storePhotoBlobInAllKeys(parsedUrl, msg.blob, msg.contentType));
+    } catch (_) {}
+    return;
+  }
 
   if (msg.type === 'SHOW_PUSH_NOTIFICATION' && msg.notification) {
     const { title, body, tag, targetScreen, targetClassId, category, urgency } = msg.notification;

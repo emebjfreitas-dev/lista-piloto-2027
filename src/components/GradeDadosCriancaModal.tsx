@@ -26,6 +26,8 @@ import {
   getStoredClasses,
 } from '../services/db';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { findStudentSiblings } from '../utils/siblingDetection';
+import { StudentSiblingsCard } from './StudentSiblingsCard';
 
 interface GradeDadosCriancaModalProps {
   isOpen: boolean;
@@ -494,77 +496,17 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     }, 2500);
   };
 
+  // Cruzamento automático de dados de filiação (Mãe, Pai ou Ambos) em toda a escola
   const detectedSiblings = React.useMemo(() => {
     if (!draft) return [];
-    const cleanStr = (s?: string) =>
-      (s || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/^(mae|pai|responsavel(?:\s*\d*)?|filiacao\s*\d*)\s*[:\-\u2013]?\s*/i, '')
-        .replace(/\((mae|pai|responsavel|av[oa]|ti[oa])\)/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toUpperCase();
-
-    const isUsableName = (name: string) =>
-      name.length >= 6 &&
-      !['NAO INFORMADO', 'NAO CONSTA', 'SEM DECLARACAO', 'DESCONHECIDO'].includes(name);
-
-    const myMother = cleanStr(draft.filiacao1);
-    const myFather = cleanStr(draft.filiacao2);
-
-    const validMyMother = isUsableName(myMother) ? myMother : '';
-    const validMyFather = isUsableName(myFather) ? myFather : '';
-
-    if (!validMyMother && !validMyFather) return [];
-
-    const allClasses = getStoredClasses();
-    const siblingMap = new Map<string, { student: Student; className: string; relation: string }>();
-
-    for (const cls of allClasses) {
-      for (const st of cls.students || []) {
-        if (st.id === draft.id) continue;
-        const stMother = cleanStr(st.filiacao1);
-        const stFather = cleanStr(st.filiacao2);
-
-        const sameMother = Boolean(
-          validMyMother &&
-            isUsableName(stMother) &&
-            (validMyMother === stMother ||
-              validMyMother.includes(stMother) ||
-              stMother.includes(validMyMother))
-        );
-        const sameFather = Boolean(
-          validMyFather &&
-            isUsableName(stFather) &&
-            (validMyFather === stFather ||
-              validMyFather.includes(stFather) ||
-              stFather.includes(validMyFather))
-        );
-
-        if (sameMother || sameFather) {
-          let relation = 'Mesma Família';
-          if (sameMother && sameFather) relation = 'Mesma Mãe e Mesmo Pai';
-          else if (sameMother) relation = 'Mesma Mãe';
-          else if (sameFather) relation = 'Mesmo Pai';
-
-          siblingMap.set(st.id, {
-            student: st,
-            className: cls.name,
-            relation,
-          });
-        }
-      }
-    }
-
-    return Array.from(siblingMap.values());
+    return findStudentSiblings(draft);
   }, [draft]);
 
   const effectiveIrmaosText = React.useMemo(() => {
     const manual = (draft?.irmaos || '').trim();
     if (detectedSiblings.length === 0) return manual;
     const autoText = detectedSiblings
-      .map((s) => `${s.student.name} [${s.className} · ${s.relation}]`)
+      .map((s) => `${s.student.name} [Turma ${s.className} · ${s.relationLabel}]`)
       .join(' | ');
     if (!manual || manual === '—') return autoText;
     const manualUpper = manual.toUpperCase();
@@ -573,7 +515,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     );
     if (missingAuto.length === 0) return manual;
     return `${manual} | ${missingAuto
-      .map((s) => `${s.student.name} [${s.className} · ${s.relation}]`)
+      .map((s) => `${s.student.name} [Turma ${s.className} · ${s.relationLabel}]`)
       .join(' | ')}`;
   }, [draft?.irmaos, detectedSiblings]);
 
@@ -1247,36 +1189,13 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   })()}
                 </div>
 
-                {/* Irmãos Detectados na Escola (mediante nome da mãe, pai ou de ambos) */}
+                {/* Irmãos Detectados na Escola (Cruzamento de Mãe, Pai ou Ambos) */}
                 {detectedSiblings.length > 0 && (
                   <div className="pt-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 mb-1.5 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[15px]">family_restroom</span>
-                      <span>Irmãos Identificados na Escola ({detectedSiblings.length})</span>
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {detectedSiblings.map((sib, idx) => (
-                        <button
-                          key={`sib-${idx}`}
-                          type="button"
-                          onClick={() => onSelectStudent?.(sib.student)}
-                          disabled={!onSelectStudent}
-                          className={`px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-950 text-xs font-semibold flex items-center gap-2 shadow-2xs text-left transition-all duration-150 ease-out ${
-                            onSelectStudent
-                              ? 'hover:bg-emerald-100 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
-                              : 'cursor-default'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[15px] text-emerald-700 shrink-0">child_care</span>
-                          <div className="min-w-0">
-                            <span className="block truncate">{sib.student.name}</span>
-                            <span className="text-[10px] text-emerald-800 font-medium block">
-                              Turma {sib.className} · {sib.relation}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    <StudentSiblingsCard
+                      siblings={detectedSiblings}
+                      onSelectSibling={(sibSt) => onSelectStudent?.(sibSt)}
+                    />
                   </div>
                 )}
 

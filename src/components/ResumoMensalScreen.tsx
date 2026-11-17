@@ -9,6 +9,8 @@ import {
 import { StudentAvatar } from './StudentAvatar';
 import { StudentDataExpansionPanel } from './StudentDataExpansionPanel';
 import { AttendanceDailyHeatmap } from './AttendanceDailyHeatmap';
+import { FamiliasMultiplosAlunosView } from './FamiliasMultiplosAlunosView';
+import { groupSchoolFamiliesByGuardians } from '../utils/siblingDetection';
 
 export interface ResumoMensalScreenProps {
   currentClass: ClassGroup;
@@ -135,6 +137,14 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   const [alertFilterMode, setAlertFilterMode] = useState<
     'all_alerts' | 'below_mec' | 'consecutive' | 'no_certificate' | 'all'
   >('all_alerts');
+
+  // Alternador de visualização do painel executivo
+  const [activeView, setActiveView] = useState<'analytics' | 'familias'>('analytics');
+
+  const multiStudentFamiliesCount = useMemo(
+    () => groupSchoolFamiliesByGuardians(allClasses).length,
+    [allClasses]
+  );
 
   // Expansão visual detalhada de estudantes (sem sair da tela)
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
@@ -450,6 +460,57 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
         </div>
       </section>
 
+      {/* SELETOR DE VISUALIZAÇÃO: PAINEL ANALÍTICO VS FAMÍLIAS COM MÚLTIPLOS ALUNOS */}
+      <div
+        role="tablist"
+        aria-label="Visualizações do Resumo Mensal"
+        className="bg-white rounded-2xl p-1.5 shadow-xs border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-1.5"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'analytics'}
+          onClick={() => setActiveView('analytics')}
+          className={`min-h-[42px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+            activeView === 'analytics'
+              ? 'bg-slate-900 text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">analytics</span>
+          <span>Painel Analítico &amp; Busca Ativa</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'familias'}
+          onClick={() => setActiveView('familias')}
+          className={`min-h-[42px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+            activeView === 'familias'
+              ? 'bg-[#0b3b8c] text-white shadow-2xs'
+              : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">family_restroom</span>
+          <span>
+            Famílias com Múltiplos Alunos ({multiStudentFamiliesCount})
+          </span>
+        </button>
+      </div>
+
+      {activeView === 'familias' ? (
+        <FamiliasMultiplosAlunosView
+          allClasses={allClasses}
+          onOpenStudentGrid={(student) => onOpenStudentGrid?.(student)}
+          onSelectClass={(cls) => {
+            onSelectClass(cls);
+            setScopeFilter(cls.id);
+            setActiveView('analytics');
+          }}
+        />
+      ) : (
+        <>
       {/* BARRA DE SLICERS (POWER BI - MINIMALISTA E SÓBRIA) */}
       <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm space-y-3 min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-2 pb-2 text-xs font-bold text-slate-800">
@@ -1402,6 +1463,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
           )}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 };

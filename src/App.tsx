@@ -1824,6 +1824,18 @@ export default function App() {
               setAssignedClassId(cls.id);
               setSelectedClass(cls);
             }}
+            onOpenStudentGrid={(student, targetCls) => {
+              const matchedClass =
+                targetCls ||
+                classes.find((c) => c.students.some((s) => s.id === student.id)) ||
+                selectedClass;
+              setGridModalData({
+                student,
+                classId: matchedClass.id,
+                className: matchedClass.name,
+                diasLetivosMes: matchedClass.classesHeld || 20,
+              });
+            }}
             onUpdateStudent={(classId, updatedStudent) => {
               handleSaveSingleStudent(classId, updatedStudent);
             }}
@@ -1866,17 +1878,23 @@ export default function App() {
                 window.scrollTo(0, 0);
               }}
               onOpenReportPrint={() => setIsReportPrintModalOpen(true)}
-              onOpenStudentPdf={(student) =>
-                setPdfModalData({ student, className: selectedClass.name })
-              }
-              onOpenStudentGrid={(student) =>
+              onOpenStudentPdf={(student) => {
+                const matchedClass =
+                  classes.find((c) => c.students.some((s) => s.id === student.id)) ||
+                  selectedClass;
+                setPdfModalData({ student, className: matchedClass.name });
+              }}
+              onOpenStudentGrid={(student) => {
+                const matchedClass =
+                  classes.find((c) => c.students.some((s) => s.id === student.id)) ||
+                  selectedClass;
                 setGridModalData({
                   student,
-                  classId: selectedClass.id,
-                  className: selectedClass.name,
-                  diasLetivosMes: selectedClass.classesHeld || 20,
-                })
-              }
+                  classId: matchedClass.id,
+                  className: matchedClass.name,
+                  diasLetivosMes: matchedClass.classesHeld || 20,
+                });
+              }}
               onBack={handleBack}
             />
           ) : (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ClassGroup, Student } from '../types';
 import { OFFICIAL_OCTOBER_DAYS, SCHOOL_NAME } from '../data/mockData';
 import {
@@ -7,6 +7,8 @@ import {
 } from '../utils/attendanceRules';
 import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
+import { findStudentSiblings } from '../utils/siblingDetection';
+import { StudentSiblingsCard } from './StudentSiblingsCard';
 
 interface StudentDataExpansionPanelProps {
   student: Student;
@@ -58,6 +60,9 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
     'filiacao2',
     student.notes
   );
+
+  // Cruzamento automático de dados para identificar irmãos na escola (Mãe, Pai ou Ambos)
+  const detectedSiblings = useMemo(() => findStudentSiblings(student), [student]);
 
   const isCompliant = metrics.frequenciaPercent >= effectiveMinPresence;
   const unexcusedAbsences = Math.max(0, metrics.faltas - metrics.atestados);
@@ -346,6 +351,14 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
         </div>
       )}
 
+      {/* Irmãos Identificados na Escola (Aparece Imediatamente ao Clicar no Estudante) */}
+      {detectedSiblings.length > 0 && (
+        <StudentSiblingsCard
+          siblings={detectedSiblings}
+          onOpenSiblingFicha={onOpenStudentGrid}
+        />
+      )}
+
       {/* Abas Rápidas */}
       <div className="bg-white rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-2xs">
         <div
@@ -381,6 +394,11 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
           >
             <span className="material-symbols-outlined text-[15px] shrink-0">family_restroom</span>
             <span>Família</span>
+            {detectedSiblings.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-extrabold tabular-nums">
+                {detectedSiblings.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -504,6 +522,14 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 </p>
               )}
             </div>
+            {detectedSiblings.length > 0 && (
+              <div className="md:col-span-2 pt-1">
+                <StudentSiblingsCard
+                  siblings={detectedSiblings}
+                  onOpenSiblingFicha={onOpenStudentGrid}
+                />
+              </div>
+            )}
           </div>
         )}
 

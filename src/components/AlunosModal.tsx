@@ -7,6 +7,8 @@ import {
 } from '../utils/genderDictionary';
 import { getSavedPhotosDriveFolderInfo, OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { findStudentSiblings } from '../utils/siblingDetection';
+import { StudentSiblingsCard } from './StudentSiblingsCard';
 
 interface AlunosModalProps {
   isOpen: boolean;
@@ -50,6 +52,12 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
   const selectedStudent =
     students.find((s) => s.id === selectedStudentId) || filtered[0] || students[0] || null;
   const savedDriveFolder = getSavedPhotosDriveFolderInfo();
+
+  // Cruzamento automático de irmãos por Mãe, Pai ou Ambos
+  const detectedSiblings = useMemo(() => {
+    if (!selectedStudent) return [];
+    return findStudentSiblings(selectedStudent);
+  }, [selectedStudent]);
 
   return (
     <div
@@ -300,6 +308,22 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                       );
                     })()}
                   </div>
+
+                  {detectedSiblings.length > 0 && (
+                    <div className="min-[400px]:col-span-2 min-w-0">
+                      <StudentSiblingsCard
+                        siblings={detectedSiblings}
+                        compact
+                        onSelectSibling={(sibSt) => {
+                          if (students.some((s) => s.id === sibSt.id)) {
+                            setSelectedStudentId(sibSt.id);
+                          } else if (onOpenStudentGrid) {
+                            onOpenStudentGrid(sibSt);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <div className="min-[400px]:col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf] min-w-0">
                     <span className="text-xs font-semibold text-[#647073] uppercase block">

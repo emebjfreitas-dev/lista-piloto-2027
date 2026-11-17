@@ -4316,6 +4316,13 @@ export const clearAllStudentPhotosViaApi = async (): Promise<{ ok: boolean; clea
   }));
   saveStoredClasses(cleared, true);
 
+  // Notifica o Service Worker para limpar o IndexedDB de blobs de fotos
+  if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+    try {
+      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_STUDENT_PHOTOS_CACHE' });
+    } catch (_) {}
+  }
+
   if (isBackendApiAvailable()) {
     try {
       const res = await fetch('/api/photos/clear-all', {

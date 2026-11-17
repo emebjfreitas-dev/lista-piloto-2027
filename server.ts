@@ -2746,21 +2746,28 @@ async function startServer() {
       server: { middlewareMode: true, hmr: false, ws: false, watch: null },
       appType: 'spa',
     });
-    app.get('/@vite/client', async (_req, res, next) => {
-      try {
-        const transformed = await vite.transformRequest('/@vite/client');
-        if (transformed?.code) {
-          const safeCode = transformed.code.replace(
-            'transport.connect(createHMRHandler(handleMessage));',
-            '// HMR WebSocket disabled'
-          );
-          res.setHeader('Content-Type', 'application/javascript');
-          res.setHeader('Cache-Control', 'no-store');
-          res.send(safeCode);
-          return;
+    app.use(async (req, res, next) => {
+      if (req.path.endsWith('/@vite/client')) {
+        try {
+          const transformed = await vite.transformRequest('/@vite/client');
+          if (transformed?.code) {
+            const safeCode = transformed.code
+              .replace(
+                'transport.connect(createHMRHandler(handleMessage));',
+                '// HMR WebSocket disabled'
+              )
+              .replace(
+                /new WebSocket\([^)]*\)/g,
+                '({ addEventListener(){}, removeEventListener(){}, close(){}, send(){}, readyState: 3, OPEN: 1, CLOSED: 3 })'
+              );
+            res.setHeader('Content-Type', 'application/javascript');
+            res.setHeader('Cache-Control', 'no-store');
+            res.send(safeCode);
+            return;
+          }
+        } catch {
+          // Fallback to standard Vite middleware
         }
-      } catch {
-        // Fallback to standard Vite middleware
       }
       next();
     });

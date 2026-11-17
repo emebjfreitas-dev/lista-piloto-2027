@@ -30,8 +30,11 @@ import {
   Send,
   Trash2,
   UserCheck,
+  Users,
   X,
 } from 'lucide-react';
+import { FamiliasMultiplosAlunosModal } from './FamiliasMultiplosAlunosView';
+import { groupSchoolFamiliesByGuardians } from '../utils/siblingDetection';
 
 interface FaltasConsecutivasScreenProps {
   classGroup: ClassGroup;
@@ -41,6 +44,7 @@ interface FaltasConsecutivasScreenProps {
   userName?: string;
   userEmail?: string;
   onSelectClass?: (cls: ClassGroup) => void;
+  onOpenStudentGrid?: (student: Student, classGroup?: ClassGroup) => void;
   onUpdateStudent: (classId: string, updatedStudent: Student) => void;
   onBack?: () => void;
 }
@@ -229,6 +233,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   teacherRoleType,
   userName,
   onSelectClass,
+  onOpenStudentGrid,
   onUpdateStudent,
   onBack,
 }) => {
@@ -250,6 +255,17 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedStudentKey, setExpandedStudentKey] = useState<string | null>(null);
+  const [isFamiliesModalOpen, setIsFamiliesModalOpen] = useState(false);
+
+  const familyScopeClasses = useMemo(
+    () => (availableClasses.length > 0 ? availableClasses : [classGroup]),
+    [availableClasses, classGroup]
+  );
+
+  const multiStudentFamiliesCount = useMemo(
+    () => groupSchoolFamiliesByGuardians(familyScopeClasses).length,
+    [familyScopeClasses]
+  );
 
   // Estado para solicitações da PEB I
   const [draftSelectedDaysByStudent, setDraftSelectedDaysByStudent] = useState<
@@ -822,56 +838,68 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             </p>
           </div>
 
-          {/* Escopo de turmas: Admin/Outros podem alternar; PEB I vê exclusivamente sua turma */}
-          {!isPeb1 && availableClasses.length > 1 && onSelectClass ? (
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setViewAllClassesMode(true)}
-                  className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                    viewAllClassesMode
-                      ? 'bg-white text-slate-950 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-950'
-                  }`}
-                >
-                  Todas ({availableClasses.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewAllClassesMode(false)}
-                  className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                    !viewAllClassesMode
-                      ? 'bg-white text-slate-950 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-950'
-                  }`}
-                >
-                  Por Turma
-                </button>
-              </div>
+          {/* Escopo de turmas + Botão do Modal de Famílias com Múltiplos Alunos */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsFamiliesModalOpen(true)}
+              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-950 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+              title="Visualizar automaticamente todos os estudantes que compartilham os mesmos responsáveis"
+            >
+              <Users className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>Famílias / Irmãos ({multiStudentFamiliesCount})</span>
+            </button>
 
-              {!viewAllClassesMode && (
-                <select
-                  value={classGroup.id}
-                  onChange={(e) => {
-                    const target = availableClasses.find((c) => c.id === e.target.value);
-                    if (target) onSelectClass(target);
-                  }}
-                  className="h-9 px-3 rounded-xl bg-slate-100 text-slate-950 text-xs font-semibold cursor-pointer focus:outline-none"
-                >
-                  {availableClasses.map((cls) => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name} · {cls.shift.replace('Turno ', '')}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          ) : (
-            <div className="text-xs font-semibold text-slate-700 shrink-0 pt-1">
-              Turma {classGroup.name} · {classGroup.shift.replace('Turno ', '')}
-            </div>
-          )}
+            {!isPeb1 && availableClasses.length > 1 && onSelectClass ? (
+              <>
+                <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setViewAllClassesMode(true)}
+                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      viewAllClassesMode
+                        ? 'bg-white text-slate-950 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-950'
+                    }`}
+                  >
+                    Todas ({availableClasses.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewAllClassesMode(false)}
+                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                      !viewAllClassesMode
+                        ? 'bg-white text-slate-950 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-950'
+                    }`}
+                  >
+                    Por Turma
+                  </button>
+                </div>
+
+                {!viewAllClassesMode && (
+                  <select
+                    value={classGroup.id}
+                    onChange={(e) => {
+                      const target = availableClasses.find((c) => c.id === e.target.value);
+                      if (target) onSelectClass(target);
+                    }}
+                    className="h-9 px-3 rounded-xl bg-slate-100 text-slate-950 text-xs font-semibold cursor-pointer focus:outline-none"
+                  >
+                    {availableClasses.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name} · {cls.shift.replace('Turno ', '')}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </>
+            ) : (
+              <div className="text-xs font-semibold text-slate-700 pt-1">
+                Turma {classGroup.name} · {classGroup.shift.replace('Turno ', '')}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Barra de Filtros / Indicadores Clicáveis (Zero Cards Aninhados Pesados) */}
@@ -1988,6 +2016,22 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
           </div>
         </div>
       )}
+
+      {/* Modal de Busca Ativa: Famílias com Múltiplos Alunos na Escola */}
+      <FamiliasMultiplosAlunosModal
+        isOpen={isFamiliesModalOpen}
+        onClose={() => setIsFamiliesModalOpen(false)}
+        allClasses={familyScopeClasses}
+        onOpenStudentGrid={onOpenStudentGrid}
+        onSelectClass={
+          onSelectClass
+            ? (cls) => {
+                setViewAllClassesMode(false);
+                onSelectClass(cls);
+              }
+            : undefined
+        }
+      />
     </div>
   );
 };

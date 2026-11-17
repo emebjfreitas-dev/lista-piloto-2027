@@ -3,6 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      // Suprime conexões WebSocket de Vite HMR no ambiente do AI Studio Build onde HMR está desabilitado
+      if (typeof window !== 'undefined' && window.WebSocket) {
+        const _OrigWS = window.WebSocket;
+        window.WebSocket = function (url, protocols) {
+          if (
+            typeof url === 'string' &&
+            (url.includes('vite-hmr') || url.includes('vite-ping') || protocols === 'vite-hmr' || protocols === 'vite-ping')
+          ) {
+            return {
+              url,
+              readyState: 3,
+              OPEN: 1,
+              CLOSED: 3,
+              CLOSING: 2,
+              CONNECTING: 0,
+              addEventListener() {},
+              removeEventListener() {},
+              close() {},
+              send() {},
+            };
+          }
+          return new _OrigWS(url, protocols);
+        };
+        window.WebSocket.prototype = _OrigWS.prototype;
+        window.WebSocket.CONNECTING = 0;
+        window.WebSocket.OPEN = 1;
+        window.WebSocket.CLOSING = 2;
+        window.WebSocket.CLOSED = 3;
+      }
+    </script>
     <title>Lista Piloto Candelário 2027 — EMEB Prof. Joaquim Candelário de Freitas</title>
     <meta
       name="description"
