@@ -49,8 +49,10 @@ export async function registerPushServiceWorker(): Promise<ServiceWorkerRegistra
   }
 
   if (!swRegistrationPromise) {
+    const baseUrl =
+      (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL || '/';
     swRegistrationPromise = navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
+      .register(`${baseUrl}sw.js`, { scope: baseUrl })
       .then((reg) => reg)
       .catch(() => null);
   }
@@ -190,10 +192,12 @@ export async function triggerPushNotification(
         });
         return fullNotice;
       } else if (reg && 'showNotification' in reg) {
+        const baseUrl =
+          (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL || '/';
         await reg.showNotification(fullNotice.title, {
           body: fullNotice.body,
-          icon: '/brasao-jundiai.svg',
-          badge: '/brasao-jundiai.svg',
+          icon: `${baseUrl}pwa-192x192.png`,
+          badge: `${baseUrl}favicon-32x32.png`,
           tag: fullNotice.id,
           data: {
             targetScreen: fullNotice.targetScreen,
@@ -202,9 +206,11 @@ export async function triggerPushNotification(
         });
         return fullNotice;
       } else {
+        const baseUrl =
+          (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL || '/';
         new Notification(fullNotice.title, {
           body: fullNotice.body,
-          icon: '/brasao-jundiai.svg',
+          icon: `${baseUrl}pwa-192x192.png`,
           tag: fullNotice.id,
         });
       }

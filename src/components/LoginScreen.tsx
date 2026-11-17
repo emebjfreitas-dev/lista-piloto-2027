@@ -1,36 +1,118 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthorizedUser, SchoolNotice } from '../types';
 import { APP_LOGO_URL, APP_LOGO_FALLBACK_URL, INITIAL_AUTHORIZED_USERS } from '../data/mockData';
-import { findAuthorizedUserByEmail, saveStoredAuthorizedUsers } from '../services/db';
-import { googleSignIn } from '../services/googleSheetsApi';
+import {
+  findAuthorizedUserByEmail,
+  isValidInstitutionalEmail,
+  saveStoredAuthorizedUsers,
+} from '../services/db';
+import {
+  googleSignIn,
+  checkGoogleRedirectResult,
+  logoutGoogle,
+} from '../services/googleSheetsApi';
+import { fetchStateFromFirestoreCloud } from '../services/firebaseSync';
 import { Loader2 } from 'lucide-react';
-
-const ADMIN_OFFICIAL_EMAIL = 'emebjfreitas@jundiai.sp.gov.br';
 
 interface LoginScreenProps {
   authorizedUsers: AuthorizedUser[];
   schoolNotices?: SchoolNotice[];
+  externalError?: string | null;
   onLoginSuccess: (authorizedUser: AuthorizedUser) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   authorizedUsers,
+  externalError,
   onLoginSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(externalError || null);
 
-  // Conclui login com perfil autorizado
-  const completeLogin = (user: AuthorizedUser) => {
+  useEffect(() => {
+    if (externalError) {
+      setErrorMsg(externalError);
+    }
+  }, [externalError]);
+
+  // Valida o e-mail retornado pelo Google contra o domínio institucional e a lista de usuários autorizados
+  const verifyAndAuthorizeEmail = async (rawEmail: string) => {
+    const authEmail = rawEmail.trim().toLowerCase();
+
+    if (!isValidInstitutionalEmail(authEmail)) {
+      await logoutGoogle().catch(() => {});
+      setErrorMsg(
+        `Acesso negado: o e-mail "${authEmail}" não pertence ao domínio institucional autorizado (@educacao.jundiai.sp.gov.br). Apenas usuários autorizados podem acessar.`
+      );
+      return;
+    }
+
+    // Busca também a lista atualizada de usuários autorizados na nuvem (Firestore) caso a Equipe Administrativa tenha adicionado novos docentes
+    let cloudUsers: AuthorizedUser[] = [];
     try {
-      localStorage.setItem('emeb_candelario_last_remembered_email_2027', user.email);
+      const cloudState = await fetchStateFromFirestoreCloud();
+      if (cloudState?.authorizedUsers && cloudState.authorizedUsers.length > 0) {
+        cloudUsers = cloudState.authorizedUsers;
+        saveStoredAuthorizedUsers(cloudUsers);
+      }
+    } catch {
+      // prossegue com a lista local e oficial se offline
+    }
+
+    const mergedUsers =
+      cloudUsers.length > 0
+        ? [...cloudUsers, ...authorizedUsers, ...INITIAL_AUTHORIZED_USERS]
+        : [...authorizedUsers, ...INITIAL_AUTHORIZED_USERS];
+
+    const found = findAuthorizedUserByEmail(authEmail, mergedUsers);
+
+    if (!found) {
+      await logoutGoogle().catch(() => {});
+      setErrorMsg(
+        `Acesso restrito: a conta "${authEmail}" não está cadastrada na lista de usuários autorizados da EMEB Prof. Joaquim Candelário de Freitas. Solicite à Equipe Administrativa a liberação do seu acesso.`
+      );
+      return;
+    }
+
+    if (!found.active) {
+      await logoutGoogle().catch(() => {});
+      setErrorMsg(
+        `Acesso bloqueado: o usuário "${authEmail}" está com o acesso desativado no sistema. Contate a Equipe Administrativa.`
+      );
+      return;
+    }
+
+    try {
+      localStorage.setItem('emeb_candelario_last_remembered_email_2027', found.email);
     } catch {
       // safe fallback
     }
-    onLoginSuccess(user);
+    onLoginSuccess(found);
   };
 
-  // Login exclusivo via Google Workspace
+  // Verifica retorno de autenticação via redirect (quando pop-up é bloqueado pelo navegador)
+  useEffect(() => {
+    let mounted = true;
+    const handleRedirectCheck = async () => {
+      try {
+        const res = await checkGoogleRedirectResult();
+        if (mounted && res?.user?.email) {
+          setLoading(true);
+          await verifyAndAuthorizeEmail(res.user.email);
+        }
+      } catch {
+        // ignore redirect absence
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    void handleRedirectCheck();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Login exclusivo e obrigatório via Google Workspace
   const handleGoogleWorkspaceLogin = async () => {
     setErrorMsg(null);
     setLoading(true);
@@ -38,68 +120,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       const res = await googleSignIn();
       if (!res?.user?.email) {
-        // Fallback suave para iframe/ambiente restrito com conta oficial do administrador
-        const fallbackAdmin =
-          authorizedUsers.find((u) => u.email.trim().toLowerCase() === ADMIN_OFFICIAL_EMAIL) ||
-          INITIAL_AUTHORIZED_USERS.find((u) => u.email.trim().toLowerCase() === ADMIN_OFFICIAL_EMAIL) || {
-            id: 'usr-admin-emeb',
-            name: 'Equipe Administrativa',
-            email: ADMIN_OFFICIAL_EMAIL,
-            role: 'admin' as const,
-            teacherRoleType: 'admin' as const,
-            assignedClassName: 'Todas as 40 Turmas (Acesso Geral)',
-            assignedClassId: 'all',
-            active: true,
-            createdAt: '01/02/2027',
-          };
-        completeLogin(fallbackAdmin);
+        // Quando signInWithRedirect é acionado, o navegador redirecionará
         return;
       }
-
-      const authEmail = res.user.email.trim().toLowerCase();
-      const allUsers = [...INITIAL_AUTHORIZED_USERS, ...authorizedUsers];
-      const found = findAuthorizedUserByEmail(authEmail, allUsers);
-
-      if (found) {
-        completeLogin(found);
+      await verifyAndAuthorizeEmail(res.user.email);
+    } catch (error: any) {
+      const code = String(error?.code || '');
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        setErrorMsg(
+          'Autenticação cancelada. Clique no botão acima e faça login com sua conta Google institucional autorizada.'
+        );
+      } else if (code === 'auth/popup-blocked') {
+        setErrorMsg(
+          'O pop-up de login do Google foi bloqueado pelo navegador. Libere os pop-ups para este site e tente novamente.'
+        );
+      } else if (code === 'auth/unauthorized-domain') {
+        setErrorMsg(
+          'Este domínio ainda não está autorizado no Firebase Authentication. Contate a Equipe Administrativa.'
+        );
       } else {
-        const isAdmin =
-          authEmail === ADMIN_OFFICIAL_EMAIL ||
-          authEmail.includes('admin') ||
-          authEmail.includes('emebjfreitas');
-
-        const newUser: AuthorizedUser = {
-          id: `usr-${Date.now()}`,
-          name: res.user.displayName || authEmail.split('@')[0].toUpperCase(),
-          email: authEmail,
-          role: isAdmin ? 'admin' : 'usuario',
-          teacherRoleType: isAdmin ? 'admin' : 'peb1',
-          assignedClassName: isAdmin ? 'Todas as 40 Turmas' : 'Turma Regente',
-          assignedClassId: 'all',
-          active: true,
-          createdAt: new Date().toLocaleDateString('pt-BR'),
-        };
-
-        const updated = [...authorizedUsers, newUser];
-        saveStoredAuthorizedUsers(updated);
-        completeLogin(newUser);
+        setErrorMsg(
+          'Não foi possível concluir o login com o Google. Verifique se está usando uma conta @educacao.jundiai.sp.gov.br autorizada e tente novamente.'
+        );
       }
-    } catch {
-      // Se popup for bloqueado pelo navegador ou falhar em ambiente embutido, conecta com a credencial oficial da escola
-      const fallbackAdmin =
-        authorizedUsers.find((u) => u.email.trim().toLowerCase() === ADMIN_OFFICIAL_EMAIL) ||
-        INITIAL_AUTHORIZED_USERS.find((u) => u.email.trim().toLowerCase() === ADMIN_OFFICIAL_EMAIL) || {
-          id: 'usr-admin-emeb',
-          name: 'Equipe Administrativa',
-          email: ADMIN_OFFICIAL_EMAIL,
-          role: 'admin' as const,
-          teacherRoleType: 'admin' as const,
-          assignedClassName: 'Todas as 40 Turmas (Acesso Geral)',
-          assignedClassId: 'all',
-          active: true,
-          createdAt: '01/02/2027',
-        };
-      completeLogin(fallbackAdmin);
     } finally {
       setLoading(false);
     }

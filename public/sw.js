@@ -1,11 +1,12 @@
 /* Service Worker Oficial — EMEB Joaquim Candelário de Freitas (PWA Offline & Web Push) */
-const SW_VERSION = 'candelario-pwa-v5';
-const CACHE_NAME = 'candelario-offline-v5';
+const SW_VERSION = 'candelario-pwa-v6';
+const CACHE_NAME = 'candelario-offline-v6';
 
 const PRECACHE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './brasao-jundiai.svg',
   './favicon.ico',
   './favicon.svg',
   './favicon-32x32.png',
@@ -365,7 +366,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((networkRes) => {
-          if (networkRes && networkRes.status === 200) {
+          const ct = (networkRes.headers.get('content-type') || '').toLowerCase();
+          if (networkRes && networkRes.status === 200 && ct.includes('text/html')) {
             const clone = networkRes.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
           }
@@ -376,7 +378,6 @@ self.addEventListener('fetch', (event) => {
           if (cached) return cached;
           const fallback =
             (await caches.match('./index.html')) ||
-            (await caches.match('/index.html')) ||
             (await caches.match('./'));
           if (fallback) return fallback;
           return new Response('Modo Offline — Lista Piloto Candelário 2027', {
@@ -389,13 +390,22 @@ self.addEventListener('fetch', (event) => {
 
   // 4. Assets estáticos da mesma origem (JS, CSS, imagens, fontes)
   if (url.origin === self.location.origin) {
+    const isImmutableStaticAsset =
+      url.pathname.includes('/assets/') ||
+      /\.(svg|png|ico|woff2?|jpg|jpeg|webp)$/i.test(url.pathname);
+
     event.respondWith(
       caches.match(req).then((cachedRes) => {
         if (cachedRes) {
-          // Revalida em segundo plano (Stale-While-Revalidate)
+          // Bundles Vite com hash e ícones/brasão: Cache-First puro (zero requisições extras que geram Rate Limit no GitHub Pages)
+          if (isImmutableStaticAsset) {
+            return cachedRes;
+          }
+          // Demais arquivos (ex: manifest.json): Stale-While-Revalidate
           fetch(req)
             .then((networkRes) => {
-              if (networkRes && networkRes.status === 200) {
+              const ct = (networkRes.headers.get('content-type') || '').toLowerCase();
+              if (networkRes && networkRes.status === 200 && !ct.includes('text/html')) {
                 caches.open(CACHE_NAME).then((cache) => cache.put(req, networkRes));
               }
             })
@@ -405,14 +415,15 @@ self.addEventListener('fetch', (event) => {
 
         return fetch(req)
           .then((networkRes) => {
-            if (networkRes && networkRes.status === 200) {
+            const ct = (networkRes.headers.get('content-type') || '').toLowerCase();
+            // Nunca armazena páginas HTML 404/Rate-Limit como se fossem JS, CSS ou imagens
+            if (networkRes && networkRes.status === 200 && !ct.includes('text/html')) {
               const clone = networkRes.clone();
               caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
             }
             return networkRes;
           })
           .catch(() => {
-            // Fallback para imagens
             if (req.destination === 'image') {
               return caches.match('./pwa-192x192.png');
             }
@@ -429,15 +440,15 @@ self.addEventListener('push', (event) => {
   let payload = {
     title: 'EMEB Candelário · Fechamento de Frequência',
     body: 'A janela de lançamento mensal de presença está próxima do encerramento.',
-    icon: '/pwa-192x192.png',
-    badge: '/favicon-32x32.png',
+    icon: './pwa-192x192.png',
+    badge: './favicon-32x32.png',
     tag: 'candelario-fcm-' + Date.now(),
     requireInteraction: false,
     data: {
       targetScreen: 'frequencia_mensal',
       category: 'prazo',
       urgency: 'warning',
-      url: '/?screen=frequencia_mensal',
+      url: './?screen=frequencia_mensal',
     },
   };
 
@@ -458,7 +469,7 @@ self.addEventListener('push', (event) => {
       const computedUrl =
         fcmLink ||
         dataObj.url ||
-        `/?screen=${encodeURIComponent(targetScreen)}${
+        `./?screen=${encodeURIComponent(targetScreen)}${
           targetClassId ? `&classId=${encodeURIComponent(targetClassId)}` : ''
         }`;
 
@@ -496,8 +507,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: payload.body,
-    icon: payload.icon || '/pwa-192x192.png',
-    badge: payload.badge || '/favicon-32x32.png',
+    icon: payload.icon || './pwa-192x192.png',
+    badge: payload.badge || './favicon-32x32.png',
     tag: payload.tag,
     renotify: true,
     requireInteraction: Boolean(payload.requireInteraction),
@@ -546,8 +557,8 @@ self.addEventListener('message', (event) => {
         : '';
     const options = {
       body: body || '',
-      icon: '/pwa-192x192.png',
-      badge: '/favicon-32x32.png',
+      icon: './pwa-192x192.png',
+      badge: './favicon-32x32.png',
       tag: tag || 'candelario-notice-' + Date.now(),
       renotify: true,
       requireInteraction: isUrgent,
@@ -561,7 +572,7 @@ self.addEventListener('message', (event) => {
         targetClassId: targetClassId || undefined,
         category: category || 'aviso',
         urgency: urgency || 'info',
-        url: `/?screen=${encodeURIComponent(resolvedScreen)}${classQuery}`,
+        url: `./?screen=${encodeURIComponent(resolvedScreen)}${classQuery}`,
       },
     };
 
@@ -621,7 +632,7 @@ self.addEventListener('notificationclick', (event) => {
             ? `&classId=${encodeURIComponent(targetClassId)}`
             : '';
           const targetUrl =
-            notifData.url || `/?screen=${encodeURIComponent(targetScreen)}${classQuery}`;
+            notifData.url || `./?screen=${encodeURIComponent(targetScreen)}${classQuery}`;
           return self.clients.openWindow(targetUrl);
         }
       })

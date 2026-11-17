@@ -4,51 +4,14 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(<App />);
 
-// Verificação de disponibilidade dos ícones antes da inicialização do Service Worker
-const verifyIconAssets = async (base: string): Promise<boolean> => {
-  const iconsToCheck = [
-    `${base}favicon.svg`,
-    `${base}pwa-192x192.png`,
-    `${base}apple-touch-icon.png`,
-  ];
-
-  try {
-    const results = await Promise.all(
-      iconsToCheck.map(async (url) => {
-        try {
-          const res = await fetch(url, { method: 'HEAD' });
-          if (res.ok) return true;
-          if (res.status === 405) {
-            const getRes = await fetch(url);
-            return getRes.ok;
-          }
-          return false;
-        } catch {
-          return false;
-        }
-      })
-    );
-    return results.every(Boolean);
-  } catch {
-    return false;
-  }
-};
-
-// Registro do Service Worker para PWA e suporte offline com validação prévia de ícones
+// Registro do Service Worker para PWA e suporte offline com escopo compatível com GitHub Pages
 if ('serviceWorker' in navigator && typeof window !== 'undefined') {
-  window.addEventListener('load', async () => {
+  window.addEventListener('load', () => {
     const baseUrl = import.meta.env.BASE_URL || '/';
     const swUrl = `${baseUrl}sw.js`;
 
-    // Verifica se os arquivos de ícones essenciais estão acessíveis antes de registrar
-    const iconsReady = await verifyIconAssets(baseUrl);
-    if (!iconsReady) {
-      console.warn('Registro do Service Worker ignorado: arquivos de ícones (favicon.svg, etc.) não estão acessíveis.');
-      return;
-    }
-
     navigator.serviceWorker
-      .register(swUrl)
+      .register(swUrl, { scope: baseUrl, updateViaCache: 'imports' })
       .then((registration) => {
         registration.onupdatefound = () => {
           const installingWorker = registration.installing;

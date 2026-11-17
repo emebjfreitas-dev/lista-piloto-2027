@@ -205,12 +205,7 @@ export const getActiveUserAuthHeaders = (): Record<string, string> => {
   } catch {
     // fallback
   }
-  const lastEmail = localStorage.getItem('emeb_candelario_last_remembered_email_2027');
-  const email = (lastEmail || 'emebjfreitas@jundiai.sp.gov.br').trim().toLowerCase();
-  const isAdmin = email.startsWith('emebjfreitas@') || email.includes('admin');
   return {
-    'x-user-email': email,
-    'x-user-role': isAdmin ? 'admin' : 'usuario',
     'x-clean-epoch': CLEAN_DB_RESET_EPOCH_ID,
   };
 };

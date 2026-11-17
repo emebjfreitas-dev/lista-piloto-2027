@@ -30,6 +30,8 @@ import {
   getLocalClassesUpdatedAtMs,
   addSecurityAuditLog,
   getStoredLgpdConfig,
+  isValidInstitutionalEmail,
+  findAuthorizedUserByEmail,
 } from './services/db';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
@@ -38,6 +40,8 @@ import {
   SyncStatusSnapshot,
   saveClassesToFirestoreCloud,
   ensureFirestoreCleanEpoch,
+  validateFirestoreConnectionOnBoot,
+  fetchStateFromFirestoreCloud,
 } from './services/firebaseSync';
 import {
   SyncQueueManager,
@@ -47,7 +51,7 @@ import {
   probeBackendAvailability,
   isBackendApiAvailable,
 } from './services/apiEnvironment';
-import { OFFICIAL_OCTOBER_DAYS, INITIAL_CLASSES } from './data/mockData';
+import { OFFICIAL_OCTOBER_DAYS, INITIAL_CLASSES, INITIAL_AUTHORIZED_USERS } from './data/mockData';
 import { getClassAttendanceMetrics, haveClassesChanged } from './utils/attendanceRules';
 import {
   getAccessToken,
@@ -142,7 +146,7 @@ export default function App() {
     : undefined;
 
   const effectiveInitialRole: UserRole =
-    matchedInitialUser?.role || initialSavedSession?.role || 'admin';
+    matchedInitialUser?.role || initialSavedSession?.role || 'usuario';
   const effectiveInitialAssignedClassIds: string[] =
     matchedInitialUser &&
     matchedInitialUser.role === 'usuario' &&
@@ -170,9 +174,13 @@ export default function App() {
   const requestedScreenParam = initialUrlParams?.get('screen') as ScreenType | null;
   const requestedClassIdParam = initialUrlParams?.get('classId');
 
+  const [isAuthVerified, setIsAuthVerified] = useState<boolean>(false);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(() => Boolean(initialSavedSession));
+  const [authLoginError, setAuthLoginError] = useState<string | null>(null);
+
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
     if (!initialSavedSession || (matchedInitialUser && !matchedInitialUser.active)) {
-      return effectiveInitialIsStrictAdmin ? 'home' : 'home';
+      return 'login';
     }
     if (requestedScreenParam && requestedScreenParam !== 'login') {
       const canAccessRequested =
@@ -252,18 +260,19 @@ export default function App() {
     initialSavedSession?.sessionId || null
   );
   const [currentUserEmail, setCurrentUserEmail] = useState<string>(
-    initialSavedSession?.email || 'emebjfreitas@jundiai.sp.gov.br'
+    initialSavedSession?.email || ''
   );
   const [currentUserName, setCurrentUserName] = useState<string>(() => {
-    const email = initialSavedSession?.email || 'emebjfreitas@jundiai.sp.gov.br';
+    const email = initialSavedSession?.email || '';
+    if (!email) return '';
     if (email.trim().toLowerCase().startsWith('emebjfreitas')) {
       return 'Equipe Administrativa';
     }
-    return matchedInitialUser?.name || initialSavedSession?.name || 'Equipe Administrativa';
+    return matchedInitialUser?.name || initialSavedSession?.name || '';
   });
 
   useEffect(() => {
-    if (currentUserEmail.trim().toLowerCase().startsWith('emebjfreitas')) {
+    if (currentUserEmail && currentUserEmail.trim().toLowerCase().startsWith('emebjfreitas')) {
       setCurrentUserName('Equipe Administrativa');
     }
   }, [currentUserEmail]);
@@ -359,9 +368,9 @@ export default function App() {
     void probeBackendAvailability();
   }, []);
 
-  // Automatically save current screen, selected class, and user session while logged in so page refresh returns to the exact coherent page
+  // Automatically save current screen, selected class, and user session only while genuinely authenticated
   useEffect(() => {
-    if (currentScreen === 'login') return;
+    if (currentScreen === 'login' || !isAuthVerified || !currentUserEmail) return;
     try {
       const payload: PersistedAuthSession = {
         email: currentUserEmail,
@@ -379,6 +388,7 @@ export default function App() {
       // ignore storage write error
     }
   }, [
+    isAuthVerified,
     currentScreen,
     currentUserEmail,
     currentUserName,
@@ -582,9 +592,113 @@ export default function App() {
     }
   }, [authorizedUsers, currentUserEmail, simulatedTeacherEmail, classes]);
 
-  // Real-time Cross-Browser & Cross-Device Synchronization via Backend API (/api/school-state) every 1.8 seconds!
-  // Synchronizes Classes, Attendance, Photos, Scanned PDF links, Cloud Folder/Sheet Links, Users, and Launch Window instantaneously.
+  // Mandatory Firebase Auth session verification on boot and auth state changes
   useEffect(() => {
+    let active = true;
+    const clearUnauthenticatedSession = (errorMessage?: string) => {
+      try {
+        localStorage.removeItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+        localStorage.removeItem('emeb_candelario_last_remembered_email_2027');
+      } catch {
+        // ignore storage cleanup error
+      }
+      if (!active) return;
+      setIsAuthVerified(false);
+      setIsAuthChecking(false);
+      setSimulatedTeacherEmail(null);
+      setCurrentUserEmail('');
+      setCurrentUserName('');
+      setUserRole('usuario');
+      if (errorMessage) setAuthLoginError(errorMessage);
+      setCurrentScreen('login');
+    };
+
+    try {
+      const auth = getAuth();
+      const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
+        if (!active) return;
+        if (!fbUser || !fbUser.email) {
+          clearUnauthenticatedSession();
+          return;
+        }
+
+        const authEmail = fbUser.email.trim().toLowerCase();
+        if (!isValidInstitutionalEmail(authEmail)) {
+          await logoutGoogle().catch(() => {});
+          clearUnauthenticatedSession(
+            `Acesso negado: o e-mail "${authEmail}" não pertence ao domínio institucional autorizado (@educacao.jundiai.sp.gov.br).`
+          );
+          return;
+        }
+
+        let currentPool = [...getStoredAuthorizedUsers(), ...INITIAL_AUTHORIZED_USERS];
+        let matched = findAuthorizedUserByEmail(authEmail, currentPool);
+
+        if (!matched) {
+          try {
+            const cloudState = await fetchStateFromFirestoreCloud();
+            if (cloudState?.authorizedUsers && cloudState.authorizedUsers.length > 0) {
+              saveStoredAuthorizedUsers(cloudState.authorizedUsers);
+              setAuthorizedUsers(cloudState.authorizedUsers);
+              currentPool = [...cloudState.authorizedUsers, ...INITIAL_AUTHORIZED_USERS];
+              matched = findAuthorizedUserByEmail(authEmail, currentPool);
+            }
+          } catch {
+            // fallback to local list
+          }
+        }
+
+        if (!active) return;
+
+        if (!matched || !matched.active) {
+          await logoutGoogle().catch(() => {});
+          clearUnauthenticatedSession(
+            !matched
+              ? `Acesso restrito: a conta "${authEmail}" não está cadastrada como usuária autorizada pela Equipe Administrativa.`
+              : `Acesso bloqueado: o usuário "${authEmail}" está desativado no sistema.`
+          );
+          return;
+        }
+
+        setAuthLoginError(null);
+        setCurrentUserEmail(matched.email);
+        setCurrentUserName(matched.name);
+        setUserRole(matched.role);
+        if (matched.role === 'usuario') {
+          const nextIds =
+            matched.assignedClassIds && matched.assignedClassIds.length > 0
+              ? matched.assignedClassIds.filter((id) => id !== 'all')
+              : matched.assignedClassId && matched.assignedClassId !== 'all'
+              ? [matched.assignedClassId]
+              : [classes[0]?.id || 'g04a'];
+          const primaryId = nextIds[0] || classes[0]?.id || 'g04a';
+          setAssignedClassIds(nextIds);
+          setAssignedClassId(primaryId);
+        }
+        setIsAuthVerified(true);
+        setIsAuthChecking(false);
+
+        setCurrentScreen((prev) => (prev === 'login' ? 'home' : prev));
+
+        void validateFirestoreConnectionOnBoot();
+        void ensureFirestoreCleanEpoch(INITIAL_CLASSES);
+      });
+
+      return () => {
+        active = false;
+        unsubAuth();
+      };
+    } catch {
+      clearUnauthenticatedSession();
+      return () => {
+        active = false;
+      };
+    }
+  }, []);
+
+  // Real-time Cross-Browser & Cross-Device Synchronization (ONLY when genuinely authenticated)
+  useEffect(() => {
+    if (!isAuthVerified || currentScreen === 'login') return;
     let active = true;
 
     const syncFromBackendServer = async () => {
@@ -634,25 +748,11 @@ export default function App() {
     let pollId: number | null = null;
     if (isBackendApiAvailable()) {
       syncFromBackendServer();
-      // On Node/Express servers, poll occasionally (60s) when visible; Firestore onSnapshot already delivers real-time sync <200ms
       pollId = window.setInterval(() => {
         if (document.visibilityState === 'visible') {
           syncFromBackendServer();
         }
       }, 300000);
-    }
-
-    // Ensure Cloud Firestore transitions to the clean zero-data epoch on authenticated institutional sign-in
-    let unsubAuthEpoch: (() => void) | undefined;
-    try {
-      const auth = getAuth();
-      unsubAuthEpoch = onAuthStateChanged(auth, (fbUser) => {
-        if (fbUser && active) {
-          void ensureFirestoreCleanEpoch(INITIAL_CLASSES);
-        }
-      });
-    } catch {
-      // ignore auth listener setup errors when Firebase auth is unavailable
     }
 
     // Instant <200ms Real-Time Push via Cloud Firestore onSnapshot
@@ -677,6 +777,10 @@ export default function App() {
       },
       onMetaConfigUpdate: (cfg) => {
         if (!active) return;
+        if (Array.isArray(cfg.authorizedUsers) && cfg.authorizedUsers.length > 0) {
+          setAuthorizedUsers(cfg.authorizedUsers);
+          saveStoredAuthorizedUsers(cfg.authorizedUsers);
+        }
         if (cfg.attendanceWindowConfig) {
           setAttendanceWindowConfig(cfg.attendanceWindowConfig);
           saveStoredAttendanceWindowConfig(cfg.attendanceWindowConfig);
@@ -695,10 +799,9 @@ export default function App() {
     return () => {
       active = false;
       if (pollId !== null) window.clearInterval(pollId);
-      if (unsubAuthEpoch) unsubAuthEpoch();
       unsubFirestore();
     };
-  }, []);
+  }, [isAuthVerified, currentScreen === 'login']);
 
   // Listen to localStorage changes from other browser tabs so when any tab updates classes, users, or links, all tabs update in 0ms!
   useEffect(() => {
@@ -1132,6 +1235,9 @@ export default function App() {
       description: `Login registrado — ${latestFromList.email}`,
     });
 
+    setAuthLoginError(null);
+    setIsAuthVerified(true);
+    setIsAuthChecking(false);
     setSimulatedTeacherEmail(null);
     setCurrentUserEmail(latestFromList.email);
     setCurrentUserName(latestFromList.name);
@@ -1155,7 +1261,7 @@ export default function App() {
 
   // Real-time session duration tracker (ticks every 5 seconds while logged in, even after F5 refresh!)
   useEffect(() => {
-    if (currentScreen === 'login') return;
+    if (!isAuthVerified || currentScreen === 'login' || !currentUserEmail) return;
 
     const trackedEmail = (simulatedTeacherEmail || currentUserEmail).trim().toLowerCase();
 
@@ -1315,6 +1421,7 @@ export default function App() {
   const handleLogout = async () => {
     try {
       localStorage.removeItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
+      localStorage.removeItem('emeb_candelario_last_remembered_email_2027');
     } catch {
       // ignore
     }
@@ -1362,6 +1469,11 @@ export default function App() {
     } catch {
       // ignore sign-out error
     }
+    setIsAuthVerified(false);
+    setSimulatedTeacherEmail(null);
+    setCurrentUserEmail('');
+    setCurrentUserName('');
+    setUserRole('usuario');
     setCurrentScreen('login');
     window.scrollTo(0, 0);
   };
@@ -1404,8 +1516,44 @@ export default function App() {
     }
   };
 
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-[100dvh] w-full bg-gradient-to-b from-[#071a3d] via-[#0b2a66] to-[#081d45] flex flex-col items-center justify-center p-6 text-white font-sans">
+        <div className="w-10 h-10 border-4 border-white/25 border-t-white rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold tracking-wide text-white/90">
+          Verificando sessão institucional...
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthVerified || currentScreen === 'login') {
+    return (
+      <div className="min-h-screen w-full overflow-x-hidden bg-[#071a3d] font-sans">
+        <LoginScreen
+          authorizedUsers={authorizedUsers}
+          schoolNotices={schoolNotices}
+          externalError={authLoginError}
+          onLoginSuccess={handleLoginSuccess}
+        />
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          gap={10}
+          visibleToasts={4}
+          offset={{ top: 16, right: 16 }}
+          mobileOffset={{ top: 12, left: 12, right: 12 }}
+          toastOptions={{
+            className: 'sonner-sf-toast',
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[#f5f5f7] text-[#1d1d1f] flex flex-col font-sans selection:bg-[#0071e3]/15 selection:text-[#0066cc]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#f5f5f7] text-[#1d1f1d] flex flex-col font-sans selection:bg-[#0071e3]/15 selection:text-[#0066cc]">
       {/* Top Minimalist Header */}
       <Header
         currentScreen={currentScreen}
@@ -1490,13 +1638,7 @@ export default function App() {
       />
 
       {/* Main Content Area: Responsive Proportions for Mobile, Tablet, Laptop & Full HD Desktop */}
-      <main
-        className={
-          currentScreen === 'login'
-            ? 'w-full min-h-screen p-0 m-0'
-            : 'flex-1 w-full min-w-0 max-w-[1600px] mx-auto px-3.5 sm:px-6 lg:px-8 pt-[76px] sm:pt-[84px] pb-28 lg:pb-14'
-        }
-      >
+      <main className="flex-1 w-full min-w-0 max-w-[1600px] mx-auto px-3.5 sm:px-6 lg:px-8 pt-[76px] sm:pt-[84px] pb-28 lg:pb-14">
         {/* Banner de Aviso de Menor Privilégio e Segurança LGPD */}
         {securityBlockNotice && (
           <div className="mb-5 w-full min-w-0 p-4 sm:p-5 rounded-2xl bg-amber-50 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 shadow-sm animate-gentle-fade">
@@ -1526,14 +1668,6 @@ export default function App() {
               Compreendi
             </button>
           </div>
-        )}
-
-        {currentScreen === 'login' && (
-          <LoginScreen
-            authorizedUsers={authorizedUsers}
-            schoolNotices={schoolNotices}
-            onLoginSuccess={handleLoginSuccess}
-          />
         )}
 
         {currentScreen === 'home' && (

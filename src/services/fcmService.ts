@@ -570,7 +570,11 @@ export async function unregisterDeviceFromFcm(userEmail: string): Promise<void> 
 
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     try {
-      const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+      const baseUrl =
+        (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL || '/';
+      const reg =
+        (await navigator.serviceWorker.getRegistration(`${baseUrl}sw.js`)) ||
+        (await navigator.serviceWorker.getRegistration());
       const existingSub = await reg?.pushManager?.getSubscription();
       if (existingSub) {
         await existingSub.unsubscribe();

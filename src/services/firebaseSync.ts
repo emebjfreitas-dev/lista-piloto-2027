@@ -79,8 +79,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   return errInfo;
 }
 
-// Validate connection to Firestore on boot per Firebase architecture best practices
-async function validateFirestoreConnectionOnBoot(): Promise<void> {
+// Validate connection to Firestore after authenticated institutional sign-in
+export async function validateFirestoreConnectionOnBoot(): Promise<void> {
   const testPath = 'school_meta_2027/state';
   try {
     await getDocFromServer(doc(firestoreDb, 'school_meta_2027', 'state'));
@@ -92,7 +92,6 @@ async function validateFirestoreConnectionOnBoot(): Promise<void> {
     }
   }
 }
-void validateFirestoreConnectionOnBoot();
 
 const OFFLINE_QUEUE_STORAGE_KEY = 'emeb_candelario_offline_sync_queue_2027_v1';
 
