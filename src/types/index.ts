@@ -346,6 +346,7 @@ export interface AuthorizedUser {
     | 'EDUCAÇÃO ESPECIAL (AEE)'
     | 'GESTÃO / ADMIN';
   active: boolean;
+  accessExpiresAt?: string; // Data limite YYYY-MM-DD (acesso revogado automaticamente após esta data)
   createdAt: string;
   updatedAtMs?: number;
   totalAccessCount?: number;

@@ -23,6 +23,10 @@ import {
   saveStoredLgpdConfig,
   exportSecurityAuditLogsCSV,
   RBAC_ROLE_DEFINITIONS,
+  getLocalTodayDateISO,
+  isUserAccessExpired,
+  isUserAccessEffectivelyActive,
+  formatAccessExpirationDateBR,
 } from '../services/db';
 import { SyncStatusSnapshot } from '../services/firebaseSync';
 import { StudentAvatar } from './StudentAvatar';
@@ -68,6 +72,7 @@ import {
   Send,
   Images,
   FileText,
+  CalendarClock,
 } from 'lucide-react';
 import {
   FcmBackendStatus,
@@ -296,9 +301,12 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   const [name, setName] = useState('');
   const [newAccessLevel, setNewAccessLevel] = useState<AccessLevelKey>('usuario');
   const [assignedClassId, setAssignedClassId] = useState<string>(classes[0]?.id || 'g04a');
+  const [newExpirationDate, setNewExpirationDate] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | AccessLevelKey>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'active' | 'blocked' | 'temporary' | 'expired'
+  >('all');
   const [userSortBy, setUserSortBy] = useState<'default' | 'name_asc' | 'email_asc' | 'access_desc'>('default');
   const [logSearchTerm, setLogSearchTerm] = useState('');
   const [onlyAccessedFilter, setOnlyAccessedFilter] = useState(false);
@@ -706,6 +714,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         ? `${targetClass.name} (${targetClass.shift.replace('Turno ', '')})`
         : 'GRUPO 04 A (Manhã)';
 
+    const cleanExp = newExpirationDate.trim();
+    const hasValidExp = /^\d{4}-\d{2}-\d{2}$/.test(cleanExp);
+    const isAlreadyExpired = hasValidExp && getLocalTodayDateISO() > cleanExp;
+
     const newUser: AuthorizedUser = {
       id: `usr-${Date.now()}`,
       email: fullEmail,
@@ -717,7 +729,8 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       assignedClassName,
       assignedClassIds: targetRole === 'usuario' ? [assignedClassId] : ['all'],
       assignedClassNames: [assignedClassName],
-      active: true,
+      active: !isAlreadyExpired,
+      ...(hasValidExp ? { accessExpiresAt: cleanExp } : {}),
       createdAt: new Date().toLocaleDateString('pt-BR'),
       updatedAtMs: Date.now(),
     };
@@ -725,10 +738,15 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     onSaveAuthorizedUsers([newUser, ...authorizedUsers]);
     setEmailPrefix('');
     setName('');
+    setNewExpirationDate('');
     setShowAddUserForm(false);
     triggerFeedback(
-      'success',
-      `Acesso ${ACCESS_LEVEL_META[newAccessLevel].badgeLabel} liberado para ${fullEmail}.`
+      isAlreadyExpired ? 'error' : 'success',
+      hasValidExp
+        ? isAlreadyExpired
+          ? `Conta ${fullEmail} cadastrada com data vencida (${formatAccessExpirationDateBR(cleanExp)}) — acesso revogado.`
+          : `Acesso ${ACCESS_LEVEL_META[newAccessLevel].badgeLabel} liberado para ${fullEmail} até ${formatAccessExpirationDateBR(cleanExp)}.`
+        : `Acesso ${ACCESS_LEVEL_META[newAccessLevel].badgeLabel} liberado para ${fullEmail}.`
     );
   };
 
@@ -955,6 +973,15 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     if (!canManage) return;
     const target = authorizedUsers.find((u) => u.id === userId);
     if (!target) return;
+    if (!target.active && isUserAccessExpired(target)) {
+      triggerFeedback(
+        'error',
+        `A validade de ${target.name} expirou após ${formatAccessExpirationDateBR(
+          target.accessExpiresAt
+        )}. Atualize ou remova a data de validade para reativar o acesso.`
+      );
+      return;
+    }
     if (target.active && resolveAccessLevel(target) === 'admin') {
       const activeAdmins = authorizedUsers.filter(
         (u) => u.active && resolveAccessLevel(u) === 'admin'
@@ -969,6 +996,81 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     );
     onSaveAuthorizedUsers(next);
     markUserSavedFlash([userId]);
+  };
+
+  const handleUpdateUserExpiration = (userId: string, rawDate: string) => {
+    if (!canManage) return;
+    const target = authorizedUsers.find((u) => u.id === userId);
+    if (!target) return;
+
+    const cleanDate = rawDate.trim();
+    if (cleanDate && !/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) return;
+
+    const isPastDate = Boolean(cleanDate) && getLocalTodayDateISO() > cleanDate;
+    if (isPastDate && resolveAccessLevel(target) === 'admin' && target.active) {
+      const activeAdmins = authorizedUsers.filter(
+        (u) => u.active && resolveAccessLevel(u) === 'admin'
+      );
+      if (activeAdmins.length <= 1) {
+        triggerFeedback(
+          'error',
+          'É obrigatório manter pelo menos 1 Administrador ativo com acesso válido.'
+        );
+        return;
+      }
+    }
+
+    const wasExpired = isUserAccessExpired(target);
+    const nowMs = Date.now();
+    const nextUsers: AuthorizedUser[] = authorizedUsers.map((u) => {
+      if (u.id !== userId) return u;
+      if (!cleanDate) {
+        const { accessExpiresAt: _removed, ...rest } = u;
+        return {
+          ...rest,
+          active: wasExpired ? true : u.active,
+          updatedAtMs: nowMs,
+        };
+      }
+      return {
+        ...u,
+        accessExpiresAt: cleanDate,
+        active: isPastDate ? false : wasExpired ? true : u.active,
+        updatedAtMs: nowMs,
+      };
+    });
+
+    onSaveAuthorizedUsers(nextUsers);
+    markUserSavedFlash([userId]);
+
+    const auditEntry = addSecurityAuditLog({
+      userEmail: currentUserEmail,
+      userName: 'Administrador Escolar',
+      userRole: 'admin',
+      eventType: 'ROLE_PERMISSION_CHANGED',
+      actionTitle: !cleanDate
+        ? 'Validade de acesso removida (acesso permanente)'
+        : isPastDate
+        ? 'Data de expiração vencida — acesso revogado'
+        : `Validade de acesso definida até ${formatAccessExpirationDateBR(cleanDate)}`,
+      details: `${target.name} (${target.email}) atualizado para ${
+        !cleanDate
+          ? 'acesso sem data de expiração'
+          : `validade até ${formatAccessExpirationDateBR(cleanDate)}`
+      }.`,
+      targetResource: target.email,
+      severity: isPastDate ? 'warning' : 'info',
+    });
+    setSecurityLogs((prev) => [auditEntry, ...prev]);
+
+    triggerFeedback(
+      isPastDate ? 'error' : 'success',
+      !cleanDate
+        ? `Validade removida: ${target.name} agora possui acesso permanente.`
+        : isPastDate
+        ? `Data ${formatAccessExpirationDateBR(cleanDate)} já vencida — acesso de ${target.name} revogado automaticamente.`
+        : `Validade de ${target.name} definida até ${formatAccessExpirationDateBR(cleanDate)}.`
+    );
   };
 
   const handleRemoveUser = (user: AuthorizedUser) => {
@@ -992,6 +1094,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       const existing = metricsByEmail.get(off.email.trim().toLowerCase());
       return {
         ...off,
+        ...(existing?.accessExpiresAt ? { accessExpiresAt: existing.accessExpiresAt } : {}),
         totalAccessCount: existing?.totalAccessCount || 0,
         totalDurationSeconds: existing?.totalDurationSeconds || 0,
         lastSessionDurationSeconds: existing?.lastSessionDurationSeconds || 0,
@@ -1044,12 +1147,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   );
 
   const activeUsersCount = useMemo(
-    () => authorizedUsers.filter((u) => u.active).length,
+    () => authorizedUsers.filter((u) => isUserAccessEffectivelyActive(u)).length,
     [authorizedUsers]
   );
 
   const blockedUsersCount = useMemo(
-    () => authorizedUsers.filter((u) => !u.active).length,
+    () => authorizedUsers.filter((u) => !isUserAccessEffectivelyActive(u)).length,
+    [authorizedUsers]
+  );
+
+  const temporaryUsersCount = useMemo(
+    () => authorizedUsers.filter((u) => Boolean(u.accessExpiresAt)).length,
+    [authorizedUsers]
+  );
+
+  const expiredUsersCount = useMemo(
+    () => authorizedUsers.filter((u) => isUserAccessExpired(u)).length,
     [authorizedUsers]
   );
 
@@ -1076,8 +1189,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     const matched = authorizedUsers.filter((u) => {
       const level = resolveAccessLevel(u, draftEdits[u.id]?.accessLevel);
       if (roleFilter !== 'all' && level !== roleFilter) return false;
-      if (statusFilter === 'active' && !u.active) return false;
-      if (statusFilter === 'blocked' && u.active) return false;
+      if (statusFilter === 'active' && !isUserAccessEffectivelyActive(u)) return false;
+      if (statusFilter === 'blocked' && isUserAccessEffectivelyActive(u)) return false;
+      if (statusFilter === 'temporary' && !u.accessExpiresAt) return false;
+      if (statusFilter === 'expired' && !isUserAccessExpired(u)) return false;
       if (onlyAccessedFilter && (u.totalAccessCount || 0) === 0) return false;
       if (queryTokens.length === 0) return true;
 
@@ -2624,13 +2739,15 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   <div
                     role="group"
                     aria-label="Filtrar por status de acesso"
-                    className="inline-flex items-center p-1 rounded-xl bg-[#f2f2f7] gap-1"
+                    className="inline-flex flex-wrap items-center p-1 rounded-xl bg-[#f2f2f7] gap-1"
                   >
                     {(
                       [
                         { id: 'all', label: `Todos (${authorizedUsers.length})` },
                         { id: 'active', label: `Liberados (${activeUsersCount})` },
                         { id: 'blocked', label: `Bloqueados (${blockedUsersCount})` },
+                        { id: 'temporary', label: `Temporários (${temporaryUsersCount})` },
+                        { id: 'expired', label: `Expirados (${expiredUsersCount})` },
                       ] as const
                     ).map((st) => (
                       <button
@@ -2642,8 +2759,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         }}
                         className={`min-h-[34px] px-2.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                           statusFilter === st.id
-                            ? st.id === 'blocked'
+                            ? st.id === 'blocked' || st.id === 'expired'
                               ? 'bg-[#991b1b] text-white shadow-2xs'
+                              : st.id === 'temporary'
+                              ? 'bg-[#b45309] text-white shadow-2xs'
                               : st.id === 'active'
                               ? 'bg-[#047857] text-white shadow-2xs'
                               : 'bg-white text-[#111827] shadow-2xs'
@@ -2861,42 +2980,77 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     </div>
                   </div>
 
-                  <div className="xl:col-span-2 space-y-1">
-                    <label className="block text-xs font-medium text-[#48484a]">
-                      Turma vinculada
-                    </label>
-                    {newAccessLevel === 'usuario' ? (
-                      <select
-                        value={assignedClassId}
-                        onChange={(e) => setAssignedClassId(e.target.value)}
-                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#eaf6ef] text-[#005035] text-xs font-semibold focus:outline-none cursor-pointer"
+                    <div className="xl:col-span-2 space-y-1">
+                      <label className="block text-xs font-medium text-[#48484a]">
+                        Turma vinculada
+                      </label>
+                      {newAccessLevel === 'usuario' ? (
+                        <select
+                          value={assignedClassId}
+                          onChange={(e) => setAssignedClassId(e.target.value)}
+                          className="w-full min-h-[42px] px-3 rounded-xl bg-[#eaf6ef] text-[#005035] text-xs font-semibold focus:outline-none cursor-pointer"
+                        >
+                          {classes.map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                              {cls.turmaAbrev || cls.name} — {cls.name} (
+                              {cls.shift.replace('Turno ', '')})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="min-h-[42px] px-3 rounded-xl bg-white text-[#48484a] text-xs flex items-center">
+                          {ACCESS_LEVEL_META[newAccessLevel].description}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="xl:col-span-1">
+                      <button
+                        type="submit"
+                        className="w-full min-h-[42px] px-3 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center justify-center gap-1 cursor-pointer"
                       >
-                        {classes.map((cls) => (
-                          <option key={cls.id} value={cls.id}>
-                            {cls.turmaAbrev || cls.name} — {cls.name} (
-                            {cls.shift.replace('Turno ', '')})
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="min-h-[42px] px-3 rounded-xl bg-white text-[#48484a] text-xs flex items-center">
-                        {ACCESS_LEVEL_META[newAccessLevel].description}
-                      </div>
-                    )}
+                        <Plus className="w-4 h-4" />
+                        <span>Salvar</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="xl:col-span-1">
-                    <button
-                      type="submit"
-                      className="w-full min-h-[42px] px-3 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center justify-center gap-1 cursor-pointer"
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
+                    <label
+                      htmlFor="new-user-expiration-date"
+                      className="text-xs font-medium text-[#48484a] inline-flex items-center gap-1.5 shrink-0"
                     >
-                      <Plus className="w-4 h-4" />
-                      <span>Salvar</span>
-                    </button>
+                      <CalendarClock className="w-3.5 h-3.5 text-[#6e6e73]" />
+                      <span>Data de expiração (opcional para temporários):</span>
+                    </label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        id="new-user-expiration-date"
+                        type="date"
+                        value={newExpirationDate}
+                        onChange={(e) => setNewExpirationDate(e.target.value)}
+                        className="min-h-[38px] px-3 rounded-xl bg-white text-xs font-medium text-[#111827] tabular-nums focus:outline-none"
+                      />
+                      {newExpirationDate && (
+                        <button
+                          type="button"
+                          onClick={() => setNewExpirationDate('')}
+                          className="min-h-[34px] px-2.5 rounded-lg bg-white text-xs font-semibold text-[#6e6e73] hover:text-[#111827] cursor-pointer"
+                        >
+                          Limpar data (Permanente)
+                        </button>
+                      )}
+                      <span className="text-xs text-[#6e6e73]">
+                        {newExpirationDate
+                          ? `Acesso será revogado automaticamente após ${formatAccessExpirationDateBR(
+                              newExpirationDate
+                            )}.`
+                          : 'Deixe em branco para acesso permanente.'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </form>
-            )}
+                </form>
+              )}
 
             {filteredUsers.length === 0 ? (
               <div className="p-8 rounded-2xl bg-[#f5f5f7] text-center space-y-2.5">
@@ -2929,12 +3083,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     const effectiveClassName =
                       draftEdits[u.id]?.assignedClassName || u.assignedClassName;
                     const wasRecentlySaved = Boolean(recentlySavedUserIds[u.id]);
+                    const isExpired = isUserAccessExpired(u);
+                    const isEffectivelyActive = isUserAccessEffectivelyActive(u);
 
                     return (
                       <article
                         key={u.id}
                         className={`rounded-2xl p-4 space-y-3 bg-[#f2f2f7] transition-opacity duration-150 min-w-0 break-words ${
-                          !u.active ? 'opacity-70' : ''
+                          !isEffectivelyActive ? 'opacity-75' : ''
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2 min-w-0">
@@ -2946,6 +3102,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                 {renderAccessLevelIcon(effectiveLevel)}
                                 <span>{levelMeta.badgeLabel}</span>
                               </span>
+                              {u.accessExpiresAt && (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold tabular-nums ${
+                                    isExpired
+                                      ? 'bg-[#fee2e2] text-[#991b1b]'
+                                      : 'bg-[#fef3c7] text-[#92400e]'
+                                  }`}
+                                >
+                                  <CalendarClock className="w-3 h-3 shrink-0" />
+                                  <span>
+                                    {isExpired
+                                      ? `Expirado (${formatAccessExpirationDateBR(u.accessExpiresAt)})`
+                                      : `Até ${formatAccessExpirationDateBR(u.accessExpiresAt)}`}
+                                  </span>
+                                </span>
+                              )}
                               {u.subjectName &&
                                 u.subjectName !== 'GESTÃO / ADMIN' &&
                                 u.subjectName !== 'REGENTE PEB I' &&
@@ -2965,11 +3137,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                           </div>
 
                           <ToggleSwitch
-                            checked={u.active}
+                            checked={isEffectivelyActive}
                             disabled={!canManage}
                             onChange={() => handleToggleActive(u.id)}
                             activeText="Ativo"
-                            inactiveText="Bloq."
+                            inactiveText={isExpired ? 'Expirado' : 'Bloq.'}
                             ariaLabel={`Alternar acesso de ${u.name}`}
                           />
                         </div>
@@ -3026,6 +3198,31 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                           )}
                         </div>
 
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-[#48484a] block">
+                            Validade de acesso (temporário)
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="date"
+                              value={u.accessExpiresAt || ''}
+                              disabled={!canManage}
+                              onChange={(e) => handleUpdateUserExpiration(u.id, e.target.value)}
+                              aria-label={`Data de expiração de ${u.name}`}
+                              className="flex-1 min-w-0 min-h-[38px] px-2.5 rounded-xl bg-white text-xs font-medium text-[#111827] tabular-nums focus:outline-none disabled:opacity-60"
+                            />
+                            {canManage && u.accessExpiresAt && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateUserExpiration(u.id, '')}
+                                className="min-h-[38px] px-2.5 rounded-xl bg-white text-xs font-semibold text-[#48484a] hover:text-[#111827] cursor-pointer shrink-0"
+                              >
+                                Permanente
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#48484a] tabular-nums">
                           <span>
                             {u.totalAccessCount || 0} acessos ·{' '}
@@ -3072,6 +3269,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         <th className="py-3 px-3">Educador(a) e Nível</th>
                         <th className="py-3 px-3">Alternar Nível de Acesso</th>
                         <th className="py-3 px-3">Turma(s) &amp; Vínculo</th>
+                        <th className="py-3 px-3">Validade</th>
                         <th className="py-3 px-3 text-center">Acessos</th>
                         <th className="py-3 px-3">Tempo de Uso</th>
                         <th className="py-3 px-3 text-right rounded-tr-xl">Ações</th>
@@ -3087,21 +3285,23 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         const effectiveClassName =
                           draftEdits[u.id]?.assignedClassName || u.assignedClassName;
                         const wasRecentlySaved = Boolean(recentlySavedUserIds[u.id]);
+                        const isExpired = isUserAccessExpired(u);
+                        const isEffectivelyActive = isUserAccessEffectivelyActive(u);
 
                         return (
                           <tr
                             key={u.id}
                             className={`odd:bg-[#f8f8fb] even:bg-white hover:bg-[#eef0f5] transition-colors duration-100 ${
-                              !u.active ? 'opacity-65' : ''
+                              !isEffectivelyActive ? 'opacity-70' : ''
                             }`}
                           >
                             <td className="py-3 px-3 align-middle whitespace-nowrap">
                               <ToggleSwitch
-                                checked={u.active}
+                                checked={isEffectivelyActive}
                                 disabled={!canManage}
                                 onChange={() => handleToggleActive(u.id)}
                                 activeText="Liberado"
-                                inactiveText="Bloqueado"
+                                inactiveText={isExpired ? 'Expirado' : 'Bloqueado'}
                                 ariaLabel={`Alternar acesso de ${u.name}`}
                               />
                             </td>
@@ -3186,6 +3386,55 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                   {effectiveClassName}
                                 </span>
                               )}
+                            </td>
+
+                            <td className="py-3 px-3 align-middle whitespace-nowrap">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="date"
+                                    value={u.accessExpiresAt || ''}
+                                    disabled={!canManage}
+                                    onChange={(e) =>
+                                      handleUpdateUserExpiration(u.id, e.target.value)
+                                    }
+                                    aria-label={`Validade de ${u.name}`}
+                                    className={`min-h-[32px] px-2 rounded-lg text-xs font-medium tabular-nums focus:outline-none ${
+                                      isExpired
+                                        ? 'bg-[#fee2e2] text-[#991b1b]'
+                                        : u.accessExpiresAt
+                                        ? 'bg-[#fef3c7] text-[#92400e]'
+                                        : 'bg-[#f2f2f7] text-[#48484a]'
+                                    }`}
+                                  />
+                                  {canManage && u.accessExpiresAt && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateUserExpiration(u.id, '')}
+                                      title="Remover validade (tornar acesso permanente)"
+                                      aria-label={`Remover data de expiração de ${u.name}`}
+                                      className="w-7 h-7 rounded-lg bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#48484a] hover:text-[#111827] flex items-center justify-center cursor-pointer"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                                <span
+                                  className={`text-[11px] font-medium block tabular-nums ${
+                                    isExpired
+                                      ? 'text-[#991b1b]'
+                                      : u.accessExpiresAt
+                                      ? 'text-[#92400e]'
+                                      : 'text-[#6e6e73]'
+                                  }`}
+                                >
+                                  {isExpired
+                                    ? `Expirado (${formatAccessExpirationDateBR(u.accessExpiresAt)})`
+                                    : u.accessExpiresAt
+                                    ? `Temporário até ${formatAccessExpirationDateBR(u.accessExpiresAt)}`
+                                    : 'Permanente'}
+                                </span>
+                              </div>
                             </td>
 
                             <td className="py-3 px-3 align-middle text-center tabular-nums">
@@ -4296,13 +4545,60 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   </span>
                 </div>
                 <ToggleSwitch
-                  checked={assignModalUser.active}
+                  checked={isUserAccessEffectivelyActive(assignModalUser)}
                   disabled={!canManage}
                   onChange={() => handleToggleActive(assignModalUser.id)}
                   activeText="Acesso Liberado"
-                  inactiveText="Bloqueado"
+                  inactiveText={isUserAccessExpired(assignModalUser) ? 'Expirado' : 'Bloqueado'}
                   ariaLabel={`Alternar acesso de ${assignModalUser.name}`}
                 />
+              </div>
+
+              {/* Validade / Expiração Automática para Temporários */}
+              <div className="p-3.5 rounded-2xl bg-[#f2f2f7] space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-[#374151] inline-flex items-center gap-1.5">
+                    <CalendarClock className="w-3.5 h-3.5 text-[#48484a]" />
+                    <span>Validade do Acesso (Temporários / Substitutos)</span>
+                  </span>
+                  {assignModalUser.accessExpiresAt && (
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-xs font-semibold tabular-nums ${
+                        isUserAccessExpired(assignModalUser)
+                          ? 'bg-[#fee2e2] text-[#991b1b]'
+                          : 'bg-[#fef3c7] text-[#92400e]'
+                      }`}
+                    >
+                      {isUserAccessExpired(assignModalUser)
+                        ? `Expirado (${formatAccessExpirationDateBR(assignModalUser.accessExpiresAt)})`
+                        : `Até ${formatAccessExpirationDateBR(assignModalUser.accessExpiresAt)}`}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    value={assignModalUser.accessExpiresAt || ''}
+                    disabled={!canManage}
+                    onChange={(e) =>
+                      handleUpdateUserExpiration(assignModalUser.id, e.target.value)
+                    }
+                    className="min-h-[38px] px-3 rounded-xl bg-white text-xs font-medium text-[#111827] tabular-nums focus:outline-none"
+                  />
+                  {canManage && assignModalUser.accessExpiresAt && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateUserExpiration(assignModalUser.id, '')}
+                      className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#e5e5ea] text-xs font-semibold text-[#111827] cursor-pointer"
+                    >
+                      Tornar Permanente
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-[#6e6e73]">
+                  O usuário mantém acesso até o fim da data selecionada; após essa data, o sistema revoga o acesso automaticamente.
+                </p>
               </div>
 
               {/* Presets de Função (Garante separação estrita ADMIN, PEB I, PEB II, AEE, Apoio) */}

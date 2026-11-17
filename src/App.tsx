@@ -33,6 +33,10 @@ import {
   getStoredLgpdConfig,
   isValidInstitutionalEmail,
   findAuthorizedUserByEmail,
+  isUserAccessExpired,
+  isUserAccessEffectivelyActive,
+  formatAccessExpirationDateBR,
+  syncExpiredAuthorizedUsers,
 } from './services/db';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
@@ -179,7 +183,10 @@ export default function App() {
   const [authLoginError, setAuthLoginError] = useState<string | null>(null);
 
   const [currentScreen, setCurrentScreen] = useState<ScreenType>(() => {
-    if (!initialSavedSession || (matchedInitialUser && !matchedInitialUser.active)) {
+    if (
+      !initialSavedSession ||
+      (matchedInitialUser && !isUserAccessEffectivelyActive(matchedInitialUser))
+    ) {
       return 'login';
     }
     if (requestedScreenParam && requestedScreenParam !== 'login') {
@@ -602,7 +609,7 @@ export default function App() {
       const sig = incomingUsers
         .map(
           (u) =>
-            `${u.id}:${u.email}:${u.role}:${u.teacherRoleType || ''}:${u.active}:${u.assignedClassId}:${(u.assignedClassIds || []).join(',')}:${u.totalAccessCount || 0}:${u.totalDurationSeconds || 0}`
+            `${u.id}:${u.email}:${u.role}:${u.teacherRoleType || ''}:${u.active}:${u.accessExpiresAt || ''}:${u.assignedClassId}:${(u.assignedClassIds || []).join(',')}:${u.totalAccessCount || 0}:${u.totalDurationSeconds || 0}`
         )
         .join('|');
       if (lastMetaSignatureRef.current.users === sig) return;
@@ -621,7 +628,14 @@ export default function App() {
       (u) => u.email.trim().toLowerCase() === lookupEmail
     );
     if (!matched) return;
-    if (!matched.active && !simulatedTeacherEmail) {
+    if ((!matched.active || isUserAccessExpired(matched)) && !simulatedTeacherEmail) {
+      if (isUserAccessExpired(matched)) {
+        setAuthLoginError(
+          `Acesso expirado: o prazo de utilização (${formatAccessExpirationDateBR(
+            matched.accessExpiresAt
+          )}) foi encerrado e seu acesso foi revogado automaticamente.`
+        );
+      }
       setCurrentScreen('login');
       return;
     }
@@ -664,6 +678,51 @@ export default function App() {
       }
     }
   }, [isAuthVerified, authorizedUsers, currentUserEmail, simulatedTeacherEmail, currentUserName]);
+
+  // Revogação automática de contas temporárias expiradas (executa ao carregar e a cada 60s quando logado como Administrador)
+  const lastAutoRevokeCheckSigRef = useRef<string>('');
+  useEffect(() => {
+    if (!isAuthVerified || userRole !== 'admin' || simulatedTeacherEmail) return;
+
+    const runExpirationRevocation = () => {
+      const currentList = authorizedUsersRef.current;
+      if (!Array.isArray(currentList) || currentList.length === 0) return;
+
+      const { updatedUsers, expiredUsers, changed } = syncExpiredAuthorizedUsers(currentList);
+      if (!changed) return;
+
+      const revokeSig = expiredUsers.map((u) => `${u.id}:${u.accessExpiresAt || ''}`).join('|');
+      if (lastAutoRevokeCheckSigRef.current === revokeSig) return;
+      lastAutoRevokeCheckSigRef.current = revokeSig;
+
+      expiredUsers.forEach((expUser) => {
+        addSecurityAuditLog({
+          userEmail: currentUserEmail || 'sistema@educacao.jundiai.sp.gov.br',
+          userName: 'Revogação Automática por Validade',
+          userRole: 'admin',
+          eventType: 'ROLE_PERMISSION_CHANGED',
+          actionTitle: 'Acesso temporário expirado e revogado',
+          details: `O acesso de ${expUser.name} (${expUser.email}) expirou após ${formatAccessExpirationDateBR(
+            expUser.accessExpiresAt
+          )} e foi desativado automaticamente.`,
+          targetResource: expUser.email,
+          severity: 'warning',
+        });
+      });
+
+      setAuthorizedUsers(updatedUsers);
+      saveStoredAuthorizedUsers(updatedUsers);
+      void pushAuthorizedUsersToServer(updatedUsers);
+      SyncQueueManager.enqueueUsersAccessWrite({
+        users: updatedUsers,
+        description: `Revogação automática de ${expiredUsers.length} acesso(s) temporário(s) expirado(s)`,
+      });
+    };
+
+    runExpirationRevocation();
+    const intervalId = window.setInterval(runExpirationRevocation, 60000);
+    return () => window.clearInterval(intervalId);
+  }, [isAuthVerified, userRole, simulatedTeacherEmail, authorizedUsers, currentUserEmail]);
 
   // Mandatory Firebase Auth session verification on boot and auth state changes
   useEffect(() => {
@@ -723,11 +782,15 @@ export default function App() {
 
         if (!active) return;
 
-        if (!matched || !matched.active) {
+        if (!matched || !isUserAccessEffectivelyActive(matched)) {
           await logoutGoogle().catch(() => {});
           clearUnauthenticatedSession(
             !matched
               ? `Acesso restrito: a conta "${authEmail}" não está cadastrada como usuária autorizada pela Equipe Administrativa.`
+              : isUserAccessExpired(matched)
+              ? `Acesso expirado: a conta temporária "${authEmail}" venceu após ${formatAccessExpirationDateBR(
+                  matched.accessExpiresAt
+                )} e foi revogada automaticamente.`
               : `Acesso bloqueado: o usuário "${authEmail}" está desativado no sistema.`
           );
           return;

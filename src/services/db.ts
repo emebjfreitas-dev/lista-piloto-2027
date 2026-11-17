@@ -495,7 +495,9 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
       cleanId = `${cleanId}-${cleanEmail.split('@')[0]}`;
     }
     seenIds.add(cleanId);
-    uniqueUsers.push({
+    const rawExpires = typeof u.accessExpiresAt === 'string' ? u.accessExpiresAt.trim() : '';
+    const cleanExpires = /^\d{4}-\d{2}-\d{2}$/.test(rawExpires) ? rawExpires : undefined;
+    const baseMerged: AuthorizedUser = {
       ...off,
       ...u,
       id: cleanId,
@@ -504,7 +506,13 @@ const classesOrUsersSanitize = (users: AuthorizedUser[]): AuthorizedUser[] => {
       firstName: u.firstName || off?.firstName,
       teacherRoleType: u.teacherRoleType || off?.teacherRoleType,
       subjectName: u.subjectName || off?.subjectName,
-    });
+    };
+    if (cleanExpires) {
+      baseMerged.accessExpiresAt = cleanExpires;
+    } else {
+      delete baseMerged.accessExpiresAt;
+    }
+    uniqueUsers.push(baseMerged);
   });
 
   return uniqueUsers.map((u) => {
@@ -1216,6 +1224,57 @@ export const findAuthorizedUserByEmail = (
   return list.find((u) => u.email.trim().toLowerCase() === normalized);
 };
 
+export const getLocalTodayDateISO = (referenceDate: Date = new Date()): string => {
+  const year = referenceDate.getFullYear();
+  const month = String(referenceDate.getMonth() + 1).padStart(2, '0');
+  const day = String(referenceDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const isUserAccessExpired = (
+  user: Pick<AuthorizedUser, 'accessExpiresAt'>,
+  referenceDate: Date = new Date()
+): boolean => {
+  const raw = typeof user.accessExpiresAt === 'string' ? user.accessExpiresAt.trim() : '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
+  return getLocalTodayDateISO(referenceDate) > raw;
+};
+
+export const isUserAccessEffectivelyActive = (
+  user: Pick<AuthorizedUser, 'active' | 'accessExpiresAt'>,
+  referenceDate: Date = new Date()
+): boolean => Boolean(user.active) && !isUserAccessExpired(user, referenceDate);
+
+export const formatAccessExpirationDateBR = (dateISO?: string): string => {
+  if (!dateISO || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO.trim())) return '';
+  const [y, m, d] = dateISO.trim().split('-');
+  return `${d}/${m}/${y}`;
+};
+
+export const syncExpiredAuthorizedUsers = (
+  users: AuthorizedUser[],
+  referenceDate: Date = new Date()
+): { updatedUsers: AuthorizedUser[]; expiredUsers: AuthorizedUser[]; changed: boolean } => {
+  const nowMs = Date.now();
+  const expiredUsers: AuthorizedUser[] = [];
+  const updatedUsers = users.map((u) => {
+    if (u.active && isUserAccessExpired(u, referenceDate)) {
+      expiredUsers.push(u);
+      return {
+        ...u,
+        active: false,
+        updatedAtMs: nowMs,
+      };
+    }
+    return u;
+  });
+  return {
+    updatedUsers,
+    expiredUsers,
+    changed: expiredUsers.length > 0,
+  };
+};
+
 /**
  * Exclusão lógica (soft delete) com retenção de histórico para tolerância zero à perda de dados
  */
@@ -1600,7 +1659,14 @@ export const exportOfficialMatrixToXLS = (
       u.assignedClassNames && u.assignedClassNames.length > 0
         ? u.assignedClassNames.join(' + ')
         : u.assignedClassName,
-    'STATUS': u.active ? 'ATIVO' : 'BLOQUEADO',
+    'STATUS': isUserAccessExpired(u)
+      ? 'EXPIRADO'
+      : u.active
+      ? 'ATIVO'
+      : 'BLOQUEADO',
+    'VALIDADE DO ACESSO': u.accessExpiresAt
+      ? formatAccessExpirationDateBR(u.accessExpiresAt)
+      : 'Permanente',
     'ACESSOS TOTAIS': u.totalAccessCount || 0,
     'TEMPO CONECTADO': formatDurationHuman(u.totalDurationSeconds || 0),
     'ÚLTIMO ACESSO': u.lastLoginAt || 'Ainda não acessou',
@@ -2081,7 +2147,14 @@ export const downloadSpreadsheetXLSX = (
         ? 'PROFESSOR PEB I (Acesso Limitado à Turma)'
         : 'PROFESSOR PEB II (Somente Visualização)',
     'TURMA VINCULADA': u.assignedClassName,
-    'STATUS DO ACESSO': u.active ? 'ATIVO / LIBERADO' : 'BLOQUEADO / SUSPENSO',
+    'STATUS DO ACESSO': isUserAccessExpired(u)
+      ? 'EXPIRADO (REVOGADO)'
+      : u.active
+      ? 'ATIVO / LIBERADO'
+      : 'BLOQUEADO / SUSPENSO',
+    'VALIDADE DO ACESSO': u.accessExpiresAt
+      ? formatAccessExpirationDateBR(u.accessExpiresAt)
+      : 'Permanente',
     'DATA DE CADASTRO': u.createdAt,
     'TOTAL DE ACESSOS': u.totalAccessCount || 0,
     'TEMPO TOTAL CONECTADO': formatDurationHuman(u.totalDurationSeconds),

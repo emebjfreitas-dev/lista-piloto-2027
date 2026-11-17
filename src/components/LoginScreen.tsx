@@ -5,6 +5,8 @@ import {
   findAuthorizedUserByEmail,
   isValidInstitutionalEmail,
   saveStoredAuthorizedUsers,
+  isUserAccessExpired,
+  formatAccessExpirationDateBR,
 } from '../services/db';
 import {
   googleSignIn,
@@ -70,6 +72,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       await logoutGoogle().catch(() => {});
       setErrorMsg(
         `Acesso restrito: a conta "${authEmail}" não está cadastrada na lista de usuários autorizados da EMEB Prof. Joaquim Candelário de Freitas. Solicite à Equipe Administrativa a liberação do seu acesso.`
+      );
+      return;
+    }
+
+    if (isUserAccessExpired(found)) {
+      await logoutGoogle().catch(() => {});
+      setErrorMsg(
+        `Acesso expirado: o acesso temporário de "${authEmail}" venceu após ${formatAccessExpirationDateBR(
+          found.accessExpiresAt
+        )} e foi revogado automaticamente. Contate a Equipe Administrativa.`
       );
       return;
     }
