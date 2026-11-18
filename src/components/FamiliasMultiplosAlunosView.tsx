@@ -525,11 +525,10 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                         key={m.student.id}
                         className="py-2.5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 min-w-0"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <StudentAvatar
                             student={m.student}
-                            size="sm"
-                            expandableOnClick={false}
+                            size="md"
                           />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 min-w-0">

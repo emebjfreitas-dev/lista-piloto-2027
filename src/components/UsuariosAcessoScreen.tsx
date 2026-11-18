@@ -2713,7 +2713,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   >
                     <div className="flex items-start justify-between gap-2 min-w-0">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <StudentAvatar name={spec.name} size="sm" />
+                        <StudentAvatar name={spec.name} size="xs" expandableOnClick={false} />
                         <div className="min-w-0 flex-1">
                           <span className="inline-block px-2 py-0.5 rounded-md bg-[#fef3c7] text-[#92400e] text-xs font-semibold uppercase">
                             {spec.subjectName || 'ESPECIALISTA PEB II'}

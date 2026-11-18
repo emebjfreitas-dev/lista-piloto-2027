@@ -418,10 +418,10 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
           onClick={() => setIsOpen((prev) => !prev)}
           aria-label="Central de Notificações FCM e Prazos"
           title="Avisos e Prazos da Janela de Frequência (FCM)"
-          className={`relative w-10 h-10 rounded-full sm:rounded-xl flex items-center justify-center transition-colors cursor-pointer active:scale-95 ${
+          className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer active:scale-95 ${
             isOpen
-              ? 'bg-[#1d1d1f] text-white'
-              : 'bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1d1d1f]'
+              ? 'bg-[#0b3b8c] text-white border border-[#0b3b8c]'
+              : 'border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950'
           }`}
         >
           {unreadCount > 0 ? (

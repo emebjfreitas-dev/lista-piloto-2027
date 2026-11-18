@@ -866,7 +866,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
                   <StudentAvatar
                     student={student}
-                    size="md"
+                    size="lg"
                   />
 
                   <div className="min-w-0 flex-1">

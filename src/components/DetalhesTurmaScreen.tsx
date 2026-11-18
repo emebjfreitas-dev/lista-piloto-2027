@@ -128,21 +128,12 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
       <div className="space-y-3 min-w-0">
         <div className="flex items-start justify-between gap-2.5 min-w-0">
           <div className="flex items-start gap-3.5 min-w-0 flex-1">
-            <div
-              onClick={(e) => {
-                if (onOpenPhotoModal) {
-                  e.stopPropagation();
-                  onOpenPhotoModal(student);
-                }
-              }}
-              className={`shrink-0 ${onOpenPhotoModal ? 'cursor-pointer' : ''}`}
-            >
-              <StudentAvatar
-                student={student}
-                size="lg"
-                className="border-0 bg-[#f1f5f9]"
-              />
-            </div>
+            <StudentAvatar
+              student={student}
+              size={isExpanded ? 'xl' : 'lg'}
+              onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
+              className="border-0 bg-[#f1f5f9]"
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
@@ -371,21 +362,12 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3.5 min-w-0 flex-1">
-          <div
-            onClick={(e) => {
-              if (onOpenPhotoModal) {
-                e.stopPropagation();
-                onOpenPhotoModal(student);
-              }
-            }}
-            className={`shrink-0 ${onOpenPhotoModal ? 'cursor-pointer' : ''}`}
-          >
-            <StudentAvatar
-              student={student}
-              size="md"
-              className="border-0 bg-[#f1f5f9]"
-            />
-          </div>
+          <StudentAvatar
+            student={student}
+            size="lg"
+            onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
+            className="border-0 bg-[#f1f5f9]"
+          />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-1.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
@@ -619,22 +601,13 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
         </td>
         <td className="py-2.5 px-3">
           <div className="flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                onClick={(e) => {
-                  if (onOpenPhotoModal) {
-                    e.stopPropagation();
-                    onOpenPhotoModal(student);
-                  }
-                }}
-                className={`shrink-0 ${onOpenPhotoModal ? 'cursor-pointer' : ''}`}
-              >
-                <StudentAvatar
-                  student={student}
-                  size="sm"
-                  className="border-0 bg-[#f1f5f9]"
-                />
-              </div>
+            <div className="flex items-center gap-3 min-w-0">
+              <StudentAvatar
+                student={student}
+                size="md"
+                onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
+                className="border-0 bg-[#f1f5f9]"
+              />
               <div className="min-w-0">
                 <span className="font-semibold text-[15px] text-[#0f172a] tracking-[-0.018em] break-words block leading-snug">
                   {student.name}
@@ -904,22 +877,12 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
         className="flex items-start justify-between gap-3 cursor-pointer select-none min-w-0"
       >
         <div className="flex items-start gap-3.5 min-w-0 flex-1">
-          <div
-            onClick={(e) => {
-              if (onOpenPhotoModal) {
-                e.stopPropagation();
-                onOpenPhotoModal(student);
-              }
-            }}
-            title={onOpenPhotoModal ? 'Atualizar foto' : undefined}
-            className={`shrink-0 ${onOpenPhotoModal ? 'cursor-pointer' : ''}`}
-          >
-            <StudentAvatar
-              student={student}
-              size="lg"
-              className="border-0 bg-[#f1f5f9]"
-            />
-          </div>
+          <StudentAvatar
+            student={student}
+            size={isExpanded ? 'xl' : 'lg'}
+            onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
+            className="border-0 bg-[#f1f5f9]"
+          />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
@@ -1528,6 +1491,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           minLegalPresence={minLegalPresence}
           onOpenStudentPdf={stableOpenStudentPdf}
           onOpenStudentGrid={stableOpenStudentGrid}
+          onOpenPhotoModal={onOpenPhotoModal}
           onCollapse={() => setExpandedStudentId(null)}
           showHeaderMeta={!isPeb1}
           familyFeedback={latestFeedback}
@@ -1540,6 +1504,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       minLegalPresence,
       stableOpenStudentPdf,
       stableOpenStudentGrid,
+      onOpenPhotoModal,
       isPeb1,
     ]
   );
@@ -1569,24 +1534,24 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       : 'single';
 
   const peb1DynamicRowHeight = useDynamicRowHeight({
-    defaultRowHeight: viewportWidth < 640 ? 172 : 164,
+    defaultRowHeight: viewportWidth < 640 ? 188 : 180,
     key: `peb1-${classGroup.id}-${peb1ColumnCount}-${filteredStudents.length}-${peb1LayoutKey}`,
   });
 
   const adminGridDynamicRowHeight = useDynamicRowHeight({
-    defaultRowHeight: viewportWidth < 640 ? 228 : 220,
+    defaultRowHeight: viewportWidth < 640 ? 242 : 236,
     key: `grid-${classGroup.id}-${adminGridColumnCount}-${filteredStudents.length}-${adminGridLayoutKey}`,
   });
 
   const adminCompactDynamicRowHeight = useDynamicRowHeight({
-    defaultRowHeight: viewportWidth < 640 ? 132 : 84,
+    defaultRowHeight: viewportWidth < 640 ? 148 : 112,
     key: `compact-${classGroup.id}-${viewportWidth < 640 ? 'm' : 'd'}-${filteredStudents.length}-${
       expandedStudentId === '__ALL__' ? 'all' : 'single'
     }`,
   });
 
   const tableDynamicRowHeight = useDynamicRowHeight({
-    defaultRowHeight: 62,
+    defaultRowHeight: 84,
     key: `table-${classGroup.id}-${filteredStudents.length}-${
       expandedStudentId === '__ALL__' ? 'all' : 'single'
     }`,

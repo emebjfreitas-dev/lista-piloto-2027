@@ -9,6 +9,7 @@ import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { findStudentSiblings } from '../utils/siblingDetection';
 import { StudentSiblingsCard } from './StudentSiblingsCard';
+import { StudentAvatar } from './StudentAvatar';
 
 interface StudentDataExpansionPanelProps {
   student: Student;
@@ -17,6 +18,7 @@ interface StudentDataExpansionPanelProps {
   minLegalPresence?: number;
   onOpenStudentPdf?: (student: Student) => void;
   onOpenStudentGrid?: (student: Student) => void;
+  onOpenPhotoModal?: (student: Student) => void;
   onCollapse?: () => void;
   showHeaderMeta?: boolean;
   familyFeedback?: string;
@@ -31,6 +33,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
   minLegalPresence,
   onOpenStudentPdf,
   onOpenStudentGrid,
+  onOpenPhotoModal,
   onCollapse,
   showHeaderMeta = true,
   familyFeedback,
@@ -141,32 +144,46 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
       onClick={(e) => e.stopPropagation()}
       className="mt-3 rounded-2xl bg-[#f1f5f9] p-3.5 sm:p-4 space-y-3 text-[#0f172a] animate-gentle-fade min-w-0 break-words"
     >
-      {/* Topo Compacto: Identificação + Ações Principais */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 min-w-0">
+      {/* Topo: Identificação com Foto Grande + Ações Principais */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 min-w-0">
         {showHeaderMeta && (
-          <div className="min-w-0 flex-1 space-y-0.5">
-            <h4 className="font-semibold text-[16px] sm:text-[17px] tracking-[-0.02em] text-[#0f172a] leading-snug break-words min-w-0">
-              {student.name}
-            </h4>
-            <p className="text-[12px] tracking-[-0.006em] text-[#64748b] font-medium flex flex-wrap items-center gap-x-1.5 gap-y-0.5 tabular-nums">
-              {student.ra && (
-                <span>
-                  RA {student.ra}
-                  {student.digRa ? `-${student.digRa}` : ''}
-                </span>
-              )}
-              {student.dataNascimento && (
-                <>
-                  {student.ra && <span aria-hidden="true">·</span>}
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <StudentAvatar
+              student={student}
+              size="xl"
+              onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
+              className="border-0 bg-white shadow-xs"
+            />
+            <div className="min-w-0 flex-1 space-y-1">
+              <h4 className="font-bold text-[17px] sm:text-[18px] tracking-[-0.02em] text-[#0f172a] leading-snug break-words min-w-0">
+                {student.name}
+              </h4>
+              <p className="text-[12.5px] tracking-[-0.006em] text-[#475569] font-medium flex flex-wrap items-center gap-x-1.5 gap-y-0.5 tabular-nums">
+                {student.ra && (
                   <span>
-                    {student.dataNascimento}
-                    {student.idade ? ` (${student.idade}a)` : ''}
+                    RA {student.ra}
+                    {student.digRa ? `-${student.digRa}` : ''}
                   </span>
-                </>
-              )}
-              {(student.ra || student.dataNascimento) && <span aria-hidden="true">·</span>}
-              <span>{classGroup.name}</span>
-            </p>
+                )}
+                {student.dataNascimento && (
+                  <>
+                    {student.ra && <span aria-hidden="true">·</span>}
+                    <span>
+                      {student.dataNascimento}
+                      {student.idade
+                        ? ` (${
+                            /\banos?\b|\bmes|\bdias?/i.test(String(student.idade))
+                              ? student.idade
+                              : `${student.idade}a`
+                          })`
+                        : ''}
+                    </span>
+                  </>
+                )}
+                {(student.ra || student.dataNascimento) && <span aria-hidden="true">·</span>}
+                <span className="font-semibold text-[#0b3b8c]">{classGroup.name}</span>
+              </p>
+            </div>
           </div>
         )}
 

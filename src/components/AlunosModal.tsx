@@ -140,8 +140,8 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                       : 'bg-[#f9faf8] hover:bg-[#f3f4f2] border-[#b4c0c4]/80'
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <StudentAvatar student={student} size="md" />
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <StudentAvatar student={student} size="lg" />
 
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -203,10 +203,10 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                 </div>
 
                 {/* Avatar + Name + Ficha Informativa Escaneada (Drive) */}
-                <div className="flex items-center gap-3.5 bg-white p-3.5 rounded-2xl border border-[#b4c0c4]">
+                <div className="flex items-center gap-4 bg-white p-3.5 rounded-2xl border border-[#b4c0c4]">
                   <StudentAvatar
                     student={selectedStudent}
-                    size="lg"
+                    size="xl"
                     expandableOnClick={true}
                     onUploadPhotoClick={() => onOpenPhotoModal(selectedStudent)}
                   />

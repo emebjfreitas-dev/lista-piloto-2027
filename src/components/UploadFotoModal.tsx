@@ -318,6 +318,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                       <StudentAvatar
                         student={st}
                         size="sm"
+                        expandableOnClick={false}
                         className="w-6 h-6 rounded-lg object-cover"
                       />
                       {hasPhoto && (

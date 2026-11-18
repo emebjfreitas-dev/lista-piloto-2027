@@ -108,7 +108,7 @@ export const StudentSiblingsCard: React.FC<StudentSiblingsCardProps> = ({
                   student={sib.student}
                   name={sib.student.name}
                   photo={sib.student.photo}
-                  size={compact ? 'sm' : 'md'}
+                  size={compact ? 'md' : 'lg'}
                 />
 
                 <div className="min-w-0 flex-1 space-y-0.5">

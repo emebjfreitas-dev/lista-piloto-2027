@@ -1152,7 +1152,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       {student.number.toString().padStart(2, '0')}
                     </span>
 
-                    <StudentAvatar student={student} size="sm" />
+                    <StudentAvatar student={student} size="md" />
 
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
@@ -1717,7 +1717,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
           >
             <div className="px-4 py-3.5 bg-[#0b3b8c] text-white flex items-center justify-between gap-2.5 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <StudentAvatar student={activeModalData.student} size="sm" />
+                <StudentAvatar student={activeModalData.student} size="md" />
                 <div className="min-w-0 flex-1">
                   <div className="text-xs text-blue-100 tabular-nums truncate">
                     {activeModalData.cls.name} · Nº{' '}

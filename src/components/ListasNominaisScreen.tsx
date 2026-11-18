@@ -871,18 +871,12 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                           <div className="space-y-2.5 min-w-0">
                             {/* Topo do Cartão: Nome do Estudante + Avatar */}
                             <div className="flex items-start gap-3.5 min-w-0">
-                              <div
-                                onClick={() => onOpenPhotoModal(student, cls.name)}
-                                className="shrink-0 cursor-pointer"
-                                title="Atualizar foto"
-                              >
-                                <StudentAvatar
-                                  student={student}
-                                  size="md"
-                                  className="border-0 bg-[#f1f5f9]"
-                                  expandableOnClick={false}
-                                />
-                              </div>
+                              <StudentAvatar
+                                student={student}
+                                size="lg"
+                                onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
+                                className="border-0 bg-[#f1f5f9]"
+                              />
 
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-1.5 min-w-0">
@@ -1050,18 +1044,12 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                               {(idx + 1).toString().padStart(2, '0')}
                             </span>
 
-                            <div
-                              onClick={() => onOpenPhotoModal(student, cls.name)}
-                              className="shrink-0 cursor-pointer"
-                              title="Atualizar foto"
-                            >
-                              <StudentAvatar
-                                student={student}
-                                size="sm"
-                                className="border-0 bg-[#f1f5f9]"
-                                expandableOnClick={false}
-                              />
-                            </div>
+                            <StudentAvatar
+                              student={student}
+                              size="md"
+                              onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
+                              className="border-0 bg-[#f1f5f9]"
+                            />
 
                             <div className="min-w-0 flex-1">
                               <span className="block text-[15px] sm:text-[16px] font-semibold text-[#0f172a] leading-snug break-words tracking-[-0.02em]">

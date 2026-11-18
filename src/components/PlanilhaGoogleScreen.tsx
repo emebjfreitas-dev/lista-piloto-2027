@@ -2289,8 +2289,8 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                             className="py-3.5 px-4 cursor-pointer"
                             onClick={() => onOpenStudentGrid?.(cls.id, student.id)}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <StudentAvatar student={student} size="sm" />
+                            <div className="flex items-center gap-3">
+                              <StudentAvatar student={student} size="md" />
                               <div>
                                 <span className="font-bold text-[#1d1d1f] hover:text-[#0071e3] block">
                                   Nº {student.number.toString().padStart(2, '0')} • {student.name}
@@ -2638,10 +2638,10 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                     </td>
 
                     <td className="py-2.5 px-3">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-3">
                         <StudentAvatar
                           student={r.student}
-                          size="sm"
+                          size="md"
                           expandableOnClick={true}
                         />
                         <div className="min-w-0">
@@ -3198,11 +3198,11 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
 
                     <td className="py-2.5 px-3">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0">
                           <StudentAvatar
                             name={row.nome}
                             photo={row.fotoUrl}
-                            size="sm"
+                            size="md"
                             expandableOnClick
                           />
                           <div className="min-w-0">
@@ -3700,7 +3700,7 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       </td>
                       <td className="py-2.5 px-3 font-bold text-[#151a18] border-r border-[#edeeec]">
                         <div className="flex items-center gap-2.5">
-                          <StudentAvatar name={u.name || u.email} size="sm" />
+                          <StudentAvatar name={u.name || u.email} size="xs" expandableOnClick={false} />
                           <span>{u.name}</span>
                         </div>
                       </td>

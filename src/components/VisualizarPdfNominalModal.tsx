@@ -271,7 +271,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <StudentAvatar
               student={student}
-              size="sm"
+              size="md"
               className="shrink-0"
             />
             <div className="min-w-0 flex-1">

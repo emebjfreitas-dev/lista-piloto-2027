@@ -1281,8 +1281,8 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
                           }`}
                         >
                           <td className="py-2.5 px-3">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <StudentAvatar student={item.student} size="sm" expandableOnClick={false} />
+                            <div className="flex items-center gap-3 min-w-0">
+                              <StudentAvatar student={item.student} size="md" />
                               <div className="min-w-0">
                                 <span className="font-bold text-slate-950 block break-words leading-snug">
                                   {item.student.name}

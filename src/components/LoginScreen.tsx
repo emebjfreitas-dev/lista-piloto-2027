@@ -208,25 +208,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
+  const schoolPhotoSrc = `${import.meta.env.BASE_URL || '/'}escola-candelario.jpg`;
+
   return (
-    <div className="relative min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 overflow-hidden select-none font-sans">
-      {/* Foto da EMEB Professor Joaquim Candelário de Freitas em marca d'água ao fundo */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="relative min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 overflow-hidden select-none font-sans bg-slate-200">
+      {/* Foto da EMEB Professor Joaquim Candelário de Freitas em marca d'água visível e natural ao fundo */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-slate-200">
         <img
-          src="/escola-candelario.jpg"
+          src={schoolPhotoSrc}
           alt="EMEB Prof. Joaquim Candelário de Freitas"
           onError={(e) => {
             e.currentTarget.onerror = null;
             e.currentTarget.src = SCHOOL_PATRON_WATERMARK_URL;
           }}
-          className="w-full h-full object-cover object-center scale-105 opacity-25 filter contrast-110 brightness-90 transition-opacity duration-700"
+          className="w-full h-full object-cover object-center opacity-70 filter contrast-105 saturate-[0.85] transition-opacity duration-700"
         />
-        {/* Camada translúcida institucional em azul profundo para contraste e elegância */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#061737]/85 via-[#081e46]/80 to-[#05132d]/92 backdrop-blur-[1.5px]" />
+        {/* Véu neutro suave (sem excesso de azul) para destacar a fachada da escola e manter legibilidade do card */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/15 via-white/30 to-slate-900/25" />
       </div>
 
       {/* Card Minimalista e Focado */}
-      <div className="relative z-10 w-full max-w-[390px] min-w-0 bg-white/98 backdrop-blur-md rounded-3xl shadow-[0_24px_55px_rgba(0,0,0,0.36)] px-7 py-9 sm:px-9 sm:py-10 flex flex-col items-center text-center animate-apple-pop">
+      <div className="relative z-10 w-full max-w-[390px] min-w-0 bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_24px_60px_rgba(15,23,42,0.22)] border border-white/80 px-7 py-9 sm:px-9 sm:py-10 flex flex-col items-center text-center animate-apple-pop">
         {/* Brasão Oficial de Jundiaí */}
         <img
           src={APP_LOGO_URL}

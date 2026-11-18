@@ -307,8 +307,8 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   className={`group rounded-2xl p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 border h-full min-h-[118px] ${cardTierColor}`}
                 >
                   <div className="flex items-start justify-between gap-2.5 min-w-0">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <StudentAvatar student={student} size="sm" />
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <StudentAvatar student={student} size="md" />
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm sm:text-base font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors duration-100 break-words leading-snug">
                           {student.name}
@@ -442,7 +442,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             {/* Cabeçalho do Modal */}
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-black/[0.06]">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <StudentAvatar student={selectedDetailItem.student} size="md" />
+                <StudentAvatar student={selectedDetailItem.student} size="lg" />
                 <div className="min-w-0 flex-1">
                   <span className="text-xs font-semibold text-[#ff3b30] block break-words">
                     Alerta de Faltas Críticas · Turma {selectedDetailItem.cls.name}

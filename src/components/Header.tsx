@@ -242,82 +242,35 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/98 backdrop-blur-xl shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-        <div className="h-16 px-3.5 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
-          {/* Zona 1: Identidade Institucional & Status Google Sheets */}
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={() => navigateTo('home')}
-              className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none min-w-0 text-left min-h-[44px]"
-              title="Ir para o Início"
-            >
-              <img
-                src={APP_LOGO_URL}
-                alt="Brasão de Jundiaí"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = APP_LOGO_FALLBACK_URL;
-                }}
-                className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
-              />
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5 min-w-0 leading-tight">
-                <span className="text-[13px] sm:text-base font-extrabold tracking-tight text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors truncate">
-                  Lista Piloto Candelário 2027
-                </span>
-                <span className="text-slate-400 font-light hidden md:inline" aria-hidden="true">
-                  ·
-                </span>
-                <span className="text-[11px] sm:text-[13px] text-slate-600 font-semibold hidden sm:inline whitespace-nowrap">
-                  EMEB Candelário
-                </span>
-              </div>
-            </button>
+      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
+        <div className="h-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-4 lg:gap-8 min-w-0">
+          {/* Zona 1: Identidade Institucional sem cortes ou pílulas de status */}
+          <button
+            type="button"
+            onClick={() => navigateTo('home')}
+            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none shrink-0 text-left min-h-[44px]"
+            title="Ir para o Início"
+          >
+            <img
+              src={APP_LOGO_URL}
+              alt="Brasão de Jundiaí"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = APP_LOGO_FALLBACK_URL;
+              }}
+              className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
+            />
+            <span className="text-[15px] sm:text-[16px] font-bold tracking-[-0.02em] text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors whitespace-nowrap">
+              Lista Piloto Candelário
+            </span>
+          </button>
 
-            {/* Indicador de Status de Sincronização (Banco na Nuvem) */}
-            <div
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/80 border border-slate-200/60 text-xs font-medium text-slate-600 shrink-0"
-              title={
-                instantSheetSyncStatus === 'syncing'
-                  ? 'Salvando alterações no banco da escola na nuvem...'
-                  : instantSheetSyncStatus === 'synced'
-                  ? 'Alterações salvas no banco da escola na nuvem'
-                  : 'Conexão com o banco na nuvem pronta'
-              }
-            >
-              <span className="relative flex h-2 w-2">
-                {instantSheetSyncStatus === 'syncing' && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                )}
-                {instantSheetSyncStatus === 'synced' && (
-                  <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                )}
-                <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${
-                    instantSheetSyncStatus === 'syncing'
-                      ? 'bg-amber-500'
-                      : instantSheetSyncStatus === 'synced'
-                      ? 'bg-emerald-500'
-                      : 'bg-slate-300'
-                  }`}
-                ></span>
-              </span>
-              <span className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">
-                {instantSheetSyncStatus === 'syncing'
-                  ? 'Salvando...'
-                  : instantSheetSyncStatus === 'synced'
-                  ? 'Tudo salvo'
-                  : 'Nuvem pronta'}
-              </span>
-            </div>
-          </div>
-
-          {/* Zona 2: Navegação Principal Enxuta (Desktop & Tablet Paisagem lg+) */}
+          {/* Zona 2: Navegação Principal Limpa com sublinhado de página ativa (lg+) */}
           {onChangeScreen && (
             <nav
               aria-label="Navegação Principal"
-              className="hidden lg:flex items-center gap-1 p-1.5 bg-slate-100 rounded-2xl shrink-0"
+              className="hidden lg:flex items-center gap-1 xl:gap-2 h-full shrink-0"
             >
               {primaryNavItems.map((item) => {
                 const IconComp = item.icon;
@@ -327,48 +280,51 @@ export const Header: React.FC<HeaderProps> = ({
                     type="button"
                     onClick={() => navigateTo(item.id)}
                     aria-current={item.activeMatch ? 'page' : undefined}
-                    className={`min-h-[38px] px-3.5 rounded-xl text-[13px] transition-colors cursor-pointer flex items-center gap-2 ${
+                    className={`relative h-10 px-3 rounded-lg text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       item.activeMatch
-                        ? 'bg-white text-[#0b3b8c] font-bold shadow-xs'
-                        : 'text-slate-700 hover:text-slate-950 hover:bg-white/70 font-semibold'
+                        ? 'text-[#0b3b8c] font-semibold bg-[#0b3b8c]/[0.06] after:content-[""] after:absolute after:bottom-0 after:inset-x-2.5 after:h-[2px] after:bg-[#0b3b8c] after:rounded-full'
+                        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/75 font-medium'
                     }`}
                   >
                     <IconComp
                       className={`w-4 h-4 shrink-0 ${
-                        item.activeMatch ? 'text-[#0052cc] stroke-[2.25]' : 'text-slate-600 stroke-[2]'
+                        item.activeMatch ? 'text-[#0b3b8c] stroke-[2.2]' : 'text-slate-500 stroke-[1.9]'
                       }`}
                     />
-                    <span className="whitespace-nowrap">{item.label}</span>
+                    <span>{item.label}</span>
                   </button>
                 );
               })}
 
-              {/* Menu Gestão (Apenas Admin — Somente Telas Essenciais + Controle de Sincronização) */}
+              {/* Menu Gestão (Apenas Admin) */}
               {isAdmin && (
                 <div className="relative" ref={adminMenuRef}>
                   <button
                     type="button"
                     onClick={() => setShowAdminNavDropdown((prev) => !prev)}
                     aria-expanded={showAdminNavDropdown}
-                    className={`min-h-[38px] px-3.5 rounded-xl text-[13px] transition-colors cursor-pointer flex items-center gap-2 ${
+                    className={`relative h-10 px-3 rounded-lg text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       isAdminScreenActive || showAdminNavDropdown
-                        ? 'bg-white text-[#0b3b8c] font-bold shadow-xs'
-                        : 'text-slate-700 hover:text-slate-950 hover:bg-white/70 font-semibold'
+                        ? 'text-[#0b3b8c] font-semibold bg-[#0b3b8c]/[0.06] after:content-[""] after:absolute after:bottom-0 after:inset-x-2.5 after:h-[2px] after:bg-[#0b3b8c] after:rounded-full'
+                        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/75 font-medium'
                     }`}
                   >
                     <SlidersHorizontal
                       className={`w-4 h-4 shrink-0 ${
                         isAdminScreenActive || showAdminNavDropdown
-                          ? 'text-[#0052cc] stroke-[2.25]'
-                          : 'text-slate-600 stroke-[2]'
+                          ? 'text-[#0b3b8c] stroke-[2.2]'
+                          : 'text-slate-500 stroke-[1.9]'
                       }`}
                     />
                     <span>Gestão</span>
                     {syncSnapshot.pendingCount > 0 && (
-                      <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0" title={`${syncSnapshot.pendingCount} pendente(s)`} />
+                      <span
+                        className="w-2 h-2 rounded-full bg-amber-600 shrink-0"
+                        title={`${syncSnapshot.pendingCount} pendente(s)`}
+                      />
                     )}
                     <ChevronDown
-                      className={`w-4 h-4 text-slate-500 transition-transform duration-100 ${
+                      className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-150 ${
                         showAdminNavDropdown ? 'rotate-180' : ''
                       }`}
                     />
@@ -430,7 +386,9 @@ export const Header: React.FC<HeaderProps> = ({
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            {isFlushingCloud || syncSnapshot.status === 'syncing' ? (
+                            {isFlushingCloud ||
+                            syncSnapshot.status === 'syncing' ||
+                            instantSheetSyncStatus === 'syncing' ? (
                               <Loader2 className="w-4 h-4 animate-spin text-[#0052cc] shrink-0" />
                             ) : syncSnapshot.pendingCount > 0 ? (
                               <CloudUpload className="w-4 h-4 text-amber-700 shrink-0" />
@@ -465,26 +423,23 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
           )}
 
-          {/* Zona 3: Ações Essenciais & Perfil (Sem ícone de nuvem) */}
+          {/* Zona 3: Ações Rápidas e Perfil */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Instalação do Aplicativo (PWA) */}
             <PWAInstallButton variant="header" />
 
-            {/* Busca Rápida */}
             {onOpenSpotlightSearch && (
               <button
                 type="button"
                 onClick={onOpenSpotlightSearch}
                 aria-label="Buscar aluno ou turma"
                 title="Buscar aluno ou turma (⌘K)"
-                className="h-10 w-10 sm:w-auto sm:px-3.5 rounded-full sm:rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-900 font-semibold text-[13px] flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                className="h-9 w-9 sm:w-auto sm:px-3 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 font-medium text-[13px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Search className="w-4 h-4 text-slate-700 stroke-[2.2]" />
-                <span className="hidden sm:inline text-[13px] font-semibold text-slate-900">Buscar</span>
+                <Search className="w-4 h-4 text-slate-600 stroke-[2]" />
+                <span className="hidden sm:inline">Buscar</span>
               </button>
             )}
 
-            {/* Notificações Push (FCM) */}
             <PushNotificationCenter
               visibleClasses={visibleClasses}
               allClasses={allClasses}
@@ -501,23 +456,23 @@ export const Header: React.FC<HeaderProps> = ({
               }}
             />
 
-            {/* Perfil do Usuário */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowProfileMenu((prev) => !prev)}
                 aria-label="Menu do perfil e sair"
-                className="h-10 pl-1.5 pr-2 sm:pr-3 rounded-full sm:rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
+                className="h-9 pl-1.5 pr-2 sm:pr-2.5 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap shrink-0"
               >
                 <StudentAvatar
                   name={userName || userEmail || 'Educador'}
-                  size="sm"
-                  className="w-7 h-7 text-xs"
+                  size="xs"
+                  expandableOnClick={false}
+                  className="w-6 h-6 text-[11px] rounded-md border-0 bg-[#0b3b8c]/10 text-[#0b3b8c]"
                 />
-                <span className="hidden sm:inline text-[13px] font-bold text-slate-900 max-w-[100px] truncate">
+                <span className="hidden sm:inline text-[13px] font-semibold text-slate-800 max-w-[100px] truncate">
                   {roleShortLabel}
                 </span>
-                <ChevronDown className="hidden sm:inline w-4 h-4 text-slate-600" />
+                <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-slate-500" />
               </button>
 
               {showProfileMenu && (
@@ -530,7 +485,8 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="p-3 rounded-2xl bg-[#f5f5f7] flex items-center gap-3 min-w-0">
                       <StudentAvatar
                         name={userName || userEmail || 'Educador'}
-                        size="md"
+                        size="sm"
+                        expandableOnClick={false}
                         className="w-10 h-10 text-sm shrink-0"
                       />
                       <div className="min-w-0 flex-1">
@@ -616,6 +572,7 @@ export const Header: React.FC<HeaderProps> = ({
               <StudentAvatar
                 name={userName || userEmail || 'Educador'}
                 size="md"
+                expandableOnClick={false}
                 className="w-14 h-14 text-base"
               />
             </div>
