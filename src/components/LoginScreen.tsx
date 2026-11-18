@@ -163,7 +163,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     };
   }, []);
 
-  // Executa o login com a conta Google
+  // Executa o login com a conta Google com validação estrita de segurança (sem bypass)
   const handleGoogleLogin = async () => {
     setErrorMsg(null);
     setLoading(true);
@@ -174,18 +174,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         await verifyAndAuthorizeEmail(res.user.email, res.user.displayName);
         return;
       }
-      // Se a resposta não contém e-mail imediato (ex: ambiente com pop-up restrito),
-      // entra com a conta oficial da Direção Escolar
-      await verifyAndAuthorizeEmail('emebjfreitas@jundiai.sp.gov.br', 'Equipe Administrativa');
-    } catch (_error: any) {
-      // Em ambientes restritos de iframe ou com restrição de domínio não autorizado no Firebase Auth
-      // (ex: domínio de pré-visualização run.app), autentica diretamente com a conta da Direção Escolar
-      // sem exibir alertas de erro ou impedir o acesso
-      try {
-        await verifyAndAuthorizeEmail('emebjfreitas@jundiai.sp.gov.br', 'Equipe Administrativa');
-      } catch {
+      // Se não retornou e-mail imediato (ex: redirecionamento em andamento), não efetua login e aguarda o fluxo seguro
+    } catch (error: any) {
+      const code = String(error?.code || '');
+      const message = String(error?.message || '');
+
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        // Usuário fechou ou cancelou o pop-up do Google
+        setErrorMsg(null);
+      } else if (
+        code === 'auth/unauthorized-domain' ||
+        message.includes('unauthorized domain') ||
+        message.includes('auth/unauthorized-domain')
+      ) {
+        const currentHost =
+          typeof window !== 'undefined' && window.location.hostname
+            ? window.location.hostname
+            : 'deste ambiente';
         setErrorMsg(
-          'Não foi possível concluir o login com o Google. Verifique sua conexão e tente novamente.'
+          `Domínio não autorizado no Firebase Auth (${currentHost}). Por segurança, adicione "${currentHost}" no Firebase Console (Authentication > Configurações > Domínios autorizados) para permitir o login seguro com o Google nesta hospedagem.`
+        );
+      } else if (code === 'auth/popup-blocked') {
+        setErrorMsg(
+          'O pop-up de login do Google foi bloqueado pelo seu navegador. Por favor, permita pop-ups para este site e tente novamente.'
+        );
+      } else {
+        setErrorMsg(
+          'Não foi possível concluir a autenticação com o Google. Verifique sua conexão e tente novamente.'
         );
       }
     } finally {
