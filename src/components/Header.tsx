@@ -85,6 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showAdminNavDropdown, setShowAdminNavDropdown] = useState(false);
 
   const adminMenuRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const [syncSnapshot, setSyncSnapshot] = useState<SyncStatusSnapshot>({
     status: 'synced',
@@ -106,12 +107,15 @@ export const Header: React.FC<HeaderProps> = ({
       if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
         setShowAdminNavDropdown(false);
       }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
     };
-    if (showAdminNavDropdown) {
+    if (showAdminNavDropdown || showProfileMenu) {
       document.addEventListener('mousedown', handleOutside);
     }
     return () => document.removeEventListener('mousedown', handleOutside);
-  }, [showAdminNavDropdown]);
+  }, [showAdminNavDropdown, showProfileMenu]);
 
   const handleCloudFlushClick = async () => {
     if (isFlushingCloud) return;
@@ -301,7 +305,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="relative" ref={adminMenuRef}>
                   <button
                     type="button"
-                    onClick={() => setShowAdminNavDropdown((prev) => !prev)}
+                    onClick={() => {
+                      setShowAdminNavDropdown((prev) => !prev);
+                      setShowProfileMenu(false);
+                    }}
                     aria-expanded={showAdminNavDropdown}
                     className={`relative h-9 px-2 xl:px-3 rounded-xl text-[12.5px] xl:text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       isAdminScreenActive || showAdminNavDropdown
@@ -457,10 +464,13 @@ export const Header: React.FC<HeaderProps> = ({
               }}
             />
 
-            <div className="relative">
+            <div className="relative" ref={profileMenuRef}>
               <button
                 type="button"
-                onClick={() => setShowProfileMenu((prev) => !prev)}
+                onClick={() => {
+                  setShowProfileMenu((prev) => !prev);
+                  setShowAdminNavDropdown(false);
+                }}
                 aria-label="Menu do perfil e sair"
                 className="h-9 pl-1.5 pr-2 sm:pr-2.5 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-colors whitespace-nowrap shrink-0"
               >

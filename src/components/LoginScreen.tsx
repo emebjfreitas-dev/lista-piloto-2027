@@ -213,7 +213,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   return (
     <div className="relative min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 overflow-hidden select-none font-sans bg-slate-200">
       {/* Foto da EMEB Professor Joaquim Candelário de Freitas em marca d'água visível e natural ao fundo */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-slate-200">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-slate-100">
         <img
           src={schoolPhotoSrc}
           alt="EMEB Prof. Joaquim Candelário de Freitas"
@@ -221,10 +221,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             e.currentTarget.onerror = null;
             e.currentTarget.src = SCHOOL_PATRON_WATERMARK_URL;
           }}
-          className="w-full h-full object-cover object-center opacity-70 filter contrast-105 saturate-[0.85] transition-opacity duration-700"
+          className="w-full h-full object-cover object-center opacity-85 filter brightness-105 contrast-100 saturate-95 transition-opacity duration-700"
         />
-        {/* Véu neutro suave (sem excesso de azul) para destacar a fachada da escola e manter legibilidade do card */}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/15 via-white/30 to-slate-900/25" />
+        {/* Véu claro translúcido para garantir que a foto da escola fique nítida, clara e luminosa sem escurecer */}
+        <div className="absolute inset-0 bg-white/40" />
       </div>
 
       {/* Card Minimalista e Focado */}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   AuthorizedUser,
   ClassGroup,
@@ -12,6 +12,7 @@ import {
   runSchoolDataDiagnostics,
 } from '../utils/dataDiagnostics';
 import { SyncStatusSnapshot, saveClassesToFirestoreCloud } from '../services/firebaseSync';
+import { SyncQueueManager, SyncQueueManagerSnapshot, SyncQueueTaskItem } from '../services/syncQueueManager';
 import {
   addSecurityAuditLog,
   flushPendingOfflineQueue,
@@ -52,7 +53,7 @@ interface DiagnosticoBancoDadosScreenProps {
   embedded?: boolean;
 }
 
-type CategoryFilter = 'all' | DiagnosticCategory | 'estrutural';
+type CategoryFilter = 'all' | DiagnosticCategory | 'estrutural' | 'sync_queue';
 type SeverityFilter = 'all' | DiagnosticSeverity;
 
 interface StructuralCheckIssue {
@@ -119,6 +120,16 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
+
+  const [queueSnapshot, setQueueSnapshot] = useState<SyncQueueManagerSnapshot>(() =>
+    SyncQueueManager.getSnapshot()
+  );
+
+  useEffect(() => {
+    return SyncQueueManager.subscribe((snap) => {
+      setQueueSnapshot(snap);
+    });
+  }, []);
 
   const baseReport = useMemo(
     () =>
@@ -493,6 +504,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
     { id: 'frequencia_legal', label: 'Frequência Legal', count: baseReport.byCategory.frequencia_legal.length },
     { id: 'docencia', label: 'Docência', count: baseReport.byCategory.docencia.length },
     { id: 'sincronia_cloud', label: 'Nuvem Firebase', count: baseReport.byCategory.sincronia_cloud.length },
+    { id: 'sync_queue', label: 'Fila Sync (QueueManager)', count: queueSnapshot.pendingTasksCount },
   ];
 
   if (!isStrictAdmin) {
@@ -823,7 +835,78 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
           </select>
         </div>
 
-        {filteredIssues.length === 0 ? (
+        {categoryFilter === 'sync_queue' ? (
+          <div className="space-y-4">
+            <div className="p-5 rounded-2xl bg-[#f2f2f7] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-[#48484a] uppercase tracking-wider">
+                  SyncQueueManager (Fila Atômica Local & Nuvem)
+                </span>
+                <p className="text-sm font-semibold text-[#111827]">
+                  {queueSnapshot.isProcessing ? 'Processando fila...' : queueSnapshot.pendingTasksCount > 0 ? `${queueSnapshot.pendingTasksCount} tarefa(s) pendente(s) na fila` : 'Fila de sincronização totalmente sincronizada'}
+                </p>
+                <p className="text-xs text-[#48484a]">
+                  {queueSnapshot.lastCompletedAtISO ? `Última sincronização concluída: ${new Date(queueSnapshot.lastCompletedAtISO).toLocaleTimeString('pt-BR')}` : 'Nenhuma sincronização executada nesta sessão ainda'}
+                  {queueSnapshot.lastError && <span className="block text-[#991b1b] mt-0.5">Último erro: {queueSnapshot.lastError}</span>}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsSyncing(true);
+                  try {
+                    await SyncQueueManager.flushNow();
+                    setFeedback({ type: 'success', text: 'Fila de sincronização processada com sucesso.' });
+                  } catch (err: any) {
+                    setFeedback({ type: 'error', text: `Erro ao processar fila: ${err?.message || 'Erro desconhecido'}` });
+                  } finally {
+                    setIsSyncing(false);
+                  }
+                }}
+                disabled={isSyncing || queueSnapshot.pendingTasksCount === 0}
+                className="min-h-[42px] px-4 rounded-xl bg-[#111827] hover:bg-black text-white text-xs font-semibold inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>Forçar Processamento (Flush Now)</span>
+              </button>
+            </div>
+
+            {queueSnapshot.tasks.length === 0 ? (
+              <div className="p-10 rounded-2xl bg-[#eaf6ef] text-center space-y-2">
+                <CheckCircle2 className="w-7 h-7 text-[#047857] mx-auto" />
+                <p className="text-sm font-semibold text-[#005035]">Nenhuma falha ou tarefa pendente na fila</p>
+                <p className="text-xs text-[#374151]">Todas as operações do SyncQueueManager foram concluídas e persistidas.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {queueSnapshot.tasks.map((task: SyncQueueTaskItem) => (
+                  <article key={task.taskId} className="p-4 rounded-2xl bg-[#f2f2f7] space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
+                        task.status === 'processing' ? 'bg-[#e8f0fe] text-[#1a4fa3]' :
+                        task.status === 'retrying' ? 'bg-[#fee2e2] text-[#991b1b]' : 'bg-[#fef3c7] text-[#92400e]'
+                      }`}>
+                        {task.status === 'processing' ? 'Processando' : task.status === 'retrying' ? `Retentando (Tentativa ${task.attempts})` : 'Na Fila'}
+                      </span>
+                      <span className="text-xs font-medium text-[#48484a] font-mono">
+                        {task.dedupeKey}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-[#111827]">{task.description}</h3>
+                      <p className="text-xs text-[#48484a] mt-0.5">Criada em: {new Date(task.createdAtMs).toLocaleTimeString('pt-BR')} · Coalesced: {task.coalescedCount || 1}x</p>
+                    </div>
+                    {task.lastError && (
+                      <div className="p-3 rounded-xl bg-[#fee2e2] text-xs text-[#991b1b] font-mono break-all">
+                        <strong>Erro Registrado:</strong> {task.lastError}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : filteredIssues.length === 0 ? (
           <div className="p-10 rounded-2xl bg-[#eaf6ef] text-center space-y-2">
             <Sparkles className="w-7 h-7 text-[#047857] mx-auto" />
             <p className="text-sm font-semibold text-[#005035]">
