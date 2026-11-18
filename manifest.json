@@ -1,0 +1,108 @@
+{
+  "id": "./",
+  "name": "Lista Piloto Candelário 2027 — EMEB Prof. Joaquim Candelário de Freitas",
+  "short_name": "Lista Piloto",
+  "description": "Portal Institucional de Gestão Escolar, Frequência Mensal e Busca Ativa da EMEB Prof. Joaquim Candelário de Freitas (Prefeitura de Jundiaí · SME)",
+  "theme_color": "#002b5c",
+  "background_color": "#002b5c",
+  "display": "standalone",
+  "orientation": "any",
+  "start_url": "./",
+  "scope": "./",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "./pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./brasao-jundiai.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Minha Turma — EMEB Candelário",
+      "short_name": "Turma",
+      "description": "Acesso rápido à lista de estudantes e chamadas da turma atribuída",
+      "url": "./?screen=turmas",
+      "icons": [
+        {
+          "src": "./pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Frequência Mensal",
+      "short_name": "Frequência",
+      "description": "Lançamento oficial de faltas do mês na EMEB Candelário",
+      "url": "./?screen=frequencia_mensal",
+      "icons": [
+        {
+          "src": "./pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Bolsa Família & Acompanhamento",
+      "short_name": "Bolsa Família",
+      "description": "Relatório nominal dos estudantes beneficiários do Bolsa Família",
+      "url": "./?screen=bolsa_familia",
+      "icons": [
+        {
+          "src": "./pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Central Admin — Direção EMEB",
+      "short_name": "Admin",
+      "description": "Painel de controle de acessos da EMEB Prof. Joaquim Candelário de Freitas",
+      "url": "./?screen=usuarios_acesso",
+      "icons": [
+        {
+          "src": "./pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
