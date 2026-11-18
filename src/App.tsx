@@ -97,6 +97,30 @@ import { SpotlightCommandModal } from './components/SpotlightCommandModal';
 import { AdminArrastePdfsModal } from './components/AdminArrastePdfsModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { Toaster, toast } from 'sonner';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+
+const screenSlideVariants = {
+  enter: (direction: 1 | -1) => ({
+    opacity: 0,
+    x: direction >= 0 ? 22 : -22,
+  }),
+  center: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      x: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const },
+      opacity: { duration: 0.18, ease: 'easeOut' as const },
+    },
+  },
+  exit: (direction: 1 | -1) => ({
+    opacity: 0,
+    x: direction >= 0 ? -14 : 14,
+    transition: {
+      x: { duration: 0.13, ease: [0.4, 0, 1, 1] as const },
+      opacity: { duration: 0.11, ease: 'easeIn' as const },
+    },
+  }),
+};
 
 const ADMIN_ONLY_SCREENS: ScreenType[] = [
   'dias_letivos',
@@ -230,6 +254,7 @@ export default function App() {
   });
 
   const [navigationHistory, setNavigationHistory] = useState<ScreenType[]>([]);
+  const [navDirection, setNavDirection] = useState<1 | -1>(1);
 
   const [classes, setClasses] = useState<ClassGroup[]>(() => initialClasses);
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(() => {
@@ -357,6 +382,7 @@ export default function App() {
       return;
     }
 
+    setNavDirection(1);
     setNavigationHistory((prev) => [...prev, currentScreen]);
     setCurrentScreen(nextScreen);
     window.scrollTo(0, 0);
@@ -1404,6 +1430,7 @@ export default function App() {
   };
 
   const handleBack = () => {
+    setNavDirection(-1);
     if (navigationHistory.length > 0) {
       const prevScreen = navigationHistory[navigationHistory.length - 1];
       setNavigationHistory((prev) => prev.slice(0, -1));
@@ -1945,6 +1972,26 @@ export default function App() {
           </div>
         )}
 
+        <MotionConfig reducedMotion="user">
+          <AnimatePresence mode="wait" initial={false} custom={navDirection}>
+            <motion.div
+              key={
+                currentScreen === 'resumo'
+                  ? 'home'
+                  : currentScreen === 'diagnostico_bd' ||
+                    currentScreen === 'importar_deficiencias_htm'
+                  ? 'usuarios_acesso'
+                  : currentScreen === 'turmas' && userRole === 'usuario'
+                  ? 'detalhes'
+                  : currentScreen
+              }
+              custom={navDirection}
+              variants={screenSlideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              className="w-full min-w-0"
+            >
         {currentScreen === 'home' && (
           <HomeScreen
             userRole={userRole}
@@ -2049,6 +2096,7 @@ export default function App() {
                   setAssignedClassId(foundCls.id);
                   setSelectedClass(foundCls);
                 }
+                setNavDirection(1);
                 setSimulatedTeacherEmail(teacher.email);
                 setUserRole(teacher.role);
                 setCurrentScreen(teacher.role === 'usuario' ? 'detalhes' : 'turmas');
@@ -2092,6 +2140,7 @@ export default function App() {
               if (role === 'usuario') {
                 const target = classes.find((c) => c.id === assignedClassId) || classes[0];
                 if (target) setSelectedClass(target);
+                setNavDirection(1);
                 setCurrentScreen('detalhes');
               }
             }}
@@ -2107,13 +2156,12 @@ export default function App() {
               setSelectedClass(cls);
               setIsStudentListModalOpen(true);
             }}
-            onOpenConfigDaysModal={() => setCurrentScreen('dias_letivos')}
-            onNavigateToSheet={() => setCurrentScreen('planilha')}
-            onNavigateToAcessos={() => setCurrentScreen('usuarios_acesso')}
+            onOpenConfigDaysModal={() => navigateToScreen('dias_letivos')}
+            onNavigateToSheet={() => navigateToScreen('planilha')}
+            onNavigateToAcessos={() => navigateToScreen('usuarios_acesso')}
             onSelectStudentForConsecutiveScreen={(cls) => {
               setSelectedClass(cls);
-              setCurrentScreen('faltas_consecutivas');
-              window.scrollTo(0, 0);
+              navigateToScreen('faltas_consecutivas');
             }}
             onOpenStudentGrid={(student, classId, className, diasLetivosMes) =>
               setGridModalData({
@@ -2174,7 +2222,9 @@ export default function App() {
             }}
             onNavigateToSheet={() => navigateToScreen('planilha')}
             onBackToClasses={() => {
-              navigateToScreen('turmas');
+              setNavDirection(-1);
+              setCurrentScreen('turmas');
+              window.scrollTo(0, 0);
             }}
           />
         )}
@@ -2227,7 +2277,7 @@ export default function App() {
                 diasLetivosMes: selectedClass.classesHeld || 20,
               })
             }
-            onNavigateToSheet={() => setCurrentScreen('planilha')}
+            onNavigateToSheet={() => navigateToScreen('planilha')}
             onBack={handleBack}
           />
         )}
@@ -2279,7 +2329,7 @@ export default function App() {
               const found = updatedClasses.find((c) => c.id === selectedClass.id);
               if (found) setSelectedClass(found);
             }}
-            onNavigateToSheet={() => setCurrentScreen('planilha')}
+            onNavigateToSheet={() => navigateToScreen('planilha')}
             onBack={handleBack}
           />
         )}
@@ -2331,7 +2381,7 @@ export default function App() {
         )}
 
         {currentScreen === 'planilha' && isStrictAdmin && (
-          <div className="w-full min-w-0 break-words max-w-xl mx-auto py-12 sm:py-16 px-4 text-center space-y-4">
+          <div className="w-full min-w-0 break-words max-w-xl mx-auto my-6 p-8 bg-white rounded-3xl shadow-lg text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-xs shrink-0">
               <span className="material-symbols-outlined text-[34px]">verified</span>
             </div>
@@ -2348,6 +2398,9 @@ export default function App() {
             </button>
           </div>
         )}
+            </motion.div>
+          </AnimatePresence>
+        </MotionConfig>
       </main>
 
       {/* Fixed Bottom Navigation - Interactive for Senior & Lay Educators */}
@@ -2463,8 +2516,7 @@ export default function App() {
         }}
         onNavigateToConsecutiveAbsences={() => {
           setGridModalData(null);
-          setCurrentScreen('faltas_consecutivas');
-          window.scrollTo(0, 0);
+          navigateToScreen('faltas_consecutivas');
         }}
       />
 
@@ -2477,8 +2529,7 @@ export default function App() {
         onSelectClass={(cls) => {
           setAssignedClassId(cls.id);
           setSelectedClass(cls);
-          setCurrentScreen('detalhes');
-          window.scrollTo(0, 0);
+          navigateToScreen('detalhes');
         }}
         onOpenStudentGrid={(student, classId, className, diasLetivosMes) => {
           const foundCls = classes.find((c) => c.id === classId);
