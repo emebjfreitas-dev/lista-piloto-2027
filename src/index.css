@@ -391,6 +391,22 @@ svg.lucide {
   will-change: opacity, transform;
 }
 
+@keyframes googleBtnFadeIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-google-btn-fade-in {
+  animation: googleBtnFadeIn 650ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+  will-change: opacity, transform;
+}
+
 .animate-in {
   animation-duration: 90ms !important;
   animation-timing-function: var(--ease-apple) !important;
