@@ -1796,7 +1796,7 @@ export default function App() {
 
   if (isAuthChecking) {
     return (
-      <div className="min-h-[100dvh] w-full bg-gradient-to-b from-[#071a3d] via-[#0b2a66] to-[#081d45] flex flex-col items-center justify-center p-6 text-white font-sans">
+      <div className="min-h-[100dvh] w-full bg-[linear-gradient(168deg,#001229_0%,#050f1f_50%,#040b16_100%)] flex flex-col items-center justify-center p-6 text-white font-sans">
         <div className="w-10 h-10 border-4 border-white/25 border-t-white rounded-full animate-spin mb-4" />
         <p className="text-sm font-semibold tracking-wide text-white/90">
           Verificando sessão institucional...
@@ -1807,7 +1807,7 @@ export default function App() {
 
   if (!isAuthVerified || currentScreen === 'login') {
     return (
-      <div className="min-h-screen w-full overflow-x-hidden bg-[#071a3d] font-sans">
+      <div className="min-h-screen w-full overflow-x-hidden bg-[#050f1f] font-sans">
         <LoginScreen
           authorizedUsers={authorizedUsers}
           schoolNotices={schoolNotices}
@@ -1831,7 +1831,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[#f5f5f7] text-[#1d1f1d] flex flex-col font-sans selection:bg-[#0071e3]/15 selection:text-[#0066cc]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[linear-gradient(168deg,#001229_0%,#050f1f_48%,#040b16_100%)] bg-fixed text-[#1d1f1d] flex flex-col font-sans selection:bg-[#0071e3]/20 selection:text-[#0066cc]">
       {/* Top Minimalist Header */}
       <Header
         currentScreen={currentScreen}

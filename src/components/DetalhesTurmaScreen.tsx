@@ -1662,10 +1662,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
         <header className="space-y-3.5 min-w-0">
           <div className="flex items-baseline justify-between gap-3 flex-wrap min-w-0 px-0.5">
-            <h1 className="text-[26px] sm:text-[30px] font-bold text-[#0f172a] tracking-[-0.028em] leading-[1.15] break-words">
+            <h1 className="text-[26px] sm:text-[30px] font-bold text-white tracking-[-0.028em] leading-[1.15] break-words">
               {classGroup.name}
             </h1>
-            <span className="text-[13px] font-medium tracking-[-0.008em] text-[#64748b] tabular-nums">
+            <span className="text-[13px] font-medium tracking-[-0.008em] text-slate-300 tabular-nums">
               {searchStudent.trim()
                 ? `${filteredStudents.length} de ${orderedStudents.length} estudantes`
                 : `${orderedStudents.length} estudantes`}
@@ -1683,7 +1683,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               onChange={(e) => setSearchStudent(e.target.value)}
               placeholder="Buscar estudante por nome ou número..."
               aria-label="Buscar estudante"
-              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#f8fafc] shadow-2xs transition-colors"
+              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#f8fafc] shadow-lg transition-colors"
             />
             {searchStudent && (
               <button
@@ -1744,16 +1744,16 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
 
       {/* Contexto da Turma e Navegação */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] tracking-[-0.008em] text-[#64748b] py-0.5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] tracking-[-0.008em] text-slate-300 py-0.5 min-w-0">
         <button
           type="button"
           onClick={onBackToClasses}
-          className="text-[#475569] hover:text-[#0f172a] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+          className="text-slate-200 hover:text-white font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
         >
           <span className="material-symbols-outlined text-[16px]">arrow_back</span>
           <span>Turmas</span>
         </button>
-        <span className="text-[#64748b] font-medium tabular-nums shrink-0">
+        <span className="text-slate-300 font-medium tabular-nums shrink-0">
           {classGroup.shift.replace('Turno ', '')} · {classGroup.room} · {diasLetivosMes} dias letivos
         </span>
       </div>

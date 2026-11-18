@@ -381,7 +381,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       )}
 
       {/* CABEÇALHO DA TELA BOLSA FAMÍLIA */}
-      <header className="space-y-4 min-w-0">
+      <header className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_8px_26px_rgba(0,0,0,0.22)] space-y-4 min-w-0">
         <div className="flex items-center justify-between gap-3 flex-wrap min-w-0">
           <div className="flex items-center gap-3 min-w-0">
             {onBack && (
@@ -471,7 +471,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por nome, RA, NIS (Bolsa Família), responsável ou rota..."
             aria-label="Buscar estudante nas listas nominais do Bolsa Família"
-            className="w-full min-h-[48px] pl-11 pr-11 rounded-2xl bg-white text-sm sm:text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#f8fafc] shadow-2xs transition-colors"
+            className="w-full min-h-[48px] pl-11 pr-11 rounded-2xl bg-[#f1f5f9] focus:bg-[#e2e8f0]/60 text-sm sm:text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#64748b] focus:outline-none transition-colors"
           />
           {searchQuery && (
             <button

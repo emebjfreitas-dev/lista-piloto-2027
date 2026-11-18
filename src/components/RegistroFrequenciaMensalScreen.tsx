@@ -546,22 +546,22 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   return (
     <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
       {/* Breadcrumb e Contexto */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 py-0.5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 py-0.5 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <button
             type="button"
             onClick={onBack}
-            className="text-slate-600 hover:text-slate-900 font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            className="text-slate-200 hover:text-white font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[15px]">arrow_back</span>
             <span>Turma {classGroup.name}</span>
           </button>
-          <span className="text-slate-300">/</span>
-          <span className="font-semibold text-slate-800 break-words">Informar Faltas do Mês</span>
+          <span className="text-slate-500">/</span>
+          <span className="font-semibold text-white break-words">Informar Faltas do Mês</span>
           <span className="text-slate-400">·</span>
           <span>{selectedMonthName}/2027</span>
         </div>
-        <span className="hidden sm:inline text-slate-500 text-xs font-semibold shrink-0">
+        <span className="hidden sm:inline text-slate-300 text-xs font-semibold shrink-0">
           {diasLetivosMes} dias letivos no mês
         </span>
       </div>

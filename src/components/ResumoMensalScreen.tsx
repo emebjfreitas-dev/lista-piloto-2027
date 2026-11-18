@@ -388,32 +388,32 @@ export const ResumoMensalScreen: React.FC<ResumoMensalScreenProps> = ({
   return (
     <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade text-[#111827]">
       {/* Breadcrumb Limpo */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#48484a] py-0.5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 py-0.5 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           {onBack && (
             <>
               <button
                 type="button"
                 onClick={onBack}
-                className="text-[#374151] hover:text-[#111827] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
+                className="text-slate-200 hover:text-white font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[15px]">arrow_back</span>
                 <span>Voltar</span>
               </button>
-              <span className="text-[#6e6e73]">/</span>
+              <span className="text-slate-500">/</span>
             </>
           )}
-          <span className="font-semibold text-[#111827]">Resumo Mensal MEC</span>
-          <span className="text-[#48484a]">·</span>
+          <span className="font-semibold text-white">Resumo Mensal MEC</span>
+          <span className="text-slate-400">·</span>
           <span>{selectedMonthName}/2027</span>
         </div>
-        <span className="text-[#48484a] text-xs hidden sm:inline">
+        <span className="text-slate-300 text-xs hidden sm:inline">
           Painel Executivo de Frequência Escolar
         </span>
       </div>
 
-      {/* CABEÇALHO EXECUTIVO POWER BI (SÓBRIO, SEM ATALHOS REDUNDANTES) */}
-      <section className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-sm min-w-0">
+      {/* CABEÇALHO EXECUTIVO POWER BI (SÓBRIO, COM SEPARAÇÃO SUTIL SOBRE O TEMA ESCURO) */}
+      <section className="bg-[#0b1628] text-white rounded-3xl p-5 sm:p-6 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_12px_32px_rgba(0,0,0,0.38)] min-w-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0">
           <div className="space-y-1.5 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-300">

@@ -10,8 +10,9 @@
 
 @layer base {
   :root {
-    /* Paleta Institucional de Alto Contraste Sem Contornos — Azul Marinho/Cobalto, Branco Puro & Status Nítidos */
-    --canvas-bg: #e6edf6;
+    /* Paleta Institucional Profunda (Menos Azulada) + Superfícies Elevadas de Alto Contraste */
+    --canvas-bg: #050f1f;
+    --canvas-gradient: linear-gradient(168deg, #001229 0%, #050f1f 48%, #040b16 100%);
     --surface-bg: #ffffff;
     --surface-subtle: #e2e8f0;
     --surface-elevated: #ffffff;
@@ -64,6 +65,8 @@
     font-size: clamp(15.5px, 0.35vw + 14.5px, 17px);
     font-family: var(--font-sans) !important;
     background-color: var(--canvas-bg);
+    background-image: var(--canvas-gradient);
+    background-attachment: fixed;
     color: var(--text-primary);
     line-height: 1.5;
     font-weight: 400;
@@ -78,6 +81,8 @@
   body {
     font-family: var(--font-sans) !important;
     background-color: var(--canvas-bg);
+    background-image: var(--canvas-gradient);
+    background-attachment: fixed;
     color: var(--text-primary);
     overflow-x: hidden;
     font-kerning: normal;
@@ -164,11 +169,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(51, 65, 85, 0.35);
+    background: rgba(148, 163, 184, 0.3);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(51, 65, 85, 0.55);
+    background: rgba(148, 163, 184, 0.5);
   }
 
   /* Scroll Lock & Modais Suaves */
@@ -264,19 +269,19 @@ svg.lucide {
   shape-rendering: geometricPrecision;
 }
 
-/* Superfícies Institucionais Sem Contornos: Branco Puro + Elevação Tonal Nítida */
+/* Superfícies Institucionais Sem Contornos: Branco Puro + Elevação Nítida sobre Fundo Escuro */
 .card-welcoming,
 .card-modern {
   border-radius: 1.25rem;
   background-color: #ffffff;
   border: none;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.12);
   transition: box-shadow var(--duration-fast) ease, background-color var(--duration-fast) ease;
 }
 
 .card-welcoming:hover,
 .card-modern:hover {
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.09);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), 0 4px 10px rgba(0, 0, 0, 0.16);
 }
 
 /* Segmented Control de Alto Contraste Sem Contorno */

@@ -536,10 +536,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 px-1">
           <div>
-            <h2 className="text-xl sm:text-2xl font-semibold text-[#111827]">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white">
               Acesso Rápido
             </h2>
-            <p className="text-xs sm:text-sm text-[#48484a]">
+            <p className="text-xs sm:text-sm text-slate-300">
               Ferramentas principais para {isStrictAdmin ? 'gestão escolar' : 'rotina docente'}
             </p>
           </div>

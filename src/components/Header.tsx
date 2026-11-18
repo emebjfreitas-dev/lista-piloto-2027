@@ -242,7 +242,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80">
+      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.28)]">
         <div className="h-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-4 lg:gap-8 min-w-0">
           {/* Zona 1: Identidade Institucional sem cortes ou pílulas de status */}
           <button

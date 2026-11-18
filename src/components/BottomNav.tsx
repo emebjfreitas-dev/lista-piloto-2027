@@ -156,7 +156,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {/* Barra de Navegação Inferior Enxuta (Mobile & Tablet) */}
       <nav
         aria-label="Barra de Navegação Inferior"
-        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/98 backdrop-blur-xl border-t border-slate-200 shadow-[0_-2px_12px_rgba(15,23,42,0.07)] lg:hidden"
+        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/98 backdrop-blur-xl shadow-[0_-6px_24px_rgba(0,0,0,0.32)] lg:hidden"
       >
         <div className="flex items-center justify-around h-[68px] px-2 max-w-lg mx-auto gap-1">
           {coreNavItems.map((item) => {
