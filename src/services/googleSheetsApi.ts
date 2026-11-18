@@ -94,11 +94,20 @@ export const SCOPES = [
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 
-const provider = new GoogleAuthProvider();
-SCOPES.forEach((scope) => provider.addScope(scope));
-provider.setCustomParameters({
+// Provider limpo para autenticação Google padrão (sem escopos sensíveis de Drive para evitar bloqueios no login)
+export const authLoginProvider = new GoogleAuthProvider();
+authLoginProvider.setCustomParameters({
   prompt: 'select_account',
 });
+
+// Provider com escopos de Drive e Planilhas para integrações explícitas
+export const driveProvider = new GoogleAuthProvider();
+SCOPES.forEach((scope) => driveProvider.addScope(scope));
+driveProvider.setCustomParameters({
+  prompt: 'select_account',
+});
+
+const provider = authLoginProvider;
 
 // In-memory access token cache (NEVER stored in localStorage/sessionStorage per security rules)
 let isSigningIn = false;
