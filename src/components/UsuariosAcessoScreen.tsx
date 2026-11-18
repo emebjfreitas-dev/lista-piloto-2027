@@ -37,6 +37,7 @@ import { ImportarDeficienciasHtmScreen } from './ImportarDeficienciasHtmScreen';
 import { DiagnosticoBancoDadosScreen } from './DiagnosticoBancoDadosScreen';
 import { AtualizarDadosJsonModal } from './AtualizarDadosJsonModal';
 import { PwaIconsHealthScanner } from './PwaIconsHealthScanner';
+import { CustomSelect } from './CustomSelect';
 import {
   ArrowLeft,
   School,
@@ -233,6 +234,15 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
 
 export type AdminCenterSection = 'acesso' | 'seguranca' | 'uploads' | 'diagnostico';
 export type AdminUploadTool = 'fotos' | 'pdfs' | 'htm' | 'json';
+export type AdminCenterSubTab =
+  | 'quadro_turmas'
+  | 'contas_acesso'
+  | 'rbac_matriz'
+  | 'seguranca_lgpd'
+  | 'monitoramento'
+  | 'pwa_identidade';
+
+type SubTabId = AdminCenterSubTab;
 
 interface UsuariosAcessoScreenProps {
   authorizedUsers: AuthorizedUser[];
@@ -252,17 +262,10 @@ interface UsuariosAcessoScreenProps {
   onNavigateScreen?: (screen: ScreenType) => void;
   onOpenClassDetails?: (cls: ClassGroup) => void;
   initialSection?: AdminCenterSection;
+  initialSubTab?: AdminCenterSubTab;
   initialUploadTool?: AdminUploadTool;
   onBack: () => void;
 }
-
-type SubTabId =
-  | 'quadro_turmas'
-  | 'contas_acesso'
-  | 'rbac_matriz'
-  | 'seguranca_lgpd'
-  | 'monitoramento'
-  | 'pwa_identidade';
 
 export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   authorizedUsers,
@@ -282,13 +285,14 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   onNavigateScreen,
   onOpenClassDetails,
   initialSection = 'acesso',
+  initialSubTab,
   initialUploadTool = 'fotos',
   onBack,
 }) => {
   const [activeSection, setActiveSection] = useState<AdminCenterSection>(initialSection);
   const [activeUploadTool, setActiveUploadTool] = useState<AdminUploadTool>(initialUploadTool);
   const [activeSubTab, setActiveSubTab] = useState<SubTabId>(
-    initialSection === 'seguranca' ? 'seguranca_lgpd' : 'quadro_turmas'
+    initialSubTab || (initialSection === 'seguranca' ? 'seguranca_lgpd' : 'quadro_turmas')
   );
   const [matrixShiftFilter, setMatrixShiftFilter] = useState<'ALL' | 'MANHÃ' | 'TARDE' | 'VAGAS'>('ALL');
   const [matrixSearchTerm, setMatrixSearchTerm] = useState('');
@@ -364,9 +368,15 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
   useEffect(() => {
     setActiveSection(initialSection);
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+      return;
+    }
     if (initialSection === 'seguranca') {
       setActiveSubTab((prev) =>
-        prev === 'seguranca_lgpd' || prev === 'monitoramento' ? prev : 'seguranca_lgpd'
+        prev === 'seguranca_lgpd' || prev === 'monitoramento' || prev === 'pwa_identidade'
+          ? prev
+          : 'seguranca_lgpd'
       );
     } else if (initialSection === 'acesso') {
       setActiveSubTab((prev) =>
@@ -375,7 +385,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           : 'quadro_turmas'
       );
     }
-  }, [initialSection]);
+  }, [initialSection, initialSubTab]);
 
   useEffect(() => {
     setActiveUploadTool(initialUploadTool);
@@ -1454,7 +1464,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     },
     {
       id: 'contas_acesso',
-      label: 'Contas e Perfis',
+      label: 'E-mails Autorizados & Perfis',
       count: authorizedUsers.length,
       icon: <Users className="w-4 h-4 shrink-0" />,
     },
@@ -2058,19 +2068,21 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                 <label className="text-xs font-medium text-[#6e6e73] block mb-1">
                                   Pronome
                                 </label>
-                                <select
+                                <CustomSelect
                                   value={matrixDraft.teacherPronoun}
-                                  onChange={(e) =>
+                                  onChange={(val) =>
                                     setMatrixDraft({
                                       ...matrixDraft,
-                                      teacherPronoun: e.target.value,
+                                      teacherPronoun: val,
                                     })
                                   }
-                                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
-                                >
-                                  <option value="PROFESSORA">PROFESSORA</option>
-                                  <option value="PROFESSOR">PROFESSOR</option>
-                                </select>
+                                  ariaLabel="Pronome"
+                                  className="w-full bg-white text-xs font-medium text-[#1d1d1f]"
+                                  options={[
+                                    { value: 'PROFESSORA', label: 'PROFESSORA' },
+                                    { value: 'PROFESSOR', label: 'PROFESSOR' },
+                                  ]}
+                                />
                               </div>
                               <div>
                                 <label className="text-xs font-medium text-[#6e6e73] block mb-1">
@@ -2108,19 +2120,21 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                 <label className="text-xs font-medium text-[#6e6e73] block mb-1">
                                   Período
                                 </label>
-                                <select
+                                <CustomSelect
                                   value={matrixDraft.shift}
-                                  onChange={(e) =>
+                                  onChange={(val) =>
                                     setMatrixDraft({
                                       ...matrixDraft,
-                                      shift: e.target.value as 'Turno Manhã' | 'Turno Tarde',
+                                      shift: val as 'Turno Manhã' | 'Turno Tarde',
                                     })
                                   }
-                                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs font-medium text-[#1d1d1f]"
-                                >
-                                  <option value="Turno Manhã">Manhã</option>
-                                  <option value="Turno Tarde">Tarde</option>
-                                </select>
+                                  ariaLabel="Período"
+                                  className="w-full bg-white text-xs font-medium text-[#1d1d1f]"
+                                  options={[
+                                    { value: 'Turno Manhã', label: 'Manhã' },
+                                    { value: 'Turno Tarde', label: 'Tarde' },
+                                  ]}
+                                />
                               </div>
                             </div>
 
@@ -2371,19 +2385,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                     className="w-full px-2.5 py-1.5 rounded-lg bg-white text-xs font-medium text-[#1d1d1f]"
                                   />
                                   <div className="flex gap-1.5">
-                                    <select
+                                    <CustomSelect
                                       value={matrixDraft.teacherPronoun}
-                                      onChange={(e) =>
+                                      onChange={(val) =>
                                         setMatrixDraft({
                                           ...matrixDraft,
-                                          teacherPronoun: e.target.value,
+                                          teacherPronoun: val,
                                         })
                                       }
-                                      className="px-2.5 min-h-[36px] rounded-lg bg-white text-xs font-medium"
-                                    >
-                                      <option value="PROFESSORA">PROFESSORA</option>
-                                      <option value="PROFESSOR">PROFESSOR</option>
-                                    </select>
+                                      size="sm"
+                                      ariaLabel="Pronome"
+                                      className="bg-white text-xs font-medium"
+                                      options={[
+                                        { value: 'PROFESSORA', label: 'PROFESSORA' },
+                                        { value: 'PROFESSOR', label: 'PROFESSOR' },
+                                      ]}
+                                    />
                                     <input
                                       type="text"
                                       value={matrixDraft.teacherFirstName}
@@ -2452,19 +2469,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                                     }
                                     className="w-32 px-2.5 min-h-[36px] rounded-lg bg-white text-xs"
                                   />
-                                  <select
+                                  <CustomSelect
                                     value={matrixDraft.shift}
-                                    onChange={(e) =>
+                                    onChange={(val) =>
                                       setMatrixDraft({
                                         ...matrixDraft,
-                                        shift: e.target.value as 'Turno Manhã' | 'Turno Tarde',
+                                        shift: val as 'Turno Manhã' | 'Turno Tarde',
                                       })
                                     }
-                                    className="block w-32 px-2.5 min-h-[36px] rounded-lg bg-white text-xs"
-                                  >
-                                    <option value="Turno Manhã">Manhã</option>
-                                    <option value="Turno Tarde">Tarde</option>
-                                  </select>
+                                    size="sm"
+                                    ariaLabel="Período"
+                                    className="w-32 bg-white text-xs font-medium"
+                                    options={[
+                                      { value: 'Turno Manhã', label: 'Manhã' },
+                                      { value: 'Turno Tarde', label: 'Tarde' },
+                                    ]}
+                                  />
                                 </div>
                               ) : (
                                 <div className="space-y-0.5">
@@ -2834,21 +2854,22 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                     ))}
                   </div>
 
-                  <select
+                  <CustomSelect
                     value={userSortBy}
-                    onChange={(e) =>
+                    onChange={(val) =>
                       setUserSortBy(
-                        e.target.value as 'default' | 'name_asc' | 'email_asc' | 'access_desc'
+                        val as 'default' | 'name_asc' | 'email_asc' | 'access_desc'
                       )
                     }
-                    aria-label="Ordenar lista de usuários"
-                    className="min-h-[42px] px-3 rounded-xl bg-[#f5f5f7] text-xs font-semibold text-[#111827] focus:outline-none cursor-pointer"
-                  >
-                    <option value="default">Ordem padrão</option>
-                    <option value="name_asc">Nome (A–Z)</option>
-                    <option value="email_asc">E-mail (A–Z)</option>
-                    <option value="access_desc">Mais acessos</option>
-                  </select>
+                    ariaLabel="Ordenar lista de usuários"
+                    className="min-h-[42px] bg-[#f5f5f7] text-xs font-semibold text-[#111827]"
+                    options={[
+                      { value: 'default', label: 'Ordem padrão' },
+                      { value: 'name_asc', label: 'Nome (A–Z)' },
+                      { value: 'email_asc', label: 'E-mail (A–Z)' },
+                      { value: 'access_desc', label: 'Mais acessos' },
+                    ]}
+                  />
 
                   {canManage && (
                     <button
@@ -3045,18 +3066,17 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                         Turma vinculada
                       </label>
                       {newAccessLevel === 'usuario' ? (
-                        <select
+                        <CustomSelect
                           value={assignedClassId}
-                          onChange={(e) => setAssignedClassId(e.target.value)}
-                          className="w-full min-h-[42px] px-3 rounded-xl bg-[#eaf6ef] text-[#005035] text-xs font-semibold focus:outline-none cursor-pointer"
-                        >
-                          {classes.map((cls) => (
-                            <option key={cls.id} value={cls.id}>
-                              {cls.turmaAbrev || cls.name} — {cls.name} (
-                              {cls.shift.replace('Turno ', '')})
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => setAssignedClassId(val)}
+                          ariaLabel="Turma vinculada"
+                          searchPlaceholder="Buscar turma..."
+                          className="w-full min-h-[42px] bg-[#eaf6ef] hover:bg-[#ddf0e5] text-[#005035] text-xs font-semibold"
+                          options={classes.map((cls) => ({
+                            value: cls.id,
+                            label: `${cls.turmaAbrev || cls.name} — ${cls.name} (${cls.shift.replace('Turno ', '')})`,
+                          }))}
+                        />
                       ) : (
                         <div className="min-h-[42px] px-3 rounded-xl bg-white text-[#48484a] text-xs flex items-center">
                           {ACCESS_LEVEL_META[newAccessLevel].description}
@@ -4031,41 +4051,42 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                       <span className="text-xs font-semibold text-[#1d1d1f] block">
                         Antecedência do Aviso
                       </span>
-                      <select
+                      <CustomSelect
                         value={fcmConfigDraft.notifyDaysBeforeClose}
-                        onChange={(e) =>
+                        onChange={(val) =>
                           setFcmConfigDraft((prev) => ({
                             ...prev,
-                            notifyDaysBeforeClose: Number(e.target.value),
+                            notifyDaysBeforeClose: Number(val),
                           }))
                         }
-                        className="w-full min-h-[38px] px-3 rounded-xl bg-white text-xs font-semibold text-[#1d1d1f] focus:outline-none"
-                      >
-                        <option value={1}>1 dia antes de abrir</option>
-                        <option value={2}>2 dias antes de abrir</option>
-                        <option value={3}>3 dias antes de abrir</option>
-                        <option value={4}>4 dias antes de abrir</option>
-                        <option value={5}>5 dias antes de abrir</option>
-                      </select>
+                        ariaLabel="Antecedência do Aviso"
+                        className="w-full bg-white text-xs font-semibold text-[#1d1d1f]"
+                        options={[1, 2, 3, 4, 5].map((d) => ({
+                          value: String(d),
+                          label: `${d} ${d === 1 ? 'dia' : 'dias'} antes de abrir`,
+                        }))}
+                      />
                     </label>
 
                     <label className="space-y-1 block">
                       <span className="text-xs font-semibold text-[#1d1d1f] block">
                         Público-Alvo Automático
                       </span>
-                      <select
+                      <CustomSelect
                         value={fcmConfigDraft.remindPendingTeachersOnly ? 'pending' : 'all'}
-                        onChange={(e) =>
+                        onChange={(val) =>
                           setFcmConfigDraft((prev) => ({
                             ...prev,
-                            remindPendingTeachersOnly: e.target.value === 'pending',
+                            remindPendingTeachersOnly: val === 'pending',
                           }))
                         }
-                        className="w-full min-h-[38px] px-3 rounded-xl bg-white text-xs font-semibold text-[#1d1d1f] focus:outline-none"
-                      >
-                        <option value="pending">Apenas turmas pendentes</option>
-                        <option value="all">Todos os docentes</option>
-                      </select>
+                        ariaLabel="Público-Alvo Automático"
+                        className="w-full bg-white text-xs font-semibold text-[#1d1d1f]"
+                        options={[
+                          { value: 'pending', label: 'Apenas turmas pendentes' },
+                          { value: 'all', label: 'Todos os docentes' },
+                        ]}
+                      />
                     </label>
                   </div>
 
@@ -4138,16 +4159,18 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
                   className="min-h-[40px] px-3.5 rounded-xl bg-[#f5f5f7] text-xs text-[#1d1d1f] focus:bg-white focus:outline-none"
                 />
 
-                <select
+                <CustomSelect
                   value={securitySeverityFilter}
-                  onChange={(e) => setSecuritySeverityFilter(e.target.value as any)}
-                  className="min-h-[40px] px-3 rounded-xl bg-[#f5f5f7] text-xs font-medium text-[#1d1d1f] cursor-pointer"
-                >
-                  <option value="all">Todas severidades</option>
-                  <option value="info">Informativo</option>
-                  <option value="warning">Avisos</option>
-                  <option value="security_alert">Bloqueios</option>
-                </select>
+                  onChange={(val) => setSecuritySeverityFilter(val as any)}
+                  ariaLabel="Filtrar severidade da auditoria"
+                  className="bg-[#f5f5f7] text-xs font-semibold text-[#1d1d1f]"
+                  options={[
+                    { value: 'all', label: 'Todas severidades' },
+                    { value: 'info', label: 'Informativo' },
+                    { value: 'warning', label: 'Avisos' },
+                    { value: 'security_alert', label: 'Bloqueios' },
+                  ]}
+                />
 
                 {canManage && securityLogs.length > 0 && (
                   <button

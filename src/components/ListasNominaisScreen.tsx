@@ -397,7 +397,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl sm:text-3xl font-bold text-[#0f172a] tracking-[-0.028em] leading-tight break-words">
-                  Bolsa Família &amp; Condicionalidades
+                  Estudantes Beneficiados do Bolsa Família
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-lg bg-[#fef3c7] text-[#92400e] text-xs font-bold uppercase">
                   MEC / LDB 2027
