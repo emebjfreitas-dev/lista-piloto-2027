@@ -36,6 +36,7 @@ import { AdminArrastePdfsModal } from './AdminArrastePdfsModal';
 import { ImportarDeficienciasHtmScreen } from './ImportarDeficienciasHtmScreen';
 import { DiagnosticoBancoDadosScreen } from './DiagnosticoBancoDadosScreen';
 import { AtualizarDadosJsonModal } from './AtualizarDadosJsonModal';
+import { PwaIconsHealthScanner } from './PwaIconsHealthScanner';
 import {
   ArrowLeft,
   School,
@@ -74,6 +75,7 @@ import {
   Images,
   FileText,
   CalendarClock,
+  Smartphone,
 } from 'lucide-react';
 import {
   FcmBackendStatus,
@@ -259,7 +261,8 @@ type SubTabId =
   | 'contas_acesso'
   | 'rbac_matriz'
   | 'seguranca_lgpd'
-  | 'monitoramento';
+  | 'monitoramento'
+  | 'pwa_identidade';
 
 export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   authorizedUsers,
@@ -398,10 +401,16 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     } else if (section === 'seguranca') {
       if (
         preferredSubTab &&
-        (preferredSubTab === 'seguranca_lgpd' || preferredSubTab === 'monitoramento')
+        (preferredSubTab === 'seguranca_lgpd' ||
+          preferredSubTab === 'monitoramento' ||
+          preferredSubTab === 'pwa_identidade')
       ) {
         setActiveSubTab(preferredSubTab);
-      } else if (activeSubTab !== 'seguranca_lgpd' && activeSubTab !== 'monitoramento') {
+      } else if (
+        activeSubTab !== 'seguranca_lgpd' &&
+        activeSubTab !== 'monitoramento' &&
+        activeSubTab !== 'pwa_identidade'
+      ) {
         setActiveSubTab('seguranca_lgpd');
       }
     }
@@ -1467,6 +1476,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       label: 'Tempo de Tela & Sessões',
       count: accessSessionLogs.length,
       icon: <Activity className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'pwa_identidade',
+      label: 'Ícones iOS & PWA',
+      icon: <Smartphone className="w-4 h-4 shrink-0" />,
     },
   ];
 
@@ -4440,6 +4454,13 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             </>
           )}
         </section>
+      )}
+
+      {/* =====================================================================
+          SEÇÃO 2 · SUB-ABA 6: VERIFICADOR DE ÍCONES PWA & COMPATIBILIDADE iOS
+          ===================================================================== */}
+      {activeSection === 'seguranca' && activeSubTab === 'pwa_identidade' && (
+        <PwaIconsHealthScanner />
       )}
 
       {/* =====================================================================

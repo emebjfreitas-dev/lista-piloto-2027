@@ -7,9 +7,9 @@ async function generateFavicons() {
   const svgPath = path.join(publicDir, 'favicon.svg');
   const svgBuffer = fs.readFileSync(svgPath);
 
-  console.log('Generating favicon PNG sizes...');
+  console.log('Generating favicon & PWA PNG sizes...');
 
-  const sizes = [16, 32, 48, 180, 192, 512];
+  const sizes = [16, 32, 48, 192, 512];
   const pngBuffers: Record<number, Buffer> = {};
 
   for (const size of sizes) {
@@ -24,14 +24,66 @@ async function generateFavicons() {
       fs.writeFileSync(path.join(publicDir, 'favicon-16x16.png'), png);
     } else if (size === 32) {
       fs.writeFileSync(path.join(publicDir, 'favicon-32x32.png'), png);
-    } else if (size === 180) {
-      fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), png);
     } else if (size === 192) {
       fs.writeFileSync(path.join(publicDir, 'pwa-192x192.png'), png);
     } else if (size === 512) {
       fs.writeFileSync(path.join(publicDir, 'pwa-512x512.png'), png);
     }
   }
+
+  // Apple Touch Icon (180x180) — iOS requires opaque background (no transparency, otherwise renders black) + safe padding
+  const iosInnerSize = 148;
+  const iosCrest = await sharp(svgBuffer)
+    .resize(iosInnerSize, iosInnerSize, {
+      fit: 'contain',
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    })
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .png()
+    .toBuffer();
+
+  const appleTouchIcon = await sharp({
+    create: {
+      width: 180,
+      height: 180,
+      channels: 3,
+      background: { r: 255, g: 255, b: 255 },
+    },
+  })
+    .composite([{ input: iosCrest, gravity: 'center' }])
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .removeAlpha()
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+
+  fs.writeFileSync(path.join(publicDir, 'apple-touch-icon.png'), appleTouchIcon);
+
+  // Android Maskable Icon (512x512) — Safe zone ~76% inner area on opaque white background
+  const maskableInnerSize = 388;
+  const maskableCrest = await sharp(svgBuffer)
+    .resize(maskableInnerSize, maskableInnerSize, {
+      fit: 'contain',
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    })
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .png()
+    .toBuffer();
+
+  const pwaMaskableIcon = await sharp({
+    create: {
+      width: 512,
+      height: 512,
+      channels: 3,
+      background: { r: 255, g: 255, b: 255 },
+    },
+  })
+    .composite([{ input: maskableCrest, gravity: 'center' }])
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .removeAlpha()
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+
+  fs.writeFileSync(path.join(publicDir, 'pwa-maskable-512x512.png'), pwaMaskableIcon);
 
   console.log('Building binary multi-resolution favicon.ico (16x16, 32x32, 48x48)...');
   const icoSizes = [16, 32, 48];
@@ -67,15 +119,16 @@ async function generateFavicons() {
   const icoBuffer = Buffer.concat([header, ...dirEntries, ...imageBuffers]);
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), icoBuffer);
 
-  console.log('Favicon generation completed successfully!');
+  console.log('Favicon & iOS/PWA icon generation completed successfully!');
   console.log('Generated:');
   console.log(' - public/favicon.svg');
   console.log(' - public/favicon.ico (' + icoBuffer.length + ' bytes)');
   console.log(' - public/favicon-16x16.png');
   console.log(' - public/favicon-32x32.png');
-  console.log(' - public/apple-touch-icon.png (180x180)');
+  console.log(' - public/apple-touch-icon.png (180x180 opaque iOS-ready)');
   console.log(' - public/pwa-192x192.png');
   console.log(' - public/pwa-512x512.png');
+  console.log(' - public/pwa-maskable-512x512.png (512x512 opaque safe-zone)');
 }
 
 generateFavicons().catch((err) => {
