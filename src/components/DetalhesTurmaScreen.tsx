@@ -25,6 +25,8 @@ import { StudentAvatar } from './StudentAvatar';
 import { StudentDataExpansionPanel } from './StudentDataExpansionPanel';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
+import { FileWarning, Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 type ViewMode = 'grid' | 'compact' | 'table';
 type StatusFilter =
@@ -59,6 +61,7 @@ interface DetalhesTurmaScreenProps {
   onNavigateToConsecutiveAbsences?: () => void;
   onNavigateToSheet: () => void;
   onBackToClasses: () => void;
+  initialStatusFilter?: StatusFilter;
 }
 
 interface EstudanteCardProps {
@@ -1195,11 +1198,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   onOpenPhotoModal,
   onOpenStudentPdf,
   onBackToClasses,
+  initialStatusFilter = 'all',
 }) => {
   const isPeb1 = userRole === 'usuario';
   const [searchStudent, setSearchStudent] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatusFilter);
+  const [copiedFichaAlert, setCopiedFichaAlert] = useState(false);
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
   const [tableElement, setTableElement] = useState<HTMLTableElement | null>(null);
   const [viewportSize, setViewportSize] = useState<{ width: number; height: number }>(() => ({
@@ -1209,7 +1214,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
   useEffect(() => {
     setExpandedStudentId(null);
-  }, [classGroup.id]);
+    setStatusFilter(initialStatusFilter);
+  }, [classGroup.id, initialStatusFilter]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1378,12 +1384,13 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       if (s.nis && s.nis.trim().length > 0) bolsaFamiliaCount++;
       if (s.rotaOnibus && s.rotaOnibus.trim().length > 0) onibusFretadoCount++;
 
+      const isMoved = sit.includes('BXTR') || sit.includes('TRANSF') || sit.includes('REMAN') || sit.includes('RM');
       const hasScannedPdf = Boolean(
         (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
           (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
       );
       if (hasScannedPdf) comFichaEscaneadaCount++;
-      else semFichaEscaneadaCount++;
+      else if (!isMoved) semFichaEscaneadaCount++;
 
       const m = getStudentAttendanceMetrics(s, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
       if (m.isBelowLegalThreshold) alertaLegalCount++;
@@ -1452,7 +1459,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       );
 
       if (statusFilter === 'ativos') return !isMov;
-      if (statusFilter === 'sem_ficha_pdf') return !hasScannedPdf;
+      if (statusFilter === 'sem_ficha_pdf') return !isMov && !hasScannedPdf;
       if (statusFilter === 'movimentados') return isMov;
       if (statusFilter === 'onibus_fretado') {
         return Boolean(s.rotaOnibus && s.rotaOnibus.trim().length > 0);
@@ -1696,6 +1703,64 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               </button>
             )}
           </div>
+
+          {classSummary.semFichaEscaneadaCount > 0 && (
+            <div className="p-4 rounded-2xl bg-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/12 text-amber-700 flex items-center justify-center shrink-0">
+                  <FileWarning className="w-[18px] h-[18px] stroke-[1.5]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-bold text-slate-950">
+                    {classSummary.semFichaEscaneadaCount} Ficha(s) Informativa(s) não preenchida(s)
+                  </p>
+                  <p className="text-xs text-slate-600 leading-snug">
+                    Repasse o pedido de preenchimento da Ficha Informativa às famílias destes estudantes.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const msg =
+                      'Prezados responsáveis, solicitamos a gentileza de preencher e enviar a Ficha Informativa do(a) estudante para atualização do prontuário escolar na EMEB Prof. Joaquim Candelário de Freitas.';
+                    try {
+                      await navigator.clipboard.writeText(msg);
+                      setCopiedFichaAlert(true);
+                      toast.success('Recado para família copiado!');
+                      window.setTimeout(() => setCopiedFichaAlert(false), 3000);
+                    } catch {
+                      toast.info(msg);
+                    }
+                  }}
+                  className="min-h-[34px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  {copiedFichaAlert ? (
+                    <Check className="w-3.5 h-3.5 text-[#047857] stroke-[1.8]" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-slate-600 stroke-[1.5]" />
+                  )}
+                  <span>{copiedFichaAlert ? 'Copiado' : 'Copiar recado'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setStatusFilter(statusFilter === 'sem_ficha_pdf' ? 'all' : 'sem_ficha_pdf')
+                  }
+                  className={`min-h-[34px] px-3 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                    statusFilter === 'sem_ficha_pdf'
+                      ? 'bg-[#0b3b8c] text-white'
+                      : 'bg-amber-100 hover:bg-amber-200 text-amber-950'
+                  }`}
+                >
+                  {statusFilter === 'sem_ficha_pdf'
+                    ? 'Mostrar toda a turma'
+                    : `Filtrar pendentes (${classSummary.semFichaEscaneadaCount})`}
+                </button>
+              </div>
+            </div>
+          )}
         </header>
 
         {peb1Rows.length === 0 ? (

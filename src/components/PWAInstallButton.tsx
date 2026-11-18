@@ -110,10 +110,10 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
         onClick={handleInstallClick}
         disabled={isInstalling}
         title="Instalar Lista Piloto como aplicativo no seu dispositivo"
-        className="h-9 px-3 rounded-lg bg-[#0b3b8c]/[0.07] hover:bg-[#0b3b8c]/[0.12] border border-[#0b3b8c]/20 text-[#0b3b8c] font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+        className="h-9 px-2.5 xl:px-3 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/16 text-[#0b3b8c] font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
       >
-        <Download className="w-4 h-4 stroke-[2]" />
-        <span className="hidden sm:inline">Instalar App</span>
+        <Download className="w-4 h-4 stroke-[1.6]" />
+        <span className="hidden xl:inline">Instalar App</span>
       </button>
     );
   }
@@ -125,10 +125,10 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
           type="button"
           onClick={() => setShowIOSGuide(true)}
           title="Instalar no iPhone / iPad"
-          className="h-9 px-3 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+          className="h-9 px-2.5 xl:px-3 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
         >
-          <Smartphone className="w-4 h-4 text-slate-600" />
-          <span className="hidden sm:inline">Instalar iOS</span>
+          <Smartphone className="w-4 h-4 text-slate-600 stroke-[1.5]" />
+          <span className="hidden xl:inline">Instalar iOS</span>
         </button>
 
         {showIOSGuide && (

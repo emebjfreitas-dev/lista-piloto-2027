@@ -383,10 +383,15 @@ export default function App() {
     }
 
     setNavDirection(1);
+    setDetalhesInitialStatusFilter('all');
     setNavigationHistory((prev) => [...prev, currentScreen]);
     setCurrentScreen(nextScreen);
     window.scrollTo(0, 0);
   };
+
+  const [detalhesInitialStatusFilter, setDetalhesInitialStatusFilter] = useState<
+    'all' | 'sem_ficha_pdf'
+  >('all');
 
   const [attendanceWindowConfig, setAttendanceWindowConfig] =
     useState<AttendanceWindowConfig>(() => getStoredAttendanceWindowConfig());
@@ -1209,6 +1214,7 @@ export default function App() {
   const handleSelectClassForDetails = (cls: ClassGroup) => {
     if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
     setSelectedClass(cls);
+    setDetalhesInitialStatusFilter('all');
     navigateToScreen('detalhes');
   };
 
@@ -2044,6 +2050,12 @@ export default function App() {
             onNavigateToAcessos={() => {
               navigateToScreen('usuarios_acesso');
             }}
+            onOpenClassPendingFichas={(cls) => {
+              if (userRole === 'usuario' && !allowedUsuarioClassIds.includes(cls.id)) return;
+              setSelectedClass(cls);
+              navigateToScreen('detalhes');
+              setDetalhesInitialStatusFilter('sem_ficha_pdf');
+            }}
           />
         )}
 
@@ -2221,8 +2233,10 @@ export default function App() {
               navigateToScreen('faltas_consecutivas');
             }}
             onNavigateToSheet={() => navigateToScreen('planilha')}
+            initialStatusFilter={detalhesInitialStatusFilter}
             onBackToClasses={() => {
               setNavDirection(-1);
+              setDetalhesInitialStatusFilter('all');
               setCurrentScreen('turmas');
               window.scrollTo(0, 0);
             }}

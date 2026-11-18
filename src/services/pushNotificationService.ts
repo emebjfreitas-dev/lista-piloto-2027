@@ -133,12 +133,17 @@ export async function requestPushNotificationPermission(): Promise<{
   }
 }
 
+const getReadStorageKey = (userEmail?: string): string => {
+  const clean = (userEmail || '').trim().toLowerCase();
+  return clean ? `${PUSH_READ_IDS_STORAGE_KEY}_${clean}` : PUSH_READ_IDS_STORAGE_KEY;
+};
+
 /**
  * Dispara uma notificação Push real através do Service Worker ativo (ou fallback nativo + banner Apple no topo).
  */
 export async function triggerPushNotification(
   notice: Omit<PushNoticeItem, 'id' | 'createdAt'> & { id?: string; createdAt?: string },
-  options?: { showBanner?: boolean; saveToFeed?: boolean }
+  options?: { showBanner?: boolean; saveToFeed?: boolean; userEmail?: string }
 ): Promise<PushNoticeItem> {
   const fullNotice: PushNoticeItem = {
     id: notice.id || `push_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -156,6 +161,12 @@ export async function triggerPushNotification(
     authorName: notice.authorName || 'Coordenação EMEB Candelário',
     read: false,
   };
+
+  // Se este usuário já deu ciência nesta notificação, não reexibe banner nem OS push
+  const alreadyReadByUser = getReadPushNoticeIds(options?.userEmail).includes(fullNotice.id);
+  if (alreadyReadByUser) {
+    return { ...fullNotice, read: true };
+  }
 
   if (options?.saveToFeed !== false) {
     const existing = getStoredCustomPushNotices();
@@ -268,36 +279,44 @@ export function saveStoredCustomPushNotices(notices: PushNoticeItem[]): void {
   }
 }
 
-export function getReadPushNoticeIds(): string[] {
+export function getReadPushNoticeIds(userEmail?: string): string[] {
   try {
-    const raw = localStorage.getItem(PUSH_READ_IDS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+    const userKey = getReadStorageKey(userEmail);
+    const rawUser = localStorage.getItem(userKey);
+    const userIds: string[] = rawUser ? JSON.parse(rawUser) : [];
+    if (userKey === PUSH_READ_IDS_STORAGE_KEY) {
+      return Array.isArray(userIds) ? userIds : [];
     }
+    const rawLegacy = localStorage.getItem(PUSH_READ_IDS_STORAGE_KEY);
+    const legacyIds: string[] = rawLegacy ? JSON.parse(rawLegacy) : [];
+    return Array.from(
+      new Set([
+        ...(Array.isArray(userIds) ? userIds : []),
+        ...(Array.isArray(legacyIds) ? legacyIds : []),
+      ])
+    );
   } catch {
-    // ignore
+    return [];
   }
-  return [];
 }
 
-export function markPushNoticeAsRead(id: string): string[] {
-  const current = getReadPushNoticeIds();
+export function markPushNoticeAsRead(id: string, userEmail?: string): string[] {
+  const current = getReadPushNoticeIds(userEmail);
   if (current.includes(id)) return current;
   const next = [...current, id];
   try {
-    localStorage.setItem(PUSH_READ_IDS_STORAGE_KEY, JSON.stringify(next));
+    localStorage.setItem(getReadStorageKey(userEmail), JSON.stringify(next));
   } catch {
     // ignore
   }
   return next;
 }
 
-export function markAllPushNoticesAsRead(ids: string[]): string[] {
-  const current = getReadPushNoticeIds();
+export function markAllPushNoticesAsRead(ids: string[], userEmail?: string): string[] {
+  const current = getReadPushNoticeIds(userEmail);
   const merged = Array.from(new Set([...current, ...ids]));
   try {
-    localStorage.setItem(PUSH_READ_IDS_STORAGE_KEY, JSON.stringify(merged));
+    localStorage.setItem(getReadStorageKey(userEmail), JSON.stringify(merged));
   } catch {
     // ignore
   }

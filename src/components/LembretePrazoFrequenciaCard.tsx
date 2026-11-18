@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AttendanceWindowConfig, ClassGroup, UserRole } from '../types';
+import { AttendanceWindowConfig, AuthorizedUser, ClassGroup, UserRole } from '../types';
 import { evaluateAttendanceLaunchWindow } from '../services/db';
 import {
   dispatchWindowClosingFcmAlert,
@@ -22,6 +22,7 @@ import {
 interface LembretePrazoFrequenciaCardProps {
   attendanceWindowConfig: AttendanceWindowConfig;
   userRole?: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
   userEmail?: string;
   userName?: string;
   classes?: ClassGroup[];
@@ -34,6 +35,7 @@ interface LembretePrazoFrequenciaCardProps {
 export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardProps> = ({
   attendanceWindowConfig,
   userRole = 'usuario',
+  teacherRoleType,
   userEmail = 'emebjfreitas@jundiai.sp.gov.br',
   userName,
   classes = [],
@@ -42,6 +44,8 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
   onOpenMonthlyAttendance,
   onNavigateToAcessos,
 }) => {
+  const isStrictAdmin =
+    userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
   const [isDismissed, setIsDismissed] = useState(false);
   const [fcmPermission, setFcmPermission] = useState<NotificationPermission | 'unsupported'>(() =>
     getPushPermissionState()
@@ -104,7 +108,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
   };
 
   const handleAdminNotifyPendingViaFcm = async () => {
-    if (fcmActionLoading) return;
+    if (!isStrictAdmin || fcmActionLoading) return;
     setFcmActionLoading(true);
     setFcmToastMsg(null);
     try {
@@ -114,6 +118,8 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
         classes,
         senderEmail: userEmail,
         senderName: userName || 'Gestão Escolar',
+        senderRole: userRole,
+        senderTeacherRoleType: teacherRoleType,
       });
       setFcmToastMsg(res.message);
     } finally {
@@ -255,7 +261,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             </button>
           )}
 
-          {userRole === 'admin' ? (
+          {isStrictAdmin ? (
             <button
               type="button"
               disabled={fcmActionLoading}
@@ -295,7 +301,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             </button>
           )}
 
-          {userRole === 'admin' && onNavigateToAcessos && (
+          {isStrictAdmin && onNavigateToAcessos && (
             <button
               type="button"
               onClick={onNavigateToAcessos}

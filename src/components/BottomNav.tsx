@@ -116,21 +116,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       label: 'Bolsa Família & Fretado',
       description: 'Acompanhamento de condicionalidades sociais',
       icon: HeartHandshake,
-      tintClass: 'bg-[#fef3c7] text-[#92400e]',
+      tintClass: 'bg-amber-500/12 text-amber-700',
     },
     {
       id: 'dias_letivos',
       label: '200 Dias Letivos',
       description: 'Calendário oficial e feriados 2027',
       icon: CalendarDays,
-      tintClass: 'bg-[#eaf6ef] text-[#005035]',
+      tintClass: 'bg-emerald-500/12 text-emerald-700',
     },
     {
       id: 'usuarios_acesso',
       label: 'Central Admin · Segurança e Uploads',
       description: 'Acessos, LGPD, FCM, banco, fotos, PDFs e .HTM',
       icon: ShieldCheck,
-      tintClass: 'bg-[#f2f2f7] text-[#1d1d1f]',
+      tintClass: 'bg-[#0071e3]/12 text-[#0071e3]',
     },
   ];
 
@@ -180,7 +180,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 >
                   <IconComp
                     className={`w-5 h-5 transition-colors ${
-                      isActive ? 'stroke-[2.3]' : 'stroke-[1.95]'
+                      isActive ? 'stroke-[1.9]' : 'stroke-[1.5]'
                     }`}
                   />
                 </div>
@@ -211,7 +211,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               >
                 <SlidersHorizontal
                   className={`w-5 h-5 transition-colors ${
-                    isMoreActive || showMoreMenu ? 'stroke-[2.3]' : 'stroke-[1.95]'
+                    isMoreActive || showMoreMenu ? 'stroke-[1.9]' : 'stroke-[1.5]'
                   }`}
                 />
                 {syncSnapshot.pendingCount > 0 && (
@@ -237,7 +237,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               className="group flex flex-col items-center justify-center flex-1 min-w-0 min-h-[48px] h-full py-1.5 px-1 transition-transform cursor-pointer select-none active:scale-95 text-slate-600 hover:text-[#b91c1c]"
             >
               <div className="flex items-center justify-center px-3.5 h-8 rounded-xl">
-                <LogOut className="w-5 h-5 text-[#dc2626] stroke-[2]" />
+                <LogOut className="w-5 h-5 text-[#dc2626] stroke-[1.5]" />
               </div>
               <span className="text-xs font-semibold tracking-tight leading-tight mt-1 break-words text-center max-w-full text-slate-600">
                 Sair

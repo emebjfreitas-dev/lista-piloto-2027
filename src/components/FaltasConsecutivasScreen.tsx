@@ -567,18 +567,6 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     }));
 
     toast.success(`Solicitação enviada à secretaria para ${student.name.split(' ')[0]}!`);
-
-    triggerPushNotification(
-      {
-        title: `Contato Solicitado (${nextSequenceNumber}ª) • ${student.name.split(' ')[0]}`,
-        body: `PEB I (${cls.name}) solicitou contato com a família (${validation.sortedKeys.join(', ')}).`,
-        category: 'busca_ativa',
-        targetClassId: cls.id,
-        targetScreen: 'faltas_consecutivas',
-        authorName: userName || cls.teacherName || 'Regente PEB I',
-      },
-      { saveToFeed: true, showBanner: true }
-    );
   };
 
   const handleRemoveOccurrence = (

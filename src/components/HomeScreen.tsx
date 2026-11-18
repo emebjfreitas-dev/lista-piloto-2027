@@ -31,7 +31,11 @@ import {
   CalendarDays,
   ShieldCheck,
   ArrowUpDown,
+  FileWarning,
+  Copy,
+  Check,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   ResponsiveContainer,
   BarChart,
@@ -66,6 +70,7 @@ interface HomeScreenProps {
     reader: { userEmail: string; userName: string; userRole?: string }
   ) => void;
   onNavigateToAcessos?: () => void;
+  onOpenClassPendingFichas?: (cls: ClassGroup) => void;
 }
 
 interface QuickActionItem {
@@ -97,6 +102,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onSaveSchoolNotices,
   onMarkNoticeRead,
   onNavigateToAcessos,
+  onOpenClassPendingFichas,
 }) => {
   const isStrictAdmin =
     userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
@@ -109,6 +115,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [activeHubTab, setActiveHubTab] = useState<'prazos' | 'busca_ativa'>('prazos');
   const [chartFilterShift, setChartFilterShift] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
   const [chartSortMode, setChartSortMode] = useState<'default' | 'asc'>('default');
+  const [showAllMissingFichasClasses, setShowAllMissingFichasClasses] = useState(false);
+  const [copiedFamilyFichaPrompt, setCopiedFamilyFichaPrompt] = useState(false);
 
   const referencePeriod = useMemo(() => getDefaultReferencePeriod(new Date()), []);
   const windowEval = useMemo(
@@ -173,6 +181,55 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       criticalConsecutiveCount,
     };
   }, [visibleBaseClasses]);
+
+  // Levantamento de estudantes ativos ainda sem Ficha Informativa preenchida/anexada
+  const missingFichasSummary = useMemo(() => {
+    const classesWithMissing: Array<{
+      classGroup: ClassGroup;
+      missingStudents: Student[];
+    }> = [];
+    let totalMissing = 0;
+
+    visibleBaseClasses.forEach((cls) => {
+      const missingStudents = cls.students.filter((s) => {
+        const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
+        const isMoved =
+          sit.includes('BXTR') || sit.includes('TRANSF') || sit.includes('REMAN') || sit.includes('RM');
+        if (isMoved) return false;
+        const hasFicha = Boolean(
+          (s.fichaPdfDriveUrl && s.fichaPdfDriveUrl.trim().length > 0) ||
+            (s.fichaPdfDriveId && s.fichaPdfDriveId.trim().length > 0)
+        );
+        return !hasFicha;
+      });
+      if (missingStudents.length > 0) {
+        totalMissing += missingStudents.length;
+        classesWithMissing.push({
+          classGroup: cls,
+          missingStudents: [...missingStudents].sort((a, b) => a.number - b.number),
+        });
+      }
+    });
+
+    return {
+      totalMissing,
+      classesWithMissing,
+      firstPendingClass: classesWithMissing[0]?.classGroup || visibleBaseClasses[0],
+    };
+  }, [visibleBaseClasses]);
+
+  const handleCopyFamilyFichaRequest = async () => {
+    const message =
+      'Prezados responsáveis, solicitamos a gentileza de preencher e encaminhar a Ficha Informativa do(a) estudante para atualização do prontuário escolar na EMEB Prof. Joaquim Candelário de Freitas. Contamos com a colaboração da família!';
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopiedFamilyFichaPrompt(true);
+      toast.success('Recado copiado! Basta repassar no WhatsApp ou bilhete das famílias.');
+      window.setTimeout(() => setCopiedFamilyFichaPrompt(false), 3000);
+    } catch {
+      toast.info(message);
+    }
+  };
 
   const filteredClasses = useMemo(() => {
     let list = visibleBaseClasses;
@@ -302,7 +359,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const primaryTeacherClass = visibleBaseClasses[0];
 
-  // Ações essenciais estritamente filtradas pelo perfil (nunca expõe ferramentas Admin para PEB I, PEB II ou AEE)
+  // Ações essenciais estritamente filtradas pelo perfil com ícones minimalistas estilo Apple SF
   const quickActions = useMemo<QuickActionItem[]>(() => {
     const items: QuickActionItem[] = [
       {
@@ -312,9 +369,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           userRole === 'usuario' && primaryTeacherClass
             ? `${primaryTeacherClass.name} · ${schoolStats.activeStudents} estudantes`
             : `${schoolStats.totalClasses} turma(s) · ${schoolStats.activeStudents} ativos`,
-        icon: <Users className="w-6 h-6" />,
-        accentBg: 'bg-[#111827]',
-        accentText: 'text-white',
+        icon: <Users className="w-5 h-5 stroke-[1.5]" />,
+        accentBg: 'bg-slate-100',
+        accentText: 'text-slate-700',
         onClick: () =>
           userRole === 'usuario'
             ? onNavigateToScreen('detalhes')
@@ -329,9 +386,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         subtitle: `${referencePeriod.monthName}/${referencePeriod.year} · ${
           windowEval.isAllowedToLaunch ? 'Janela aberta' : 'Consultar prazo'
         }`,
-        icon: <CalendarCheck className="w-6 h-6" />,
-        accentBg: 'bg-[#047857]',
-        accentText: 'text-white',
+        icon: <CalendarCheck className="w-5 h-5 stroke-[1.5]" />,
+        accentBg: 'bg-emerald-500/12',
+        accentText: 'text-emerald-700',
         onClick: () => onNavigateToScreen('frequencia_mensal'),
       });
     }
@@ -340,9 +397,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       id: 'faltas_consecutivas',
       title: 'Busca Ativa (ECA)',
       subtitle: `${schoolStats.criticalConsecutiveCount} caso(s) em atenção`,
-      icon: <AlertTriangle className="w-6 h-6" />,
-      accentBg: 'bg-[#be123c]',
-      accentText: 'text-white',
+      icon: <AlertTriangle className="w-5 h-5 stroke-[1.5]" />,
+      accentBg: 'bg-rose-500/12',
+      accentText: 'text-rose-600',
       onClick: () => onNavigateToScreen('faltas_consecutivas'),
     });
 
@@ -352,44 +409,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           id: 'usuarios_acesso',
           title: 'Central de Segurança, Acesso e Uploads',
           subtitle: `Docentes, LGPD, FCM, diagnóstico BD, fotos, PDFs e ${schoolStats.aeeCount} AEE`,
-          icon: <ShieldCheck className="w-6 h-6" />,
-          accentBg: 'bg-[#1a4fa3]',
-          accentText: 'text-white',
+          icon: <ShieldCheck className="w-5 h-5 stroke-[1.5]" />,
+          accentBg: 'bg-[#0071e3]/12',
+          accentText: 'text-[#0071e3]',
           onClick: () => onNavigateToScreen('usuarios_acesso'),
         },
         {
           id: 'bolsa_familia',
           title: 'Bolsa Família & Fretado',
           subtitle: 'Acompanhamento bimestral e transporte',
-          icon: <HeartHandshake className="w-6 h-6" />,
-          accentBg: 'bg-[#f2f2f7]',
-          accentText: 'text-[#111827]',
+          icon: <HeartHandshake className="w-5 h-5 stroke-[1.5]" />,
+          accentBg: 'bg-amber-500/12',
+          accentText: 'text-amber-700',
           onClick: () => onNavigateToScreen('bolsa_familia'),
         },
         {
           id: 'dias_letivos',
           title: '200 Dias Letivos',
           subtitle: 'Calendário oficial e feriados 2027',
-          icon: <CalendarDays className="w-6 h-6" />,
-          accentBg: 'bg-[#f2f2f7]',
-          accentText: 'text-[#111827]',
+          icon: <CalendarDays className="w-5 h-5 stroke-[1.5]" />,
+          accentBg: 'bg-slate-100',
+          accentText: 'text-slate-700',
           onClick: () => onNavigateToScreen('dias_letivos'),
         }
       );
     } else {
-      items.push(
-        {
-          id: 'avisos',
-          title: 'Quadro de Avisos da Direção',
-          subtitle: `${schoolNotices.filter((n) => n.active !== false).length} comunicado(s) ativo(s)`,
-          icon: <Bell className="w-6 h-6" />,
-          accentBg: 'bg-[#f2f2f7]',
-          accentText: 'text-[#111827]',
-          onClick: () => {
-            document.getElementById('quadro-avisos-direcao')?.scrollIntoView({ behavior: 'smooth' });
-          },
-        }
-      );
+      items.push({
+        id: 'avisos',
+        title: 'Quadro de Avisos da Direção',
+        subtitle: `${schoolNotices.filter((n) => n.active !== false).length} comunicado(s) ativo(s)`,
+        icon: <Bell className="w-5 h-5 stroke-[1.5]" />,
+        accentBg: 'bg-[#0071e3]/12',
+        accentText: 'text-[#0071e3]',
+        onClick: () => {
+          document.getElementById('quadro-avisos-direcao')?.scrollIntoView({ behavior: 'smooth' });
+        },
+      });
     }
 
     return items;
@@ -429,32 +484,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateToScreen('frequencia_mensal')}
-                className="w-full sm:w-auto min-h-[48px] py-2.5 px-6 rounded-2xl bg-[#047857] hover:bg-[#065f46] text-white text-sm font-bold inline-flex items-center justify-center text-center whitespace-normal gap-2.5 cursor-pointer transition-colors duration-100 shadow-xs"
+                className="w-full sm:w-auto min-h-[46px] py-2.5 px-5 rounded-2xl bg-[#047857] hover:bg-[#065f46] text-white text-sm font-semibold inline-flex items-center justify-center text-center whitespace-nowrap gap-2 cursor-pointer transition-colors duration-100 shadow-xs"
               >
-                <CalendarCheck className="w-5 h-5 shrink-0" />
+                <CalendarCheck className="w-[18px] h-[18px] stroke-[1.6] shrink-0" />
                 <span>Informar Faltas · {referencePeriod.monthName}</span>
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => onNavigateToScreen('turmas')}
-                className="w-full sm:w-auto min-h-[48px] py-2.5 px-6 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-sm font-bold inline-flex items-center justify-center text-center whitespace-normal gap-2.5 cursor-pointer transition-colors duration-100 shadow-xs"
+                className="w-full sm:w-auto min-h-[46px] py-2.5 px-5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-sm font-semibold inline-flex items-center justify-center text-center whitespace-nowrap gap-2 cursor-pointer transition-colors duration-100 shadow-xs"
               >
-                <Users className="w-5 h-5 shrink-0" />
+                <Users className="w-[18px] h-[18px] stroke-[1.6] shrink-0" />
                 <span>Ver Turmas ({schoolStats.totalClasses})</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Faixa Unificada de KPIs Reais */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 min-w-0">
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] min-w-0 break-words">
+        {/* Faixa Unificada de KPIs Alinhados */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 min-w-0 items-stretch">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] min-w-0 flex flex-col justify-between h-full">
             <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Estudantes Ativos</span>
-            <span className="text-2xl sm:text-3xl font-bold text-slate-950 tabular-nums block mt-1">
+            <span className="text-2xl sm:text-[28px] font-bold text-slate-950 tabular-nums block my-1 leading-tight">
               {schoolStats.activeStudents}
             </span>
-            <span className="text-xs text-slate-600 font-medium tabular-nums block mt-1">
+            <span className="text-xs text-slate-600 font-medium tabular-nums block">
               {schoolStats.aeeCount} em AEE
             </span>
           </div>
@@ -463,63 +518,210 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={() => onNavigateToScreen('detalhes')}
-              className="text-left p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] hover:bg-slate-200/70 cursor-pointer transition-colors duration-100 min-w-0 break-words"
+              className="text-left p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] hover:bg-slate-200/70 cursor-pointer transition-colors duration-100 min-w-0 flex flex-col justify-between h-full"
             >
               <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Minha Turma</span>
-              <span className="text-xl sm:text-2xl font-bold text-slate-950 block mt-1 leading-snug">
+              <span className="text-xl sm:text-2xl font-bold text-slate-950 block my-1 leading-tight truncate">
                 {primaryTeacherClass.name}
               </span>
-              <span className="text-xs text-slate-600 font-medium block mt-1">
+              <span className="text-xs text-slate-600 font-medium block truncate">
                 {primaryTeacherClass.shift.replace('Turno ', '')} · {primaryTeacherClass.room || 'Sala'}
               </span>
             </button>
           ) : (
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] min-w-0 break-words">
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] min-w-0 flex flex-col justify-between h-full">
               <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Turmas</span>
-              <span className="text-2xl sm:text-3xl font-bold text-slate-950 tabular-nums block mt-1">
+              <span className="text-2xl sm:text-[28px] font-bold text-slate-950 tabular-nums block my-1 leading-tight">
                 {schoolStats.totalClasses}
               </span>
-              <span className="text-xs text-slate-600 font-medium tabular-nums block mt-1">
+              <span className="text-xs text-slate-600 font-medium tabular-nums block">
                 {schoolStats.morningCount} manhã · {schoolStats.afternoonCount} tarde
               </span>
             </div>
           )}
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 min-w-0 break-words">
+          <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 min-w-0 flex flex-col justify-between h-full">
             <span className="text-xs sm:text-[13px] font-semibold text-[#047857] block">Presença Média</span>
-            <span className="text-2xl sm:text-3xl font-bold text-[#047857] tabular-nums block mt-1">
+            <span className="text-2xl sm:text-[28px] font-bold text-[#047857] tabular-nums block my-1 leading-tight">
               {schoolStats.avgPresence}%
             </span>
-            <span className="text-xs text-emerald-900/80 font-medium block mt-1">Meta MEC ≥ 75%</span>
+            <span className="text-xs text-emerald-900/80 font-medium block">Meta MEC ≥ 75%</span>
           </div>
 
           <button
             type="button"
             onClick={() => onNavigateToScreen('faltas_consecutivas')}
-            className="text-left p-4 sm:p-5 rounded-2xl bg-rose-50 hover:bg-rose-100 cursor-pointer transition-colors duration-100 min-w-0 break-words"
+            className="text-left p-4 sm:p-5 rounded-2xl bg-rose-50 hover:bg-rose-100 cursor-pointer transition-colors duration-100 min-w-0 flex flex-col justify-between h-full"
           >
             <span className="text-xs sm:text-[13px] font-semibold text-[#be123c] block">Busca Ativa (ECA)</span>
-            <span className="text-2xl sm:text-3xl font-bold text-[#be123c] tabular-nums block mt-1">
+            <span className="text-2xl sm:text-[28px] font-bold text-[#be123c] tabular-nums block my-1 leading-tight">
               {schoolStats.criticalConsecutiveCount}
             </span>
-            <span className="text-xs text-rose-900 font-medium block mt-1">Casos em atenção</span>
+            <span className="text-xs text-rose-900 font-medium block">Casos em atenção</span>
           </button>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#e8f0fe] col-span-2 sm:col-span-1 min-w-0 break-words">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#e8f0fe] col-span-2 sm:col-span-1 min-w-0 flex flex-col justify-between h-full">
             <span className="text-xs sm:text-[13px] font-semibold text-[#0b3b8c] block">Referência</span>
-            <span className="text-lg sm:text-xl font-bold text-slate-950 block mt-1 break-words leading-snug">
-              {referencePeriod.monthName} / {referencePeriod.year}
+            <span className="text-lg sm:text-xl font-bold text-slate-950 block my-1 leading-tight whitespace-nowrap">
+              {referencePeriod.monthName}/{referencePeriod.year}
             </span>
             <span
-              className={`text-xs font-bold block mt-1 ${
+              className={`text-xs font-bold block ${
                 windowEval.isAllowedToLaunch ? 'text-[#047857]' : 'text-slate-600'
               }`}
             >
-              {windowEval.isAllowedToLaunch ? 'Janela de lançamento aberta' : 'Consulta disponível'}
+              {windowEval.isAllowedToLaunch ? 'Janela aberta' : 'Consulta disponível'}
             </span>
           </div>
         </div>
       </section>
+
+      {/* AVISO INICIAL: FICHAS INFORMATIVAS NÃO PREENCHIDAS (Alerta ao Professor para Repassar à Família) */}
+      {missingFichasSummary.totalMissing > 0 && (
+        <section
+          aria-label="Aviso de Fichas Informativas Pendentes"
+          className="bg-white rounded-3xl p-5 sm:p-6 shadow-xs space-y-4 min-w-0"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
+            <div className="flex items-start gap-3.5 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/12 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                <FileWarning className="w-5 h-5 stroke-[1.5]" />
+              </div>
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-950 tracking-tight break-words">
+                    Fichas Informativas não preenchidas · Repassar pedido às famílias
+                  </h2>
+                </div>
+                <p className="text-xs sm:text-[13.5px] text-slate-700 leading-relaxed break-words">
+                  Há{' '}
+                  <strong className="font-bold text-[#b45309] tabular-nums">
+                    {missingFichasSummary.totalMissing} estudante(s) ativo(s)
+                  </strong>{' '}
+                  em{' '}
+                  <strong className="font-semibold text-slate-900 tabular-nums">
+                    {missingFichasSummary.classesWithMissing.length} turma(s)
+                  </strong>{' '}
+                  ainda sem Ficha Informativa preenchida/anexada. Por favor, repasse o pedido de
+                  preenchimento às respectivas famílias para atualizar o prontuário escolar.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleCopyFamilyFichaRequest}
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+              >
+                {copiedFamilyFichaPrompt ? (
+                  <>
+                    <Check className="w-4 h-4 text-[#047857] stroke-[1.8]" />
+                    <span>Recado copiado</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 text-slate-600 stroke-[1.5]" />
+                    <span>Copiar recado para família</span>
+                  </>
+                )}
+              </button>
+
+              {missingFichasSummary.firstPendingClass && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenClassPendingFichas) {
+                      onOpenClassPendingFichas(missingFichasSummary.firstPendingClass);
+                    } else if (onSelectClassForDetails) {
+                      onSelectClassForDetails(missingFichasSummary.firstPendingClass);
+                    } else {
+                      onNavigateToScreen('detalhes');
+                    }
+                  }}
+                  className="min-h-[40px] px-4 py-2 rounded-xl bg-[#b45309] hover:bg-[#92400e] text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+                >
+                  <span>Ver pendentes</span>
+                  <ChevronRight className="w-4 h-4 stroke-[1.6]" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Lista compacta de estudantes/turmas com Ficha Informativa pendente */}
+          {userRole === 'usuario' && missingFichasSummary.classesWithMissing[0] ? (
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 space-y-2">
+              <span className="text-xs font-semibold text-amber-950 block">
+                Estudantes sem Ficha Informativa em {missingFichasSummary.classesWithMissing[0].classGroup.name}:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(showAllMissingFichasClasses
+                  ? missingFichasSummary.classesWithMissing[0].missingStudents
+                  : missingFichasSummary.classesWithMissing[0].missingStudents.slice(0, 8)
+                ).map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() =>
+                      onOpenStudentPdf
+                        ? onOpenStudentPdf(st, missingFichasSummary.classesWithMissing[0].classGroup.name)
+                        : onOpenClassPendingFichas?.(missingFichasSummary.classesWithMissing[0].classGroup)
+                    }
+                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100/70 text-xs font-medium text-slate-900 tabular-nums cursor-pointer transition-colors"
+                  >
+                    {st.number.toString().padStart(2, '0')} · {st.name}
+                  </button>
+                ))}
+                {missingFichasSummary.classesWithMissing[0].missingStudents.length > 8 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllMissingFichasClasses((prev) => !prev)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                  >
+                    {showAllMissingFichasClasses
+                      ? 'Mostrar menos'
+                      : `+${missingFichasSummary.classesWithMissing[0].missingStudents.length - 8} estudantes`}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {(showAllMissingFichasClasses
+                ? missingFichasSummary.classesWithMissing
+                : missingFichasSummary.classesWithMissing.slice(0, 8)
+              ).map(({ classGroup: cls, missingStudents }) => (
+                <button
+                  key={cls.id}
+                  type="button"
+                  onClick={() =>
+                    onOpenClassPendingFichas
+                      ? onOpenClassPendingFichas(cls)
+                      : onSelectClassForDetails
+                      ? onSelectClassForDetails(cls)
+                      : onNavigateToScreen('detalhes')
+                  }
+                  className="min-h-[34px] px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-950 text-xs font-semibold inline-flex items-center gap-1.5 tabular-nums cursor-pointer transition-colors"
+                >
+                  <span>{cls.name}</span>
+                  <span className="font-bold text-[#b45309]">({missingStudents.length})</span>
+                </button>
+              ))}
+              {missingFichasSummary.classesWithMissing.length > 8 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllMissingFichasClasses((prev) => !prev)}
+                  className="px-2.5 py-1.5 text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                >
+                  {showAllMissingFichasClasses
+                    ? 'Ocultar turmas extras'
+                    : `Ver todas (${missingFichasSummary.classesWithMissing.length} turmas)`}
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* QUADRO DE AVISOS DA DIREÇÃO (Visível para toda a equipe escolar · Admins postam mensagens curtas) */}
       <QuadroAvisosDirecao
@@ -532,7 +734,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         onMarkNoticesRead={onMarkNoticeRead}
       />
 
-      {/* 2. ACESSO RÁPIDO (SEM PILLS, SEM CLUTTER, COM FERRAMENTAS ESSENCIAIS POR PERFIL) */}
+      {/* 2. ACESSO RÁPIDO (ÍCONES MINIMALISTAS ESTILO APPLE E ALINHAMENTO UNIFORME) */}
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 px-1">
           <div>
@@ -545,29 +747,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 min-w-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 min-w-0 items-stretch">
           {quickActions.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={item.onClick}
-              className="w-full min-w-0 min-h-[82px] text-left bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 active:scale-[0.99] rounded-2xl p-4 sm:p-5 shadow-xs transition-all duration-100 cursor-pointer flex items-center justify-between gap-3.5 group"
+              className="w-full h-full min-w-0 min-h-[82px] text-left bg-white hover:bg-slate-50 active:scale-[0.99] rounded-2xl p-4 sm:p-5 shadow-xs transition-all duration-100 cursor-pointer flex items-center justify-between gap-3.5 group"
             >
-              <div className="flex items-center gap-4 min-w-0 flex-1">
+              <div className="flex items-center gap-3.5 min-w-0 flex-1">
                 <div
-                  className={`w-12 h-12 rounded-2xl ${item.accentBg} ${item.accentText} flex items-center justify-center shrink-0`}
+                  className={`w-10 h-10 rounded-xl ${item.accentBg} ${item.accentText} flex items-center justify-center shrink-0`}
                 >
                   {item.icon}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base sm:text-[17px] font-bold text-slate-950 break-words leading-snug">
+                  <h3 className="text-[15px] sm:text-base font-bold text-slate-950 break-words leading-snug">
                     {item.title}
                   </h3>
                   <p className="text-xs sm:text-[13px] text-slate-600 break-words leading-snug mt-0.5">{item.subtitle}</p>
                 </div>
               </div>
 
-              <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-[#0b3b8c] group-hover:translate-x-0.5 transition-all shrink-0" />
+              <ChevronRight className="w-[18px] h-[18px] stroke-[1.5] text-slate-400 group-hover:text-[#0b3b8c] group-hover:translate-x-0.5 transition-all shrink-0" />
             </button>
           ))}
         </div>
@@ -765,6 +967,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <LembretePrazoFrequenciaCard
             attendanceWindowConfig={attendanceWindowConfig}
             userRole={userRole}
+            teacherRoleType={teacherRoleType}
             userEmail={userEmail}
             userName={userName}
             classes={classes}

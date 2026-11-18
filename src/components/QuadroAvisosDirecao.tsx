@@ -287,14 +287,14 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
 
   const handleMarkRead = (id: string) => {
     persistReadReceipts([id]);
-    toast.success('Leitura confirmada.');
+    toast.success('Ciência registrada com sucesso.');
   };
 
   const handleMarkAllRead = () => {
     const ids = unreadNotices.map((n) => n.id);
     if (ids.length === 0) return;
     persistReadReceipts(ids);
-    toast.success('Todos os avisos marcados como lidos.');
+    toast.success('Ciência registrada em todos os avisos.');
   };
 
   const toggleReadersPanel = (noticeId: string) => {
@@ -344,8 +344,8 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
       {/* Cabeçalho do Quadro */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
         <div className="flex items-start sm:items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-2xl bg-[#0b3b8c]/10 text-[#0b3b8c] flex items-center justify-center shrink-0">
-            <Megaphone className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0">
+            <Megaphone className="w-5 h-5 stroke-[1.5]" />
           </div>
           <div className="min-w-0">
             <h2 className="text-lg sm:text-xl font-bold text-slate-950 tracking-tight text-balance break-words">
@@ -363,7 +363,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                   <span aria-hidden="true">·</span>
                   <span className="font-bold text-[#be123c] tabular-nums">
                     {unreadNotices.length}{' '}
-                    {unreadNotices.length === 1 ? 'não lido' : 'não lidos'}
+                    {unreadNotices.length === 1 ? 'pendente de ciência' : 'pendentes de ciência'}
                   </span>
                 </>
               )}
@@ -378,8 +378,8 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
               onClick={handleMarkAllRead}
               className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors duration-100"
             >
-              <CheckCheck className="w-4 h-4 text-[#047857] shrink-0" />
-              <span>Marcar todos como lidos</span>
+              <CheckCheck className="w-4 h-4 text-[#047857] stroke-[1.6] shrink-0" />
+              <span>Dar ciência em tudo</span>
             </button>
           )}
 
@@ -389,7 +389,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
               onClick={handleOpenNew}
               className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs sm:text-[13px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors duration-100"
             >
-              <Plus className="w-4 h-4 shrink-0" />
+              <Plus className="w-4 h-4 stroke-[1.8] shrink-0" />
               <span>Postar Aviso</span>
             </button>
           )}
@@ -608,13 +608,13 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                         onClick={() => handleMarkRead(notice.id)}
                         className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors duration-100"
                       >
-                        <Check className="w-3.5 h-3.5 shrink-0" />
-                        <span>Marcar como lido</span>
+                        <Check className="w-3.5 h-3.5 stroke-[1.8] shrink-0" />
+                        <span>Dar ciência</span>
                       </button>
                     ) : (
                       <span className="min-h-[32px] font-bold text-[#047857] inline-flex items-center gap-1.5">
-                        <CheckCheck className="w-4 h-4 shrink-0" />
-                        <span>Lido</span>
+                        <CheckCheck className="w-4 h-4 stroke-[1.6] shrink-0" />
+                        <span>Ciência confirmada</span>
                       </span>
                     )}
 

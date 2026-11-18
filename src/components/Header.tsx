@@ -204,21 +204,21 @@ export const Header: React.FC<HeaderProps> = ({
       label: 'Bolsa Família & Fretado',
       subtitle: 'Condicionalidades e alertas sociais',
       icon: HeartHandshake,
-      tintClass: 'bg-[#fef3c7] text-[#92400e]',
+      tintClass: 'bg-amber-500/12 text-amber-700',
     },
     {
       id: 'dias_letivos',
       label: '200 Dias Letivos',
       subtitle: 'Calendário oficial e feriados 2027',
       icon: CalendarDays,
-      tintClass: 'bg-[#eaf6ef] text-[#005035]',
+      tintClass: 'bg-emerald-500/12 text-emerald-700',
     },
     {
       id: 'usuarios_acesso',
       label: 'Central Admin',
       subtitle: 'Segurança, acessos, banco e uploads',
       icon: ShieldCheck,
-      tintClass: 'bg-[#f2f2f7] text-[#1d1d1f]',
+      tintClass: 'bg-[#0071e3]/12 text-[#0071e3]',
     },
   ];
 
@@ -242,13 +242,13 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.28)]">
-        <div className="h-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto flex items-center justify-between gap-4 lg:gap-8 min-w-0">
-          {/* Zona 1: Identidade Institucional sem cortes ou pílulas de status */}
+      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.22)]">
+        <div className="h-16 px-3 sm:px-5 lg:px-6 max-w-[1600px] mx-auto flex items-center justify-between gap-2 lg:gap-4 xl:gap-6 min-w-0">
+          {/* Zona 1: Identidade Institucional (flexível com min-w-0 para nunca empurrar o perfil para fora da tela) */}
           <button
             type="button"
             onClick={() => navigateTo('home')}
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none shrink-0 text-left min-h-[44px]"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group select-none min-w-0 shrink text-left min-h-[44px]"
             title="Ir para o Início"
           >
             <img
@@ -259,18 +259,18 @@ export const Header: React.FC<HeaderProps> = ({
                 e.currentTarget.onerror = null;
                 e.currentTarget.src = APP_LOGO_FALLBACK_URL;
               }}
-              className="w-8 h-8 sm:w-9 sm:h-9 object-contain shrink-0"
+              className="w-8 h-8 object-contain shrink-0"
             />
-            <span className="text-[15px] sm:text-[16px] font-bold tracking-[-0.02em] text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors whitespace-nowrap">
-              Lista Piloto Candelário
+            <span className="text-[13.5px] sm:text-[14px] xl:text-[15.5px] font-semibold tracking-[-0.02em] text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors truncate">
+              Lista Piloto Candelário 2027
             </span>
           </button>
 
-          {/* Zona 2: Navegação Principal Limpa com sublinhado de página ativa (lg+) */}
+          {/* Zona 2: Navegação Principal Limpa com alinhamento equilibrado (lg+) */}
           {onChangeScreen && (
             <nav
               aria-label="Navegação Principal"
-              className="hidden lg:flex items-center gap-1 xl:gap-2 h-full shrink-0"
+              className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 h-full shrink-0"
             >
               {primaryNavItems.map((item) => {
                 const IconComp = item.icon;
@@ -280,15 +280,15 @@ export const Header: React.FC<HeaderProps> = ({
                     type="button"
                     onClick={() => navigateTo(item.id)}
                     aria-current={item.activeMatch ? 'page' : undefined}
-                    className={`relative h-10 px-3 rounded-lg text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                    className={`relative h-9 px-2 xl:px-3 rounded-xl text-[12.5px] xl:text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       item.activeMatch
-                        ? 'text-[#0b3b8c] font-semibold bg-[#0b3b8c]/[0.06] after:content-[""] after:absolute after:bottom-0 after:inset-x-2.5 after:h-[2px] after:bg-[#0b3b8c] after:rounded-full'
-                        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/75 font-medium'
+                        ? 'text-[#0b3b8c] font-semibold bg-[#0b3b8c]/[0.07] after:content-[""] after:absolute after:-bottom-1 after:inset-x-2.5 after:h-[2px] after:bg-[#0b3b8c] after:rounded-full'
+                        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80 font-medium'
                     }`}
                   >
                     <IconComp
-                      className={`w-4 h-4 shrink-0 ${
-                        item.activeMatch ? 'text-[#0b3b8c] stroke-[2.2]' : 'text-slate-500 stroke-[1.9]'
+                      className={`w-[17px] h-[17px] shrink-0 ${
+                        item.activeMatch ? 'text-[#0b3b8c] stroke-[1.8]' : 'text-slate-500 stroke-[1.5]'
                       }`}
                     />
                     <span>{item.label}</span>
@@ -303,17 +303,17 @@ export const Header: React.FC<HeaderProps> = ({
                     type="button"
                     onClick={() => setShowAdminNavDropdown((prev) => !prev)}
                     aria-expanded={showAdminNavDropdown}
-                    className={`relative h-10 px-3 rounded-lg text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                    className={`relative h-9 px-2 xl:px-3 rounded-xl text-[12.5px] xl:text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       isAdminScreenActive || showAdminNavDropdown
-                        ? 'text-[#0b3b8c] font-semibold bg-[#0b3b8c]/[0.06] after:content-[""] after:absolute after:bottom-0 after:inset-x-2.5 after:h-[2px] after:bg-[#0b3b8c] after:rounded-full'
-                        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/75 font-medium'
+                        ? 'text-[#0b3b8c] font-semibold bg-[#0b3b8c]/[0.07] after:content-[""] after:absolute after:-bottom-1 after:inset-x-2.5 after:h-[2px] after:bg-[#0b3b8c] after:rounded-full'
+                        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80 font-medium'
                     }`}
                   >
                     <SlidersHorizontal
-                      className={`w-4 h-4 shrink-0 ${
+                      className={`w-[17px] h-[17px] shrink-0 ${
                         isAdminScreenActive || showAdminNavDropdown
-                          ? 'text-[#0b3b8c] stroke-[2.2]'
-                          : 'text-slate-500 stroke-[1.9]'
+                          ? 'text-[#0b3b8c] stroke-[1.8]'
+                          : 'text-slate-500 stroke-[1.5]'
                       }`}
                     />
                     <span>Gestão</span>
@@ -324,14 +324,14 @@ export const Header: React.FC<HeaderProps> = ({
                       />
                     )}
                     <ChevronDown
-                      className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-150 ${
+                      className={`w-3.5 h-3.5 text-slate-500 stroke-[1.6] transition-transform duration-150 ${
                         showAdminNavDropdown ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
 
                   {showAdminNavDropdown && (
-                    <div className="absolute right-0 mt-2.5 w-[min(22rem,calc(100vw-1.5rem))] bg-white rounded-3xl border border-slate-200 shadow-[0_18px_48px_rgba(15,23,42,0.16)] p-2.5 space-y-1 z-50 animate-gentle-fade">
+                    <div className="absolute right-0 mt-2.5 w-[min(22rem,calc(100vw-1.5rem))] bg-white rounded-3xl shadow-[0_18px_48px_rgba(15,23,42,0.18)] p-2.5 space-y-1 z-50 animate-gentle-fade">
                       <span className="text-xs font-bold uppercase tracking-wider text-slate-600 px-3 pt-1 pb-0.5 block">
                         Ferramentas de Gestão
                       </span>
@@ -358,7 +358,7 @@ export const Header: React.FC<HeaderProps> = ({
                                 active ? 'bg-white/20 text-white' : item.tintClass
                               }`}
                             >
-                              <IconComp className="w-5 h-5 stroke-[2]" />
+                              <IconComp className="w-[18px] h-[18px] stroke-[1.5]" />
                             </div>
                             <div className="min-w-0 flex-1">
                               <span className="text-sm font-semibold block break-words leading-snug">
@@ -423,8 +423,8 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
           )}
 
-          {/* Zona 3: Ações Rápidas e Perfil */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Zona 3: Ações Rápidas e Perfil (sempre perfeitamente visível dentro do viewport) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <PWAInstallButton variant="header" />
 
             {onOpenSpotlightSearch && (
@@ -433,10 +433,10 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onOpenSpotlightSearch}
                 aria-label="Buscar aluno ou turma"
                 title="Buscar aluno ou turma (⌘K)"
-                className="h-9 w-9 sm:w-auto sm:px-3 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-950 font-medium text-[13px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                className="h-9 w-9 xl:w-auto xl:px-3 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 hover:text-slate-950 font-medium text-[13px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Search className="w-4 h-4 text-slate-600 stroke-[2]" />
-                <span className="hidden sm:inline">Buscar</span>
+                <Search className="w-[17px] h-[17px] text-slate-600 stroke-[1.5]" />
+                <span className="hidden xl:inline">Buscar</span>
               </button>
             )}
 
@@ -444,6 +444,7 @@ export const Header: React.FC<HeaderProps> = ({
               visibleClasses={visibleClasses}
               allClasses={allClasses}
               userRole={userRole}
+              teacherRoleType={teacherRoleType}
               userEmail={userEmail}
               userName={userName}
               assignedClassIds={assignedClassIds}
@@ -461,18 +462,18 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => setShowProfileMenu((prev) => !prev)}
                 aria-label="Menu do perfil e sair"
-                className="h-9 pl-1.5 pr-2 sm:pr-2.5 rounded-lg border border-slate-200/90 bg-white hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap shrink-0"
+                className="h-9 pl-1.5 pr-2 sm:pr-2.5 rounded-xl bg-slate-100/80 hover:bg-slate-200/80 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-colors whitespace-nowrap shrink-0"
               >
                 <StudentAvatar
                   name={userName || userEmail || 'Educador'}
                   size="xs"
                   expandableOnClick={false}
-                  className="w-6 h-6 text-[11px] rounded-md border-0 bg-[#0b3b8c]/10 text-[#0b3b8c]"
+                  className="w-6 h-6 text-[11px] rounded-lg border-0 bg-[#0b3b8c]/12 text-[#0b3b8c]"
                 />
-                <span className="hidden sm:inline text-[13px] font-semibold text-slate-800 max-w-[100px] truncate">
+                <span className="hidden sm:inline text-[13px] font-semibold text-slate-800 max-w-[78px] truncate">
                   {roleShortLabel}
                 </span>
-                <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-slate-500" />
+                <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-slate-500 stroke-[1.6]" />
               </button>
 
               {showProfileMenu && (

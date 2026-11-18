@@ -41,6 +41,7 @@ import { isBackendApiAvailable } from './apiEnvironment';
 import {
   PushNoticeItem,
   getPushPermissionState,
+  getReadPushNoticeIds,
   getStoredPushPreferences,
   registerPushServiceWorker,
   saveStoredPushPreferences,
@@ -675,6 +676,7 @@ export function subscribeToFcmNotifications(params: {
 
     const isNew = markAlertIdSeen(alert.id);
     if (!isNew) return;
+    if (getReadPushNoticeIds(params.userEmail).includes(alert.id)) return;
 
     const notice = await triggerPushNotification(
       {
@@ -693,7 +695,7 @@ export function subscribeToFcmNotifications(params: {
           minute: '2-digit',
         }),
       },
-      { showBanner: true, saveToFeed: true }
+      { showBanner: true, saveToFeed: true, userEmail: params.userEmail }
     );
     params.onAlertReceived?.(notice);
   };
@@ -707,6 +709,7 @@ export function subscribeToFcmNotifications(params: {
         const data = payload.data || {};
         const msgId = data.alertId || payload.messageId || `fcm_fg_${Date.now()}`;
         if (!markAlertIdSeen(msgId)) return;
+        if (getReadPushNoticeIds(params.userEmail).includes(msgId)) return;
 
         const notice = await triggerPushNotification(
           {
@@ -721,7 +724,7 @@ export function subscribeToFcmNotifications(params: {
             targetScreen: (data.targetScreen as ScreenType) || 'frequencia_mensal',
             authorName: data.authorName || 'Firebase Cloud Messaging',
           },
-          { showBanner: true, saveToFeed: true }
+          { showBanner: true, saveToFeed: true, userEmail: params.userEmail }
         );
         params.onAlertReceived?.(notice);
       });
@@ -914,9 +917,14 @@ export async function evaluateAndTriggerWindowClosingReminder(params: {
     body = `A gestão abriu o lançamento de presença para regularização (${classPreview}). Confira suas pendências antes do encerramento.`;
   }
 
+  const reminderId = `window_auto_${todayKey}_${win.windowPhase}`;
+  if (!params.forceNotify && getReadPushNoticeIds(params.userEmail).includes(reminderId)) {
+    return null;
+  }
+
   return triggerPushNotification(
     {
-      id: `window_auto_${todayKey}_${win.windowPhase}`,
+      id: reminderId,
       title,
       body,
       category: 'prazo',
@@ -924,13 +932,14 @@ export async function evaluateAndTriggerWindowClosingReminder(params: {
       targetScreen: 'frequencia_mensal',
       authorName: 'FCM · Monitoramento de Prazos',
     },
-    { showBanner: true, saveToFeed: true }
+    { showBanner: true, saveToFeed: true, userEmail: params.userEmail }
   );
 }
 
 /**
  * Dispara alerta FCM oficial sobre o fechamento da janela de lançamento de presença
  * para professores (envio HTTP v1 em background + Firestore realtime + Service Worker).
+ * Restrito estritamente a Administradores.
  */
 export async function dispatchWindowClosingFcmAlert(params: {
   title?: string;
@@ -941,6 +950,8 @@ export async function dispatchWindowClosingFcmAlert(params: {
   classes: ClassGroup[];
   senderEmail: string;
   senderName: string;
+  senderRole?: UserRole;
+  senderTeacherRoleType?: AuthorizedUser['teacherRoleType'];
 }): Promise<{
   ok: boolean;
   alert: FcmWindowAlert;
@@ -948,6 +959,36 @@ export async function dispatchWindowClosingFcmAlert(params: {
   realtimeNotified: boolean;
   message: string;
 }> {
+  if (
+    (params.senderRole && params.senderRole !== 'admin') ||
+    params.senderTeacherRoleType === 'apoio' ||
+    params.senderTeacherRoleType === 'aee'
+  ) {
+    const emptyAlert: FcmWindowAlert = {
+      id: `blocked_${Date.now()}`,
+      title: '',
+      body: '',
+      category: 'prazo',
+      urgency: 'info',
+      targetScreen: 'frequencia_mensal',
+      targetClassIds: [],
+      targetAudience: 'all',
+      closingDateFormatted: '',
+      windowPhase: 'closed',
+      createdAtMs: Date.now(),
+      createdAtISO: new Date().toISOString(),
+      createdByEmail: params.senderEmail,
+      createdByName: params.senderName,
+      pendingClassesCount: 0,
+    };
+    return {
+      ok: false,
+      alert: emptyAlert,
+      deliveredFcmCount: 0,
+      realtimeNotified: false,
+      message: 'Apenas administradores podem enviar notificações push.',
+    };
+  }
   const win = evaluateAttendanceLaunchWindow(params.attendanceWindowConfig);
   const pendingClasses = params.classes.filter((c) => c.isPending);
   const audience = params.targetAudience || 'pending_only';
