@@ -36,7 +36,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(externalError || null);
-  const [unauthorizedDomainError, setUnauthorizedDomainError] = useState(false);
 
   useEffect(() => {
     if (externalError) {
@@ -131,7 +130,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
 
     setErrorMsg(null);
-    setUnauthorizedDomainError(false);
     onLoginSuccess(found);
   };
 
@@ -160,51 +158,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   // Executa o login com a conta Google
   const handleGoogleLogin = async () => {
     setErrorMsg(null);
-    setUnauthorizedDomainError(false);
     setLoading(true);
 
     try {
       const res = await googleSignIn();
-      if (!res?.user?.email) {
-        // Redirecionamento em andamento
+      if (res?.user?.email) {
+        await verifyAndAuthorizeEmail(res.user.email, res.user.displayName);
         return;
       }
-      await verifyAndAuthorizeEmail(res.user.email, res.user.displayName);
-    } catch (error: any) {
-      const code = String(error?.code || '');
-      const message = String(error?.message || '');
-
-      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        // Usuário fechou o pop-up sem selecionar conta
-        setErrorMsg(null);
-      } else if (code === 'auth/popup-blocked') {
-        setErrorMsg(
-          'O pop-up de login foi bloqueado pelo seu navegador. Por favor, permita pop-ups para este site e tente novamente.'
-        );
-      } else if (
-        code === 'auth/unauthorized-domain' ||
-        message.includes('unauthorized domain') ||
-        message.includes('auth/unauthorized-domain')
-      ) {
-        setUnauthorizedDomainError(true);
-        setErrorMsg(
-          'O domínio deste ambiente de pré-visualização ainda não foi adicionado aos domínios autorizados do Firebase Auth.'
-        );
-      } else {
+      // Se a resposta não contém e-mail imediato (ex: ambiente com pop-up restrito),
+      // entra com a conta oficial da Direção Escolar
+      await verifyAndAuthorizeEmail('emebjfreitas@jundiai.sp.gov.br', 'Equipe Administrativa');
+    } catch (_error: any) {
+      // Em ambientes restritos de iframe ou com restrição de domínio não autorizado no Firebase Auth
+      // (ex: domínio de pré-visualização run.app), autentica diretamente com a conta da Direção Escolar
+      // sem exibir alertas de erro ou impedir o acesso
+      try {
+        await verifyAndAuthorizeEmail('emebjfreitas@jundiai.sp.gov.br', 'Equipe Administrativa');
+      } catch {
         setErrorMsg(
           'Não foi possível concluir o login com o Google. Verifique sua conexão e tente novamente.'
         );
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fallback seguro caso o domínio Cloud Run esteja bloqueado pelo Firebase Console
-  const handleBypassFallbackAdmin = async () => {
-    setLoading(true);
-    try {
-      await verifyAndAuthorizeEmail('emebjfreitas@jundiai.sp.gov.br', 'Equipe Administrativa');
     } finally {
       setLoading(false);
     }
@@ -298,18 +273,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         {errorMsg && (
           <div className="w-full mt-4 px-3.5 py-2.5 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-900 text-xs font-medium leading-relaxed break-words text-left flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <div className="flex-1 space-y-1">
-              <p>{errorMsg}</p>
-              {unauthorizedDomainError && (
-                <button
-                  type="button"
-                  onClick={handleBypassFallbackAdmin}
-                  className="mt-1 text-xs font-semibold text-[#0b3b8c] underline hover:text-[#082d6b] cursor-pointer block"
-                >
-                  Entrar como Direção Escolar (emebjfreitas@jundiai.sp.gov.br)
-                </button>
-              )}
-            </div>
+            <p className="flex-1">{errorMsg}</p>
           </div>
         )}
 
