@@ -6,6 +6,8 @@ import {
   getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
   User,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -93,6 +95,7 @@ export const SCOPES = [
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 
 // Provider limpo para autenticação Google padrão (sem escopos sensíveis de Drive para evitar bloqueios no login)
 export const authLoginProvider = new GoogleAuthProvider();
