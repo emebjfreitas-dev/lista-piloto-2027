@@ -4062,6 +4062,21 @@ export const validateAndSanitizeJsonPayload = (
       } else {
         flatStudentRows = rawJson.data;
       }
+    } else {
+      // Fallback universal: busca qualquer propriedade que seja array no objeto
+      const allValues = Object.values(rawJson);
+      const foundArray = allValues.find((v) => Array.isArray(v) && v.length > 0) as any[] | undefined;
+      if (foundArray) {
+        if (foundArray.some(isClassObjectShape)) {
+          rawClasses = foundArray;
+        } else {
+          flatStudentRows = foundArray;
+        }
+      } else if (isClassObjectShape(rawJson)) {
+        rawClasses = [rawJson];
+      } else if (rawJson.estudante || rawJson.name || rawJson.nome || rawJson.RA || rawJson.ra) {
+        flatStudentRows = [rawJson];
+      }
     }
   }
 

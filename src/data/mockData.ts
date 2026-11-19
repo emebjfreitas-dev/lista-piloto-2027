@@ -274,6 +274,17 @@ export const APP_LOGO_FALLBACK_URL = `${APP_BASE_URL}pwa-192x192.png`;
 export const SCHOOL_PATRON_WATERMARK_URL =
   'https://live.staticflickr.com/65535/51747624614_48845297df_b.jpg';
 
+export const SCHOOL_WATERMARK_GALLERY: string[] = [
+  'https://jundiai.sp.gov.br/noticias/wp-content/uploads/sites/32/2024/12/candelario-1-1536x1024.jpg',
+  'https://jundiai.sp.gov.br/noticias/wp-content/uploads/sites/32/2022/07/inauguracao_emeb_candelario_de_freitas-404.jpg',
+  'https://jundiai.sp.gov.br/noticias/wp-content/uploads/sites/32/2023/05/parque_naturalizado_emeb_candelario_de_freitas_pa-3-1536x1024.jpg',
+  'https://jundiai.sp.gov.br/noticias/wp-content/uploads/sites/32/2021/11/grafite-emeb-candelario-77.jpg',
+  'https://jundiai.sp.gov.br/noticias/wp-content/uploads/sites/32/2022/07/alunos-emeb-candelario-em-aula-de-chromebooks-laboratorio-maker_c_-27.jpg',
+  'https://jundiai.sp.gov.br/noticias/wp-content/uploads/sites/32/2023/05/espaco-maker-fablab-emeb-candelario-formacao-alunos-para-uso-dos-chromebooks_fm_-4-1536x1024.jpg',
+  'https://live.staticflickr.com/65535/51747624614_48845297df_b.jpg',
+  `${APP_BASE_URL}escola-candelario.jpg`,
+];
+
 export const TEACHER_AVATAR_URL = 'https://lh3.googleusercontent.com/aida-public/AB6AXuD1tNB8f_YzRDEnOX7J-c3VPCSR3ojnGgdR5a2C4rW2hVcV660D4e5OWn63fjSZK5KQ4g_yWHlJoeOx5KEvQt593NNKaIQrl5O6nr3nZQv4gi2FC7TNoRqsU30o2GhNtBb5wK00uLoqwqm3e_2gjJp_gVfrvPkEi3zNpz-o-Xq0RYzfFlB5HQCeT-3OSYttOQz1KQPUGHkJv-v7s6FQHQleuYLnJHtRcjgsw6Gkt0P6zsimskCx0x2m';
 
 // Links Oficiais Padrão (Editáveis pelo Administrador para usar sua própria Planilha e Pasta Drive)

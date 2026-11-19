@@ -2,12 +2,11 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
+  inMemoryPersistence,
   User,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -95,7 +94,9 @@ export const SCOPES = [
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(() => {});
+setPersistence(auth, browserLocalPersistence).catch(() => {
+  setPersistence(auth, inMemoryPersistence).catch(() => {});
+});
 
 // Provider limpo para autenticação Google padrão (sem escopos sensíveis de Drive para evitar bloqueios no login)
 export const authLoginProvider = new GoogleAuthProvider();
@@ -345,21 +346,7 @@ export const checkGoogleRedirectResult = async (): Promise<{
   user: User;
   accessToken: string;
 } | null> => {
-  try {
-    const result = await getRedirectResult(auth);
-    if (!result) return null;
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (credential?.accessToken) {
-      cachedAccessToken = credential.accessToken;
-      cachedAccessTokenExpiresAtMs = Date.now() + TOKEN_DEFAULT_TTL_MS;
-      lastDriveAuthError = null;
-      registerDriveTokenOnServer(cachedAccessToken);
-    }
-    return { user: result.user, accessToken: cachedAccessToken || '' };
-  } catch (err) {
-    console.warn('Redirect auth check:', err);
-    return null;
-  }
+  return null;
 };
 
 export const googleSignIn = async (): Promise<{
@@ -380,14 +367,12 @@ export const googleSignIn = async (): Promise<{
   } catch (error: any) {
     if (
       error?.code === 'auth/popup-blocked' ||
-      error?.code === 'auth/operation-not-supported-in-this-environment'
+      error?.code === 'auth/operation-not-supported-in-this-environment' ||
+      error?.code === 'auth/missing-initial-state'
     ) {
-      try {
-        await signInWithRedirect(auth, provider);
-        return null;
-      } catch {
-        throw error;
-      }
+      throw new Error(
+        'O navegador bloqueou a janela pop-up de login ou este ambiente restrito não suporta pop-ups. Por favor, abra o aplicativo no navegador principal (Safari ou Chrome).'
+      );
     }
     throw error;
   } finally {

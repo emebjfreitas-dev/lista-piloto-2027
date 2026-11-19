@@ -3,11 +3,13 @@ import {
   AuthorizedUser,
   UserAccessSessionLog,
 } from '../types';
+import { toast } from 'sonner';
 import {
   getStoredClasses,
   getStoredAuthorizedUsers,
   getStoredAccessSessionLogs,
   mergeClassesWithConcurrencyControl,
+  importSchoolDataFromJson,
 } from './db';
 import {
   enqueuePendingSyncOperation,
@@ -42,7 +44,8 @@ export type SyncQueueTaskCategory =
   | 'pdf'
   | 'student_data'
   | 'users_access'
-  | 'gender_dictionary';
+  | 'gender_dictionary'
+  | 'json_import';
 
 export interface SyncQueueTaskItem {
   taskId: string;
@@ -59,7 +62,7 @@ export interface SyncQueueTaskItem {
   attempts: number;
   nextRetryAtMs: number;
   lastError?: string;
-  status: 'queued' | 'processing' | 'retrying';
+  status: 'queued' | 'processing' | 'retrying' | 'failed';
 }
 
 export interface SyncQueueManagerSnapshot {
@@ -98,6 +101,13 @@ class CentralizedSyncQueueManager {
   } | null = null;
   private pendingGenderSnapshot: {
     entries?: NameGenderEntry[];
+    updatedAtMs: number;
+  } | null = null;
+  private pendingJsonImportSnapshot: {
+    classes?: ClassGroup[];
+    fileName?: string;
+    fileSize?: string;
+    userEmail?: string;
     updatedAtMs: number;
   } | null = null;
 
@@ -346,6 +356,7 @@ class CentralizedSyncQueueManager {
       student_data: 'Dados Cadastrais / Busca Ativa',
       users_access: 'Controle de Acessos',
       gender_dictionary: 'Consulta de Gênero M/F',
+      json_import: 'Importação JSON de Estudantes',
     };
 
     const description =
@@ -503,6 +514,60 @@ class CentralizedSyncQueueManager {
     this.scheduleNextRetryTimer(COALESCE_WINDOW_MS);
   }
 
+  public enqueueJsonImportWrite(params: {
+    classes: ClassGroup[];
+    fileName?: string;
+    fileSize?: string;
+    userEmail?: string;
+    description?: string;
+  }): void {
+    const now = Date.now();
+    const coalesceUntilMs = now + COALESCE_WINDOW_MS;
+    this.pendingJsonImportSnapshot = {
+      classes: params.classes,
+      fileName: params.fileName || 'importacao_escolar.json',
+      fileSize: params.fileSize || '0 KB',
+      userEmail: params.userEmail || 'emebjfreitas@jundiai.sp.gov.br',
+      updatedAtMs: now,
+    };
+
+    const dedupeKey = 'json:import';
+    const existingIdx = this.queue.findIndex((t) => t.dedupeKey === dedupeKey);
+    const description = params.description || `Importação JSON — ${params.fileName || 'backup.json'}`;
+
+    if (existingIdx >= 0) {
+      const prev = this.queue[existingIdx];
+      this.queue[existingIdx] = {
+        ...prev,
+        categoriesCoalesced: ['json_import'],
+        description,
+        updatedAtMs: now,
+        coalesceUntilMs,
+        coalescedCount: (prev.coalescedCount || 1) + 1,
+        status: prev.status === 'processing' ? 'processing' : 'queued',
+        nextRetryAtMs: prev.status === 'processing' ? prev.nextRetryAtMs : coalesceUntilMs,
+      };
+    } else {
+      this.queue.push({
+        taskId: `sq-json-${now}-${Math.random().toString(36).slice(2, 7)}`,
+        dedupeKey,
+        category: 'json_import',
+        categoriesCoalesced: ['json_import'],
+        description,
+        createdAtMs: now,
+        updatedAtMs: now,
+        coalesceUntilMs,
+        coalescedCount: 1,
+        attempts: 0,
+        nextRetryAtMs: coalesceUntilMs,
+        status: 'queued',
+      });
+    }
+
+    this.persistToStorage();
+    this.scheduleNextRetryTimer(COALESCE_WINDOW_MS);
+  }
+
   public hasPendingTasks(): boolean {
     return this.queue.length > 0;
   }
@@ -562,7 +627,7 @@ class CentralizedSyncQueueManager {
         );
 
         const dueClassTasks = dueTasks.filter(
-          (t) => t.category !== 'users_access' && t.category !== 'gender_dictionary'
+          (t) => t.category !== 'users_access' && t.category !== 'gender_dictionary' && t.category !== 'json_import'
         );
 
         // 1. Unified single Firestore transaction for all due coalesced class tasks
@@ -658,36 +723,61 @@ class CentralizedSyncQueueManager {
           } catch (err: any) {
             const errorMessage =
               err?.message || 'Falha de comunicação com a nuvem — retentativa agendada';
-            let maxAttempts = 1;
-            let maxBackoff = BASE_BACKOFF_MS;
+            let maxAttemptsObserved = 1;
+            let maxBackoffObserved = BASE_BACKOFF_MS;
+            let anyTaskFailed = false;
 
             for (const snap of taskSnapshots) {
               const nextAttempts = (snap.attempts || 0) + 1;
-              const backoffMs = this.computeExponentialBackoffMs(nextAttempts);
-              maxAttempts = Math.max(maxAttempts, nextAttempts);
-              maxBackoff = Math.max(maxBackoff, backoffMs);
-
+              const maxAllowedAttempts = 5;
               const currentIdx = this.queue.findIndex((t) => t.dedupeKey === snap.dedupeKey);
-              if (currentIdx >= 0) {
-                this.queue[currentIdx] = {
-                  ...this.queue[currentIdx],
-                  attempts: nextAttempts,
-                  status: 'retrying',
-                  lastError: errorMessage,
-                  nextRetryAtMs: Date.now() + backoffMs,
-                };
+
+              if (nextAttempts >= maxAllowedAttempts) {
+                anyTaskFailed = true;
+                if (currentIdx >= 0) {
+                  this.queue[currentIdx] = {
+                    ...this.queue[currentIdx],
+                    attempts: nextAttempts,
+                    status: 'failed',
+                    lastError: errorMessage,
+                    nextRetryAtMs: Infinity,
+                  };
+                }
+                try {
+                  toast.error(`Falha Definitiva: ${snap.description}`, {
+                    description: `Limite de ${maxAllowedAttempts} tentativas esgotado. Erro: ${errorMessage}`,
+                    duration: Infinity,
+                  });
+                } catch {}
+              } else {
+                const backoffMs = this.computeExponentialBackoffMs(nextAttempts);
+                maxAttemptsObserved = Math.max(maxAttemptsObserved, nextAttempts);
+                maxBackoffObserved = Math.max(maxBackoffObserved, backoffMs);
+
+                if (currentIdx >= 0) {
+                  this.queue[currentIdx] = {
+                    ...this.queue[currentIdx],
+                    attempts: nextAttempts,
+                    status: 'retrying',
+                    lastError: errorMessage,
+                    nextRetryAtMs: Date.now() + backoffMs,
+                  };
+                }
               }
             }
 
             this.lastError = errorMessage;
             enqueuePendingSyncOperation(
               'save_classes',
-              `${taskSnapshots.length} turma(s) agrupada(s) (tentativa ${maxAttempts} · backoff ${Math.round(
-                maxBackoff / 1000
+              `${taskSnapshots.length} turma(s) agrupada(s) (tentativa ${maxAttemptsObserved} · backoff ${Math.round(
+                maxBackoffObserved / 1000
               )}s)`,
               errorMessage
             );
             this.persistToStorage();
+            if (anyTaskFailed) {
+              continue;
+            }
             break;
           }
         }
@@ -719,20 +809,21 @@ class CentralizedSyncQueueManager {
                 'Sincronização de acessos pendente — aguardando conexão com o banco na nuvem.'
               );
             }
-          } else if (taskSnapshot.category === 'gender_dictionary') {
-            const latestClasses = getStoredClasses();
-            const latestEntries =
-              this.pendingGenderSnapshot?.entries || getStoredNameGenderEntries();
-            const firestoreOk = await saveConfigMetaToFirestoreCloud({
-              genderDictionary: latestEntries,
-            });
-            if (hasLinkedSheet) {
-              await syncGenderDictionaryToGoogleSheet(latestClasses, latestEntries).catch(() => false);
-            }
-            if (!firestoreOk) {
-              throw new Error(
-                'Sincronização do dicionário pendente — aguardando conexão com a nuvem.'
-              );
+          } else if (taskSnapshot.category === 'json_import') {
+            const snapData = this.pendingJsonImportSnapshot;
+            const classesToImport = snapData?.classes || getStoredClasses();
+            const fileName = snapData?.fileName || 'importacao_escolar.json';
+            const fileSize = snapData?.fileSize || '0 KB';
+            const userEmail = snapData?.userEmail || 'emebjfreitas@jundiai.sp.gov.br';
+
+            const importRes = await importSchoolDataFromJson(
+              classesToImport,
+              fileName,
+              fileSize,
+              userEmail
+            );
+            if (!importRes.ok) {
+              throw new Error(importRes.error || 'Falha ao processar importação JSON no backend.');
             }
           }
 
@@ -769,33 +860,63 @@ class CentralizedSyncQueueManager {
           this.persistToStorage();
         } catch (err: any) {
           const nextAttempts = (taskSnapshot.attempts || 0) + 1;
-          const backoffMs = this.computeExponentialBackoffMs(nextAttempts);
+          const maxAllowedAttempts = 5;
           const errorMessage =
             err?.message || 'Falha de comunicação com a nuvem — retentativa agendada';
 
           const currentIdx = this.queue.findIndex(
             (t) => t.dedupeKey === taskSnapshot.dedupeKey
           );
-          if (currentIdx >= 0) {
-            this.queue[currentIdx] = {
-              ...this.queue[currentIdx],
-              attempts: nextAttempts,
-              status: 'retrying',
-              lastError: errorMessage,
-              nextRetryAtMs: Date.now() + backoffMs,
-            };
-          }
 
-          this.lastError = errorMessage;
-          enqueuePendingSyncOperation(
-            taskSnapshot.category === 'users_access' ? 'save_users' : 'save_classes',
-            `${taskSnapshot.description} (tentativa ${nextAttempts} · backoff ${Math.round(
-              backoffMs / 1000
-            )}s)`,
-            errorMessage
-          );
-          this.persistToStorage();
-          break;
+          if (nextAttempts >= maxAllowedAttempts) {
+            if (currentIdx >= 0) {
+              this.queue[currentIdx] = {
+                ...this.queue[currentIdx],
+                attempts: nextAttempts,
+                status: 'failed',
+                lastError: errorMessage,
+                nextRetryAtMs: Infinity,
+              };
+            }
+            this.lastError = errorMessage;
+
+            try {
+              toast.error(`Falha Definitiva: ${taskSnapshot.description}`, {
+                description: `Limite de ${maxAllowedAttempts} tentativas esgotado. Erro: ${errorMessage}`,
+                duration: Infinity,
+              });
+            } catch {}
+
+            enqueuePendingSyncOperation(
+              taskSnapshot.category === 'users_access' ? 'save_users' : 'save_classes',
+              `${taskSnapshot.description} (FALHA após ${nextAttempts} tentativas)`,
+              errorMessage
+            );
+            this.persistToStorage();
+            continue;
+          } else {
+            const backoffMs = this.computeExponentialBackoffMs(nextAttempts);
+            if (currentIdx >= 0) {
+              this.queue[currentIdx] = {
+                ...this.queue[currentIdx],
+                attempts: nextAttempts,
+                status: 'retrying',
+                lastError: errorMessage,
+                nextRetryAtMs: Date.now() + backoffMs,
+              };
+            }
+
+            this.lastError = errorMessage;
+            enqueuePendingSyncOperation(
+              taskSnapshot.category === 'users_access' ? 'save_users' : 'save_classes',
+              `${taskSnapshot.description} (tentativa ${nextAttempts} · backoff ${Math.round(
+                backoffMs / 1000
+              )}s)`,
+              errorMessage
+            );
+            this.persistToStorage();
+            break;
+          }
         }
       }
     } finally {
