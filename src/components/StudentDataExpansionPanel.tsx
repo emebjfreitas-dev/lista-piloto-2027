@@ -129,7 +129,6 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
       hasGuardian2 ? `Responsável 2 (${guardian2Info.shortRoleLabel}): ${guardian2Info.cleanName}` : '',
       rawPhones ? `Telefones: ${rawPhones}` : 'Telefone: Não cadastrado',
       formattedAddress ? `Endereço: ${formattedAddress}` : '',
-      student.rotaOnibus ? `Transporte escolar: ${student.rotaOnibus}` : 'Transporte: Próprio / Família',
     ]
       .filter(Boolean)
       .join('\n');
@@ -567,18 +566,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-[#f8fafc] space-y-2">
-              <div>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
-                  Transporte
-                </span>
-                <p className="text-[13.5px] font-semibold text-[#0f172a] mt-0.5">
-                  {student.rotaOnibus
-                    ? `Ônibus (${student.rotaOnibus})`
-                    : 'Próprio'}
-                </p>
-              </div>
-
-              {student.deficiencia && (
+              {student.deficiencia ? (
                 <div>
                   <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
                     AEE
@@ -587,18 +575,26 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                     {student.deficiencia}
                   </p>
                 </div>
+              ) : (
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                    Identificação Social
+                  </span>
+                  <p className="text-[13.5px] font-semibold text-[#0f172a] mt-0.5 tabular-nums">
+                    {student.nis ? `NIS ${student.nis}` : 'Sem NIS informado'}
+                  </p>
+                </div>
               )}
 
-              {(student.nis || student.emailMunicipal) && (
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[12px] text-[#475569] tabular-nums">
-                  {student.nis && (
-                    <span>
-                      NIS <strong className="font-semibold text-[#047857]">{student.nis}</strong>
-                    </span>
-                  )}
-                  {student.emailMunicipal && (
-                    <span className="break-all">{student.emailMunicipal}</span>
-                  )}
+              {student.deficiencia && student.nis && (
+                <div className="text-[12px] text-[#475569] tabular-nums pt-1">
+                  NIS <strong className="font-semibold text-[#047857]">{student.nis}</strong>
+                </div>
+              )}
+
+              {student.emailMunicipal && (
+                <div className="text-[12px] text-[#475569] break-all pt-1">
+                  {student.emailMunicipal}
                 </div>
               )}
             </div>

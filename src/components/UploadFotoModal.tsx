@@ -3,6 +3,11 @@ import { Student } from '../types';
 import { StudentAvatar } from './StudentAvatar';
 import { uploadStudentPhotoViaApi } from '../services/db';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { isSupportedImageFile } from '../utils/photoCompressor';
+import {
+  compressPhotoLosslessWithCanvas,
+  persistSingleStudentPhotoToIndexedDb,
+} from '../services/photoIndexedDbCache';
 
 interface UploadFotoModalProps {
   isOpen: boolean;
@@ -119,75 +124,73 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, canGoPrev, canGoNext, currentIndex, sortedStudents]);
 
-  const compressImageFileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const rawDataUrl = (ev.target?.result as string) || '';
-        if (!rawDataUrl) {
-          resolve('');
-          return;
-        }
-        const img = new Image();
-        img.onload = () => {
-          try {
-            const maxDim = 600;
-            let width = img.width;
-            let height = img.height;
-            if (width > height && width > maxDim) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else if (height > maxDim) {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL('image/jpeg', 0.85));
-              return;
-            }
-          } catch {
-            // fallback
-          }
-          resolve(rawDataUrl);
-        };
-        img.onerror = () => resolve(rawDataUrl);
-        img.src = rawDataUrl;
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
-  };
-
   const processAndUploadFile = async (file: File) => {
     if (!file || !student) return;
-
-    setIsProcessing(true);
-    setStatusMsg('Carregando e otimizando foto...');
-
-    const dataUrl = await compressImageFileToDataUrl(file);
-    if (!dataUrl) {
-      setIsProcessing(false);
-      setStatusMsg('Não foi possível ler a imagem selecionada.');
+    if (!isSupportedImageFile(file)) {
+      setStatusMsg('Formato não suportado. Envie uma imagem válida (JPG, PNG, WebP, HEIC, AVIF, BMP, GIF, SVG, TIFF).');
       return;
     }
 
-    setPreviewUrl(dataUrl);
+    setIsProcessing(true);
+    setUploadSuccess(false);
+    setStatusMsg('Decodificando e otimizando foto sem perdas visuais...');
 
     try {
-      const apiRes = await uploadStudentPhotoViaApi(student.id, dataUrl);
+      const optimized = await compressPhotoLosslessWithCanvas(file, {
+        maxDimension: 520,
+        initialQuality: 0.9,
+        minQuality: 0.75,
+        targetMaxBytes: 56 * 1024,
+        includeDataUrl: true,
+      });
+
+      const dataUrl = optimized.dataUrl || '';
+      if (!dataUrl) {
+        setIsProcessing(false);
+        setStatusMsg('Não foi possível ler a imagem selecionada.');
+        return;
+      }
+
+      setPreviewUrl(dataUrl);
+
+      if (student.photoSha256 && student.photoSha256 === optimized.sha256 && student.photo) {
+        setStatusMsg('✓ Foto idêntica (SHA-256) já cadastrada — envio redundante evitado.');
+        setUploadSuccess(true);
+        setTimeout(() => setUploadSuccess(false), 2500);
+        return;
+      }
+
+      const apiRes = await uploadStudentPhotoViaApi(student.id, {
+        bytes: optimized.bytes,
+        sha256: optimized.sha256,
+        mimeType: optimized.mimeType,
+        fallbackDataUrl: dataUrl,
+      });
+
+      const savedPercent = optimized.reductionPercent;
       const finalUrl = apiRes.photoUrl || dataUrl;
+
+      void persistSingleStudentPhotoToIndexedDb({
+        studentId: student.id,
+        ra: student.ra,
+        name: student.estudante || student.name,
+        photoUrl: finalUrl,
+        isManualLink: true,
+        sha256: optimized.sha256,
+        blob: optimized.blob,
+        updatedAtMs: Date.now(),
+      });
+
       onSavePhoto(student.id, finalUrl, undefined, undefined, true);
-      setStatusMsg('✓ Foto enviada e sincronizada para toda a escola!');
+      setStatusMsg(
+        `✓ Foto otimizada (${optimized.extension.toUpperCase()}${
+          savedPercent > 0 ? `, -${savedPercent}% de espaço` : ''
+        }) e sincronizada!`
+      );
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 2500);
     } catch {
-      onSavePhoto(student.id, dataUrl, undefined, undefined, true);
-      setStatusMsg('Foto salva localmente.');
+      setStatusMsg('Erro ao processar imagem. Verifique se o arquivo não está corrompido.');
     } finally {
       setIsProcessing(false);
     }
@@ -205,7 +208,6 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     if (!student) return;
     setIsProcessing(true);
     try {
-      // Remover salvando vazio
       setPreviewUrl('');
       onSavePhoto(student.id, '', '', '', false);
       setStatusMsg('Foto do estudante removida.');
@@ -218,8 +220,10 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
     e.preventDefault();
     if (!student || isProcessing) return;
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && isSupportedImageFile(file)) {
       await processAndUploadFile(file);
+    } else if (file) {
+      setStatusMsg('Arquivo solto não é uma imagem suportada.');
     }
   };
 
@@ -397,7 +401,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif,.avif,.webp,.bmp,.svg,.tif,.tiff,.jfif"
               onChange={handleFileChange}
               className="hidden"
             />

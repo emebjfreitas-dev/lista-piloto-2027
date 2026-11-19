@@ -29,7 +29,7 @@ import {
   ScreenType,
   UserRole,
 } from '../types';
-import { evaluateAttendanceLaunchWindow, getActiveUserAuthHeaders } from './db';
+import { evaluateAttendanceLaunchWindow, getActiveUserAuthHeadersAsync } from './db';
 import {
   firestoreDb,
   handleFirestoreError,
@@ -193,8 +193,10 @@ async function fetchAutoVapidKeysFromServer(): Promise<{
     return { publicKey: '', firebaseVapidKey: '' };
   }
   try {
+    const authHeaders = await getActiveUserAuthHeadersAsync();
     const res = await fetch('/api/fcm/vapid-public-key', {
-      headers: getActiveUserAuthHeaders(),
+      headers: authHeaders,
+      credentials: 'include',
       cache: 'no-store',
     });
     if (!res.ok) return { publicKey: '', firebaseVapidKey: '' };
@@ -520,12 +522,14 @@ export async function registerDeviceForFcm(params: {
   // 3. Persistir no backend Express (para disparo HTTP v1 automático e manual em segundo plano)
   if (isBackendApiAvailable()) {
     try {
+      const authHeaders = await getActiveUserAuthHeadersAsync();
       await fetch('/api/fcm/register-token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...authHeaders,
         },
+        credentials: 'include',
         body: JSON.stringify(subscription),
       });
     } catch {
@@ -601,12 +605,14 @@ export async function unregisterDeviceFromFcm(userEmail: string): Promise<void> 
 
   if (isBackendApiAvailable()) {
     try {
+      const authHeaders = await getActiveUserAuthHeadersAsync();
       await fetch('/api/fcm/unregister-token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...authHeaders,
         },
+        credentials: 'include',
         body: JSON.stringify({ id: subId, userEmail: cleanEmail }),
       });
     } catch {
@@ -789,8 +795,10 @@ export function subscribeToFcmNotifications(params: {
   const pollBackendAlerts = async () => {
     if (cancelled || !isBackendApiAvailable()) return;
     try {
+      const authHeaders = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/fcm/alerts', {
-        headers: getActiveUserAuthHeaders(),
+        headers: authHeaders,
+        credentials: 'include',
         cache: 'no-store',
       });
       if (!res.ok) return;
@@ -1048,12 +1056,14 @@ export async function dispatchWindowClosingFcmAlert(params: {
   // 1. Disparo backend (FCM HTTP v1 via Service Account + persistência compartilhada)
   if (isBackendApiAvailable()) {
     try {
+      const authHeaders = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/fcm/send-window-alert', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...authHeaders,
         },
+        credentials: 'include',
         body: JSON.stringify({ alert }),
       });
       if (res.ok) {
@@ -1106,8 +1116,10 @@ export async function dispatchWindowClosingFcmAlert(params: {
 export async function fetchFcmBackendStatus(): Promise<FcmBackendStatus | null> {
   if (!isBackendApiAvailable()) return null;
   try {
+    const authHeaders = await getActiveUserAuthHeadersAsync();
     const res = await fetch('/api/fcm/status', {
-      headers: getActiveUserAuthHeaders(),
+      headers: authHeaders,
+      credentials: 'include',
       cache: 'no-store',
     });
     if (!res.ok) return null;
@@ -1138,12 +1150,14 @@ export async function saveFcmSystemConfiguration(
 
   if (isBackendApiAvailable()) {
     try {
+      const authHeaders = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/fcm/config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...authHeaders,
         },
+        credentials: 'include',
         body: JSON.stringify({ fcmConfig: nextConfig }),
       });
       return res.ok;

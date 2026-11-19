@@ -14,6 +14,8 @@
         "totalAbsencesMonth": { "type": "number" },
         "justifiedAbsences": { "type": "number" },
         "diasLetivosRecorte": { "type": "number" },
+        "photoSha256": { "type": "string", "maxLength": 128 },
+        "fichaPdfSha256": { "type": "string", "maxLength": 128 },
         "updatedAtMs": { "type": "number" },
         "isDeleted": { "type": "boolean" }
       },

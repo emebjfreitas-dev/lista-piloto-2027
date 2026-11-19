@@ -113,8 +113,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   }> = [
     {
       id: 'bolsa_familia',
-      label: 'Bolsa Família & Fretado',
-      description: 'Acompanhamento de condicionalidades sociais',
+      label: 'Bolsa Família',
+      description: 'Estudantes beneficiados e frequência LDB',
       icon: HeartHandshake,
       tintClass: 'bg-amber-500/12 text-amber-700',
     },
@@ -127,8 +127,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     },
     {
       id: 'usuarios_acesso',
-      label: 'Central Admin · Segurança e Uploads',
-      description: 'Acessos, LGPD, FCM, banco, fotos, PDFs e .HTM',
+      label: 'Central Administrativa',
+      description: 'Acessos, segurança, banco, fotos, PDFs e .HTM',
       icon: ShieldCheck,
       tintClass: 'bg-[#0071e3]/12 text-[#0071e3]',
     },

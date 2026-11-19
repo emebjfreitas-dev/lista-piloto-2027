@@ -119,7 +119,7 @@ const SED_GRID_FIELDS: SedFieldDef[] = [
   { key: 'emailMicrosoft', label: '45. E-mail Educacional Microsoft', category: 'familia' },
   { key: 'emailMunicipal', label: '46. E-mail Institucional do(a) Estudante', category: 'familia' },
 
-  // Endereço & Transporte
+  // Endereço
   { key: 'cep', label: '36. Código Postal (CEP)', category: 'endereco', placeholder: '13.214-000' },
   { key: 'logradouro', label: '37. Endereço (Rua / Avenida)', category: 'endereco' },
   { key: 'numeroResidencia', label: '38. Número da Residência', category: 'endereco' },
@@ -127,7 +127,6 @@ const SED_GRID_FIELDS: SedFieldDef[] = [
   { key: 'bairro', label: '40. Bairro', category: 'endereco' },
   { key: 'cidade', label: '41. Cidade', category: 'endereco', placeholder: 'JUNDIAI' },
   { key: 'uf', label: '42. Estado (UF)', category: 'endereco', placeholder: 'SP' },
-  { key: 'rotaOnibus', label: '47. Transporte Escolar / Rota de Ônibus', category: 'endereco', placeholder: 'Ex: ROTA 04 - JARDIM BÚFALO' },
 ];
 
 export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
@@ -1234,8 +1233,8 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   )}
                 </div>
 
-                {/* Endereço e Rota de Ônibus */}
-                {(fullAddress || draft.rotaOnibus) && (
+                {/* Endereço */}
+                {fullAddress && (
                   <div className="pt-2 flex flex-wrap items-center justify-between gap-2 min-w-0">
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
@@ -1250,12 +1249,6 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         </p>
                       </div>
                     </div>
-
-                    {draft.rotaOnibus && (
-                      <span className="px-3 py-1 rounded-xl bg-sky-100 text-sky-950 font-semibold text-xs tabular-nums shrink-0">
-                        Ônibus: {draft.rotaOnibus}
-                      </span>
-                    )}
                   </div>
                 )}
 
@@ -1319,7 +1312,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   { id: 'escolar', label: 'Escola e Turma' },
                   { id: 'pessoal', label: 'Documentos e Saúde' },
                   { id: 'familia', label: 'Família e Telefones' },
-                  { id: 'endereco', label: 'Endereço e Ônibus' },
+                  { id: 'endereco', label: 'Endereço' },
                 ].map((cat) => (
                   <button
                     key={cat.id}

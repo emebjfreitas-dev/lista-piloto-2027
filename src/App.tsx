@@ -38,6 +38,8 @@ import {
   isUserAccessEffectivelyActive,
   formatAccessExpirationDateBR,
   syncExpiredAuthorizedUsers,
+  establishServerAuthSessionCookie,
+  clearServerAuthSessionCookie,
 } from './services/db';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import {
@@ -769,7 +771,12 @@ export default function App() {
     return () => window.clearInterval(intervalId);
   }, [isAuthVerified, userRole, simulatedTeacherEmail, authorizedUsers, currentUserEmail]);
 
-  // Restore ONLY explicit tab session on reload (never auto-login from stale Firebase cache on fresh visit)
+  const isAuthVerifiedRef = useRef<boolean>(false);
+  useEffect(() => {
+    isAuthVerifiedRef.current = isAuthVerified;
+  }, [isAuthVerified]);
+
+  // Restore ONLY explicit tab session on reload AND verify cryptographic Firebase Auth state
   useEffect(() => {
     let active = true;
     const clearUnauthenticatedSession = (errorMessage?: string) => {
@@ -803,6 +810,27 @@ export default function App() {
         clearUnauthenticatedSession(
           `Acesso negado: o e-mail "${authEmail}" não pertence ao domínio institucional autorizado (@educacao.jundiai.sp.gov.br).`
         );
+        return;
+      }
+
+      // Garante que existe uma sessão Firebase real com e-mail verificado idêntico (bloqueia adulteração de sessionStorage)
+      try {
+        const auth = getAuth();
+        if (typeof auth.authStateReady === 'function') {
+          await auth.authStateReady();
+        }
+        const fbUser = auth.currentUser;
+        if (
+          !fbUser ||
+          !fbUser.email ||
+          !fbUser.emailVerified ||
+          fbUser.email.trim().toLowerCase() !== authEmail
+        ) {
+          clearUnauthenticatedSession();
+          return;
+        }
+      } catch {
+        clearUnauthenticatedSession();
         return;
       }
 
@@ -843,6 +871,9 @@ export default function App() {
         : matched.role === 'admin'
         ? 'usuario'
         : matched.role;
+
+      // Restaura/renova cookie HttpOnly assinado com HMAC no servidor Express
+      void establishServerAuthSessionCookie();
 
       setAuthLoginError(null);
       setCurrentUserEmail(matched.email);
@@ -886,12 +917,15 @@ export default function App() {
 
     void restoreSavedTabSession();
 
-    // Keep Firebase Auth listener passive on boot so cached browser OAuth never bypasses LoginScreen
+    // Monitora revogação/desconexão da conta Firebase Auth em tempo real sem permitir auto-login passivo
     let unsubAuth: (() => void) | undefined;
     try {
       const auth = getAuth();
-      unsubAuth = onAuthStateChanged(auth, () => {
-        // Explicit user sign-in is handled directly by LoginScreen -> handleLoginSuccess
+      unsubAuth = onAuthStateChanged(auth, (fbUser) => {
+        if (isAuthVerifiedRef.current && (!fbUser || !fbUser.emailVerified)) {
+          void clearServerAuthSessionCookie();
+          clearUnauthenticatedSession('Sua sessão Google foi encerrada ou expirou. Faça login novamente.');
+        }
       });
     } catch {
       // ignore Firebase Auth init edge cases
@@ -1727,7 +1761,10 @@ export default function App() {
     return () => window.clearInterval(intervalId);
   }, [isAuthVerified, currentUserEmail, simulatedTeacherEmail, currentUserName]);
 
-  const handleLogout = async () => {
+  const lastActivityAtMsRef = useRef<number>(Date.now());
+
+  const handleLogout = async (reasonOrEvent?: unknown) => {
+    const logoutReason = typeof reasonOrEvent === 'string' ? reasonOrEvent : null;
     try {
       sessionStorage.removeItem(ACTIVE_AUTH_SESSION_STORAGE_KEY);
       localStorage.removeItem(LEGACY_AUTH_SESSION_STORAGE_KEY);
@@ -1775,6 +1812,7 @@ export default function App() {
       activeSessionIdRef.current = null;
     }
 
+    await clearServerAuthSessionCookie();
     try {
       await logoutGoogle();
     } catch {
@@ -1785,9 +1823,51 @@ export default function App() {
     setCurrentUserEmail('');
     setCurrentUserName('');
     setUserRole('usuario');
+    if (logoutReason) {
+      setAuthLoginError(logoutReason);
+    }
     setCurrentScreen('login');
     window.scrollTo(0, 0);
   };
+
+  // Encerramento automático por inatividade (60 minutos) para máxima segurança em terminais escolares compartilhados
+  useEffect(() => {
+    if (!isAuthVerified) return;
+    lastActivityAtMsRef.current = Date.now();
+    const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
+    let lastRecordedEventMs = 0;
+
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastRecordedEventMs >= 10000) {
+        lastRecordedEventMs = now;
+        lastActivityAtMsRef.current = now;
+      }
+    };
+
+    const events = ['pointerdown', 'keydown', 'mousemove', 'touchstart', 'scroll'] as const;
+    events.forEach((evt) => window.addEventListener(evt, handleActivity, { passive: true }));
+
+    const timerId = window.setInterval(() => {
+      if (Date.now() - lastActivityAtMsRef.current >= INACTIVITY_TIMEOUT_MS) {
+        addSecurityAuditLog({
+          userEmail: currentUserEmail || 'sessao@educacao.jundiai.sp.gov.br',
+          userName: currentUserName || 'Usuário',
+          userRole: userRoleRef.current,
+          eventType: 'SESSION_TIMEOUT_REVOKED',
+          actionTitle: 'Sessão encerrada por inatividade (60 min)',
+          details: 'Desconexão preventiva automática por ausência de interação no terminal.',
+          severity: 'info',
+        });
+        void handleLogout('Sua sessão foi encerrada automaticamente após 60 minutos de inatividade por segurança.');
+      }
+    }, 30000);
+
+    return () => {
+      events.forEach((evt) => window.removeEventListener(evt, handleActivity));
+      window.clearInterval(timerId);
+    };
+  }, [isAuthVerified, currentUserEmail, currentUserName]);
 
   const handleSyncWithClasses = () => {
     setClasses((prev) => [...prev]);

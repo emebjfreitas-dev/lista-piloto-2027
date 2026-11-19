@@ -27,6 +27,7 @@ service cloud.firestore {
     function isInstitutionalUser() {
       return isSignedIn() &&
         request.auth.token.email != null &&
+        request.auth.token.email_verified == true &&
         (
           request.auth.token.email.matches('.*@educacao\\.jundiai\\.sp\\.gov\\.br$') ||
           request.auth.token.email == 'emebjfreitas@jundiai.sp.gov.br'
@@ -36,6 +37,7 @@ service cloud.firestore {
     function isAdmin() {
       return isInstitutionalUser() && (
         request.auth.token.email == 'emebjfreitas@jundiai.sp.gov.br' ||
+        request.auth.token.email == 'emebjfreitas@educacao.jundiai.sp.gov.br' ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -51,8 +53,44 @@ service cloud.firestore {
         data.students.size() <= 60;
     }
 
-    function isValidMeta(data) {
-      return data.updatedAtMs is number;
+    function isValidStateMeta(data) {
+      return data.updatedAtMs is number &&
+        data.keys().hasOnly([
+          'updatedAtMs',
+          'classesUpdatedAtMs',
+          'epochUpdatedAtMs',
+          'epochVersion',
+          'updatedAtISO',
+          'cleanResetEpochId'
+        ]);
+    }
+
+    function isValidConfigMeta(data) {
+      return data.updatedAtMs is number &&
+        data.keys().hasOnly([
+          'updatedAtMs',
+          'authorizedUsers',
+          'accessSessionLogs',
+          'attendanceWindowConfig',
+          'schoolNotices',
+          'cloudLinks',
+          'discoveredNominalPdfs',
+          'discoveredDrivePhotos',
+          'genderDictionary',
+          'cleanResetEpochId'
+        ]);
+    }
+
+    function isTeacherAllowedConfigUpdate() {
+      return incoming().diff(existing()).affectedKeys().hasOnly([
+        'updatedAtMs',
+        'authorizedUsers',
+        'accessSessionLogs',
+        'schoolNotices',
+        'discoveredNominalPdfs',
+        'discoveredDrivePhotos',
+        'genderDictionary'
+      ]);
     }
 
     function isValidFcmToken(data) {
@@ -83,7 +121,8 @@ service cloud.firestore {
 
     // Classes collection (1 document per class, max 60 students per class, <1MB each)
     match /school_classes_2027/{classId} {
-      allow get, list: if isInstitutionalUser();
+      allow get: if isInstitutionalUser() && isValidId(classId);
+      allow list: if isInstitutionalUser();
       allow create: if isInstitutionalUser() &&
         isValidId(classId) &&
         incoming().id == classId &&
@@ -95,18 +134,28 @@ service cloud.firestore {
       allow delete: if isAdmin() && isValidId(classId);
     }
 
-    // School metadata & configuration (users, attendance window, cloud links, discovered caches)
+    // School metadata & configuration (state watermark + tiered config updates)
     match /school_meta_2027/{docId} {
-      allow get, list: if isInstitutionalUser();
-      allow create, update: if isInstitutionalUser() &&
-        docId in ['state', 'config'] &&
-        isValidMeta(incoming());
-      allow delete: if isAdmin();
+      allow get: if isInstitutionalUser() && isValidId(docId);
+      allow list: if isInstitutionalUser();
+      allow create: if isValidId(docId) && (
+        (docId == 'state' && isInstitutionalUser() && isValidStateMeta(incoming())) ||
+        (docId == 'config' && isAdmin() && isValidConfigMeta(incoming()))
+      );
+      allow update: if isValidId(docId) && (
+        (docId == 'state' && isInstitutionalUser() && isValidStateMeta(incoming())) ||
+        (docId == 'config' && isValidConfigMeta(incoming()) && (isAdmin() || (isInstitutionalUser() && isTeacherAllowedConfigUpdate())))
+      );
+      allow delete: if isAdmin() && isValidId(docId);
     }
 
     // FCM Push Device Tokens (PII-isolated: teachers only read/manage their own token; admins inspect coverage)
     match /school_fcm_tokens_2027/{subscriptionId} {
-      allow get, list: if isAdmin() || (
+      allow get: if isValidId(subscriptionId) && (isAdmin() || (
+        isInstitutionalUser() &&
+        resource.data.userEmail == request.auth.token.email
+      ));
+      allow list: if isAdmin() || (
         isInstitutionalUser() &&
         resource.data.userEmail == request.auth.token.email
       );
@@ -124,7 +173,8 @@ service cloud.firestore {
 
     // FCM Attendance Closing Alerts broadcast feed
     match /school_fcm_alerts_2027/{alertId} {
-      allow get, list: if isInstitutionalUser();
+      allow get: if isInstitutionalUser() && isValidId(alertId);
+      allow list: if isInstitutionalUser();
       allow create, update: if isAdmin() &&
         isValidId(alertId) &&
         incoming().id == alertId &&

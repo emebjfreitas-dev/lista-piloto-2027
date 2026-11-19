@@ -407,8 +407,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       items.push(
         {
           id: 'usuarios_acesso',
-          title: 'Central de Segurança, Acesso e Uploads',
-          subtitle: `Docentes, LGPD, FCM, diagnóstico BD, fotos, PDFs e ${schoolStats.aeeCount} AEE`,
+          title: 'Central Administrativa',
+          subtitle: `Acessos, segurança, banco, uploads e ${schoolStats.aeeCount} AEE`,
           icon: <ShieldCheck className="w-5 h-5 stroke-[1.5]" />,
           accentBg: 'bg-[#0071e3]/12',
           accentText: 'text-[#0071e3]',
@@ -416,8 +416,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         },
         {
           id: 'bolsa_familia',
-          title: 'Bolsa Família & Fretado',
-          subtitle: 'Acompanhamento bimestral e transporte',
+          title: 'Bolsa Família',
+          subtitle: 'Estudantes beneficiados e frequência LDB',
           icon: <HeartHandshake className="w-5 h-5 stroke-[1.5]" />,
           accentBg: 'bg-amber-500/12',
           accentText: 'text-amber-700',

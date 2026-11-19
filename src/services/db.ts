@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { getAuth } from 'firebase/auth';
 import {
   ClassGroup,
   Student,
@@ -228,6 +229,64 @@ export const getActiveUserAuthHeaders = (): Record<string, string> => {
   return {
     'x-clean-epoch': CLEAN_DB_RESET_EPOCH_ID,
   };
+};
+
+export const getActiveUserAuthHeadersAsync = async (
+  forceRefresh = false
+): Promise<Record<string, string>> => {
+  const base = getActiveUserAuthHeaders();
+  try {
+    const currentUser = getAuth().currentUser;
+    if (currentUser) {
+      const idToken = await currentUser.getIdToken(forceRefresh);
+      if (idToken) {
+        return {
+          ...base,
+          Authorization: `Bearer ${idToken}`,
+        };
+      }
+    }
+  } catch {
+    // fallback to signed HttpOnly session cookie
+  }
+  return base;
+};
+
+export const establishServerAuthSessionCookie = async (
+  explicitIdToken?: string
+): Promise<boolean> => {
+  if (!isBackendApiAvailable()) return false;
+  try {
+    const token =
+      explicitIdToken ||
+      (await getAuth().currentUser?.getIdToken().catch(() => null)) ||
+      '';
+    if (!token) return false;
+    const res = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify({ idToken: token }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
+export const clearServerAuthSessionCookie = async (): Promise<void> => {
+  if (!isBackendApiAvailable()) return;
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+  } catch {
+    // ignore logout error
+  }
 };
 
 export const formatDurationHuman = (seconds?: number): string => {
@@ -665,12 +724,14 @@ export const pushAuthorizedUsersToServer = async (
 
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/school-state/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
         body: JSON.stringify({ authorizedUsers: sanitized }),
       });
       if (res.ok) {
@@ -717,12 +778,14 @@ export const pushSessionLogsToServer = async (
   }
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       await fetch('/api/school-state/logs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
         body: JSON.stringify({
           accessSessionLogs: logs,
           ...(sanitizedUsers ? { authorizedUsers: sanitizedUsers } : {}),
@@ -776,12 +839,14 @@ export const pushSchoolNoticesToServer = async (
   }
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/school-state/notices', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
         body: JSON.stringify({ schoolNotices: sliced }),
       });
       if (res.ok) saved = true;
@@ -813,12 +878,14 @@ export const pushAttendanceWindowToServer = async (
   }
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/school-state/window', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
         body: JSON.stringify({ attendanceWindowConfig: config }),
       });
       if (res.ok) saved = true;
@@ -961,13 +1028,15 @@ export const pushClassesToServer = async (
 
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       const opId = `op-classes-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const res = await fetch('/api/school-state/classes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
         body: JSON.stringify({
           classes,
           classesUpdatedAtMs: nowMs,
@@ -1016,12 +1085,14 @@ export const pushCloudLinksToServer = async (
   }
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/school-state/links', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
         body: JSON.stringify({
           cloudLinks,
           ...(discoveredNominalPdfs ? { discoveredNominalPdfs } : {}),
@@ -1076,7 +1147,12 @@ export const pullSharedSchoolStateFromServer = async (): Promise<{
     let apiData: any = null;
     if (isBackendApiAvailable()) {
       try {
-        const res = await fetch('/api/school-state', { cache: 'no-store' });
+        const headers = await getActiveUserAuthHeadersAsync();
+        const res = await fetch('/api/school-state', {
+          cache: 'no-store',
+          headers,
+          credentials: 'include',
+        });
         if (res.ok) {
           apiData = await res.json();
         }
@@ -1948,7 +2024,6 @@ export const downloadSpreadsheetXLSX = (
         'E-MAIL GOOGLE': s.emailGoogle || '',
         'E-MAIL MICROSOFT': s.emailMicrosoft || '',
         'EMAIL MUNICIPAL': s.emailMunicipal || '',
-        'ROTA DE ÔNIBUS': s.rotaOnibus || '',
         'SUCESSÃO ESCOLAR': s.sucessaoEscolar || '',
         // Colunas de Controle de Frequência pelo Recorte da Matrícula no Mês + Vínculos Google Drive
         'DIAS LETIVOS DO MÊS': m.diasLetivosMes,
@@ -2066,34 +2141,7 @@ export const downloadSpreadsheetXLSX = (
   const wsBolsaBim = XLSX.utils.json_to_sheet(rowsBolsaBimestral);
   XLSX.utils.book_append_sheet(wb, wsBolsaBim, 'Bolsa_Familia_Bimestral');
 
-  // Tab 6: Ônibus Fretado 2027
-  const rowsOnibus: any[] = [];
-  let seqBus = 1;
-  classes.forEach((cls) => {
-    const periodo = cls.shift.replace('Turno ', '').toUpperCase();
-    cls.students.forEach((s) => {
-      const rota = (s.rotaOnibus || '').trim();
-      if (!rota) return;
-      rowsOnibus.push({
-        'Nº': seqBus++,
-        'TURMA': cls.name,
-        'PERÍODO': periodo,
-        'Nº CHAMADA': s.number,
-        'ESTUDANTE': s.name,
-        'RA': s.ra ? `${s.ra}-${s.digRa || ''}` : '',
-        'ROTA DO ÔNIBUS FRETADO': rota,
-        'BAIRRO': s.bairro || '',
-        'TELEFONE / WHATSAPP': s.telefones || s.guardianPhone || '',
-        'RESPONSÁVEL': s.filiacao1 || s.guardianName || '',
-      });
-    });
-  });
-  if (rowsOnibus.length > 0) {
-    const wsOnibus = XLSX.utils.json_to_sheet(rowsOnibus);
-    XLSX.utils.book_append_sheet(wb, wsOnibus, 'Onibus_Fretado_2027');
-  }
-
-  // Tab 7: Dias Letivos por Mês e Calendário SME Jundiaí 2027
+  // Tab 6: Dias Letivos por Mês e Calendário SME Jundiaí 2027
   const rowsCalendario = calendar.map((d) => ({
     'Data': d.date,
     'Dia da Semana': d.dayOfWeek,
@@ -2237,7 +2285,7 @@ export type ClassExportCategory =
   | 'Filiação (Mãe e Pai) & Contatos'
   | 'Frequência, Presença & Faltas'
   | 'Documentos, Saúde & AEE'
-  | 'Endereço & Transporte'
+  | 'Endereço'
   | 'Outros Campos SED';
 
 export interface ClassExportColumnDef {
@@ -2681,12 +2729,12 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
     getValue: (s) => s.arquivo || '',
   },
 
-  // 5. Endereço & Transporte
+  // 5. Endereço
   {
     id: 'cep',
     label: 'CEP',
     shortLabel: 'CEP',
-    category: 'Endereço & Transporte',
+    category: 'Endereço',
     width: 14,
     getValue: (s) => s.cep || '13.214-000',
   },
@@ -2694,7 +2742,7 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
     id: 'logradouro',
     label: 'LOGRADOURO',
     shortLabel: 'Logradouro (Rua/Av.)',
-    category: 'Endereço & Transporte',
+    category: 'Endereço',
     width: 28,
     getValue: (s) => s.logradouro || '',
   },
@@ -2702,7 +2750,7 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
     id: 'numeroResidencia',
     label: 'N. RESIDENCIA',
     shortLabel: 'Nº Residência',
-    category: 'Endereço & Transporte',
+    category: 'Endereço',
     width: 12,
     getValue: (s) => s.numeroResidencia || '',
   },
@@ -2710,7 +2758,7 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
     id: 'complemento',
     label: 'COMPLEMENTO',
     shortLabel: 'Complemento',
-    category: 'Endereço & Transporte',
+    category: 'Endereço',
     width: 18,
     getValue: (s) => s.complemento || '',
   },
@@ -2718,7 +2766,7 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
     id: 'bairro',
     label: 'BAIRRO',
     shortLabel: 'Bairro',
-    category: 'Endereço & Transporte',
+    category: 'Endereço',
     width: 20,
     getValue: (s) => s.bairro || '',
   },
@@ -2726,7 +2774,7 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
     id: 'cidade',
     label: 'CIDADE',
     shortLabel: 'Cidade',
-    category: 'Endereço & Transporte',
+    category: 'Endereço',
     width: 16,
     getValue: (s) => s.cidade || 'JUNDIAI',
   },
@@ -2734,17 +2782,9 @@ export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
     id: 'uf',
     label: 'UF',
     shortLabel: 'UF',
-    category: 'Endereço & Transporte',
+    category: 'Endereço',
     width: 8,
     getValue: (s) => s.uf || 'SP',
-  },
-  {
-    id: 'rotaOnibus',
-    label: 'ROTA DE ÔNIBUS',
-    shortLabel: 'Rota de Ônibus / TEG',
-    category: 'Endereço & Transporte',
-    width: 18,
-    getValue: (s) => s.rotaOnibus || '',
   },
 
   // 6. Outros Campos SED
@@ -3182,8 +3222,13 @@ export const pullOfficialCalendarFromServer = async (): Promise<{
 } | null> => {
   if (!isBackendApiAvailable()) return null;
   try {
+    const headers = await getActiveUserAuthHeadersAsync();
     const res = await fetch('/api/calendar-config', {
-      headers: { 'Cache-Control': 'no-cache' },
+      headers: {
+        'Cache-Control': 'no-cache',
+        ...headers,
+      },
+      credentials: 'include',
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -3284,22 +3329,22 @@ export const saveStoredOfficialCalendarConfig = async (
   }));
   saveStoredClasses(updatedClasses);
 
-  // Sincroniza com o backend seguro (protegido por regra de admin)
+  // Sincroniza com o backend seguro (autenticado com Bearer Firebase ID Token)
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       const serverRes = await fetch('/api/calendar-config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-role': 'admin',
-          'x-user-email': adminEmail,
+          ...headers,
         },
+        credentials: 'include',
         body: JSON.stringify({
           rawDatesText,
           adminEmail,
           adminName,
           year,
-          userRole: 'admin',
         }),
       });
       if (serverRes.ok) {
@@ -3384,14 +3429,15 @@ export const saveStoredHolidayAction = async (
 
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       await fetch('/api/holidays', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-role': 'admin',
-          'x-user-email': adminEmail,
+          ...headers,
         },
-        body: JSON.stringify({ action, holiday, holidayId, adminEmail, adminName, userRole: 'admin' }),
+        credentials: 'include',
+        body: JSON.stringify({ action, holiday, holidayId, adminEmail, adminName }),
       });
     } catch {
       // offline fallback
@@ -3510,18 +3556,21 @@ export const addSecurityAuditLog = (
     // ignore
   }
 
-  // Notificar backend se disponível
+  // Notificar backend se disponível e autenticado
   if (isBackendApiAvailable()) {
     try {
-      fetch('/api/security-logs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-role': entry.userRole,
-          'x-user-email': entry.userEmail,
-        },
-        body: JSON.stringify(newEntry),
-      }).catch(() => {});
+      void getActiveUserAuthHeadersAsync().then((headers) => {
+        if (!headers.Authorization) return;
+        fetch('/api/security-logs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+          },
+          credentials: 'include',
+          body: JSON.stringify(newEntry),
+        }).catch(() => {});
+      });
     } catch {
       // offline safe
     }
@@ -4280,12 +4329,14 @@ export const importSchoolDataFromJson = async (
     // 2. Tentar persistência no backend Node.js
     if (isBackendApiAvailable()) {
       try {
+        const headers = await getActiveUserAuthHeadersAsync();
         await fetch('/api/school-state/import-json', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...getActiveUserAuthHeaders(),
+            ...headers,
           },
+          credentials: 'include',
           body: JSON.stringify({
             payload: { classes: validatedClasses },
             fileName,
@@ -4360,12 +4411,14 @@ export const resetEntireAppData = async (
   // Notificar backend
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       await fetch('/api/school-state/reset', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
         body: JSON.stringify({ freshClasses: pristineClasses }),
       });
     } catch (e) {
@@ -4383,80 +4436,338 @@ export const resetEntireAppData = async (
   return pristineClasses;
 };
 
-/**
- * Upload individual de foto pelo PEB I ou Admin para o servidor central
- */
-export const uploadStudentPhotoViaApi = async (
-  studentId: string,
-  photoDataUrl: string
-): Promise<{ ok: boolean; photoUrl?: string }> => {
-  if (!isBackendApiAvailable()) {
-    return { ok: true, photoUrl: photoDataUrl };
+export interface BatchUploadProgress {
+  completedChunks: number;
+  totalChunks: number;
+  processedItems: number;
+  totalItems: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+}
+
+export interface BinaryPhotoUploadInput {
+  studentId: string;
+  bytes: Uint8Array;
+  sha256: string;
+  mimeType?: string;
+  ext?: string;
+}
+
+export interface BinaryPdfUploadInput {
+  studentId: string;
+  bytes: Uint8Array;
+  sha256: string;
+}
+
+const buildBinaryUploadPacket = (
+  items: Array<{
+    studentId: string;
+    bytes: Uint8Array;
+    sha256: string;
+    mimeType?: string;
+    ext?: string;
+  }>
+): ArrayBuffer => {
+  const metaJson = JSON.stringify({
+    items: items.map((it) => ({
+      studentId: it.studentId,
+      sha256: it.sha256,
+      mimeType: it.mimeType,
+      ext: it.ext,
+      byteLength: it.bytes.byteLength,
+    })),
+  });
+  const encoder = new TextEncoder();
+  const metaBytes = encoder.encode(metaJson);
+  const payloadSize = items.reduce((acc, it) => acc + it.bytes.byteLength, 0);
+  const totalSize = 8 + metaBytes.byteLength + payloadSize;
+  const packet = new Uint8Array(totalSize);
+  const view = new DataView(packet.buffer);
+
+  // Magic "EMEB"
+  packet[0] = 0x45;
+  packet[1] = 0x4d;
+  packet[2] = 0x45;
+  packet[3] = 0x42;
+  view.setUint32(4, metaBytes.byteLength, false);
+  packet.set(metaBytes, 8);
+
+  let offset = 8 + metaBytes.byteLength;
+  for (const it of items) {
+    packet.set(it.bytes, offset);
+    offset += it.bytes.byteLength;
   }
-  try {
-    const res = await fetch('/api/photos/upload', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getActiveUserAuthHeaders(),
-      },
-      body: JSON.stringify({ studentId, photoDataUrl }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return { ok: true, photoUrl: data.photoUrl };
+
+  return packet.buffer;
+};
+
+const fetchWithExponentialBackoff = async (
+  url: string,
+  initFactory: () => Promise<RequestInit>,
+  maxAttempts = 3,
+  signal?: AbortSignal
+): Promise<Response> => {
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (signal?.aborted) {
+      throw new DOMException('Envio cancelado pelo usuário.', 'AbortError');
     }
-  } catch (e) {
-    console.warn('Aviso: falha ao enviar foto para /api/photos/upload:', e);
+    try {
+      const init = await initFactory();
+      const res = await fetch(url, { ...init, signal, credentials: 'include' });
+      if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429)) {
+        return res;
+      }
+      lastError = new Error(`HTTP ${res.status}`);
+    } catch (err: any) {
+      if (err?.name === 'AbortError') throw err;
+      lastError = err;
+    }
+    if (attempt < maxAttempts) {
+      const delayMs = 600 * Math.pow(2, attempt - 1);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
   }
-  return { ok: true, photoUrl: photoDataUrl };
+  throw lastError || new Error('Falha de rede após múltiplas tentativas.');
 };
 
 /**
- * Upload em lote de fotos nomeadas arrastadas pelo Admin
+ * Upload individual de foto pelo PEB I ou Admin para o servidor central (binário econômico preferencial)
+ */
+export const uploadStudentPhotoViaApi = async (
+  studentId: string,
+  photoDataUrlOrBinary:
+    | string
+    | { bytes: Uint8Array; sha256: string; mimeType?: string; fallbackDataUrl?: string }
+): Promise<{ ok: boolean; photoUrl?: string; sha256?: string; skipped?: boolean; error?: string }> => {
+  const isBinaryObj = typeof photoDataUrlOrBinary !== 'string';
+  const fallbackUrl = isBinaryObj
+    ? photoDataUrlOrBinary.fallbackDataUrl || ''
+    : photoDataUrlOrBinary;
+
+  if (!isBackendApiAvailable()) {
+    return {
+      ok: true,
+      photoUrl: fallbackUrl,
+      sha256: isBinaryObj ? photoDataUrlOrBinary.sha256 : undefined,
+    };
+  }
+
+  try {
+    if (isBinaryObj) {
+      const bodyBuffer = photoDataUrlOrBinary.bytes.buffer.slice(
+        photoDataUrlOrBinary.bytes.byteOffset,
+        photoDataUrlOrBinary.bytes.byteOffset + photoDataUrlOrBinary.bytes.byteLength
+      ) as ArrayBuffer;
+      const res = await fetchWithExponentialBackoff('/api/photos/upload-binary', async () => {
+        const headers = await getActiveUserAuthHeadersAsync();
+        return {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/octet-stream',
+            'x-student-id': studentId,
+            'x-file-sha256': photoDataUrlOrBinary.sha256,
+          },
+          body: bodyBuffer,
+        };
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          ok: true,
+          photoUrl: data.photoUrl || fallbackUrl,
+          sha256: data.sha256 || photoDataUrlOrBinary.sha256,
+          skipped: Boolean(data.skipped),
+        };
+      }
+      const errJson = await res.json().catch(() => ({}));
+      return { ok: false, error: errJson.error || `Erro HTTP ${res.status}`, photoUrl: fallbackUrl };
+    }
+
+    const res = await fetchWithExponentialBackoff('/api/photos/upload', async () => {
+      const headers = await getActiveUserAuthHeadersAsync();
+      return {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify({ studentId, photoDataUrl: photoDataUrlOrBinary }),
+      };
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, photoUrl: data.photoUrl, sha256: data.sha256 };
+    }
+    const errJson = await res.json().catch(() => ({}));
+    return { ok: false, error: errJson.error || `Erro HTTP ${res.status}`, photoUrl: fallbackUrl };
+  } catch (e: any) {
+    console.warn('Aviso: falha ao enviar foto:', e);
+    return { ok: false, error: e?.message || 'Erro de rede', photoUrl: fallbackUrl };
+  }
+};
+
+/**
+ * Upload em lote binário por chunks para 2.000+ fotos (sem bloat base64, deduplicado, com retry exponencial)
  */
 export const uploadBatchStudentPhotosViaApi = async (
-  photos: { studentId: string; photoDataUrl: string }[]
-): Promise<{ ok: boolean; updatedCount: number }> => {
-  if (!isBackendApiAvailable()) {
-    return { ok: true, updatedCount: photos.length };
+  photos: Array<BinaryPhotoUploadInput | { studentId: string; photoDataUrl: string }>,
+  options?: {
+    maxChunkBytes?: number;
+    maxChunkItems?: number;
+    signal?: AbortSignal;
+    onProgress?: (progress: BatchUploadProgress) => void;
   }
-  try {
+): Promise<{
+  ok: boolean;
+  updatedCount: number;
+  skippedCount: number;
+  failedStudentIds: string[];
+  results: Array<{ studentId: string; photoUrl: string; sha256: string }>;
+}> => {
+  if (!isBackendApiAvailable()) {
+    return {
+      ok: true,
+      updatedCount: photos.length,
+      skippedCount: 0,
+      failedStudentIds: [],
+      results: [],
+    };
+  }
+
+  const maxChunkBytes = options?.maxChunkBytes ?? 6 * 1024 * 1024;
+  const maxChunkItems = options?.maxChunkItems ?? 35;
+
+  const isBinaryBatch =
+    photos.length > 0 && 'bytes' in photos[0] && photos[0].bytes instanceof Uint8Array;
+
+  if (!isBinaryBatch) {
+    const legacyItems = photos as Array<{ studentId: string; photoDataUrl: string }>;
+    const headers = await getActiveUserAuthHeadersAsync();
     const res = await fetch('/api/photos/batch', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getActiveUserAuthHeaders(),
+        ...headers,
       },
-      body: JSON.stringify({ photos }),
+      credentials: 'include',
+      body: JSON.stringify({ photos: legacyItems }),
     });
     if (res.ok) {
       const data = await res.json();
-      return { ok: true, updatedCount: data.updatedCount ?? photos.length };
+      return {
+        ok: true,
+        updatedCount: data.updatedCount ?? legacyItems.length,
+        skippedCount: data.skippedCount ?? 0,
+        failedStudentIds: [],
+        results: Array.isArray(data.results) ? data.results : [],
+      };
     }
-  } catch (e) {
-    console.warn('Aviso: falha ao enviar lote de fotos para /api/photos/batch:', e);
+    throw new Error(`Falha ao enviar lote de fotos (HTTP ${res.status})`);
   }
-  return { ok: true, updatedCount: photos.length };
+
+  const binaryItems = photos as BinaryPhotoUploadInput[];
+  const chunks: BinaryPhotoUploadInput[][] = [];
+  let currentChunk: BinaryPhotoUploadInput[] = [];
+  let currentBytes = 0;
+
+  for (const item of binaryItems) {
+    const size = item.bytes.byteLength;
+    if (
+      currentChunk.length > 0 &&
+      (currentChunk.length >= maxChunkItems || currentBytes + size > maxChunkBytes)
+    ) {
+      chunks.push(currentChunk);
+      currentChunk = [];
+      currentBytes = 0;
+    }
+    currentChunk.push(item);
+    currentBytes += size;
+  }
+  if (currentChunk.length > 0) chunks.push(currentChunk);
+
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let processedItems = 0;
+  const failedStudentIds: string[] = [];
+  const allResults: Array<{ studentId: string; photoUrl: string; sha256: string }> = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const packetBuffer = buildBinaryUploadPacket(chunk);
+    try {
+      const res = await fetchWithExponentialBackoff(
+        '/api/photos/batch-binary',
+        async () => {
+          const headers = await getActiveUserAuthHeadersAsync();
+          return {
+            method: 'POST',
+            headers: {
+              ...headers,
+              'Content-Type': 'application/octet-stream',
+            },
+            body: packetBuffer,
+          };
+        },
+        3,
+        options?.signal
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        updatedCount += Number(data.updatedCount || 0);
+        skippedCount += Number(data.skippedCount || 0);
+        if (Array.isArray(data.results)) {
+          allResults.push(...data.results);
+        }
+      } else {
+        chunk.forEach((c) => failedStudentIds.push(c.studentId));
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') throw err;
+      chunk.forEach((c) => failedStudentIds.push(c.studentId));
+    }
+
+    processedItems += chunk.length;
+    options?.onProgress?.({
+      completedChunks: i + 1,
+      totalChunks: chunks.length,
+      processedItems,
+      totalItems: binaryItems.length,
+      updatedCount,
+      skippedCount,
+      failedCount: failedStudentIds.length,
+    });
+  }
+
+  return {
+    ok: failedStudentIds.length < binaryItems.length,
+    updatedCount,
+    skippedCount,
+    failedStudentIds,
+    results: allResults,
+  };
 };
 
 /**
  * Limpar todas as fotos de todos os estudantes (Reset de fotos)
  */
 export const clearAllStudentPhotosViaApi = async (): Promise<{ ok: boolean; clearedCount: number }> => {
-  // Limpar localmente
   const current = getStoredClasses();
   let count = 0;
   const cleared = current.map((cls) => ({
     ...cls,
     updatedAtMs: Date.now(),
     students: cls.students.map((s) => {
-      if (s.photo || s.photoDriveId || s.photoDriveUrl) count++;
+      if (s.photo || s.photoDriveId || s.photoDriveUrl || s.photoSha256) count++;
       return {
         ...s,
         photo: '',
         photoDriveId: '',
         photoDriveUrl: '',
+        photoSha256: '',
         photoManualLink: false,
         updatedAtMs: Date.now(),
       };
@@ -4465,7 +4776,6 @@ export const clearAllStudentPhotosViaApi = async (): Promise<{ ok: boolean; clea
   saveStoredClasses(cleared, true);
   void clearStudentPhotoIndexedDbCache();
 
-  // Notifica o Service Worker para limpar o IndexedDB de blobs de fotos
   if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
     try {
       navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_STUDENT_PHOTOS_CACHE' });
@@ -4474,12 +4784,14 @@ export const clearAllStudentPhotosViaApi = async (): Promise<{ ok: boolean; clea
 
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/photos/clear-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -4503,12 +4815,14 @@ export const uploadStudentPdfViaApi = async (
     return { ok: true, pdfUrl: pdfDataUrl };
   }
   try {
+    const headers = await getActiveUserAuthHeadersAsync();
     const res = await fetch('/api/pdfs/upload', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getActiveUserAuthHeaders(),
+        ...headers,
       },
+      credentials: 'include',
       body: JSON.stringify({ studentId, pdfDataUrl }),
     });
     if (res.ok) {
@@ -4518,83 +4832,197 @@ export const uploadStudentPdfViaApi = async (
   } catch (e) {
     console.warn('Aviso: falha ao enviar PDF para /api/pdfs/upload:', e);
   }
-  return { ok: true, pdfUrl: pdfDataUrl };
+  return { ok: false, pdfUrl: pdfDataUrl };
 };
 
 /**
- * Upload em lote de PDFs nomeados arrastados pelo Admin
+ * Upload em lote binário por chunks para 2.000+ fichas PDF (sem base64, SHA-256 deduplicado, com retry exponencial)
  */
 export const uploadBatchStudentPdfsViaApi = async (
-  pdfs: { studentId: string; pdfDataUrl: string }[]
-): Promise<{ ok: boolean; updatedCount: number }> => {
-  if (!isBackendApiAvailable()) {
-    return { ok: true, updatedCount: pdfs.length };
+  pdfs: Array<BinaryPdfUploadInput | { studentId: string; pdfDataUrl: string }>,
+  options?: {
+    maxChunkBytes?: number;
+    maxChunkItems?: number;
+    signal?: AbortSignal;
+    onProgress?: (progress: BatchUploadProgress) => void;
   }
-  const MAX_CHUNK_BYTES = 12 * 1024 * 1024;
-  const MAX_CHUNK_ITEMS = 5;
-  const chunks: { studentId: string; pdfDataUrl: string }[][] = [];
-  let currentChunk: { studentId: string; pdfDataUrl: string }[] = [];
+): Promise<{
+  ok: boolean;
+  updatedCount: number;
+  skippedCount: number;
+  failedStudentIds: string[];
+  results: Array<{ studentId: string; pdfUrl: string; pdfId: string; sha256: string }>;
+}> => {
+  if (!isBackendApiAvailable()) {
+    return {
+      ok: true,
+      updatedCount: pdfs.length,
+      skippedCount: 0,
+      failedStudentIds: [],
+      results: [],
+    };
+  }
+
+  const maxChunkBytes = options?.maxChunkBytes ?? 8 * 1024 * 1024;
+  const maxChunkItems = options?.maxChunkItems ?? 12;
+  const isBinaryBatch =
+    pdfs.length > 0 && 'bytes' in pdfs[0] && pdfs[0].bytes instanceof Uint8Array;
+
+  if (!isBinaryBatch) {
+    const legacyItems = pdfs as Array<{ studentId: string; pdfDataUrl: string }>;
+    const chunks: Array<typeof legacyItems> = [];
+    let currentChunk: typeof legacyItems = [];
+    let currentBytes = 0;
+
+    for (const item of legacyItems) {
+      const itemSize = item.pdfDataUrl.length;
+      if (
+        currentChunk.length > 0 &&
+        (currentChunk.length >= 5 || currentBytes + itemSize > 12 * 1024 * 1024)
+      ) {
+        chunks.push(currentChunk);
+        currentChunk = [];
+        currentBytes = 0;
+      }
+      currentChunk.push(item);
+      currentBytes += itemSize;
+    }
+    if (currentChunk.length > 0) chunks.push(currentChunk);
+
+    let totalUpdated = 0;
+    const failedStudentIds: string[] = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      try {
+        const headers = await getActiveUserAuthHeadersAsync();
+        const res = await fetch('/api/pdfs/batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+          },
+          credentials: 'include',
+          body: JSON.stringify({ pdfs: chunk }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          totalUpdated += data.updatedCount ?? chunk.length;
+        } else {
+          chunk.forEach((c) => failedStudentIds.push(c.studentId));
+        }
+      } catch {
+        chunk.forEach((c) => failedStudentIds.push(c.studentId));
+      }
+    }
+    return {
+      ok: failedStudentIds.length < legacyItems.length,
+      updatedCount: totalUpdated,
+      skippedCount: 0,
+      failedStudentIds,
+      results: [],
+    };
+  }
+
+  const binaryItems = pdfs as BinaryPdfUploadInput[];
+  const chunks: BinaryPdfUploadInput[][] = [];
+  let currentChunk: BinaryPdfUploadInput[] = [];
   let currentBytes = 0;
 
-  for (const item of pdfs) {
-    const itemSize = item.pdfDataUrl.length;
+  for (const item of binaryItems) {
+    const size = item.bytes.byteLength;
     if (
       currentChunk.length > 0 &&
-      (currentChunk.length >= MAX_CHUNK_ITEMS || currentBytes + itemSize > MAX_CHUNK_BYTES)
+      (currentChunk.length >= maxChunkItems || currentBytes + size > maxChunkBytes)
     ) {
       chunks.push(currentChunk);
       currentChunk = [];
       currentBytes = 0;
     }
     currentChunk.push(item);
-    currentBytes += itemSize;
+    currentBytes += size;
   }
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
-  }
+  if (currentChunk.length > 0) chunks.push(currentChunk);
 
-  let totalUpdated = 0;
-  for (const chunk of chunks) {
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let processedItems = 0;
+  const failedStudentIds: string[] = [];
+  const allResults: Array<{ studentId: string; pdfUrl: string; pdfId: string; sha256: string }> = [];
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const packetBuffer = buildBinaryUploadPacket(chunk);
     try {
-      const res = await fetch('/api/pdfs/batch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+      const res = await fetchWithExponentialBackoff(
+        '/api/pdfs/batch-binary',
+        async () => {
+          const headers = await getActiveUserAuthHeadersAsync();
+          return {
+            method: 'POST',
+            headers: {
+              ...headers,
+              'Content-Type': 'application/octet-stream',
+            },
+            body: packetBuffer,
+          };
         },
-        body: JSON.stringify({ pdfs: chunk }),
-      });
+        3,
+        options?.signal
+      );
+
       if (res.ok) {
         const data = await res.json();
-        totalUpdated += data.updatedCount ?? chunk.length;
+        updatedCount += Number(data.updatedCount || 0);
+        skippedCount += Number(data.skippedCount || 0);
+        if (Array.isArray(data.results)) {
+          allResults.push(...data.results);
+        }
       } else {
-        totalUpdated += chunk.length;
+        chunk.forEach((c) => failedStudentIds.push(c.studentId));
       }
-    } catch (e) {
-      console.warn('Aviso: falha ao enviar lote de PDFs para /api/pdfs/batch:', e);
-      totalUpdated += chunk.length;
+    } catch (err: any) {
+      if (err?.name === 'AbortError') throw err;
+      chunk.forEach((c) => failedStudentIds.push(c.studentId));
     }
+
+    processedItems += chunk.length;
+    options?.onProgress?.({
+      completedChunks: i + 1,
+      totalChunks: chunks.length,
+      processedItems,
+      totalItems: binaryItems.length,
+      updatedCount,
+      skippedCount,
+      failedCount: failedStudentIds.length,
+    });
   }
-  return { ok: true, updatedCount: totalUpdated || pdfs.length };
+
+  return {
+    ok: failedStudentIds.length < binaryItems.length,
+    updatedCount,
+    skippedCount,
+    failedStudentIds,
+    results: allResults,
+  };
 };
 
 /**
  * Limpar todas as fichas PDF de todos os estudantes (Reset de PDFs)
  */
 export const clearAllStudentPdfsViaApi = async (): Promise<{ ok: boolean; clearedCount: number }> => {
-  // Limpar localmente
   const current = getStoredClasses();
   let count = 0;
   const cleared = current.map((cls) => ({
     ...cls,
     updatedAtMs: Date.now(),
     students: cls.students.map((s) => {
-      if (s.fichaPdfDriveUrl || s.fichaPdfDriveId) count++;
+      if (s.fichaPdfDriveUrl || s.fichaPdfDriveId || s.fichaPdfSha256) count++;
       return {
         ...s,
         fichaPdfDriveId: '',
         fichaPdfDriveUrl: '',
         fichaPdfSubfolder: '',
+        fichaPdfSha256: '',
         fichaPdfManualLink: false,
         updatedAtMs: Date.now(),
       };
@@ -4604,12 +5032,14 @@ export const clearAllStudentPdfsViaApi = async (): Promise<{ ok: boolean; cleare
 
   if (isBackendApiAvailable()) {
     try {
+      const headers = await getActiveUserAuthHeadersAsync();
       const res = await fetch('/api/pdfs/clear-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getActiveUserAuthHeaders(),
+          ...headers,
         },
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -4621,6 +5051,7 @@ export const clearAllStudentPdfsViaApi = async (): Promise<{ ok: boolean; cleare
   }
   return { ok: true, clearedCount: count };
 };
+
 
 
 

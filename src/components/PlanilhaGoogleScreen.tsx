@@ -103,7 +103,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
     | 'frequencia'
     | 'turmas'
     | 'dias_letivos'
-    | 'onibus_fretado'
     | 'emails_permitidos'
     | 'consulta_genero'
   >('diagnostico_inconsistencias');
@@ -276,85 +275,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
       return true;
     });
   }, [diagnosticReport, diagnosticCategoryFilter, diagnosticSeverityFilter, diagnosticSearch]);
-
-  // Ônibus Fretado Nominal
-  const [busSearchQuery, setBusSearchQuery] = useState('');
-  const [busRouteFilter, setBusRouteFilter] = useState('all');
-
-  const onibusFretadoRows = useMemo(() => {
-    const list: Array<{
-      seq: number;
-      classId: string;
-      className: string;
-      periodo: string;
-      studentId: string;
-      number: number;
-      name: string;
-      ra: string;
-      rota: string;
-      endereco: string;
-      bairro: string;
-      telefones: string;
-      responsavel: string;
-    }> = [];
-
-    let seq = 1;
-    classesToSync.forEach((cls) => {
-      const periodo = cls.shift.replace('Turno ', '').toUpperCase();
-      const sorted = [...cls.students].sort((a, b) => a.number - b.number);
-      sorted.forEach((s) => {
-        const rota = (s.rotaOnibus || '').trim();
-        if (!rota) return;
-        const endereco = [
-          s.logradouro,
-          s.numeroResidencia ? `nº ${s.numeroResidencia}` : '',
-          s.complemento,
-        ]
-          .filter(Boolean)
-          .join(' ');
-        list.push({
-          seq: seq++,
-          classId: cls.id,
-          className: cls.name,
-          periodo,
-          studentId: s.id,
-          number: s.number,
-          name: s.name,
-          ra: s.ra ? `${s.ra}-${s.digRa || ''}` : '',
-          rota,
-          endereco,
-          bairro: s.bairro || '—',
-          telefones: s.telefones || s.guardianPhone || '',
-          responsavel: s.filiacao1 || s.guardianName || 'Não informado',
-        });
-      });
-    });
-    return list;
-  }, [classesToSync]);
-
-  const uniqueBusRoutes = useMemo(() => {
-    const routes = new Set<string>();
-    onibusFretadoRows.forEach((r) => {
-      if (r.rota) routes.add(r.rota);
-    });
-    return Array.from(routes).sort();
-  }, [onibusFretadoRows]);
-
-  const filteredOnibusRows = useMemo(() => {
-    return onibusFretadoRows.filter((r) => {
-      if (busRouteFilter !== 'all' && r.rota !== busRouteFilter) return false;
-      if (busSearchQuery.trim()) {
-        const q = busSearchQuery.toLowerCase().trim();
-        const mName = r.name.toLowerCase().includes(q);
-        const mTurma = r.className.toLowerCase().includes(q);
-        const mRa = r.ra.toLowerCase().includes(q);
-        const mRota = r.rota.toLowerCase().includes(q);
-        const mBairro = r.bairro.toLowerCase().includes(q);
-        if (!mName && !mTurma && !mRa && !mRota && !mBairro) return false;
-      }
-      return true;
-    });
-  }, [onibusFretadoRows, busRouteFilter, busSearchQuery]);
 
   const consecutiveAbsenceRows = useMemo(() => {
     const list: Array<{
@@ -1674,11 +1594,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
             id: 'dias_letivos',
             label: '200 Dias Letivos',
             icon: 'calendar_month',
-          },
-          {
-            id: 'onibus_fretado',
-            label: `Ônibus Fretado (${onibusFretadoRows.length})`,
-            icon: 'directions_bus',
           },
           {
             id: 'emails_permitidos',
@@ -4098,149 +4013,6 @@ export const PlanilhaGoogleScreen: React.FC<PlanilhaGoogleScreenProps> = ({
                       </tr>
                     );
                   })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-
-      {/* ABA OFICIAL: ÔNIBUS FRETADO & TRANSPORTE ESCOLAR MUNICIPAL */}
-      {activeTab === 'onibus_fretado' && (
-        <section className="card-welcoming bg-white rounded-3xl p-5 sm:p-7 space-y-5 animate-gentle-fade border border-[#003440]/10 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#003440]/10">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[24px] text-[#005035]">
-                  directions_bus
-                </span>
-                <h2 className="text-lg sm:text-xl font-semibold text-[#003440]">
-                  Transporte &amp; Ônibus Escolar Fretado (2027)
-                </h2>
-              </div>
-              <p className="text-sm text-[#436370]">
-                Relação oficial de estudantes que utilizam as linhas de ônibus fretado municipal EMEB Prof. Joaquim Candelário de Freitas.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-[#eaf6ef] text-[#005035] font-semibold text-xs">
-                {onibusFretadoRows.length} Estudantes com Transporte
-              </span>
-            </div>
-          </div>
-
-          {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setBusRouteFilter('all')}
-                className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition-all ${
-                  busRouteFilter === 'all'
-                    ? 'bg-[#003440] text-white font-semibold'
-                    : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
-                }`}
-              >
-                Todas as Rotas
-              </button>
-              {uniqueBusRoutes.map((route) => (
-                <button
-                  key={route}
-                  type="button"
-                  onClick={() => setBusRouteFilter(route)}
-                  className={`px-3 py-1.5 rounded-xl font-bold text-xs cursor-pointer transition-all ${
-                    busRouteFilter === route
-                      ? 'bg-[#005035] text-white font-semibold'
-                      : 'bg-[#f1f4f3] text-[#436370] hover:bg-[#e3e8e6]'
-                  }`}
-                >
-                  {route}
-                </button>
-              ))}
-            </div>
-
-            <div className="relative min-w-[260px]">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5a676b] text-[18px]">
-                search
-              </span>
-              <input
-                type="text"
-                value={busSearchQuery}
-                onChange={(e) => setBusSearchQuery(e.target.value)}
-                placeholder="Filtrar por aluno, bairro ou RA..."
-                className="w-full pl-9 pr-3 py-1.5 bg-[#f5f7f6] text-[#191c1b] text-sm rounded-xl border border-[#003440]/12 outline-none focus:border-[#005035]"
-              />
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto rounded-2xl border border-[#003440]/12">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#f5f7f6] text-[#003440] font-semibold uppercase text-xs border-b border-[#003440]/10">
-                <tr>
-                  <th className="py-2.5 px-3 w-12 text-center">Nº</th>
-                  <th className="py-2.5 px-3">Turma</th>
-                  <th className="py-2.5 px-3">Estudante</th>
-                  <th className="py-2.5 px-3">RA</th>
-                  <th className="py-2.5 px-3">Rota do Ônibus</th>
-                  <th className="py-2.5 px-3">Endereço Residencial</th>
-                  <th className="py-2.5 px-3">Bairro</th>
-                  <th className="py-2.5 px-3">Responsável</th>
-                  <th className="py-2.5 px-3 text-center">WhatsApp</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#003440]/5">
-                {filteredOnibusRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-8 text-center text-[#5a676b] font-medium">
-                      Nenhum estudante encontrado com transporte cadastrado para os filtros selecionados.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredOnibusRows.map((row) => {
-                    const waLinks = buildWhatsAppLinksFromPhoneString(
-                      row.telefones,
-                      row.name,
-                      row.responsavel
-                    );
-                    return (
-                      <tr key={`${row.classId}_${row.studentId}`} className="hover:bg-[#f9fbfa] transition-colors">
-                        <td className="py-2.5 px-3 text-center font-bold text-[#5a676b]">{row.seq}</td>
-                        <td className="py-2.5 px-3 font-semibold text-[#003440]">{row.className}</td>
-                        <td className="py-2.5 px-3 font-bold text-[#191c1b]">
-                          {row.name}
-                          <span className="text-xs text-[#5a676b] block">Chamada: Nº {row.number}</span>
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-xs text-[#41484b]">{row.ra || '—'}</td>
-                        <td className="py-2.5 px-3">
-                          <span className="px-2 py-0.5 rounded-md bg-[#eaf6ef] text-[#005035] font-semibold text-xs">
-                            {row.rota}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-[#41484b] max-w-[200px] truncate" title={row.endereco}>
-                          {row.endereco || '—'}
-                        </td>
-                        <td className="py-2.5 px-3 text-[#41484b]">{row.bairro}</td>
-                        <td className="py-2.5 px-3 text-[#191c1b] font-medium">{row.responsavel}</td>
-                        <td className="py-2.5 px-3 text-center">
-                          {waLinks.length > 0 ? (
-                            <a
-                              href={waLinks[0].waUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#075E54] font-bold text-xs transition-colors"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">chat</span>
-                              <span>WhatsApp</span>
-                            </a>
-                          ) : (
-                            <span className="text-[#5a676b] text-xs">Sem telefone</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
               </tbody>
             </table>
           </div>

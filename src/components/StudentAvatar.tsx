@@ -240,7 +240,29 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
     }
   };
 
+  const authFetchAttemptedRef = useRef<Set<string>>(new Set());
+
   const handleImageError = () => {
+    if (
+      effectivePhoto &&
+      (effectivePhoto.startsWith('/api/photos/') || effectivePhoto.startsWith('/api/drive-photo/')) &&
+      !authFetchAttemptedRef.current.has(effectivePhoto)
+    ) {
+      authFetchAttemptedRef.current.add(effectivePhoto);
+      void ensurePhotoCachedInIndexedDb(effectivePhoto, driveFileId || undefined).then((blobUrl) => {
+        if (blobUrl) {
+          setImageError(false);
+          setCacheRevision((prev) => prev + 1);
+          return;
+        }
+        if (fallbackIndex + 1 < candidateUrls.length) {
+          setFallbackIndex((prev) => prev + 1);
+        } else {
+          setImageError(true);
+        }
+      });
+      return;
+    }
     if (fallbackIndex + 1 < candidateUrls.length) {
       setFallbackIndex((prev) => prev + 1);
     } else {

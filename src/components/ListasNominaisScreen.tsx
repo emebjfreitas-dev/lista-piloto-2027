@@ -330,7 +330,6 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           : `DENTRO DA META (≥${r.rep.minLegalPresencePercent}%)`,
         'RA': `${r.student.ra}-${r.student.digRa}`,
         'NIS (BOLSA FAMÍLIA)': r.student.nis || '—',
-        'ROTA DE TRANSPORTE': r.student.rotaOnibus || '—',
         'RESPONSÁVEL / TELEFONE': `${r.student.filiacao1 || r.student.guardianName || '—'} (${r.student.telefones || r.student.guardianPhone || '—'})`,
       };
     });
@@ -469,7 +468,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nome, RA, NIS (Bolsa Família), responsável ou rota..."
+            placeholder="Buscar por nome, RA, NIS (Bolsa Família) ou responsável..."
             aria-label="Buscar estudante nas listas nominais do Bolsa Família"
             className="w-full min-h-[48px] pl-11 pr-11 rounded-2xl bg-[#f1f5f9] focus:bg-[#e2e8f0]/60 text-sm sm:text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#64748b] focus:outline-none transition-colors"
           />
@@ -923,14 +922,6 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                 <>
                                   <span aria-hidden="true" className="text-slate-300">·</span>
                                   <span className="text-[#92400e] font-semibold">NIS {student.nis}</span>
-                                </>
-                              )}
-                              {student.rotaOnibus && (
-                                <>
-                                  <span aria-hidden="true" className="text-slate-300">·</span>
-                                  <span className="text-[#0b3b8c] font-semibold">
-                                    Rota {student.rotaOnibus.replace(/[^0-9]/g, '') || student.rotaOnibus.split('-')[0].trim()}
-                                  </span>
                                 </>
                               )}
                             </div>

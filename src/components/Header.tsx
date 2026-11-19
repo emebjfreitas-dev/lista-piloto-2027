@@ -205,8 +205,8 @@ export const Header: React.FC<HeaderProps> = ({
   }> = [
     {
       id: 'bolsa_familia',
-      label: 'Bolsa Família & Fretado',
-      subtitle: 'Condicionalidades e alertas sociais',
+      label: 'Bolsa Família',
+      subtitle: 'Estudantes beneficiados e frequência LDB',
       icon: HeartHandshake,
       tintClass: 'bg-amber-500/12 text-amber-700',
     },
@@ -219,8 +219,8 @@ export const Header: React.FC<HeaderProps> = ({
     },
     {
       id: 'usuarios_acesso',
-      label: 'Central Admin',
-      subtitle: 'Segurança, acessos, banco e uploads',
+      label: 'Central Administrativa',
+      subtitle: 'Acessos, segurança, banco e uploads',
       icon: ShieldCheck,
       tintClass: 'bg-[#0071e3]/12 text-[#0071e3]',
     },
@@ -338,58 +338,60 @@ export const Header: React.FC<HeaderProps> = ({
                   </button>
 
                   {showAdminNavDropdown && (
-                    <div className="absolute right-0 mt-2.5 w-[min(22rem,calc(100vw-1.5rem))] bg-white rounded-3xl shadow-[0_18px_48px_rgba(15,23,42,0.18)] p-2.5 space-y-1 z-50 animate-gentle-fade">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-600 px-3 pt-1 pb-0.5 block">
+                    <div className="absolute right-0 mt-2.5 w-[min(22rem,calc(100vw-1.5rem))] bg-white rounded-3xl shadow-[0_18px_48px_rgba(15,23,42,0.18)] border border-slate-100 p-3 space-y-1.5 z-50 animate-gentle-fade">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-3 pt-1 pb-0.5 block">
                         Ferramentas de Gestão
                       </span>
-                      {adminEssentialItems.map((item) => {
-                        const IconComp = item.icon;
-                        const active =
-                          currentScreen === item.id ||
-                          (item.id === 'usuarios_acesso' &&
-                            (currentScreen === 'diagnostico_bd' ||
-                              currentScreen === 'importar_deficiencias_htm'));
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => navigateTo(item.id)}
-                            className={`w-full px-3 py-2.5 rounded-2xl text-left flex items-center gap-3 transition-colors cursor-pointer min-w-0 ${
-                              active
-                                ? 'bg-[#0b3b8c] text-white'
-                                : 'text-slate-900 hover:bg-slate-100'
-                            }`}
-                          >
-                            <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                                active ? 'bg-white/20 text-white' : item.tintClass
+                      <div className="space-y-1">
+                        {adminEssentialItems.map((item) => {
+                          const IconComp = item.icon;
+                          const active =
+                            currentScreen === item.id ||
+                            (item.id === 'usuarios_acesso' &&
+                              (currentScreen === 'diagnostico_bd' ||
+                                currentScreen === 'importar_deficiencias_htm'));
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => navigateTo(item.id)}
+                              className={`w-full px-3 py-2.5 rounded-2xl text-left flex items-center gap-3 transition-colors cursor-pointer min-w-0 ${
+                                active
+                                  ? 'bg-[#0b3b8c] text-white'
+                                  : 'text-slate-900 hover:bg-slate-100/90'
                               }`}
                             >
-                              <IconComp className="w-[18px] h-[18px] stroke-[1.5]" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="text-sm font-semibold block break-words leading-snug">
-                                {item.label}
-                              </span>
-                              <span
-                                className={`text-xs block break-words leading-snug mt-0.5 ${
-                                  active ? 'text-blue-100' : 'text-slate-600'
+                              <div
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                  active ? 'bg-white/20 text-white' : item.tintClass
                                 }`}
                               >
-                                {item.subtitle}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
+                                <IconComp className="w-[18px] h-[18px] stroke-[1.6]" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-sm font-semibold block break-words leading-snug">
+                                  {item.label}
+                                </span>
+                                <span
+                                  className={`text-xs block break-words leading-snug mt-0.5 ${
+                                    active ? 'text-blue-100' : 'text-slate-500'
+                                  }`}
+                                >
+                                  {item.subtitle}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
 
                       {/* Controle de Sincronização em Nuvem dentro de Gestão */}
-                      <div className="pt-1.5 mt-1.5">
+                      <div className="pt-2 mt-1 border-t border-slate-100">
                         <div
                           className={`p-3 rounded-2xl flex items-center justify-between gap-2.5 min-w-0 ${
                             syncSnapshot.pendingCount > 0
-                              ? 'bg-amber-50 text-amber-950'
-                              : 'bg-slate-100 text-slate-900'
+                              ? 'bg-amber-50/90 text-amber-950'
+                              : 'bg-slate-50 text-slate-900'
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -408,7 +410,7 @@ export const Header: React.FC<HeaderProps> = ({
                                   ? `${syncSnapshot.pendingCount} pendente(s) na fila`
                                   : 'Nuvem sincronizada'}
                               </span>
-                              <span className="text-xs text-slate-600 block break-words">
+                              <span className="text-[11px] text-slate-600 block break-words">
                                 Envio automático ativo
                               </span>
                             </div>
@@ -417,7 +419,7 @@ export const Header: React.FC<HeaderProps> = ({
                             type="button"
                             onClick={handleCloudFlushClick}
                             disabled={isFlushingCloud}
-                            className="min-h-[34px] px-3 py-1.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold cursor-pointer shrink-0 transition-colors disabled:opacity-50"
+                            className="min-h-[34px] px-3 py-1.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-semibold cursor-pointer shrink-0 transition-colors disabled:opacity-50"
                           >
                             {isFlushingCloud ? 'Enviando...' : 'Sincronizar'}
                           </button>

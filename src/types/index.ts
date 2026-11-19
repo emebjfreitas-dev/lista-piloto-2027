@@ -120,10 +120,12 @@ export interface Student extends StudentSedData {
   photoDriveId?: string;
   photoDriveUrl?: string;
   photoManualLink?: boolean;
+  photoSha256?: string;
   fichaPdfDriveId?: string;
   fichaPdfDriveUrl?: string;
   fichaPdfSubfolder?: string;
   fichaPdfManualLink?: boolean;
+  fichaPdfSha256?: string;
   updatedAtMs?: number;
   initials?: string;
   status: AttendanceStatus;

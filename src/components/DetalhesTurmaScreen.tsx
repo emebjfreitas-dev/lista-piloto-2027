@@ -34,7 +34,6 @@ type StatusFilter =
   | 'ativos'
   | 'sem_ficha_pdf'
   | 'movimentados'
-  | 'onibus_fretado'
   | 'bolsa_familia'
   | 'alerta';
 
@@ -160,14 +159,6 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
                         : isRemanejado
                         ? studentGenderInfo.remanejadoTerm
                         : sit}
-                    </span>
-                  </>
-                )}
-                {student.rotaOnibus && (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span className="text-[#0b3b8c] font-semibold">
-                      Rota {student.rotaOnibus.replace(/[^0-9]/g, '') || student.rotaOnibus.split('-')[0].trim()}
                     </span>
                   </>
                 )}
@@ -1358,7 +1349,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     let pcdCount = 0;
     let alertaLegalCount = 0;
     let bolsaFamiliaCount = 0;
-    let onibusFretadoCount = 0;
     let semFichaEscaneadaCount = 0;
     let comFichaEscaneadaCount = 0;
     let somaDiasMatriculados = 0;
@@ -1382,7 +1372,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
       if (s.deficiencia && s.deficiencia.trim().length > 0) pcdCount++;
       if (s.nis && s.nis.trim().length > 0) bolsaFamiliaCount++;
-      if (s.rotaOnibus && s.rotaOnibus.trim().length > 0) onibusFretadoCount++;
 
       const isMoved = sit.includes('BXTR') || sit.includes('TRANSF') || sit.includes('REMAN') || sit.includes('RM');
       const hasScannedPdf = Boolean(
@@ -1420,7 +1409,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       pcdCount,
       alertaLegalCount,
       bolsaFamiliaCount,
-      onibusFretadoCount,
       semFichaEscaneadaCount,
       comFichaEscaneadaCount,
       somaDiasMatriculados,
@@ -1441,7 +1429,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         s.number.toString().padStart(2, '0').includes(q) ||
         (s.ra && s.ra.toLowerCase().includes(q)) ||
         (s.nis && s.nis.toLowerCase().includes(q)) ||
-        (s.rotaOnibus && s.rotaOnibus.toLowerCase().includes(q)) ||
         (s.filiacao1 && s.filiacao1.toLowerCase().includes(q)) ||
         (s.filiacao2 && s.filiacao2.toLowerCase().includes(q));
       if (!matchesQuery) return false;
@@ -1461,9 +1448,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       if (statusFilter === 'ativos') return !isMov;
       if (statusFilter === 'sem_ficha_pdf') return !isMov && !hasScannedPdf;
       if (statusFilter === 'movimentados') return isMov;
-      if (statusFilter === 'onibus_fretado') {
-        return Boolean(s.rotaOnibus && s.rotaOnibus.trim().length > 0);
-      }
       if (statusFilter === 'bolsa_familia' && userRole === 'admin') {
         return Boolean(s.nis && s.nis.trim().length > 0);
       }
@@ -1959,21 +1943,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             </button>
           )}
 
-          {classSummary.onibusFretadoCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setStatusFilter(statusFilter === 'onibus_fretado' ? 'all' : 'onibus_fretado')}
-              className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1 tabular-nums ${
-                statusFilter === 'onibus_fretado'
-                  ? 'bg-slate-800 text-white'
-                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#334155]'
-              }`}
-            >
-              <span>Ônibus</span>
-              <span className="font-bold">{classSummary.onibusFretadoCount}</span>
-            </button>
-          )}
-
           {userRole === 'admin' && classSummary.bolsaFamiliaCount > 0 && (
             <button
               type="button"
@@ -2268,7 +2237,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           'Filiação (Mãe e Pai) & Contatos',
           'Frequência, Presença & Faltas',
           'Documentos, Saúde & AEE',
-          'Endereço & Transporte',
+          'Endereço',
           'Outros Campos SED',
         ];
 

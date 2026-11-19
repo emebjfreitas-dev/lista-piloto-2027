@@ -13,6 +13,8 @@ import {
   saveStoredAuthorizedUsers,
   isUserAccessExpired,
   formatAccessExpirationDateBR,
+  establishServerAuthSessionCookie,
+  addSecurityAuditLog,
 } from '../services/db';
 import {
   googleSignIn,
@@ -78,11 +80,40 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   }, [externalError]);
 
   // Validação segura e autorização da conta institucional retornada pelo Google
-  const verifyAndAuthorizeEmail = async (rawEmail: string, displayName?: string | null) => {
+  const verifyAndAuthorizeEmail = async (
+    rawEmail: string,
+    displayName?: string | null,
+    emailVerified = false,
+    idToken?: string
+  ) => {
     const authEmail = rawEmail.trim().toLowerCase();
+
+    if (!emailVerified) {
+      await logoutGoogle().catch(() => {});
+      addSecurityAuditLog({
+        userEmail: authEmail || 'desconhecido',
+        userName: displayName || 'Não Verificado',
+        userRole: 'usuario',
+        eventType: 'LOGIN_FAILURE',
+        actionTitle: 'Login bloqueado — E-mail não verificado',
+        details: `Tentativa com conta sem e-mail verificado (${authEmail}).`,
+        severity: 'warning',
+      });
+      setErrorMsg('Acesso bloqueado: sua conta Google precisa estar com o e-mail verificado.');
+      return;
+    }
 
     if (!isValidInstitutionalEmail(authEmail)) {
       await logoutGoogle().catch(() => {});
+      addSecurityAuditLog({
+        userEmail: authEmail,
+        userName: displayName || authEmail,
+        userRole: 'usuario',
+        eventType: 'UNAUTHORIZED_ACCESS_BLOCKED',
+        actionTitle: 'Tentativa de acesso fora do domínio institucional',
+        details: `Conta "${authEmail}" bloqueada automaticamente na triagem Google Auth.`,
+        severity: 'warning',
+      });
       setErrorMsg(
         `Acesso restrito: o e-mail "${authEmail}" não pertence ao domínio institucional (@educacao.jundiai.sp.gov.br) ou à conta oficial da escola.`
       );
@@ -147,6 +178,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     if (isUserAccessExpired(found)) {
       await logoutGoogle().catch(() => {});
+      addSecurityAuditLog({
+        userEmail: authEmail,
+        userName: found.name,
+        userRole: found.role,
+        eventType: 'LOGIN_FAILURE',
+        actionTitle: 'Acesso temporário expirado bloqueado',
+        details: `Conta expirou após ${formatAccessExpirationDateBR(found.accessExpiresAt)}.`,
+        severity: 'warning',
+      });
       setErrorMsg(
         `Acesso expirado: o acesso temporário de "${authEmail}" venceu após ${formatAccessExpirationDateBR(
           found.accessExpiresAt
@@ -157,17 +197,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     if (!found.active) {
       await logoutGoogle().catch(() => {});
+      addSecurityAuditLog({
+        userEmail: authEmail,
+        userName: found.name,
+        userRole: found.role,
+        eventType: 'LOGIN_FAILURE',
+        actionTitle: 'Tentativa de login de usuário desativado',
+        details: `Conta "${authEmail}" está marcada como inativa.`,
+        severity: 'warning',
+      });
       setErrorMsg(
-        `Acesso bloqueado: o usuário "${authEmail}" está com o acesso desativado no sistema. Contate a Equipe Administrativa.`
+        `Acesso bloqueado: o usuário "${authEmail}" está desativado no sistema. Contate a Equipe Administrativa.`
       );
       return;
     }
 
+    // Troca o Firebase ID Token por cookie de sessão HMAC HttpOnly no backend Express antes de montar a tela principal
+    if (idToken) {
+      await establishServerAuthSessionCookie(idToken).catch(() => false);
+    }
+
+    addSecurityAuditLog({
+      userEmail: found.email,
+      userName: found.name,
+      userRole: found.role,
+      eventType: 'LOGIN_SUCCESS',
+      actionTitle: 'Autenticação Google Institucional concluída',
+      details: `Sessão criptográfica iniciada com e-mail verificado (${found.role}).`,
+      severity: 'info',
+    });
+
     setErrorMsg(null);
     onLoginSuccess(found);
   };
-
-
 
   // Executa o login com a conta Google com validação estrita de segurança (sem bypass)
   const handleGoogleLogin = async () => {
@@ -177,7 +239,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       const res = await googleSignIn();
       if (res?.user?.email) {
-        await verifyAndAuthorizeEmail(res.user.email, res.user.displayName);
+        const idToken = await res.user.getIdToken().catch(() => undefined);
+        await verifyAndAuthorizeEmail(
+          res.user.email,
+          res.user.displayName,
+          Boolean(res.user.emailVerified),
+          idToken
+        );
         return;
       }
       // Se não retornou e-mail imediato (ex: redirecionamento em andamento), não efetua login e aguarda o fluxo seguro

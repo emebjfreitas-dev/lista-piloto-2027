@@ -75,7 +75,6 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
           st.guardianName,
           st.telefones,
           st.guardianPhone,
-          st.rotaOnibus,
           st.deficiencia,
           `chamada ${st.number}`,
           `nº ${st.number}`,
@@ -382,11 +381,6 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                             {item.consecutiveCount >= 3 && (
                               <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-semibold text-xs font-mono tabular-nums">
                                 {item.consecutiveCount} dias seguidos
-                              </span>
-                            )}
-                            {item.student.rotaOnibus && (
-                              <span className="px-2 py-0.5 rounded-md bg-sky-50 text-sky-800 font-medium text-xs break-words">
-                                🚌 {item.student.rotaOnibus.split('-')[0].trim()}
                               </span>
                             )}
                           </div>

@@ -246,6 +246,7 @@ const SERVER_CLEAN_RESET_EPOCH_ID = 'clean_zero_data_2026_11_16_v1';
 
 interface SharedSchoolState {
   cleanResetEpochId?: string;
+  sessionHmacSecret?: string;
   authorizedUsers?: any[];
   accessSessionLogs?: any[];
   attendanceWindowConfig?: any;
@@ -573,7 +574,22 @@ const writeSharedState = (patch: Partial<SharedSchoolState>): SharedSchoolState 
   return next;
 };
 
-// Institutional Security & RBAC Verification Helpers
+// Institutional Security & Cryptographic RBAC Verification Helpers
+const FIREBASE_PROJECT_ID = 'listapiloto2027';
+const GOOGLE_SECURETOKEN_CERTS_URL =
+  'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+const SESSION_COOKIE_NAME = 'emeb_candelario_session';
+const SESSION_TTL_SECONDS = 60 * 60 * 12; // 12 hours max signed session
+
+const isOfficialSchoolAdminEmail = (email?: string): boolean => {
+  if (!email || typeof email !== 'string') return false;
+  const clean = email.trim().toLowerCase();
+  return (
+    clean === 'emebjfreitas@jundiai.sp.gov.br' ||
+    clean === 'emebjfreitas@educacao.jundiai.sp.gov.br'
+  );
+};
+
 const isInstitutionalEmail = (email?: string): boolean => {
   if (!email || typeof email !== 'string') return false;
   const clean = email.trim().toLowerCase();
@@ -589,39 +605,300 @@ interface RequestUser {
   name: string;
   isAdmin: boolean;
   isInstitutional: boolean;
+  uid?: string;
+  authMethod?: 'firebase_jwt' | 'signed_cookie' | 'anonymous';
 }
 
-const extractRequestUser = (req: express.Request): RequestUser => {
-  const email = String(
-    req.headers['x-user-email'] ||
-    req.body?.userEmail ||
-    req.body?.adminEmail ||
-    ''
-  ).trim().toLowerCase();
-  const role = String(
-    req.headers['x-user-role'] ||
-    req.body?.userRole ||
-    ''
-  ).trim().toLowerCase();
-  const rawName = String(req.headers['x-user-name'] || req.body?.userName || '');
-  let name = '';
-  try {
-    name = decodeURIComponent(rawName);
-  } catch {
-    name = rawName;
+let cachedGoogleCerts: { certs: Record<string, string>; expiresAtMs: number } | null = null;
+
+const getGooglePublicCerts = async (forceRefresh = false): Promise<Record<string, string>> => {
+  const now = Date.now();
+  if (!forceRefresh && cachedGoogleCerts && cachedGoogleCerts.expiresAtMs > now) {
+    return cachedGoogleCerts.certs;
   }
-  const isAdmin =
-    role === 'admin' ||
-    email === 'emebjfreitas@jundiai.sp.gov.br' ||
-    email.startsWith('emebjfreitas@');
-  const isInst = isInstitutionalEmail(email);
+  const resp = await fetch(GOOGLE_SECURETOKEN_CERTS_URL);
+  if (!resp.ok) {
+    if (cachedGoogleCerts) return cachedGoogleCerts.certs;
+    throw new Error(`Falha ao buscar chaves públicas Google Auth (${resp.status})`);
+  }
+  const certs = (await resp.json()) as Record<string, string>;
+  const cc = resp.headers.get('cache-control') || '';
+  const maxAgeMatch = cc.match(/max-age=(\d+)/i);
+  const maxAgeSec = maxAgeMatch ? Math.max(300, Number(maxAgeMatch[1])) : 3600;
+  cachedGoogleCerts = {
+    certs,
+    expiresAtMs: now + maxAgeSec * 1000,
+  };
+  return certs;
+};
+
+interface VerifiedFirebaseJwt {
+  uid: string;
+  email: string;
+  emailVerified: boolean;
+  name?: string;
+}
+
+const verifyFirebaseIdToken = async (idToken: string): Promise<VerifiedFirebaseJwt | null> => {
+  if (!idToken || typeof idToken !== 'string') return null;
+  const parts = idToken.trim().split('.');
+  if (parts.length !== 3) return null;
+
+  try {
+    const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    if (header?.alg !== 'RS256' || typeof header?.kid !== 'string' || !header.kid) {
+      return null;
+    }
+
+    let certs = await getGooglePublicCerts(false);
+    let pemCert = certs[header.kid];
+    if (!pemCert) {
+      certs = await getGooglePublicCerts(true);
+      pemCert = certs[header.kid];
+    }
+    if (!pemCert) return null;
+
+    const verifier = crypto.createVerify('RSA-SHA256');
+    verifier.update(`${parts[0]}.${parts[1]}`);
+    verifier.end();
+    const sigBuf = Buffer.from(parts[2], 'base64url');
+    if (!verifier.verify(pemCert, sigBuf)) {
+      return null;
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (payload.aud !== FIREBASE_PROJECT_ID) return null;
+    if (payload.iss !== `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`) return null;
+    if (typeof payload.sub !== 'string' || !payload.sub) return null;
+    if (typeof payload.exp !== 'number' || payload.exp <= nowSec) return null;
+    if (typeof payload.iat !== 'number' || payload.iat > nowSec + 300) return null;
+    if (typeof payload.auth_time === 'number' && payload.auth_time > nowSec + 300) return null;
+    if (typeof payload.email !== 'string' || !payload.email.trim()) return null;
+    if (payload.email_verified !== true) return null;
+
+    return {
+      uid: payload.sub,
+      email: payload.email.trim().toLowerCase(),
+      emailVerified: true,
+      name: typeof payload.name === 'string' ? payload.name.trim() : undefined,
+    };
+  } catch {
+    return null;
+  }
+};
+
+let runtimeSessionSecret: string | null = null;
+const getSessionHmacSecret = (): string => {
+  if (process.env.SESSION_HMAC_SECRET && process.env.SESSION_HMAC_SECRET.length >= 24) {
+    return process.env.SESSION_HMAC_SECRET;
+  }
+  if (runtimeSessionSecret) return runtimeSessionSecret;
+  const state = readSharedState();
+  if (state.sessionHmacSecret && state.sessionHmacSecret.length >= 32) {
+    runtimeSessionSecret = state.sessionHmacSecret;
+    return runtimeSessionSecret;
+  }
+  runtimeSessionSecret = crypto.randomBytes(32).toString('hex');
+  writeSharedState({ sessionHmacSecret: runtimeSessionSecret });
+  return runtimeSessionSecret;
+};
+
+const signSessionCookieValue = (payload: {
+  email: string;
+  uid: string;
+  name: string;
+  exp: number;
+}): string => {
+  const secret = getSessionHmacSecret();
+  const dataB64 = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const sig = crypto.createHmac('sha256', secret).update(dataB64).digest('base64url');
+  return `${dataB64}.${sig}`;
+};
+
+const verifySessionCookieValue = (
+  cookieVal?: string
+): { email: string; uid: string; name: string; exp: number } | null => {
+  if (!cookieVal || typeof cookieVal !== 'string') return null;
+  const dotIdx = cookieVal.indexOf('.');
+  if (dotIdx <= 0) return null;
+  const dataB64 = cookieVal.slice(0, dotIdx);
+  const sigB64 = cookieVal.slice(dotIdx + 1);
+  if (!dataB64 || !sigB64) return null;
+
+  try {
+    const secret = getSessionHmacSecret();
+    const expectedSig = crypto.createHmac('sha256', secret).update(dataB64).digest();
+    const incomingSig = Buffer.from(sigB64, 'base64url');
+    if (
+      expectedSig.length !== incomingSig.length ||
+      !crypto.timingSafeEqual(expectedSig, incomingSig)
+    ) {
+      return null;
+    }
+    const parsed = JSON.parse(Buffer.from(dataB64, 'base64url').toString('utf8'));
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (!parsed || typeof parsed.email !== 'string' || typeof parsed.exp !== 'number') {
+      return null;
+    }
+    if (parsed.exp <= nowSec) return null;
+    return {
+      email: parsed.email.trim().toLowerCase(),
+      uid: String(parsed.uid || ''),
+      name: String(parsed.name || ''),
+      exp: parsed.exp,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const parseCookiesFromRequest = (req: express.Request): Record<string, string> => {
+  const out: Record<string, string> = {};
+  const raw = req.headers.cookie;
+  if (!raw || typeof raw !== 'string') return out;
+  for (const part of raw.split(';')) {
+    const eqIdx = part.indexOf('=');
+    if (eqIdx <= 0) continue;
+    const k = part.slice(0, eqIdx).trim();
+    const v = part.slice(eqIdx + 1).trim();
+    if (k) {
+      try {
+        out[k] = decodeURIComponent(v);
+      } catch {
+        out[k] = v;
+      }
+    }
+  }
+  return out;
+};
+
+const getTodaySaoPauloIso = (): string => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+};
+
+const buildAuthorizedRequestUser = (
+  verifiedEmail: string,
+  displayName?: string,
+  uid?: string,
+  authMethod: 'firebase_jwt' | 'signed_cookie' = 'firebase_jwt'
+): { user: RequestUser | null; denialReason?: string } => {
+  const email = verifiedEmail.trim().toLowerCase();
+  if (!isInstitutionalEmail(email)) {
+    return { user: null, denialReason: 'NON_INSTITUTIONAL_EMAIL' };
+  }
+
+  const state = readSharedState();
+  const users = Array.isArray(state.authorizedUsers) ? state.authorizedUsers : [];
+  const matched = users.find(
+    (u: any) => u && typeof u.email === 'string' && u.email.trim().toLowerCase() === email
+  );
+
+  if (matched) {
+    if (matched.active === false) {
+      return { user: null, denialReason: 'USER_DEACTIVATED' };
+    }
+    if (matched.accessExpiresAt && typeof matched.accessExpiresAt === 'string') {
+      const todayIso = getTodaySaoPauloIso();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(matched.accessExpiresAt.trim()) && todayIso > matched.accessExpiresAt.trim()) {
+        return { user: null, denialReason: 'USER_ACCESS_EXPIRED' };
+      }
+    }
+  }
+
+  const isAdmin = isOfficialSchoolAdminEmail(email);
+  const resolvedRole = isAdmin
+    ? 'admin'
+    : matched?.role === 'peb2'
+    ? 'peb2'
+    : 'usuario';
+  const resolvedName =
+    (matched?.name && String(matched.name).trim()) ||
+    displayName ||
+    (isAdmin ? 'Equipe Administrativa' : email.split('@')[0] || 'Usuário');
 
   return {
-    email,
-    role: isAdmin ? 'admin' : (role || 'usuario'),
-    name: name || (isAdmin ? 'Equipe Administrativa' : email.split('@')[0] || 'Usuário'),
-    isAdmin,
-    isInstitutional: isInst,
+    user: {
+      email,
+      role: resolvedRole,
+      name: resolvedName,
+      isAdmin,
+      isInstitutional: true,
+      uid,
+      authMethod,
+    },
+  };
+};
+
+const resolveVerifiedRequestUser = async (
+  req: express.Request
+): Promise<{ user: RequestUser | null; denialReason?: string }> => {
+  const cached = (req as any).verifiedUser as RequestUser | undefined;
+  if (cached && cached.isInstitutional) {
+    return { user: cached };
+  }
+
+  const authHeader = String(req.headers.authorization || '').trim();
+  if (authHeader.toLowerCase().startsWith('bearer ')) {
+    const token = authHeader.slice(7).trim();
+    const verified = await verifyFirebaseIdToken(token);
+    if (!verified) {
+      return { user: null, denialReason: 'INVALID_OR_EXPIRED_FIREBASE_TOKEN' };
+    }
+    const built = buildAuthorizedRequestUser(
+      verified.email,
+      verified.name,
+      verified.uid,
+      'firebase_jwt'
+    );
+    if (built.user) {
+      (req as any).verifiedUser = built.user;
+    }
+    return built;
+  }
+
+  const cookies = parseCookiesFromRequest(req);
+  const sessionCookie = cookies[SESSION_COOKIE_NAME];
+  if (sessionCookie) {
+    const parsed = verifySessionCookieValue(sessionCookie);
+    if (!parsed) {
+      return { user: null, denialReason: 'INVALID_OR_EXPIRED_SESSION_COOKIE' };
+    }
+    const built = buildAuthorizedRequestUser(
+      parsed.email,
+      parsed.name,
+      parsed.uid,
+      'signed_cookie'
+    );
+    if (built.user) {
+      (req as any).verifiedUser = built.user;
+    }
+    return built;
+  }
+
+  return { user: null, denialReason: 'MISSING_AUTHENTICATION_TOKEN' };
+};
+
+const extractRequestUser = (req: express.Request): RequestUser => {
+  const verified = (req as any).verifiedUser as RequestUser | undefined;
+  if (verified) return verified;
+
+  return {
+    email: '',
+    role: 'anonymous',
+    name: 'Anônimo',
+    isAdmin: false,
+    isInstitutional: false,
+    authMethod: 'anonymous',
   };
 };
 
@@ -652,41 +929,66 @@ const recordSecurityAuditLog = (
   return entry;
 };
 
-// Middleware: Exige autenticação institucional válida para mutação de dados
-const requireInstitutionalAuth = (
+// Middleware: Exige token criptográfico Firebase válido ou cookie HMAC assinado de servidor institucional
+const requireInstitutionalAuth = async (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) => {
-  const user = extractRequestUser(req);
-  if (!user.isInstitutional && user.email !== 'emebjfreitas@jundiai.sp.gov.br') {
-    recordSecurityAuditLog(
-      'UNAUTHORIZED_MUTATION_ATTEMPT',
-      `Tentativa de gravação bloqueada em ${req.path} por e-mail não institucional: "${user.email || 'vazio'}"`,
-      req,
-      'BLOCKED',
-      user
-    );
-    res.status(403).json({
-      error: 'Acesso negado. Apenas e-mails institucionais autorizados (@educacao.jundiai.sp.gov.br ou emebjfreitas@jundiai.sp.gov.br) têm permissão de gravação.',
-      code: 'UNAUTHORIZED_INSTITUTIONAL_EMAIL',
+  const { user, denialReason } = await resolveVerifiedRequestUser(req);
+  if (!user || !user.isInstitutional) {
+    if (req.method !== 'GET' || denialReason !== 'MISSING_AUTHENTICATION_TOKEN') {
+      recordSecurityAuditLog(
+        'UNAUTHORIZED_MUTATION_ATTEMPT',
+        `Acesso bloqueado em ${req.method} ${req.path} (${denialReason || 'UNAUTHENTICATED'}).`,
+        req,
+        'BLOCKED',
+        { email: user?.email || 'ANONYMOUS', name: user?.name || 'Não Autenticado' }
+      );
+    }
+    const statusCode =
+      denialReason === 'MISSING_AUTHENTICATION_TOKEN' ||
+      denialReason === 'INVALID_OR_EXPIRED_FIREBASE_TOKEN' ||
+      denialReason === 'INVALID_OR_EXPIRED_SESSION_COOKIE'
+        ? 401
+        : 403;
+    res.status(statusCode).json({
+      error:
+        statusCode === 401
+          ? 'Sessão não autenticada ou expirada. Faça login novamente com sua conta Google institucional.'
+          : 'Acesso negado. Conta institucional desativada, expirada ou fora do domínio oficial.',
+      code: denialReason || 'UNAUTHORIZED_INSTITUTIONAL_EMAIL',
     });
     return;
   }
   next();
 };
 
-// Middleware: Exige privilégios de administrador
-const requireAdminAuth = (
+// Middleware: Exige privilégios criptograficamente verificados de administrador oficial
+const requireAdminAuth = async (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) => {
-  const user = extractRequestUser(req);
+  const { user, denialReason } = await resolveVerifiedRequestUser(req);
+  if (!user || !user.isInstitutional) {
+    recordSecurityAuditLog(
+      'UNAUTHORIZED_ADMIN_ATTEMPT',
+      `Tentativa não autenticada bloqueada em rota administrativa ${req.path} (${denialReason || 'UNAUTHENTICATED'}).`,
+      req,
+      'BLOCKED',
+      { email: 'ANONYMOUS', name: 'Não Autenticado' }
+    );
+    res.status(401).json({
+      error: 'Autenticação administrativa obrigatória.',
+      code: denialReason || 'UNAUTHENTICATED',
+    });
+    return;
+  }
   if (!user.isAdmin) {
     recordSecurityAuditLog(
       'PRIVILEGE_ESCALATION_BLOCKED',
-      `Tentativa de operação administrativa bloqueada em ${req.path} para o usuário: "${user.email}"`,
+      `Tentativa de operação administrativa bloqueada em ${req.path} para o usuário verificado: "${user.email}"`,
       req,
       'BLOCKED',
       user
@@ -722,6 +1024,7 @@ async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
 
   app.disable('x-powered-by');
+  app.set('trust proxy', 1);
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -729,27 +1032,134 @@ async function startServer() {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: data:; frame-src 'self' https: data:; img-src 'self' https: data: blob:;"
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: data:; frame-src 'self' https: data: blob:; img-src 'self' https: data: blob:;"
     );
     next();
   });
   app.use(express.json({ limit: '50mb' }));
 
-  // API: Obter estado compartilhado (Usuários Autorizados, Turmas, Estudantes, Fotos, PDFs Escaneados, Links Drive/Sheets e Logs)
-  app.get('/api/school-state', (_req, res) => {
+  const setSessionCookieHeader = (req: express.Request, res: express.Response, cookieValue: string, maxAgeSec: number) => {
+    const xfProto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
+    const isSecure = req.secure || xfProto.includes('https');
+    const attrs = [
+      `${SESSION_COOKIE_NAME}=${encodeURIComponent(cookieValue)}`,
+      'Path=/',
+      `Max-Age=${maxAgeSec}`,
+      'HttpOnly',
+      isSecure ? 'SameSite=None' : 'SameSite=Lax',
+      ...(isSecure ? ['Secure'] : []),
+    ];
+    res.setHeader('Set-Cookie', attrs.join('; '));
+  };
+
+  // API pública zero-PII de health-check para detecção de backend antes do login
+  app.get('/api/health', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ ok: true, service: 'emeb-candelario-2027' });
+  });
+
+  // API: Emite cookie HttpOnly assinado com HMAC a partir de um Firebase ID Token RS256 validado
+  app.post('/api/auth/session', async (req, res) => {
+    try {
+      const authHeader = String(req.headers.authorization || '').trim();
+      const rawToken = authHeader.toLowerCase().startsWith('bearer ')
+        ? authHeader.slice(7).trim()
+        : String(req.body?.idToken || '').trim();
+
+      if (!rawToken) {
+        res.status(400).json({ error: 'Token Firebase ID obrigatório.', code: 'MISSING_ID_TOKEN' });
+        return;
+      }
+
+      const verified = await verifyFirebaseIdToken(rawToken);
+      if (!verified) {
+        recordSecurityAuditLog(
+          'LOGIN_FAILURE',
+          'Token Firebase ID inválido, expirado ou com e-mail não verificado rejeitado em /api/auth/session.',
+          req,
+          'BLOCKED',
+          { email: 'ANONYMOUS', name: 'Falha JWT' }
+        );
+        res.status(401).json({
+          error: 'Token de autenticação inválido ou expirado.',
+          code: 'INVALID_FIREBASE_TOKEN',
+        });
+        return;
+      }
+
+      const { user, denialReason } = buildAuthorizedRequestUser(
+        verified.email,
+        verified.name,
+        verified.uid,
+        'firebase_jwt'
+      );
+
+      if (!user) {
+        recordSecurityAuditLog(
+          'LOGIN_FAILURE',
+          `Login bloqueado para "${verified.email}" (${denialReason || 'UNAUTHORIZED'}).`,
+          req,
+          'BLOCKED',
+          { email: verified.email, name: verified.name || verified.email }
+        );
+        res.status(403).json({
+          error: 'Conta não autorizada para acesso institucional.',
+          code: denialReason || 'UNAUTHORIZED',
+        });
+        return;
+      }
+
+      const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
+      const cookieToken = signSessionCookieValue({
+        email: user.email,
+        uid: verified.uid,
+        name: user.name,
+        exp,
+      });
+
+      setSessionCookieHeader(req, res, cookieToken, SESSION_TTL_SECONDS);
+      recordSecurityAuditLog(
+        'LOGIN_SUCCESS',
+        `Sessão autenticada com criptografia Firebase + HMAC para ${user.email} (${user.role}).`,
+        req,
+        'SUCCESS',
+        user
+      );
+
+      res.json({
+        ok: true,
+        email: user.email,
+        role: user.role,
+        isAdmin: user.isAdmin,
+        expiresAtSec: exp,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || 'Erro interno ao autenticar sessão.' });
+    }
+  });
+
+  // API: Encerrar sessão segura e revogar cookie HttpOnly
+  app.post('/api/auth/logout', (req, res) => {
+    setSessionCookieHeader(req, res, '', 0);
+    res.json({ ok: true });
+  });
+
+  // API: Obter estado compartilhado (protegido por autenticação institucional verificada)
+  app.get('/api/school-state', requireInstitutionalAuth, (_req, res) => {
     const state = readSharedState();
     const {
       adminDriveToken: _hiddenToken,
       fcmTokens: _hiddenFcmTokens,
       webPushVapidKeys: _hiddenVapidKeys,
+      sessionHmacSecret: _hiddenSessionSecret,
       ...publicState
     } = state;
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json(publicState);
   });
 
-  // API: Registrar token de leitura da pasta oficial do Drive para permitir proxy de fotos para todos os usuários da ponta (PEB I e PEB II)
-  app.post('/api/school-state/drive-token', (req, res) => {
+  // API: Registrar token de leitura da pasta oficial do Drive (autenticado institucionalmente)
+  app.post('/api/school-state/drive-token', requireInstitutionalAuth, (req, res) => {
     const { accessToken } = req.body || {};
     if (typeof accessToken === 'string' && accessToken.trim().length > 10) {
       writeSharedState({
@@ -768,38 +1178,309 @@ async function startServer() {
     } catch {}
   }
 
-  // API: Servir fotos salvas localmente no servidor para todos os usuários com cache HTTP
-  app.get('/api/photos/:filename', (req, res) => {
+  const PHOTO_MIME_BY_EXT: Record<string, string> = {
+    '.webp': 'image/webp',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.avif': 'image/avif',
+  };
+
+  const detectImageTypeFromBuffer = (
+    buf: Buffer
+  ): { valid: boolean; ext: 'webp' | 'png' | 'jpg' | 'gif' | 'avif'; mime: string } | null => {
+    if (!buf || buf.length < 12) return null;
+    // JPEG: FF D8 FF
+    if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
+      return { valid: true, ext: 'jpg', mime: 'image/jpeg' };
+    }
+    // PNG: 89 50 4E 47 0D 0A 1A 0A
+    if (
+      buf[0] === 0x89 &&
+      buf[1] === 0x50 &&
+      buf[2] === 0x4e &&
+      buf[3] === 0x47
+    ) {
+      return { valid: true, ext: 'png', mime: 'image/png' };
+    }
+    // WebP: RIFF....WEBP
+    if (
+      buf.slice(0, 4).toString('ascii') === 'RIFF' &&
+      buf.slice(8, 12).toString('ascii') === 'WEBP'
+    ) {
+      return { valid: true, ext: 'webp', mime: 'image/webp' };
+    }
+    // GIF: GIF87a / GIF89a
+    if (buf.slice(0, 4).toString('ascii') === 'GIF8') {
+      return { valid: true, ext: 'gif', mime: 'image/gif' };
+    }
+    // AVIF / HEIF ftyp box
+    if (buf.slice(4, 8).toString('ascii') === 'ftyp') {
+      return { valid: true, ext: 'avif', mime: 'image/avif' };
+    }
+    return null;
+  };
+
+  const hasPdfSignatureInBuffer = (buf: Buffer): boolean => {
+    if (!buf || buf.length < 8) return false;
+    const head = buf.slice(0, Math.min(buf.length, 1024));
+    return head.indexOf('%PDF-') !== -1;
+  };
+
+  interface DecodedBinaryItem {
+    studentId: string;
+    mimeType?: string;
+    ext?: string;
+    sha256: string;
+    buffer: Buffer;
+  }
+
+  const decodeBinaryUploadPacket = (raw: Buffer): DecodedBinaryItem[] => {
+    if (!Buffer.isBuffer(raw) || raw.length < 10) {
+      throw new Error('Pacote binário inválido ou vazio.');
+    }
+    if (raw.slice(0, 4).toString('ascii') !== 'EMEB') {
+      throw new Error('Cabeçalho de pacote binário inválido.');
+    }
+    const metaLen = raw.readUInt32BE(4);
+    if (metaLen <= 0 || metaLen > 5 * 1024 * 1024 || 8 + metaLen > raw.length) {
+      throw new Error('Tamanho de metadados do pacote binário inválido.');
+    }
+    const meta = JSON.parse(raw.slice(8, 8 + metaLen).toString('utf8'));
+    if (!meta || !Array.isArray(meta.items)) {
+      throw new Error('Metadados do pacote binário malformados.');
+    }
+    let offset = 8 + metaLen;
+    const decoded: DecodedBinaryItem[] = [];
+    for (const item of meta.items) {
+      const len = Number(item?.byteLength || 0);
+      if (!item?.studentId || !Number.isFinite(len) || len <= 0 || offset + len > raw.length) {
+        throw new Error(`Payload binário corrompido para estudante ${item?.studentId || 'desconhecido'}.`);
+      }
+      const slice = raw.subarray(offset, offset + len);
+      offset += len;
+      const computedSha = crypto.createHash('sha256').update(slice).digest('hex');
+      decoded.push({
+        studentId: String(item.studentId),
+        mimeType: item.mimeType ? String(item.mimeType) : undefined,
+        ext: item.ext ? String(item.ext) : undefined,
+        sha256: item.sha256 ? String(item.sha256) : computedSha,
+        buffer: slice,
+      });
+    }
+    return decoded;
+  };
+
+  const removeStaleStudentPhotoExtensions = (cleanId: string, keepExt: string) => {
+    const exts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'];
+    for (const ext of exts) {
+      if (ext === keepExt) continue;
+      const candidate = path.join(PHOTOS_DIR, `${cleanId}.${ext}`);
+      if (fs.existsSync(candidate)) {
+        try {
+          fs.unlinkSync(candidate);
+        } catch {}
+      }
+    }
+  };
+
+  // API: Servir fotos salvas localmente no servidor com Content-Type correto (WebP/PNG/JPG) e acesso autenticado
+  app.get('/api/photos/:filename', requireInstitutionalAuth, (req, res) => {
     const filename = path.basename(req.params.filename || '');
     if (!filename || filename.includes('..')) {
       res.status(400).end();
       return;
     }
-    const filePath = path.join(PHOTOS_DIR, filename);
+    let filePath = path.join(PHOTOS_DIR, filename);
+    if (!fs.existsSync(filePath)) {
+      const stem = filename.replace(/\.[^/.]+$/, '');
+      for (const fallbackExt of ['.webp', '.jpg', '.jpeg', '.png']) {
+        const altPath = path.join(PHOTOS_DIR, `${stem}${fallbackExt}`);
+        if (fs.existsSync(altPath)) {
+          filePath = altPath;
+          break;
+        }
+      }
+    }
     if (!fs.existsSync(filePath)) {
       res.status(404).end();
       return;
     }
-    res.setHeader('Content-Type', 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    const resolvedExt = path.extname(filePath).toLowerCase();
+    res.setHeader('Content-Type', PHOTO_MIME_BY_EXT[resolvedExt] || 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=86400');
     fs.createReadStream(filePath).pipe(res);
   });
 
-  const savePhotoDataUrlToFile = (studentId: string, dataUrl: string): string => {
-    const cleanId = String(studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
-    const filename = `${cleanId}.jpg`;
-    const filePath = path.join(PHOTOS_DIR, filename);
-    const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      const buffer = Buffer.from(matches[2], 'base64');
-      fs.writeFileSync(filePath, buffer);
-    } else {
-      fs.writeFileSync(filePath, Buffer.from(dataUrl));
+  const savePhotoBufferToFile = (
+    studentId: string,
+    buffer: Buffer
+  ): { photoUrl: string; sha256: string; filename: string } => {
+    const detected = detectImageTypeFromBuffer(buffer);
+    if (!detected) {
+      throw new Error(`Arquivo de imagem inválido ou formato não suportado para ${studentId}.`);
     }
-    return `/api/photos/${filename}`;
+    const cleanId = String(studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
+    const filename = `${cleanId}.${detected.ext}`;
+    const filePath = path.join(PHOTOS_DIR, filename);
+    const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+
+    removeStaleStudentPhotoExtensions(cleanId, detected.ext);
+
+    let needsWrite = true;
+    if (fs.existsSync(filePath)) {
+      try {
+        const existingBuf = fs.readFileSync(filePath);
+        const existingSha = crypto.createHash('sha256').update(existingBuf).digest('hex');
+        if (existingSha === sha256) {
+          needsWrite = false;
+        }
+      } catch {
+        needsWrite = true;
+      }
+    }
+
+    if (needsWrite) {
+      fs.writeFileSync(filePath, buffer);
+    }
+
+    return {
+      photoUrl: `/api/photos/${filename}`,
+      sha256,
+      filename,
+    };
   };
 
-  // API: Upload individual de foto pelo PEB I ou Admin
+  const savePhotoDataUrlToFile = (
+    studentId: string,
+    dataUrl: string
+  ): { photoUrl: string; sha256: string; filename: string } => {
+    const matches = dataUrl.match(/^data:([A-Za-z0-9\-+\/]+);base64,(.+)$/);
+    const buffer =
+      matches && matches.length === 3
+        ? Buffer.from(matches[2], 'base64')
+        : Buffer.from(dataUrl);
+    return savePhotoBufferToFile(studentId, buffer);
+  };
+
+  const applyPhotoBatchToState = (
+    items: Array<{ studentId: string; buffer: Buffer; sha256?: string }>
+  ) => {
+    const current = readSharedState();
+    const existingStudentShaMap = new Map<string, { sha256?: string; photo?: string }>();
+    if (Array.isArray(current.classes)) {
+      for (const cls of current.classes) {
+        if (!Array.isArray(cls.students)) continue;
+        for (const s of cls.students) {
+          if (s?.id) {
+            existingStudentShaMap.set(s.id, { sha256: s.photoSha256, photo: s.photo });
+          }
+        }
+      }
+    }
+
+    const now = Date.now();
+    const photoMap = new Map<string, { url: string; sha256: string }>();
+    let skippedCount = 0;
+
+    for (const item of items) {
+      if (!item.studentId || !item.buffer || item.buffer.length === 0) continue;
+      const incomingSha =
+        item.sha256 || crypto.createHash('sha256').update(item.buffer).digest('hex');
+      const existingInfo = existingStudentShaMap.get(item.studentId);
+      const cleanId = String(item.studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
+
+      // Verifica se já é exatamente o mesmo arquivo em disco (zero redundância)
+      if (existingInfo?.sha256 && existingInfo.sha256 === incomingSha && existingInfo.photo) {
+        const rawPathName = existingInfo.photo.split('?')[0].split('/').pop() || `${cleanId}.webp`;
+        if (fs.existsSync(path.join(PHOTOS_DIR, rawPathName))) {
+          skippedCount++;
+          continue;
+        }
+      }
+
+      const saved = savePhotoBufferToFile(item.studentId, item.buffer);
+      photoMap.set(item.studentId, { url: `${saved.photoUrl}?v=${now}`, sha256: saved.sha256 });
+    }
+
+    let updatedCount = 0;
+    if (photoMap.size > 0 && Array.isArray(current.classes)) {
+      current.classes = current.classes.map((cls: any) => {
+        if (!Array.isArray(cls.students)) return cls;
+        let clsUpdated = false;
+        const updatedStudents = cls.students.map((s: any) => {
+          const entry = photoMap.get(s.id);
+          if (!entry) return s;
+          clsUpdated = true;
+          updatedCount++;
+          return {
+            ...s,
+            photo: entry.url,
+            photoSha256: entry.sha256,
+            photoManualLink: true,
+            updatedAtMs: now,
+          };
+        });
+        return clsUpdated ? { ...cls, updatedAtMs: now, students: updatedStudents } : cls;
+      });
+      writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
+    }
+
+    const results = Array.from(photoMap.entries()).map(([studentId, info]) => ({
+      studentId,
+      photoUrl: info.url,
+      sha256: info.sha256,
+    }));
+
+    return { updatedCount, skippedCount, results };
+  };
+
+  // API: Upload individual binário de foto (zero bloat base64)
+  app.post(
+    '/api/photos/upload-binary',
+    requireInstitutionalAuth,
+    express.raw({ type: 'application/octet-stream', limit: '10mb' }),
+    (req, res) => {
+      const studentId = String(req.headers['x-student-id'] || '').trim();
+      const buffer = req.body as Buffer;
+      if (!studentId || !Buffer.isBuffer(buffer) || buffer.length === 0) {
+        res.status(400).json({ error: 'x-student-id e corpo binário são obrigatórios.' });
+        return;
+      }
+      try {
+        const result = applyPhotoBatchToState([
+          {
+            studentId,
+            buffer,
+            sha256: req.headers['x-file-sha256'] ? String(req.headers['x-file-sha256']) : undefined,
+          },
+        ]);
+        const item = result.results[0];
+        const current = readSharedState();
+        let resolvedUrl = item?.photoUrl;
+        if (!resolvedUrl && Array.isArray(current.classes)) {
+          for (const cls of current.classes) {
+            const st = cls.students?.find((s: any) => s.id === studentId);
+            if (st?.photo) {
+              resolvedUrl = st.photo;
+              break;
+            }
+          }
+        }
+        res.json({
+          ok: true,
+          photoUrl: resolvedUrl,
+          sha256: item?.sha256,
+          skipped: result.skippedCount > 0,
+        });
+      } catch (err: any) {
+        res.status(400).json({ error: err.message || 'Falha ao salvar foto binária' });
+      }
+    }
+  );
+
+  // API: Upload individual de foto pelo PEB I ou Admin (JSON DataURL retrocompatível)
   app.post('/api/photos/upload', requireInstitutionalAuth, (req, res) => {
     const { studentId, photoDataUrl } = req.body || {};
     if (!studentId || !photoDataUrl) {
@@ -807,7 +1488,7 @@ async function startServer() {
       return;
     }
     try {
-      const photoUrl = savePhotoDataUrlToFile(studentId, photoDataUrl);
+      const saved = savePhotoDataUrlToFile(studentId, photoDataUrl);
       const current = readSharedState();
       let updated = false;
       const now = Date.now();
@@ -824,7 +1505,8 @@ async function startServer() {
               if (s.id !== studentId) return s;
               return {
                 ...s,
-                photo: `${photoUrl}?v=${now}`,
+                photo: `${saved.photoUrl}?v=${now}`,
+                photoSha256: saved.sha256,
                 photoManualLink: true,
                 updatedAtMs: now,
               };
@@ -835,13 +1517,33 @@ async function startServer() {
       if (updated) {
         writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
       }
-      res.json({ ok: true, photoUrl: `${photoUrl}?v=${now}` });
+      res.json({ ok: true, photoUrl: `${saved.photoUrl}?v=${now}`, sha256: saved.sha256 });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Falha ao salvar foto' });
+      res.status(400).json({ error: err.message || 'Falha ao salvar foto' });
     }
   });
 
-  // API: Upload em lote de fotos nomeadas pelo Admin (Arraste & Solte)
+  // API: Upload em lote binário de fotos nomeadas para 2000+ arquivos sem overhead base64
+  app.post(
+    '/api/photos/batch-binary',
+    requireAdminAuth,
+    express.raw({ type: 'application/octet-stream', limit: '30mb' }),
+    (req, res) => {
+      try {
+        const items = decodeBinaryUploadPacket(req.body as Buffer);
+        if (items.length === 0) {
+          res.status(400).json({ error: 'Nenhuma foto no pacote binário.' });
+          return;
+        }
+        const result = applyPhotoBatchToState(items);
+        res.json({ ok: true, ...result });
+      } catch (err: any) {
+        res.status(400).json({ error: err.message || 'Falha ao processar lote binário de fotos' });
+      }
+    }
+  );
+
+  // API: Upload em lote de fotos nomeadas pelo Admin (JSON retrocompatível com deduplicação SHA-256)
   app.post('/api/photos/batch', requireAdminAuth, (req, res) => {
     const { photos } = req.body || {};
     if (!Array.isArray(photos) || photos.length === 0) {
@@ -849,50 +1551,28 @@ async function startServer() {
       return;
     }
     try {
-      const current = readSharedState();
-      const photoMap = new Map<string, string>();
-      const now = Date.now();
-      for (const item of photos) {
-        if (item.studentId && item.photoDataUrl) {
-          const photoUrl = savePhotoDataUrlToFile(item.studentId, item.photoDataUrl);
-          photoMap.set(item.studentId, `${photoUrl}?v=${now}`);
-        }
-      }
-      let totalUpdated = 0;
-      if (Array.isArray(current.classes)) {
-        current.classes = current.classes.map((cls: any) => {
-          if (!Array.isArray(cls.students)) return cls;
-          let clsUpdated = false;
-          const updatedStudents = cls.students.map((s: any) => {
-            const newPhotoUrl = photoMap.get(s.id);
-            if (!newPhotoUrl) return s;
-            clsUpdated = true;
-            totalUpdated++;
-            return {
-              ...s,
-              photo: newPhotoUrl,
-              photoManualLink: true,
-              updatedAtMs: now,
-            };
-          });
-          if (clsUpdated) {
-            return {
-              ...cls,
-              updatedAtMs: now,
-              students: updatedStudents,
-            };
-          }
-          return cls;
+      const items = photos
+        .filter((item: any) => item?.studentId && item?.photoDataUrl)
+        .map((item: any) => {
+          const matches = String(item.photoDataUrl).match(/^data:([A-Za-z0-9\-+\/]+);base64,(.+)$/);
+          const buffer =
+            matches && matches.length === 3
+              ? Buffer.from(matches[2], 'base64')
+              : Buffer.from(String(item.photoDataUrl));
+          return {
+            studentId: String(item.studentId),
+            buffer,
+            sha256: item.sha256 ? String(item.sha256) : undefined,
+          };
         });
-      }
-      writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
-      res.json({ ok: true, updatedCount: totalUpdated });
+      const result = applyPhotoBatchToState(items);
+      res.json({ ok: true, ...result });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Falha ao processar lote de fotos' });
+      res.status(400).json({ error: err.message || 'Falha ao processar lote de fotos' });
     }
   });
 
-  // API: Limpar todas as fotos de todos os estudantes (Reset para testes)
+  // API: Limpar todas as fotos de todos os estudantes (Reset)
   app.post('/api/photos/clear-all', requireAdminAuth, (req, res) => {
     try {
       if (fs.existsSync(PHOTOS_DIR)) {
@@ -913,12 +1593,13 @@ async function startServer() {
             ...cls,
             updatedAtMs: now,
             students: cls.students.map((s: any) => {
-              if (s.photo || s.photoDriveId || s.photoDriveUrl) clearedCount++;
+              if (s.photo || s.photoDriveId || s.photoDriveUrl || s.photoSha256) clearedCount++;
               return {
                 ...s,
                 photo: '',
                 photoDriveId: '',
                 photoDriveUrl: '',
+                photoSha256: '',
                 photoManualLink: false,
                 updatedAtMs: now,
               };
@@ -945,8 +1626,8 @@ async function startServer() {
     } catch {}
   }
 
-  // API: Servir PDFs salvos no servidor para visualização direta em tela cheia com cabeçalhos adequados
-  app.get('/api/pdfs/:filename', (req, res) => {
+  // API: Servir PDFs salvos no servidor apenas para usuários institucionais autenticados
+  app.get('/api/pdfs/:filename', requireInstitutionalAuth, (req, res) => {
     const filename = path.basename(req.params.filename || '');
     if (!filename || filename.includes('..')) {
       res.status(400).end();
@@ -959,26 +1640,136 @@ async function startServer() {
     }
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cache-Control', 'private, max-age=86400');
     fs.createReadStream(filePath).pipe(res);
   });
 
-  const savePdfDataUrlToFile = (studentId: string, dataUrlOrBase64: string): string => {
+  const savePdfBufferToFile = (
+    studentId: string,
+    buffer: Buffer
+  ): { pdfUrl: string; pdfId: string; sha256: string } => {
+    if (!hasPdfSignatureInBuffer(buffer)) {
+      throw new Error(`Arquivo PDF inválido ou corrompido (sem cabeçalho %PDF-) para ${studentId}.`);
+    }
     const cleanId = String(studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
     const filename = `${cleanId}.pdf`;
     const filePath = path.join(PDFS_DIR, filename);
-    const matches = dataUrlOrBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (matches && matches.length === 3) {
-      const buffer = Buffer.from(matches[2], 'base64');
-      fs.writeFileSync(filePath, buffer);
-    } else if (dataUrlOrBase64.startsWith('JVBERi0')) {
-      // Raw base64 PDF string (starts with %PDF in base64)
-      const buffer = Buffer.from(dataUrlOrBase64, 'base64');
-      fs.writeFileSync(filePath, buffer);
-    } else {
-      fs.writeFileSync(filePath, Buffer.from(dataUrlOrBase64));
+    const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+
+    let needsWrite = true;
+    if (fs.existsSync(filePath)) {
+      try {
+        const existingBuf = fs.readFileSync(filePath);
+        const existingSha = crypto.createHash('sha256').update(existingBuf).digest('hex');
+        if (existingSha === sha256) {
+          needsWrite = false;
+        }
+      } catch {
+        needsWrite = true;
+      }
     }
-    return `/api/pdfs/${filename}`;
+    if (needsWrite) {
+      fs.writeFileSync(filePath, buffer);
+    }
+
+    return {
+      pdfUrl: `/api/pdfs/${filename}`,
+      pdfId: cleanId,
+      sha256,
+    };
+  };
+
+  const decodePdfBufferFromDataUrl = (dataUrlOrBase64: string): Buffer => {
+    const matches = dataUrlOrBase64.match(/^data:([A-Za-z0-9\-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      return Buffer.from(matches[2], 'base64');
+    }
+    if (dataUrlOrBase64.startsWith('JVBERi0')) {
+      return Buffer.from(dataUrlOrBase64, 'base64');
+    }
+    return Buffer.from(dataUrlOrBase64);
+  };
+
+  const applyPdfBatchToState = (
+    items: Array<{ studentId: string; buffer: Buffer; sha256?: string }>
+  ) => {
+    const current = readSharedState();
+    const existingStudentShaMap = new Map<string, { sha256?: string; pdfUrl?: string }>();
+    if (Array.isArray(current.classes)) {
+      for (const cls of current.classes) {
+        if (!Array.isArray(cls.students)) continue;
+        for (const s of cls.students) {
+          if (s?.id) {
+            existingStudentShaMap.set(s.id, {
+              sha256: s.fichaPdfSha256,
+              pdfUrl: s.fichaPdfDriveUrl,
+            });
+          }
+        }
+      }
+    }
+
+    const now = Date.now();
+    const pdfMap = new Map<string, { url: string; id: string; sha256: string }>();
+    let skippedCount = 0;
+
+    for (const item of items) {
+      if (!item.studentId || !item.buffer || item.buffer.length === 0) continue;
+      const incomingSha =
+        item.sha256 || crypto.createHash('sha256').update(item.buffer).digest('hex');
+      const cleanId = String(item.studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
+      const existingInfo = existingStudentShaMap.get(item.studentId);
+
+      if (
+        existingInfo?.sha256 &&
+        existingInfo.sha256 === incomingSha &&
+        existingInfo.pdfUrl &&
+        fs.existsSync(path.join(PDFS_DIR, `${cleanId}.pdf`))
+      ) {
+        skippedCount++;
+        continue;
+      }
+
+      const saved = savePdfBufferToFile(item.studentId, item.buffer);
+      pdfMap.set(item.studentId, {
+        url: `${saved.pdfUrl}?v=${now}`,
+        id: saved.pdfId,
+        sha256: saved.sha256,
+      });
+    }
+
+    let updatedCount = 0;
+    if (pdfMap.size > 0 && Array.isArray(current.classes)) {
+      current.classes = current.classes.map((cls: any) => {
+        if (!Array.isArray(cls.students)) return cls;
+        let clsUpdated = false;
+        const updatedStudents = cls.students.map((s: any) => {
+          const entry = pdfMap.get(s.id);
+          if (!entry) return s;
+          clsUpdated = true;
+          updatedCount++;
+          return {
+            ...s,
+            fichaPdfDriveUrl: entry.url,
+            fichaPdfDriveId: entry.id,
+            fichaPdfSha256: entry.sha256,
+            fichaPdfManualLink: true,
+            updatedAtMs: now,
+          };
+        });
+        return clsUpdated ? { ...cls, updatedAtMs: now, students: updatedStudents } : cls;
+      });
+      writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
+    }
+
+    const results = Array.from(pdfMap.entries()).map(([studentId, info]) => ({
+      studentId,
+      pdfUrl: info.url,
+      pdfId: info.id,
+      sha256: info.sha256,
+    }));
+
+    return { updatedCount, skippedCount, results };
   };
 
   // API: Upload individual de PDF de estudante
@@ -989,43 +1780,41 @@ async function startServer() {
       return;
     }
     try {
-      const pdfUrl = savePdfDataUrlToFile(studentId, pdfDataUrl);
-      const current = readSharedState();
-      let updated = false;
-      const now = Date.now();
-      const cleanId = String(studentId).replace(/[^a-zA-Z0-9-_]/g, '_');
-      if (Array.isArray(current.classes)) {
-        current.classes = current.classes.map((cls: any) => {
-          if (!Array.isArray(cls.students)) return cls;
-          const has = cls.students.some((s: any) => s.id === studentId);
-          if (!has) return cls;
-          updated = true;
-          return {
-            ...cls,
-            updatedAtMs: now,
-            students: cls.students.map((s: any) => {
-              if (s.id !== studentId) return s;
-              return {
-                ...s,
-                fichaPdfDriveUrl: `${pdfUrl}?v=${now}`,
-                fichaPdfDriveId: cleanId,
-                fichaPdfManualLink: true,
-                updatedAtMs: now,
-              };
-            }),
-          };
-        });
-      }
-      if (updated) {
-        writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
-      }
-      res.json({ ok: true, pdfUrl: `${pdfUrl}?v=${now}` });
+      const buffer = decodePdfBufferFromDataUrl(String(pdfDataUrl));
+      const result = applyPdfBatchToState([{ studentId: String(studentId), buffer }]);
+      const entry = result.results[0];
+      res.json({
+        ok: true,
+        pdfUrl: entry?.pdfUrl,
+        sha256: entry?.sha256,
+        skipped: result.skippedCount > 0,
+      });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Falha ao salvar PDF' });
+      res.status(400).json({ error: err.message || 'Falha ao salvar PDF' });
     }
   });
 
-  // API: Upload em lote de PDFs nomeados pelo Admin (Arraste & Solte)
+  // API: Upload em lote binário de Fichas PDF para 2000+ arquivos sem overhead base64
+  app.post(
+    '/api/pdfs/batch-binary',
+    requireAdminAuth,
+    express.raw({ type: 'application/octet-stream', limit: '30mb' }),
+    (req, res) => {
+      try {
+        const items = decodeBinaryUploadPacket(req.body as Buffer);
+        if (items.length === 0) {
+          res.status(400).json({ error: 'Nenhum PDF no pacote binário.' });
+          return;
+        }
+        const result = applyPdfBatchToState(items);
+        res.json({ ok: true, ...result });
+      } catch (err: any) {
+        res.status(400).json({ error: err.message || 'Falha ao processar lote binário de PDFs' });
+      }
+    }
+  );
+
+  // API: Upload em lote de PDFs nomeados pelo Admin (JSON retrocompatível)
   app.post('/api/pdfs/batch', requireAdminAuth, (req, res) => {
     const { pdfs } = req.body || {};
     if (!Array.isArray(pdfs) || pdfs.length === 0) {
@@ -1033,48 +1822,17 @@ async function startServer() {
       return;
     }
     try {
-      const current = readSharedState();
-      const pdfMap = new Map<string, string>();
-      const now = Date.now();
-      for (const item of pdfs) {
-        if (item.studentId && item.pdfDataUrl) {
-          const pdfUrl = savePdfDataUrlToFile(item.studentId, item.pdfDataUrl);
-          pdfMap.set(item.studentId, `${pdfUrl}?v=${now}`);
-        }
-      }
-      let totalUpdated = 0;
-      if (Array.isArray(current.classes)) {
-        current.classes = current.classes.map((cls: any) => {
-          if (!Array.isArray(cls.students)) return cls;
-          let clsUpdated = false;
-          const updatedStudents = cls.students.map((s: any) => {
-            const newPdfUrl = pdfMap.get(s.id);
-            if (!newPdfUrl) return s;
-            clsUpdated = true;
-            totalUpdated++;
-            const cleanId = String(s.id).replace(/[^a-zA-Z0-9-_]/g, '_');
-            return {
-              ...s,
-              fichaPdfDriveUrl: newPdfUrl,
-              fichaPdfDriveId: cleanId,
-              fichaPdfManualLink: true,
-              updatedAtMs: now,
-            };
-          });
-          if (clsUpdated) {
-            return {
-              ...cls,
-              updatedAtMs: now,
-              students: updatedStudents,
-            };
-          }
-          return cls;
-        });
-      }
-      writeSharedState({ classes: current.classes, classesUpdatedAtMs: now });
-      res.json({ ok: true, updatedCount: totalUpdated });
+      const items = pdfs
+        .filter((item: any) => item?.studentId && item?.pdfDataUrl)
+        .map((item: any) => ({
+          studentId: String(item.studentId),
+          buffer: decodePdfBufferFromDataUrl(String(item.pdfDataUrl)),
+          sha256: item.sha256 ? String(item.sha256) : undefined,
+        }));
+      const result = applyPdfBatchToState(items);
+      res.json({ ok: true, ...result });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Falha ao processar lote de PDFs' });
+      res.status(400).json({ error: err.message || 'Falha ao processar lote de PDFs' });
     }
   });
 
@@ -1099,12 +1857,13 @@ async function startServer() {
             ...cls,
             updatedAtMs: now,
             students: cls.students.map((s: any) => {
-              if (s.fichaPdfDriveUrl || s.fichaPdfDriveId) clearedCount++;
+              if (s.fichaPdfDriveUrl || s.fichaPdfDriveId || s.fichaPdfSha256) clearedCount++;
               return {
                 ...s,
                 fichaPdfDriveId: '',
                 fichaPdfDriveUrl: '',
                 fichaPdfSubfolder: '',
+                fichaPdfSha256: '',
                 fichaPdfManualLink: false,
                 updatedAtMs: now,
               };
@@ -1128,8 +1887,8 @@ async function startServer() {
     { buffer: Buffer; contentType: string; cachedAt: number }
   >();
 
-  // API: Proxy universal de fotos do Google Drive (/api/drive-photo/:fileId) para que todos os usuários da ponta visualizem as fotos soltas da pasta sem bloqueio de permissão
-  app.get('/api/drive-photo/:fileId', async (req, res) => {
+  // API: Proxy universal de fotos do Google Drive (/api/drive-photo/:fileId) protegido por autenticação institucional
+  app.get('/api/drive-photo/:fileId', requireInstitutionalAuth, async (req, res) => {
     const fileId = String(req.params.fileId || '').replace(/[^a-zA-Z0-9-_]/g, '');
     if (!fileId) {
       res.status(400).end();
@@ -1599,8 +2358,8 @@ async function startServer() {
     });
   });
 
-  // API: Atualizar Logs de Sessão e Tempo Conectado
-  app.post('/api/school-state/logs', requireCurrentCleanEpoch, (req, res) => {
+  // API: Atualizar Logs de Sessão e Tempo Conectado (autenticado institucionalmente)
+  app.post('/api/school-state/logs', requireInstitutionalAuth, requireCurrentCleanEpoch, (req, res) => {
     const { accessSessionLogs, authorizedUsers } = req.body || {};
     const current = readSharedState();
 
@@ -1627,6 +2386,7 @@ async function startServer() {
       .slice(0, 500);
 
     let nextUsers = current.authorizedUsers;
+    const reqUser = extractRequestUser(req);
     if (Array.isArray(authorizedUsers)) {
       const currentByEmail = new Map<string, any>();
       (current.authorizedUsers || []).forEach((u: any) => {
@@ -1638,9 +2398,13 @@ async function startServer() {
         const email = String(incoming.email || '').trim().toLowerCase();
         const existing = currentByEmail.get(email);
         if (!existing) return incoming;
+        // Usuários não-admin só podem atualizar estatísticas de sessão da própria conta, jamais escalar role/status
+        if (!reqUser.isAdmin && email !== reqUser.email) {
+          return existing;
+        }
         const incTime = incoming.updatedAtMs || 0;
         const extTime = existing.updatedAtMs || 0;
-        const winner = incTime >= extTime ? incoming : existing;
+        const winner = reqUser.isAdmin && incTime >= extTime ? incoming : existing;
         return {
           ...winner,
           updatedAtMs: Math.max(incTime, extTime),
@@ -1703,28 +2467,8 @@ async function startServer() {
     res.json(saved);
   });
 
-  const isUserAdminAuthorized = (req: express.Request): boolean => {
-    const role = String(req.headers['x-user-role'] || req.body?.userRole || '').trim().toLowerCase();
-    const email = String(
-      req.headers['x-user-email'] ||
-      req.body?.adminEmail ||
-      req.body?.userEmail ||
-      ''
-    ).trim().toLowerCase();
-    if (role === 'admin') return true;
-    if (
-      email.startsWith('emebjfreitas@') ||
-      email.includes('admin') ||
-      email.includes('direcao') ||
-      email.includes('coordenacao')
-    ) {
-      return true;
-    }
-    return false;
-  };
-
-  // API: Obter Calendário Escolar Oficial (200 Dias), Feriados e Auditoria
-  app.get('/api/calendar-config', (_req, res) => {
+  // API: Obter Calendário Escolar Oficial (200 Dias), Feriados e Auditoria (protegido por auth)
+  app.get('/api/calendar-config', requireInstitutionalAuth, (_req, res) => {
     const state = readSharedState();
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json({
@@ -1899,8 +2643,8 @@ async function startServer() {
     });
   });
 
-  // API: Obter Histórico de Auditoria do Calendário
-  app.get('/api/calendar-audit-log', (_req, res) => {
+  // API: Obter Histórico de Auditoria do Calendário (Admin / Usuário Institucional autenticado)
+  app.get('/api/calendar-audit-log', requireInstitutionalAuth, (_req, res) => {
     const state = readSharedState();
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json({
@@ -1918,22 +2662,25 @@ async function startServer() {
     });
   });
 
-  // API: Registrar Evento de Segurança / Auditoria LGPD
-  app.post('/api/security-logs', (req, res) => {
+  // API: Registrar Evento de Segurança / Auditoria LGPD (Exige autenticação institucional verificada)
+  app.post('/api/security-logs', requireInstitutionalAuth, (req, res) => {
     const entry = req.body;
     if (!entry || !entry.eventType) {
       return res.status(400).json({ error: 'Dados do evento de segurança inválidos.' });
     }
 
+    const verifiedUser = extractRequestUser(req);
     const state = readSharedState();
     const existingLogs = Array.isArray(state.securityAuditLogs) ? state.securityAuditLogs : [];
     const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || '127.0.0.1';
 
     const enrichedEntry = {
       ...entry,
+      userEmail: verifiedUser.email,
+      userRole: verifiedUser.role,
       id: entry.id || `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       timestampISO: entry.timestampISO || new Date().toISOString(),
-      clientIp: entry.clientIp || clientIp,
+      clientIp,
     };
 
     const nextLogs = [enrichedEntry, ...existingLogs].slice(0, 300);

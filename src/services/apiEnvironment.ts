@@ -65,7 +65,7 @@ export const probeBackendAvailability = async (): Promise<boolean> => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3500);
-    const res = await fetch('/api/school-state', {
+    const res = await fetch('/api/health', {
       method: 'GET',
       headers: { Accept: 'application/json' },
       signal: controller.signal,
@@ -74,7 +74,7 @@ export const probeBackendAvailability = async (): Promise<boolean> => {
     clearTimeout(timeout);
 
     const contentType = res.headers.get('content-type') || '';
-    if (res.ok && contentType.includes('application/json')) {
+    if ((res.ok || res.status === 401 || res.status === 403) && contentType.includes('application/json')) {
       backendAvailable = true;
     } else {
       backendAvailable = false;
