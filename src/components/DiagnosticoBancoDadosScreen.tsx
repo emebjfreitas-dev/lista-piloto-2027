@@ -29,6 +29,7 @@ import {
   Database,
   Download,
   FileCode2,
+  HardDrive,
   Info,
   Lock,
   RefreshCw,
@@ -37,6 +38,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
+import { IndexedDbPhotoStorageModal } from './IndexedDbPhotoStorageModal';
 
 interface DiagnosticoBancoDadosScreenProps {
   classes: ClassGroup[];
@@ -49,6 +51,7 @@ interface DiagnosticoBancoDadosScreenProps {
   onOpenClassDetails: (cls: ClassGroup) => void;
   onNavigateScreen: (screen: ScreenType) => void;
   onOpenHtmUpload?: () => void;
+  onOpenPhotoCacheModal?: () => void;
   onBack: () => void;
   embedded?: boolean;
 }
@@ -102,9 +105,11 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
   onOpenClassDetails,
   onNavigateScreen,
   onOpenHtmUpload,
+  onOpenPhotoCacheModal,
   onBack,
   embedded = false,
 }) => {
+  const [internalPhotoCacheOpen, setInternalPhotoCacheOpen] = useState(false);
   const isStrictAdmin =
     userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
 
@@ -629,6 +634,21 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
 
             <button
               type="button"
+              onClick={() => {
+                if (onOpenPhotoCacheModal) {
+                  onOpenPhotoCacheModal();
+                } else {
+                  setInternalPhotoCacheOpen(true);
+                }
+              }}
+              className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#0b3b8c] text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-nowrap text-center"
+            >
+              <HardDrive className="w-3.5 h-3.5 shrink-0" />
+              <span>Cache Fotos (IndexedDB)</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleExportCsv}
               className="min-w-0 min-h-[40px] px-3.5 py-2 rounded-xl bg-[#111827] hover:bg-black text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
             >
@@ -637,6 +657,16 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
             </button>
           </div>
         </div>
+
+        {!onOpenPhotoCacheModal && (
+          <IndexedDbPhotoStorageModal
+            isOpen={internalPhotoCacheOpen}
+            onClose={() => setInternalPhotoCacheOpen(false)}
+            classes={classes}
+            currentUserEmail={userEmail}
+            onCacheUpdated={(msg) => setFeedback({ type: 'success', text: msg })}
+          />
+        )}
 
         {/* KPIs Estruturais e de Consistência */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">

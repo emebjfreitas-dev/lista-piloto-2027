@@ -84,7 +84,6 @@ import { MinhasTurmasScreen } from './components/MinhasTurmasScreen';
 import { DetalhesTurmaScreen } from './components/DetalhesTurmaScreen';
 import { RegistroFrequenciaMensalScreen } from './components/RegistroFrequenciaMensalScreen';
 import { FaltasConsecutivasScreen } from './components/FaltasConsecutivasScreen';
-import { DiasLetivosScreen } from './components/DiasLetivosScreen';
 import { ResumoMensalScreen } from './components/ResumoMensalScreen';
 import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
 import { UsuariosAcessoScreen } from './components/UsuariosAcessoScreen';
@@ -1956,7 +1955,7 @@ export default function App() {
             : currentScreen === 'bolsa_familia'
             ? 'Relatório Nominal • Bolsa Família'
             : currentScreen === 'dias_letivos'
-            ? 'Dias Letivos SME'
+            ? 'Central Admin · Calendário 200 Dias'
             : currentScreen === 'resumo'
             ? 'Fechamento'
             : currentScreen === 'planilha'
@@ -2065,7 +2064,8 @@ export default function App() {
                 currentScreen === 'resumo'
                   ? 'home'
                   : currentScreen === 'diagnostico_bd' ||
-                    currentScreen === 'importar_deficiencias_htm'
+                    currentScreen === 'importar_deficiencias_htm' ||
+                    currentScreen === 'dias_letivos'
                   ? 'usuarios_acesso'
                   : currentScreen === 'turmas' && userRole === 'usuario'
                   ? 'detalhes'
@@ -2141,7 +2141,8 @@ export default function App() {
 
         {(currentScreen === 'usuarios_acesso' ||
           currentScreen === 'diagnostico_bd' ||
-          currentScreen === 'importar_deficiencias_htm') &&
+          currentScreen === 'importar_deficiencias_htm' ||
+          currentScreen === 'dias_letivos') &&
           isStrictAdmin && (
             <UsuariosAcessoScreen
               authorizedUsers={authorizedUsers}
@@ -2154,6 +2155,9 @@ export default function App() {
               onUpdateClasses={(updatedClasses) => {
                 setClasses(updatedClasses);
                 saveStoredClasses(updatedClasses);
+                saveClassesToFirestoreCloud(updatedClasses, Date.now()).catch((err) => {
+                  console.warn('Erro ao salvar turmas no Firebase Firestore:', err);
+                });
                 const found = updatedClasses.find((c) => c.id === selectedClass.id);
                 if (found) setSelectedClass(found);
               }}
@@ -2204,6 +2208,8 @@ export default function App() {
                   ? 'diagnostico'
                   : currentScreen === 'importar_deficiencias_htm'
                   ? 'uploads'
+                  : currentScreen === 'dias_letivos'
+                  ? 'calendario'
                   : 'acesso'
               }
               initialUploadTool={
@@ -2403,27 +2409,6 @@ export default function App() {
             onUpdateStudent={(classId, updatedStudent) => {
               handleSaveSingleStudent(classId, updatedStudent);
             }}
-            onBack={handleBack}
-          />
-        )}
-
-        {currentScreen === 'dias_letivos' && (
-          <DiasLetivosScreen
-            userRole={userRole}
-            userEmail={currentUserEmail}
-            userName={currentUserName}
-            classes={classes}
-            onUpdateClasses={(updatedClasses) => {
-              setClasses(updatedClasses);
-              saveStoredClasses(updatedClasses);
-              const nowMs = Date.now();
-              saveClassesToFirestoreCloud(updatedClasses, nowMs).catch((err) => {
-                console.warn('Erro ao salvar turmas no Firebase Firestore:', err);
-              });
-              const found = updatedClasses.find((c) => c.id === selectedClass.id);
-              if (found) setSelectedClass(found);
-            }}
-            onNavigateToSheet={() => navigateToScreen('planilha')}
             onBack={handleBack}
           />
         )}

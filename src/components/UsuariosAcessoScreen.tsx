@@ -35,6 +35,7 @@ import { AdminArrasteFotosModal } from './AdminArrasteFotosModal';
 import { AdminArrastePdfsModal } from './AdminArrastePdfsModal';
 import { ImportarDeficienciasHtmScreen } from './ImportarDeficienciasHtmScreen';
 import { DiagnosticoBancoDadosScreen } from './DiagnosticoBancoDadosScreen';
+import { DiasLetivosScreen } from './DiasLetivosScreen';
 import { AtualizarDadosJsonModal } from './AtualizarDadosJsonModal';
 import { PwaIconsHealthScanner } from './PwaIconsHealthScanner';
 import { CustomSelect } from './CustomSelect';
@@ -70,14 +71,17 @@ import {
   Info,
   Database,
   FileCode2,
+  HardDrive,
   HeartHandshake,
   BellRing,
   Send,
   Images,
   FileText,
   CalendarClock,
+  CalendarDays,
   Smartphone,
 } from 'lucide-react';
+import { IndexedDbPhotoStorageModal } from './IndexedDbPhotoStorageModal';
 import {
   FcmBackendStatus,
   dispatchWindowClosingFcmAlert,
@@ -232,7 +236,7 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
   </button>
 );
 
-export type AdminCenterSection = 'acesso' | 'seguranca' | 'uploads' | 'diagnostico';
+export type AdminCenterSection = 'acesso' | 'calendario' | 'seguranca' | 'uploads' | 'diagnostico';
 export type AdminUploadTool = 'fotos' | 'pdfs' | 'htm' | 'json';
 export type AdminCenterSubTab =
   | 'quadro_turmas'
@@ -291,6 +295,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<AdminCenterSection>(initialSection);
   const [activeUploadTool, setActiveUploadTool] = useState<AdminUploadTool>(initialUploadTool);
+  const [isPhotoStorageModalOpen, setIsPhotoStorageModalOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<SubTabId>(
     initialSubTab || (initialSection === 'seguranca' ? 'seguranca_lgpd' : 'quadro_turmas')
   );
@@ -1439,6 +1444,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       icon: <Users className="w-4 h-4 shrink-0" />,
     },
     {
+      id: 'calendario',
+      label: 'Calendário 200 Dias',
+      icon: <CalendarDays className="w-4 h-4 shrink-0" />,
+    },
+    {
       id: 'seguranca',
       label: 'Segurança & Auditoria',
       icon: <ShieldCheck className="w-4 h-4 shrink-0" />,
@@ -1653,7 +1663,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             <span>Voltar</span>
           </button>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#111827] break-words">
-            Central de Segurança, Acesso e Uploads
+            Central Administrativa — Acesso, Calendário e Segurança
           </h1>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#48484a] tabular-nums">
             <span>{classes.length} turmas ({manhaTurmasCount} manhã · {tardeTurmasCount} tarde)</span>
@@ -1767,6 +1777,16 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto">
               <button
                 type="button"
+                onClick={() => setIsPhotoStorageModalOpen(true)}
+                title="Visualizar uso do IndexedDB de fotos e limpar cache de turmas antigas"
+                className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#f2f2f7] text-[#0b3b8c] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 border border-slate-200"
+              >
+                <HardDrive className="w-3.5 h-3.5 shrink-0" />
+                <span>Cache Fotos (IndexedDB)</span>
+              </button>
+
+              <button
+                type="button"
                 disabled={isSendingFcmAlert}
                 onClick={() => handleSendWindowClosingFcmFromAcessos('pending_only')}
                 title="Enviar notificação push Firebase Cloud Messaging para turmas pendentes sobre o fechamento da janela"
@@ -1790,10 +1810,10 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
           )}
         </div>
 
-        {/* Barra Primária da Central Única Admin (4 Pilares) */}
+        {/* Barra Primária da Central Única Admin (5 Pilares) */}
         <nav
           aria-label="Seções da central administrativa"
-          className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 p-1.5 bg-[#f5f5f7] rounded-2xl"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 p-1.5 bg-[#f5f5f7] rounded-2xl"
         >
           {primarySections.map((sec) => {
             const isActive = activeSection === sec.id;
@@ -4534,6 +4554,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
               <AdminArrasteFotosModal
                 isOpen
                 embedded
+                onOpenStorageManager={() => setIsPhotoStorageModalOpen(true)}
                 onClose={() => handleSelectSection('acesso', 'quadro_turmas')}
                 classes={classes}
                 onBatchPhotosSaved={(updatedClasses) => {
@@ -4588,6 +4609,25 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
       )}
 
       {/* =====================================================================
+          SEÇÃO 2.5: CONFIGURADOR DO CALENDÁRIO OFICIAL (200 DIAS & FERIADOS)
+          ===================================================================== */}
+      {activeSection === 'calendario' && (
+        <DiasLetivosScreen
+          embedded
+          userRole={userRole}
+          userEmail={currentUserEmail}
+          userName="Administrador Escolar"
+          classes={classes}
+          onUpdateClasses={(updatedClasses) => {
+            if (onUpdateClasses) onUpdateClasses(updatedClasses);
+            triggerFeedback('success', 'Calendário oficial de 200 dias publicado e sincronizado com as turmas.');
+          }}
+          onNavigateToSheet={() => onNavigateScreen?.('planilha')}
+          onBack={() => handleSelectSection('acesso', 'quadro_turmas')}
+        />
+      )}
+
+      {/* =====================================================================
           SEÇÃO 4: DIAGNÓSTICO DO BANCO & INTEGRIDADE DE SINCRONIZAÇÃO
           ===================================================================== */}
       {activeSection === 'diagnostico' && (
@@ -4614,6 +4654,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             setActiveSection('uploads');
             setActiveUploadTool('htm');
           }}
+          onOpenPhotoCacheModal={() => setIsPhotoStorageModalOpen(true)}
           onBack={() => handleSelectSection('acesso', 'quadro_turmas')}
         />
       )}
@@ -4857,6 +4898,13 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         </div>
       )}
 
+      <IndexedDbPhotoStorageModal
+        isOpen={isPhotoStorageModalOpen}
+        onClose={() => setIsPhotoStorageModalOpen(false)}
+        classes={classes}
+        currentUserEmail={currentUserEmail}
+        onCacheUpdated={(msg) => triggerFeedback('success', msg)}
+      />
     </div>
   );
 };

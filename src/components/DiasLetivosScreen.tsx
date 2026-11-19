@@ -1,5 +1,28 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import {
+  CalendarDays,
+  CheckCircle2,
+  AlertTriangle,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Trash2,
+  Edit3,
+  RefreshCw,
+  Copy,
+  FileSpreadsheet,
+  History,
+  ListChecks,
+  Wand2,
+  RotateCcw,
+  Lock,
+  ArrowLeft,
+  CalendarPlus,
+  Check,
+  X,
+} from 'lucide-react';
 import {
   UserRole,
   ClassGroup,
@@ -10,7 +33,13 @@ import {
 } from '../types';
 import {
   parseAndValidateSchoolDates,
-  generateOfficial200SchoolDays2027,
+  generateOfficial200SchoolDaysForYear,
+  toggleDateInSchoolDaysList,
+  fillMonthWeekdaysInSchoolDaysList,
+  clearMonthInSchoolDaysList,
+  removeHolidayConflictsFromSchoolDays,
+  autoBalanceSchoolDaysTo200,
+  OFFICIAL_MONTHLY_TARGETS_2027,
   MONTH_NAMES_PT,
   DAYS_OF_WEEK_PT,
   ParsedDateResult,
@@ -37,11 +66,13 @@ interface DiasLetivosScreenProps {
   userName?: string;
   classes?: ClassGroup[];
   onUpdateClasses?: (updatedClasses: ClassGroup[]) => void;
-  onNavigateToSheet: () => void;
+  onNavigateToSheet?: () => void;
   onBack: () => void;
+  embedded?: boolean;
 }
 
-type ActiveTab = 'editor' | 'feriados' | 'calendario' | 'auditoria';
+type ActiveTab = 'calendario' | 'editor' | 'feriados' | 'auditoria';
+type CalendarClickMode = 'toggle_school_day' | 'mark_holiday';
 
 export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   userRole = 'admin',
@@ -49,8 +80,8 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   userName = 'Administrador Escolar',
   classes = [],
   onUpdateClasses,
-  onNavigateToSheet,
   onBack,
+  embedded = false,
 }) => {
   const isAdmin =
     userRole === 'admin' ||
@@ -59,30 +90,40 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
     userEmail.includes('direcao') ||
     userEmail.includes('coordenacao');
 
-  // Active Tab
-  const [activeTab, setActiveTab] = useState<ActiveTab>('editor');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('calendario');
+  const [clickMode, setClickMode] = useState<CalendarClickMode>('toggle_school_day');
 
-  // State: Official Configuration & Holidays & Audit
+  // Official Calendar State
   const [calendarConfig, setCalendarConfig] = useState<OfficialCalendarConfig>(() =>
     getStoredOfficialCalendarConfig()
   );
+  const [selectedYear, setSelectedYear] = useState<number>(() => calendarConfig.year || 2027);
   const [holidays, setHolidays] = useState<SchoolHoliday[]>(() => getStoredHolidays());
   const [auditLogs, setAuditLogs] = useState<CalendarAuditLogEntry[]>(() =>
     getStoredCalendarAuditLogs()
   );
   const [isLoadingServer, setIsLoadingServer] = useState<boolean>(false);
 
-  // Editor State
+  // Two-way synchronized dates input & validation
   const [rawDatesInput, setRawDatesInput] = useState<string>(() =>
     calendarConfig.schoolDays.join('\n')
   );
   const [parsedResult, setParsedResult] = useState<ParsedDateResult>(() =>
     parseAndValidateSchoolDates(calendarConfig.schoolDays.join('\n'), holidays)
   );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const hasUnsavedRef = useRef<boolean>(false);
+
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
+  const [confirmClearInput, setConfirmClearInput] = useState<boolean>(false);
+
+  // Filters & Month focus
+  const [visualCalendarMonth, setVisualCalendarMonth] = useState<number>(2); // Fevereiro padrão
   const [searchPreviewDate, setSearchPreviewDate] = useState<string>('');
   const [selectedPreviewMonth, setSelectedPreviewMonth] = useState<string>('all');
+  const [holidayScopeFilter, setHolidayScopeFilter] = useState<'all' | HolidayScopeType>('all');
+  const [confirmDeleteHolidayId, setConfirmDeleteHolidayId] = useState<string | null>(null);
 
   // Holidays Management Modal State
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState<boolean>(false);
@@ -90,22 +131,42 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   const [holidayFormDate, setHolidayFormDate] = useState<string>('');
   const [holidayFormName, setHolidayFormName] = useState<string>('');
   const [holidayFormType, setHolidayFormType] = useState<HolidayScopeType>('municipal');
+  const [removeHolidayFromSchoolDays, setRemoveHolidayFromSchoolDays] = useState<boolean>(true);
 
-  // Calendar Visual State
-  const [visualCalendarMonth, setVisualCalendarMonth] = useState<number>(2); // Fevereiro default
-
-  // Google Sheets Auto-Sync Interval Setting (30, 60 or 120 minutes)
+  // Sync frequency
   const [syncFrequency, setSyncFrequency] = useState<GoogleSheetsSyncFrequency>(() =>
     getGoogleSheetsSyncFrequency()
   );
-  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('emeb_last_sed_auto_sync_at');
-    } catch {
-      return null;
-    }
-  });
   const [isSyncingNow, setIsSyncingNow] = useState<boolean>(false);
+
+  const applyDatesList = useCallback(
+    (nextDates: string[], holidayList: SchoolHoliday[] = holidays, markDirty = true) => {
+      const joined = nextDates.join('\n');
+      setRawDatesInput(joined);
+      const res = parseAndValidateSchoolDates(joined, holidayList);
+      setParsedResult(res);
+      if (markDirty) {
+        hasUnsavedRef.current = true;
+        setHasUnsavedChanges(true);
+      }
+      return res;
+    },
+    [holidays]
+  );
+
+  const handleValidateNow = useCallback(
+    (textToValidate?: string, customHolidays?: SchoolHoliday[], markDirty = false) => {
+      const targetText = textToValidate !== undefined ? textToValidate : rawDatesInput;
+      const res = parseAndValidateSchoolDates(targetText, customHolidays || holidays);
+      setParsedResult(res);
+      if (markDirty) {
+        hasUnsavedRef.current = true;
+        setHasUnsavedChanges(true);
+      }
+      return res;
+    },
+    [rawDatesInput, holidays]
+  );
 
   const handleSelectFrequency = (freq: GoogleSheetsSyncFrequency) => {
     if (!isAdmin) {
@@ -114,62 +175,40 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
     }
     setSyncFrequency(freq);
     saveGoogleSheetsSyncFrequency(freq);
-    toast.success(`Frequência de sincronização com o Servidor Escolar definida para ${freq} minutos!`);
+    toast.success(`Sincronização automática ajustada para ${freq} minutos.`);
   };
 
   const handleManualSyncTrigger = async () => {
     setIsSyncingNow(true);
     try {
-      const nowIso = new Date().toISOString();
-      localStorage.setItem('emeb_last_sed_auto_sync_at', nowIso);
-      setLastSyncTime(nowIso);
+      localStorage.setItem('emeb_last_sed_auto_sync_at', new Date().toISOString());
       const [calData, sState] = await Promise.all([
         pullOfficialCalendarFromServer(),
         pullSharedSchoolStateFromServer(),
       ]);
       if (calData?.calendarConfig) {
         setCalendarConfig(calData.calendarConfig);
+        setSelectedYear(calData.calendarConfig.year || 2027);
         setHolidays(calData.holidays);
+        setAuditLogs(calData.auditLogs);
+        if (!hasUnsavedRef.current) {
+          const joined = calData.calendarConfig.schoolDays.join('\n');
+          setRawDatesInput(joined);
+          setParsedResult(parseAndValidateSchoolDates(joined, calData.holidays));
+        }
       }
       if (sState && Array.isArray(sState.classes) && onUpdateClasses) {
         onUpdateClasses(sState.classes);
       }
-      toast.success('Sincronização com o Servidor Central da Escola concluída com sucesso!');
+      toast.success('Calendário e turmas sincronizados com o servidor.');
     } catch {
-      toast.info('Sincronização executada com os dados locais salvos da escola.');
+      toast.info('Dados locais verificados.');
     } finally {
       setIsSyncingNow(false);
     }
   };
 
-  // Sincronização periódica com o servidor central da escola que REAGE a mudanças em [syncFrequency]
-  useEffect(() => {
-    let isMounted = true;
-    const intervalMs = syncFrequency * 60 * 1000;
-
-    const performPeriodicSync = async () => {
-      if (document.visibilityState === 'hidden') return;
-      try {
-        const nowIso = new Date().toISOString();
-        localStorage.setItem('emeb_last_sed_auto_sync_at', nowIso);
-        if (isMounted) setLastSyncTime(nowIso);
-
-        const sState = await pullSharedSchoolStateFromServer();
-        if (isMounted && onUpdateClasses && sState && Array.isArray(sState.classes)) {
-          onUpdateClasses(sState.classes);
-        }
-      } catch (err) {
-        console.warn('[Server Sync] Falha na sincronização periódica da tela 200 dias:', err);
-      }
-    };
-
-    const intervalId = window.setInterval(performPeriodicSync, intervalMs);
-
-    return () => {
-      isMounted = false;
-      window.clearInterval(intervalId);
-    };
-  }, [syncFrequency, onUpdateClasses]);
+  // Pull initial calendar state from backend once
   useEffect(() => {
     let isMounted = true;
     setIsLoadingServer(true);
@@ -179,13 +218,15 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
         setCalendarConfig(data.calendarConfig);
         setHolidays(data.holidays);
         setAuditLogs(data.auditLogs);
-        setRawDatesInput(data.calendarConfig.schoolDays.join('\n'));
-        setParsedResult(
-          parseAndValidateSchoolDates(data.calendarConfig.schoolDays.join('\n'), data.holidays)
-        );
+        if (!hasUnsavedRef.current) {
+          setSelectedYear(data.calendarConfig.year || 2027);
+          const joined = data.calendarConfig.schoolDays.join('\n');
+          setRawDatesInput(joined);
+          setParsedResult(parseAndValidateSchoolDates(joined, data.holidays));
+        }
       })
-      .catch((err) => {
-        console.warn('Erro ao sincronizar com servidor:', err);
+      .catch(() => {
+        // offline fallback silently handled
       })
       .finally(() => {
         if (isMounted) setIsLoadingServer(false);
@@ -196,74 +237,206 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
     };
   }, []);
 
-  // Recalculate parsed result whenever raw input or holidays list changes
-  const handleValidateNow = useCallback(
-    (textToValidate?: string) => {
-      const targetText = textToValidate !== undefined ? textToValidate : rawDatesInput;
-      const res = parseAndValidateSchoolDates(targetText, holidays);
-      setParsedResult(res);
-      return res;
-    },
-    [rawDatesInput, holidays]
-  );
+  // Periodic background sync
+  useEffect(() => {
+    let isMounted = true;
+    const intervalMs = syncFrequency * 60 * 1000;
+    const performPeriodicSync = async () => {
+      if (document.visibilityState === 'hidden') return;
+      try {
+        localStorage.setItem('emeb_last_sed_auto_sync_at', new Date().toISOString());
+        const sState = await pullSharedSchoolStateFromServer();
+        if (isMounted && onUpdateClasses && sState && Array.isArray(sState.classes)) {
+          onUpdateClasses(sState.classes);
+        }
+      } catch {
+        // ignore periodic background failure
+      }
+    };
+    const intervalId = window.setInterval(performPeriodicSync, intervalMs);
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [syncFrequency, onUpdateClasses]);
 
-  // Keyboard shortcut handler: Ctrl + Enter / Cmd + Enter
+  // Actions: Template, Year Switch, Auto-Balance, Month Tools, Interactive Day Click
+  const handleLoadOfficialDefault = (targetYear: number = selectedYear) => {
+    if (!isAdmin) return;
+    const defaultDays = generateOfficial200SchoolDaysForYear(targetYear, holidays);
+    applyDatesList(defaultDays, holidays, true);
+    toast.success(`Padrão SME de 200 dias gerado para ${targetYear}.`);
+  };
+
+  const handleYearChange = (nextYear: number) => {
+    setSelectedYear(nextYear);
+    if (!isAdmin) return;
+    const defaultDays = generateOfficial200SchoolDaysForYear(nextYear, holidays);
+    applyDatesList(defaultDays, holidays, true);
+    toast.info(`Ano letivo alterado para ${nextYear} com matriz base de 200 dias.`);
+  };
+
+  const handleAutoBalance200 = () => {
+    if (!isAdmin) return;
+    const { dates, addedCount, removedCount } = autoBalanceSchoolDaysTo200(
+      parsedResult.validDates,
+      selectedYear,
+      holidays
+    );
+    applyDatesList(dates, holidays, true);
+    if (addedCount > 0) {
+      toast.success(`Completado automaticamente: +${addedCount} dia(s) letivo(s) adicionado(s) para atingir 200.`);
+    } else if (removedCount > 0) {
+      toast.success(`Ajustado automaticamente: ${removedCount} dia(s) excedente(s) removido(s) para atingir 200.`);
+    } else {
+      toast.info('O calendário já totaliza exatamente 200 dias.');
+    }
+  };
+
+  const handleRemoveHolidayConflicts = () => {
+    if (!isAdmin) return;
+    const { dates, removedCount } = removeHolidayConflictsFromSchoolDays(
+      parsedResult.validDates,
+      holidays
+    );
+    applyDatesList(dates, holidays, true);
+    toast.success(`${removedCount} data(s) coincidente(s) com feriados removida(s) dos dias letivos.`);
+  };
+
+  const handleFillSelectedMonth = () => {
+    if (!isAdmin) return;
+    const updated = fillMonthWeekdaysInSchoolDaysList(
+      parsedResult.validDates,
+      selectedYear,
+      visualCalendarMonth,
+      holidays
+    );
+    applyDatesList(updated, holidays, true);
+    toast.success(`Dias úteis de ${MONTH_NAMES_PT[visualCalendarMonth - 1]} preenchidos.`);
+  };
+
+  const handleClearSelectedMonth = () => {
+    if (!isAdmin) return;
+    const updated = clearMonthInSchoolDaysList(
+      parsedResult.validDates,
+      selectedYear,
+      visualCalendarMonth
+    );
+    applyDatesList(updated, holidays, true);
+    toast.info(`Dias de ${MONTH_NAMES_PT[visualCalendarMonth - 1]} removidos do rascunho.`);
+  };
+
+  const handleCalendarDayClick = (slot: {
+    dateStr: string;
+    isWeekend: boolean;
+    isSchoolDay: boolean;
+    holiday?: SchoolHoliday;
+  }) => {
+    if (!isAdmin) {
+      toast.info('Modo somente leitura para perfil não administrador.');
+      return;
+    }
+
+    if (clickMode === 'mark_holiday') {
+      if (slot.holiday) {
+        handleOpenEditHoliday(slot.holiday);
+      } else {
+        setEditingHoliday(null);
+        setHolidayFormDate(slot.dateStr);
+        setHolidayFormName('');
+        setHolidayFormType('municipal');
+        setRemoveHolidayFromSchoolDays(true);
+        setIsHolidayModalOpen(true);
+      }
+      return;
+    }
+
+    // Modo 'toggle_school_day'
+    if (slot.holiday && !slot.isSchoolDay) {
+      toast.info(
+        `${slot.dateStr} é "${slot.holiday.name}". Use o modo "Marcar Feriado" para editar ou remover.`,
+        { duration: 3500 }
+      );
+      return;
+    }
+
+    const { dates, added } = toggleDateInSchoolDaysList(parsedResult.validDates, slot.dateStr);
+    applyDatesList(dates, holidays, true);
+    const label = slot.isWeekend ? 'Sábado letivo' : 'Dia letivo';
+    toast.success(
+      added ? `${slot.dateStr} adicionado como ${label}.` : `${slot.dateStr} marcado como não letivo.`,
+      { duration: 1800 }
+    );
+  };
+
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      const res = handleValidateNow();
+      const res = handleValidateNow(rawDatesInput, holidays, true);
       if (res.isExactly200 && !res.hasErrors) {
-        toast.success(`200 dias válidos identificados! Pronto para salvar.`);
+        toast.success('200 dias válidos processados e prontos para publicação.');
       } else if (res.hasErrors) {
-        toast.error(`Foram encontrados erros de formatação ou duplicidades.`);
+        toast.error('Foram encontrados erros de formatação ou duplicidades.');
       } else {
         toast.info(
           `Processado: ${res.totalCount}/200 dias (${
-            res.remainingCount > 0 ? `faltam ${res.remainingCount}` : `excedente de ${res.exceededCount}`
+            res.remainingCount > 0
+              ? `faltam ${res.remainingCount}`
+              : `excedente de ${res.exceededCount}`
           }).`
         );
       }
     }
   };
 
-  // Helper: Load official 200 days template
-  const handleLoadOfficialDefault = () => {
-    const defaultDays = generateOfficial200SchoolDays2027(holidays);
-    const joined = defaultDays.join('\n');
-    setRawDatesInput(joined);
-    handleValidateNow(joined);
-    toast.success(`Padrão Oficial de 200 Dias da SME carregado no editor.`);
-  };
-
-  // Helper: Clear textarea
-  const handleClearInput = () => {
-    if (rawDatesInput.trim().length > 0) {
-      if (window.confirm('Deseja realmente limpar o campo de datas?')) {
-        setRawDatesInput('');
-        setParsedResult(parseAndValidateSchoolDates('', holidays));
-      }
+  const handleCopyDatesList = async () => {
+    try {
+      await navigator.clipboard.writeText(parsedResult.validDates.join('\n'));
+      toast.success(`${parsedResult.validDates.length} datas copiadas para a área de transferência.`);
+    } catch {
+      toast.error('Não foi possível copiar automaticamente neste navegador.');
     }
   };
 
-  // Save calendar configuration with backend authorization check and audit trail
+  const handleExportCsv = () => {
+    const header = 'Ordem,Data,DiaDaSemana,Mes,Tipo\n';
+    const rows = parsedResult.calendarDays
+      .map(
+        (d, idx) =>
+          `${idx + 1},${d.date},"${d.dayOfWeek}","${d.month}","${
+            d.isSaturday ? 'Sábado Letivo' : d.holidayConflict || 'Dia Letivo Regular'
+          }"`
+      )
+      .join('\n');
+    const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `calendario_oficial_200_dias_${selectedYear}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`CSV do calendário ${selectedYear} exportado.`);
+  };
+
+  // Publish Calendar Config
   const handleConfirmSaveCalendar = async () => {
     if (!isAdmin) {
-      toast.error('Apenas administradores possuem permissão para alterar o calendário oficial.');
+      toast.error('Apenas administradores podem publicar o calendário oficial.');
       return;
     }
-
     if (!parsedResult.isExactly200 || parsedResult.hasErrors) {
-      toast.error('O calendário deve conter exatamente 200 dias válidos e sem erros.');
+      toast.error('O calendário precisa totalizar exatamente 200 dias válidos e sem erros.');
       return;
     }
 
     setIsSaving(true);
     try {
+      const normalizedText = parsedResult.validDates.join('\n');
       const res = await saveStoredOfficialCalendarConfig(
-        rawDatesInput,
+        normalizedText,
         userEmail,
         userName,
-        calendarConfig.year || 2027
+        selectedYear
       );
 
       if (!res.ok || !res.calendarConfig) {
@@ -272,37 +445,29 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
         return;
       }
 
+      hasUnsavedRef.current = false;
+      setHasUnsavedChanges(false);
       setCalendarConfig(res.calendarConfig);
+      setRawDatesInput(res.calendarConfig.schoolDays.join('\n'));
       setAuditLogs(getStoredCalendarAuditLogs());
       setIsConfirmModalOpen(false);
 
-      // Sincroniza distribuição mensal com todas as turmas da escola
       if (classes.length > 0 && onUpdateClasses) {
         const dist = res.calendarConfig.monthlyDistribution;
-        const updatedClasses = classes.map((cls) => {
-          const updatedMonthlyDays = {
-            fevereiro: dist['Fevereiro'] || 16,
-            marco: dist['Março'] || 22,
-            abril: dist['Abril'] || 20,
-            maio: dist['Maio'] || 20,
-            junho: dist['Junho'] || 20,
-            julho: dist['Julho'] || 10,
-            agosto: dist['Agosto'] || 22,
-            setembro: dist['Setembro'] || 20,
-            outubro: dist['Outubro'] || 20,
-            novembro: dist['Novembro'] || 18,
-            dezembro: dist['Dezembro'] || 12,
-          };
-          return {
-            ...cls,
-            diasLetivosMes: updatedMonthlyDays,
-          };
-        });
+        const updatedClasses = classes.map((cls) => ({
+          ...cls,
+          classesHeld: dist['Outubro'] || cls.classesHeld || 20,
+          monthlySchoolDays: {
+            ...(cls.monthlySchoolDays || {}),
+            ...dist,
+          },
+          updatedAtMs: Date.now(),
+        }));
         onUpdateClasses(updatedClasses);
       }
 
       toast.success(
-        `Calendário Oficial de 200 Dias publicado com sucesso e replicado para as turmas!`
+        `Calendário Oficial ${selectedYear} (200 dias) publicado e replicado para as ${classes.length} turmas!`
       );
     } catch (err: any) {
       toast.error(err?.message || 'Erro inesperado ao salvar.');
@@ -312,11 +477,12 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
   };
 
   // Holiday management actions
-  const handleOpenAddHoliday = () => {
+  const handleOpenAddHoliday = (presetDate: string = '') => {
     setEditingHoliday(null);
-    setHolidayFormDate('');
+    setHolidayFormDate(presetDate);
     setHolidayFormName('');
     setHolidayFormType('municipal');
+    setRemoveHolidayFromSchoolDays(true);
     setIsHolidayModalOpen(true);
   };
 
@@ -325,6 +491,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
     setHolidayFormDate(h.date);
     setHolidayFormName(h.name);
     setHolidayFormType(h.type);
+    setRemoveHolidayFromSchoolDays(true);
     setIsHolidayModalOpen(true);
   };
 
@@ -342,8 +509,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       return;
     }
 
-    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
-    if (!dateRegex.test(cleanDate)) {
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(cleanDate)) {
       toast.error('Data deve estar estritamente no formato DD/MM/AAAA.');
       return;
     }
@@ -373,43 +539,54 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
     setAuditLogs(getStoredCalendarAuditLogs());
     setIsHolidayModalOpen(false);
 
-    // Revalida datas do editor com a lista atualizada de feriados
-    handleValidateNow();
-    toast.success(
-      editingHoliday
-        ? `Feriado "${cleanName}" atualizado!`
-        : `Feriado "${cleanName}" cadastrado com sucesso!`
-    );
+    if (removeHolidayFromSchoolDays && parsedResult.validDates.includes(cleanDate)) {
+      const nextDates = parsedResult.validDates.filter((d) => d !== cleanDate);
+      applyDatesList(nextDates, res.holidays, true);
+      toast.success(
+        `${cleanName} salvo e removido dos dias letivos. Use "Completar 200 Dias" para compensar a data.`
+      );
+    } else {
+      handleValidateNow(rawDatesInput, res.holidays, false);
+      toast.success(
+        editingHoliday ? `Feriado "${cleanName}" atualizado.` : `Feriado "${cleanName}" cadastrado.`
+      );
+    }
   };
 
   const handleDeleteHoliday = async (holiday: SchoolHoliday) => {
-    if (!isAdmin) {
-      toast.error('Apenas administradores podem excluir feriados.');
-      return;
-    }
-    if (!window.confirm(`Deseja realmente excluir o feriado "${holiday.name}" (${holiday.date})?`)) {
-      return;
-    }
-
-    const res = await saveStoredHolidayAction(
-      'delete',
-      holiday,
-      holiday.id,
-      userEmail,
-      userName
-    );
+    if (!isAdmin) return;
+    const res = await saveStoredHolidayAction('delete', holiday, holiday.id, userEmail, userName);
     if (!res.ok) {
       toast.error(res.error || 'Falha ao excluir feriado.');
       return;
     }
-
+    setConfirmDeleteHolidayId(null);
     setHolidays(res.holidays);
     setAuditLogs(getStoredCalendarAuditLogs());
-    handleValidateNow();
+    handleValidateNow(rawDatesInput, res.holidays, false);
     toast.success(`Feriado "${holiday.name}" excluído.`);
   };
 
-  // Preview filtering
+  const handleRestoreDefaultHolidays = async () => {
+    if (!isAdmin) return;
+    const res = await saveStoredHolidayAction(
+      'restore_defaults',
+      undefined,
+      undefined,
+      userEmail,
+      userName
+    );
+    if (!res.ok) {
+      toast.error(res.error || 'Falha ao restaurar feriados padrão.');
+      return;
+    }
+    setHolidays(res.holidays);
+    setAuditLogs(getStoredCalendarAuditLogs());
+    handleValidateNow(rawDatesInput, res.holidays, false);
+    toast.success('Lista padrão de feriados SME Jundiaí restaurada.');
+  };
+
+  // Filtered preview list
   const filteredPreviewDays = useMemo(() => {
     let list = parsedResult.calendarDays;
     if (selectedPreviewMonth !== 'all') {
@@ -427,11 +604,15 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
     return list;
   }, [parsedResult.calendarDays, selectedPreviewMonth, searchPreviewDate]);
 
-  // Calendar visual generation for selected month
+  const filteredHolidays = useMemo(() => {
+    if (holidayScopeFilter === 'all') return holidays;
+    return holidays.filter((h) => h.type === holidayScopeFilter);
+  }, [holidays, holidayScopeFilter]);
+
+  // Interactive visual grid slots for current month
   const visualMonthDays = useMemo(() => {
-    const year = calendarConfig.year || 2027;
-    const daysInMonth = new Date(year, visualCalendarMonth, 0).getDate();
-    const firstDayOfWeek = new Date(year, visualCalendarMonth - 1, 1).getDay(); // 0 = Dom
+    const daysInMonth = new Date(selectedYear, visualCalendarMonth, 0).getDate();
+    const firstDayOfWeek = new Date(selectedYear, visualCalendarMonth - 1, 1).getDay();
     const pad = (n: number) => n.toString().padStart(2, '0');
 
     const activeSchoolDayMap = new Map<string, string>();
@@ -441,17 +622,31 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
     const holidayMap = new Map<string, SchoolHoliday>();
     holidays.forEach((h) => {
-      holidayMap.set(h.date, h);
+      holidayMap.set(h.date.trim(), h);
     });
 
-    const slots = [];
+    const slots: Array<
+      | { isEmpty: true; id: string }
+      | {
+          isEmpty: false;
+          id: string;
+          dayNumber: number;
+          dateStr: string;
+          dayOfWeek: string;
+          isWeekend: boolean;
+          isSchoolDay: boolean;
+          schoolDayType?: string;
+          holiday?: SchoolHoliday;
+        }
+    > = [];
+
     for (let i = 0; i < firstDayOfWeek; i++) {
       slots.push({ isEmpty: true, id: `empty-${i}` });
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${pad(day)}/${pad(visualCalendarMonth)}/${year}`;
-      const dateObj = new Date(year, visualCalendarMonth - 1, day);
+      const dateStr = `${pad(day)}/${pad(visualCalendarMonth)}/${selectedYear}`;
+      const dateObj = new Date(selectedYear, visualCalendarMonth - 1, day);
       const dayOfWeek = dateObj.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const schoolDayType = activeSchoolDayMap.get(dateStr);
@@ -464,970 +659,1014 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
         dateStr,
         dayOfWeek: DAYS_OF_WEEK_PT[dayOfWeek],
         isWeekend,
-        isSchoolDay: !!schoolDayType,
+        isSchoolDay: Boolean(schoolDayType),
         schoolDayType,
         holiday,
       });
     }
 
     return slots;
-  }, [calendarConfig.year, visualCalendarMonth, parsedResult.calendarDays, holidays]);
+  }, [selectedYear, visualCalendarMonth, parsedResult.calendarDays, holidays]);
+
+  const progressPercent = Math.min(100, Math.round((parsedResult.totalCount / 200) * 100));
+  const selectedMonthName = MONTH_NAMES_PT[visualCalendarMonth - 1];
+  const selectedMonthCount = parsedResult.monthlyDistribution[selectedMonthName] || 0;
+  const selectedMonthTarget = OFFICIAL_MONTHLY_TARGETS_2027[selectedMonthName] || 0;
+  const saturdayCount = parsedResult.weekendDays.filter((w) => w.isSaturday).length;
+  const isPublishReady = parsedResult.isExactly200 && !parsedResult.hasErrors && isAdmin;
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-9.5rem)] max-w-7xl mx-auto w-full min-w-0 bg-[#f2f2f7] rounded-3xl shadow-sm animate-gentle-fade">
-      {/* ========================================================================= */}
-      {/* 1. CABEÇALHO                                                              */}
-      {/* ========================================================================= */}
-      <header className="shrink-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 pt-3 pb-2.5 shadow-2xs space-y-2 z-10 rounded-t-3xl min-w-0">
-        {/* Breadcrumb e Informações Rápidas */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#48484a] min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-            {onBack && (
-              <button
-                type="button"
-                onClick={onBack}
-                className="text-[#374151] hover:text-[#111827] font-medium inline-flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-                <span>Voltar</span>
-              </button>
-            )}
-            <span className="text-[#6e6e73]">/</span>
-            <span className="font-semibold text-[#111827]">200 Dias Letivos</span>
-            <span className="text-[#6e6e73]">·</span>
-            <span className="text-[#374151] break-words min-w-0">{SCHOOL_NAME}</span>
-          </div>
-
-          <div className="flex items-center gap-2.5 text-xs">
-            {isLoadingServer && (
-              <span className="text-[#48484a] inline-flex items-center gap-1 font-mono text-xs">
-                <span className="material-symbols-outlined text-[14px] animate-spin">sync</span>
-                <span className="hidden sm:inline">Sincronizando...</span>
-              </span>
-            )}
-            <span className="text-[#374151] font-medium inline-flex items-center gap-1.5 text-xs bg-[#e9e9ef] px-2.5 py-1 rounded-lg">
-              <span className="material-symbols-outlined text-[16px] text-[#006644]">verified</span>
-              <span className="hidden sm:inline">Base Oficial SED 2027</span>
+    <div
+      className={
+        embedded
+          ? 'w-full min-w-0 space-y-4 text-[#111827] animate-gentle-fade'
+          : 'flex flex-col min-h-[calc(100dvh-9.5rem)] max-w-7xl mx-auto w-full min-w-0 space-y-4 pb-20 text-[#111827] animate-gentle-fade'
+      }
+    >
+      {/* 1. CABEÇALHO UNIFICADO + BARRA DE PROGRESSO DINÂMICA 200 DIAS */}
+      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] border border-slate-200/70 space-y-4 min-w-0">
+        {!embedded && (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex items-center gap-1.5 font-medium hover:text-slate-950 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Voltar</span>
+            </button>
+            <span>
+              {SCHOOL_NAME} · Base Oficial SED {selectedYear}
             </span>
-          </div>
-        </div>
-
-        {/* Título Principal e Tabs */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight break-words">
-              Calendário Oficial
-            </h1>
-            <span className="text-xs text-slate-500 hidden md:inline">
-              Ano Letivo {calendarConfig.year || 2027} · LDB 200 Dias
-            </span>
-          </div>
-
-          {/* Segmented Tabs */}
-          <div className="flex flex-wrap sm:inline-flex items-center gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-auto max-w-full">
-            <button
-              type="button"
-              onClick={() => setActiveTab('editor')}
-              className={`flex-1 sm:flex-initial min-h-[38px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-100 inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-normal text-center ${
-                activeTab === 'editor'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px] shrink-0">edit_note</span>
-              <span>Editor de 200 Dias</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('feriados')}
-              className={`flex-1 sm:flex-initial min-h-[38px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-100 inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-normal text-center ${
-                activeTab === 'feriados'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px] shrink-0">celebration</span>
-              <span>Feriados ({holidays.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('calendario')}
-              className={`flex-1 sm:flex-initial min-h-[38px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-100 inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-normal text-center ${
-                activeTab === 'calendario'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px] shrink-0">calendar_month</span>
-              <span>Grade Anual</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('auditoria')}
-              className={`flex-1 sm:flex-initial min-h-[38px] px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-100 inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-normal text-center ${
-                activeTab === 'auditoria'
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px] shrink-0">history_edu</span>
-              <span>Auditoria ({auditLogs.length})</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* ========================================================================= */}
-      {/* 2. ÁREA DE ROLAGEM INTERNA CONTIDA (FLEX-1 OVERFLOW-Y-AUTO)              */}
-      {/* ========================================================================= */}
-      <main className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 focus:outline-none">
-        {/* Alerta Não-Admin */}
-        {!isAdmin && (
-          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900 text-xs flex items-center gap-2">
-            <span className="material-symbols-outlined text-amber-700 text-base shrink-0">lock</span>
-            <span>Acesso Somente Leitura: apenas administradores podem salvar ou alterar o calendário e a sincronização.</span>
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* SELETOR VISUAL: FREQUÊNCIA DE SINCRONIZAÇÃO AUTOMÁTICA (30, 60, 120 MIN)  */}
-        {/* ========================================================================= */}
-        <section className="bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-950">
+                Configurador do Calendário Oficial
+              </h2>
+              <span className="text-xs text-slate-500 tabular-nums">
+                Ano {selectedYear} · LDB 200 Dias · {classes.length} turmas
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-600">
+              Clique nos dias da grade para alternar datas letivas, ajuste feriados e publique direto para todas as turmas.
+            </p>
+          </div>
+
+          {/* Controles Compactos: Ano + Sync + Restaurar */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <select
+              aria-label="Selecionar ano letivo"
+              value={selectedYear}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
+              disabled={!isAdmin}
+              className="min-h-[38px] px-3 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-900 cursor-pointer disabled:opacity-50"
+            >
+              <option value={2026}>Ano Letivo 2026</option>
+              <option value={2027}>Ano Letivo 2027</option>
+              <option value={2028}>Ano Letivo 2028</option>
+            </select>
+
+            <select
+              aria-label="Intervalo de sincronização automática"
+              value={syncFrequency}
+              onChange={(e) => handleSelectFrequency(Number(e.target.value) as GoogleSheetsSyncFrequency)}
+              disabled={!isAdmin}
+              className="min-h-[38px] px-3 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-medium text-slate-800 cursor-pointer disabled:opacity-50"
+            >
+              <option value={30}>Sync: 30 min</option>
+              <option value={60}>Sync: 60 min</option>
+              <option value={120}>Sync: 120 min</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={handleManualSyncTrigger}
+              disabled={isSyncingNow || isLoadingServer}
+              className="min-h-[38px] px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${isSyncingNow || isLoadingServer ? 'animate-spin' : ''}`}
+              />
+              <span>{isSyncingNow ? 'Sincronizando...' : 'Sincronizar'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Medidor Vivo LDB 200 Dias + Ações Dinâmicas */}
+        <div className="pt-2 border-t border-slate-100 space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-slate-950">
+                  {parsedResult.totalCount}
+                </span>
+                <span className="text-xs sm:text-sm font-mono text-slate-500 tabular-nums">
+                  / 200 dias letivos
+                </span>
               </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-sm font-bold text-slate-900">
-                    Sincronização com o Servidor Escolar Centralizado
-                  </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-900 border border-emerald-200">
-                    Ativo: a cada {syncFrequency} min
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Ajuste o intervalo de atualização em segundo plano para calibrar dados das 40 turmas e desempenho do sistema.
-                </p>
-              </div>
+
+              <span
+                className={`text-xs font-semibold inline-flex items-center gap-1.5 ${
+                  parsedResult.isExactly200 && !parsedResult.hasErrors
+                    ? 'text-[#047857]'
+                    : parsedResult.hasErrors
+                    ? 'text-rose-700'
+                    : 'text-amber-700'
+                }`}
+              >
+                {parsedResult.isExactly200 && !parsedResult.hasErrors ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Meta de 200 dias atingida</span>
+                  </>
+                ) : parsedResult.hasErrors ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Há erros de formatação ou duplicidades na lista</span>
+                  </>
+                ) : parsedResult.remainingCount > 0 ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span className="tabular-nums">Faltam {parsedResult.remainingCount} dia(s) para 200</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span className="tabular-nums">Excedente de {parsedResult.exceededCount} dia(s) acima de 200</span>
+                  </>
+                )}
+              </span>
+
+              {hasUnsavedChanges && (
+                <span className="text-xs font-semibold text-[#0b3b8c]">
+                  · Alterações pendentes de publicação
+                </span>
+              )}
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto min-w-0">
-              {/* Dropdown Selector */}
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 rounded-xl px-3 min-h-[40px] w-full sm:w-auto min-w-0">
-                <label htmlFor="sheets-sync-select" className="text-xs font-semibold text-slate-600 shrink-0">
-                  Intervalo:
-                </label>
-                <select
-                  id="sheets-sync-select"
-                  value={syncFrequency}
-                  onChange={(e) => handleSelectFrequency(Number(e.target.value) as GoogleSheetsSyncFrequency)}
-                  disabled={!isAdmin}
-                  className="bg-transparent text-xs font-bold text-slate-900 focus:outline-none cursor-pointer disabled:opacity-50 min-w-0 flex-1"
-                  aria-label="Selecionar frequência de sincronização automática com o Servidor Escolar"
+            {/* Ações Dinâmicas Rápidas */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {parsedResult.totalCount !== 200 && !parsedResult.hasErrors && isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleAutoBalance200}
+                  className="min-h-[38px] px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  <option value={30}>30 minutos (Alta Frequência)</option>
-                  <option value={60}>60 minutos (Recomendado SME)</option>
-                  <option value={120}>120 minutos (Econômico)</option>
-                </select>
-              </div>
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>
+                    {parsedResult.remainingCount > 0 ? 'Completar 200 Dias' : 'Ajustar para 200 Dias'}
+                  </span>
+                </button>
+              )}
 
               <button
                 type="button"
-                onClick={handleManualSyncTrigger}
-                disabled={isSyncingNow}
-                className="w-full sm:w-auto min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors duration-100 border border-slate-200/90 cursor-pointer disabled:opacity-50 whitespace-normal text-center"
-                title="Sincronizar com o Servidor Central agora"
+                onClick={() => handleLoadOfficialDefault(selectedYear)}
+                disabled={!isAdmin}
+                className="min-h-[38px] px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50"
               >
-                <span className={`material-symbols-outlined text-[16px] shrink-0 ${isSyncingNow ? 'animate-spin' : ''}`}>
-                  sync
-                </span>
-                <span>{isSyncingNow ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
+                <Sparkles className="w-3.5 h-3.5 text-[#0b3b8c]" />
+                <span>Padrão SME (200d)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(true)}
+                disabled={!isPublishReady || isSaving}
+                className="min-h-[38px] px-4 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Check className="w-4 h-4" />
+                <span>Publicar Calendário</span>
               </button>
             </div>
           </div>
 
-          {/* Seletor de Botões de Rádio com Cards Visuais: 30 min, 60 min, 120 min */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5" role="radiogroup" aria-label="Intervalo de Sincronização Automática com o Servidor Escolar">
-            {/* Opção 30 Minutos */}
-            <label
-              className={`p-3.5 rounded-xl border text-left transition-colors duration-100 cursor-pointer relative flex flex-col justify-between gap-2 select-none min-w-0 ${
-                syncFrequency === 30
-                  ? 'bg-emerald-50/70 border-emerald-600 ring-2 ring-emerald-600/20 shadow-xs'
-                  : 'bg-slate-50/60 border-slate-200/90 hover:bg-slate-100/70 hover:border-slate-300'
-              } ${!isAdmin ? 'opacity-70 cursor-not-allowed' : ''}`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-1.5">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="syncIntervalRadio"
-                    value={30}
-                    checked={syncFrequency === 30}
-                    onChange={() => handleSelectFrequency(30)}
-                    disabled={!isAdmin}
-                    className="w-4 h-4 accent-emerald-600 cursor-pointer"
-                  />
-                  <span className="font-bold text-slate-900 text-sm font-mono tabular-nums">30 Minutos</span>
-                </div>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-900">
-                  Alta Frequência
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 leading-snug break-words">
-                Ideal para períodos de fechamento bimestral e lançamento ativo de faltas pelos professores.
-              </p>
-              <div className="text-xs text-slate-500 font-medium pt-1.5 border-t border-slate-200/50 flex items-center justify-between">
-                <span>Consumo da API: Maior</span>
-                {syncFrequency === 30 && (
-                  <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                    <span className="material-symbols-outlined text-[14px]">check_circle</span> Ativo
-                  </span>
-                )}
-              </div>
-            </label>
-
-            {/* Opção 60 Minutos (Recomendado) */}
-            <label
-              className={`p-3.5 rounded-xl border text-left transition-colors duration-100 cursor-pointer relative flex flex-col justify-between gap-2 select-none min-w-0 ${
-                syncFrequency === 60
-                  ? 'bg-emerald-50/70 border-emerald-600 ring-2 ring-emerald-600/20 shadow-xs'
-                  : 'bg-slate-50/60 border-slate-200/90 hover:bg-slate-100/70 hover:border-slate-300'
-              } ${!isAdmin ? 'opacity-70 cursor-not-allowed' : ''}`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-1.5">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="syncIntervalRadio"
-                    value={60}
-                    checked={syncFrequency === 60}
-                    onChange={() => handleSelectFrequency(60)}
-                    disabled={!isAdmin}
-                    className="w-4 h-4 accent-emerald-600 cursor-pointer"
-                  />
-                  <span className="font-bold text-slate-900 text-sm font-mono tabular-nums">60 Minutos</span>
-                </div>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-900">
-                  Recomendado
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 leading-snug break-words">
-                Padrão institucional balanceado: dados sempre recentes com estabilidade total.
-              </p>
-              <div className="text-xs text-slate-500 font-medium pt-1.5 border-t border-slate-200/50 flex items-center justify-between">
-                <span>Consumo da API: Equilibrado</span>
-                {syncFrequency === 60 && (
-                  <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                    <span className="material-symbols-outlined text-[14px]">check_circle</span> Ativo
-                  </span>
-                )}
-              </div>
-            </label>
-
-            {/* Opção 120 Minutos */}
-            <label
-              className={`p-3.5 rounded-xl border text-left transition-colors duration-100 cursor-pointer relative flex flex-col justify-between gap-2 select-none min-w-0 ${
-                syncFrequency === 120
-                  ? 'bg-emerald-50/70 border-emerald-600 ring-2 ring-emerald-600/20 shadow-xs'
-                  : 'bg-slate-50/60 border-slate-200/90 hover:bg-slate-100/70 hover:border-slate-300'
-              } ${!isAdmin ? 'opacity-70 cursor-not-allowed' : ''}`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-1.5">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="syncIntervalRadio"
-                    value={120}
-                    checked={syncFrequency === 120}
-                    onChange={() => handleSelectFrequency(120)}
-                    disabled={!isAdmin}
-                    className="w-4 h-4 accent-emerald-600 cursor-pointer"
-                  />
-                  <span className="font-bold text-slate-900 text-sm font-mono tabular-nums">120 Minutos</span>
-                </div>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-900">
-                  Econômico
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 leading-snug break-words">
-                Máxima preservação de cota e performance, ideal para períodos letivos regulares.
-              </p>
-              <div className="text-xs text-slate-500 font-medium pt-1.5 border-t border-slate-200/50 flex items-center justify-between">
-                <span>Consumo da API: Mínimo</span>
-                {syncFrequency === 120 && (
-                  <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                    <span className="material-symbols-outlined text-[14px]">check_circle</span> Ativo
-                  </span>
-                )}
-              </div>
-            </label>
+          {/* Barra visual de progresso */}
+          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-200 ${
+                parsedResult.isExactly200 && !parsedResult.hasErrors
+                  ? 'bg-[#047857]'
+                  : parsedResult.totalCount > 200
+                  ? 'bg-rose-600'
+                  : 'bg-amber-500'
+              }`}
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
-        </section>
 
-        {/* --------------------------------------------------------------------- */}
-        {/* ABA 1: EDITOR DE 200 DIAS                                             */}
-        {/* --------------------------------------------------------------------- */}
-        {activeTab === 'editor' && (
-          <div className="space-y-4">
-            {/* Split em 2 Colunas */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-              {/* Coluna Esquerda: Editor de Texto */}
-              <div className="lg:col-span-7 bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <h2 className="text-sm font-bold text-slate-900">
-                      Inserção Oficial de Datas (DD/MM/AAAA)
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Cole uma data por linha. Ex: <code className="font-mono text-slate-800">03/02/2027</code>.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleLoadOfficialDefault}
-                      disabled={!isAdmin}
-                      className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors duration-100 border border-slate-200 disabled:opacity-50 cursor-pointer"
-                      title="Carregar matriz oficial de 200 dias da SME Jundiaí"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">auto_fix_high</span>
-                      <span>Padrão 200 Dias</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleClearInput}
-                      disabled={!isAdmin || !rawDatesInput}
-                      className="min-h-[38px] px-3 py-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium inline-flex items-center gap-1 transition-colors duration-100 disabled:opacity-40 cursor-pointer"
-                      title="Limpar campo de datas"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">delete</span>
-                      <span>Limpar</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Textarea */}
-                <div className="relative">
-                  <textarea
-                    value={rawDatesInput}
-                    onChange={(e) => {
-                      setRawDatesInput(e.target.value);
-                      handleValidateNow(e.target.value);
-                    }}
-                    onKeyDown={handleTextareaKeyDown}
-                    disabled={!isAdmin}
-                    placeholder={`03/02/2027\n04/02/2027\n05/02/2027\n08/02/2027...`}
-                    className="w-full h-44 sm:h-52 font-mono text-xs p-3 rounded-lg border border-slate-300 focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none leading-relaxed text-slate-900 bg-slate-50/50 resize-y disabled:bg-slate-100 disabled:text-slate-500"
-                  />
-
-                  <div className="absolute right-2 bottom-2 text-[11px] text-slate-500 font-mono bg-white/90 px-2 py-0.5 rounded border border-slate-200 pointer-events-none">
-                    <strong>Ctrl + Enter</strong> para processar
-                  </div>
-                </div>
-
-                {/* Erros / Alertas */}
-                {parsedResult.hasErrors && (
-                  <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-950 space-y-1.5 text-xs">
-                    <div className="font-semibold text-rose-900 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[16px] text-rose-700">error</span>
-                      <span>Erros que impedem a homologação:</span>
-                    </div>
-                    {parsedResult.duplicateEntries.length > 0 && (
-                      <div className="text-xs text-rose-800 break-words">
-                        <strong>Duplicadas ({parsedResult.duplicateEntries.length}):</strong>{' '}
-                        {parsedResult.duplicateEntries.map((d) => `${d.date} (${d.occurrences}x)`).join(', ')}
-                      </div>
-                    )}
-                    {parsedResult.invalidEntries.length > 0 && (
-                      <div className="max-h-24 overflow-y-auto space-y-0.5 text-xs font-mono bg-white p-2 rounded border border-rose-200">
-                        {parsedResult.invalidEntries.map((inv, idx) => (
-                          <div key={idx} className="text-rose-800 break-words">
-                            Linha {inv.line}: "{inv.raw}" — {inv.reason}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+          {/* Alerta dinâmico de conflito com feriados */}
+          {parsedResult.holidayConflicts.length > 0 && (
+            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-amber-950">
+              <div className="flex items-start sm:items-center gap-2 min-w-0">
+                <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5 sm:mt-0" />
+                <span className="break-words">
+                  <strong>{parsedResult.holidayConflicts.length} conflito(s):</strong> há dia(s)
+                  letivo(s) marcado(s) em data de feriado/recesso (
+                  {parsedResult.holidayConflicts
+                    .slice(0, 3)
+                    .map((c) => `${c.date} - ${c.holidayName}`)
+                    .join('; ')}
+                  ).
+                </span>
               </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleRemoveHolidayConflicts}
+                  className="min-h-[32px] px-3 rounded-xl bg-amber-800 hover:bg-amber-900 text-white text-xs font-semibold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  Remover Feriados dos Dias Letivos
+                </button>
+              )}
+            </div>
+          )}
 
-              {/* Coluna Direita: Distribuição Mensal e Diagnóstico */}
-              <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Distribuição Mensal dos Dias
-                  </h3>
-                  <span className="text-xs font-mono font-bold text-slate-800">
-                    Total: {parsedResult.totalCount}d
-                  </span>
-                </div>
+          {!isAdmin && (
+            <div className="p-3 rounded-2xl bg-slate-100 text-slate-700 text-xs flex items-center gap-2">
+              <Lock className="w-4 h-4 shrink-0" />
+              <span>Acesso somente leitura: apenas administradores podem publicar alterações.</span>
+            </div>
+          )}
+        </div>
 
-                {/* Grid 4x3 dos 12 Meses */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 text-center">
-                  {MONTH_NAMES_PT.map((m) => {
-                    const count = parsedResult.monthlyDistribution[m] || 0;
-                    return (
-                      <div
-                        key={m}
-                        className={`p-2 rounded-lg border text-center transition-colors duration-100 ${
-                          count > 0
-                            ? 'bg-slate-50 border-slate-200 text-slate-900'
-                            : 'bg-slate-50/30 border-slate-100 text-slate-400'
-                        }`}
-                      >
-                        <span className="text-xs block font-medium text-slate-500">
-                          {m.substring(0, 3)}
-                        </span>
-                        <span className="text-sm font-bold font-mono tabular-nums block">
-                          {count}d
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
+        {/* Sub-abas do Configurador */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('calendario')}
+            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
+              activeTab === 'calendario'
+                ? 'bg-[#1d1d1f] text-white'
+                : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>Planejador Visual</span>
+          </button>
 
-                {/* Indicadores Compactos */}
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-xs">
-                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70">
-                    <span className="text-xs text-slate-500 block">Sábados Letivos</span>
-                    <span className="text-base font-bold text-slate-900 font-mono tabular-nums">
-                      {parsedResult.weekendDays.filter((w) => w.isSaturday).length}
-                    </span>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70">
-                    <span className="text-xs text-slate-500 block">Feriados Coincidentes</span>
-                    <span className={`text-base font-bold font-mono tabular-nums ${
-                      parsedResult.holidayConflicts.length > 0 ? 'text-amber-800' : 'text-slate-900'
-                    }`}>
-                      {parsedResult.holidayConflicts.length}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('editor')}
+            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
+              activeTab === 'editor'
+                ? 'bg-[#1d1d1f] text-white'
+                : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+            }`}
+          >
+            <ListChecks className="w-3.5 h-3.5" />
+            <span>Lista &amp; Importação</span>
+            <span className="tabular-nums opacity-75">({parsedResult.totalCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('feriados')}
+            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
+              activeTab === 'feriados'
+                ? 'bg-[#1d1d1f] text-white'
+                : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+            }`}
+          >
+            <CalendarPlus className="w-3.5 h-3.5" />
+            <span>Feriados &amp; Recessos</span>
+            <span className="tabular-nums opacity-75">({holidays.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('auditoria')}
+            className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
+              activeTab === 'auditoria'
+                ? 'bg-[#1d1d1f] text-white'
+                : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Auditoria</span>
+            <span className="tabular-nums opacity-75">({auditLogs.length})</span>
+          </button>
+        </div>
+      </section>
+
+      {/* ===================================================================== */}
+      {/* ABA 1: PLANEJADOR VISUAL INTERATIVO (MÊS A MÊS + CLIQUE NO DIA)       */}
+      {/* ===================================================================== */}
+      {activeTab === 'calendario' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          {/* Coluna Esquerda: Navegador Dinâmico de Meses & Metas SME */}
+          <section className="lg:col-span-4 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900">Distribuição por Mês</h3>
+              <span className="text-xs font-mono tabular-nums text-slate-500">
+                Meta: 200d
+              </span>
             </div>
 
-            {/* Tabela de Pré-visualização com Altura Delimitada */}
-            <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-1.5">
+              {MONTH_NAMES_PT.map((mName, idx) => {
+                const monthNum = idx + 1;
+                const count = parsedResult.monthlyDistribution[mName] || 0;
+                const target = OFFICIAL_MONTHLY_TARGETS_2027[mName] || 0;
+                const isSelected = visualCalendarMonth === monthNum;
+                const matchesTarget = target > 0 ? count === target : count === 0;
+
+                return (
+                  <button
+                    key={mName}
+                    type="button"
+                    onClick={() => setVisualCalendarMonth(monthNum)}
+                    className={`p-2.5 rounded-2xl text-left transition-colors cursor-pointer border flex flex-col gap-1 ${
+                      isSelected
+                        ? 'bg-[#0b3b8c] text-white border-[#0b3b8c]'
+                        : 'bg-[#f8fafc] hover:bg-slate-100 text-slate-900 border-slate-200/70'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-semibold truncate">{mName}</span>
+                      {target > 0 && matchesTarget && (
+                        <CheckCircle2
+                          className={`w-3.5 h-3.5 shrink-0 ${
+                            isSelected ? 'text-emerald-300' : 'text-[#047857]'
+                          }`}
+                        />
+                      )}
+                    </div>
+                    <div className="flex items-baseline justify-between gap-1 font-mono tabular-nums">
+                      <span className="text-sm font-bold">{count}d</span>
+                      {target > 0 && (
+                        <span
+                          className={`text-[11px] ${
+                            isSelected ? 'text-white/75' : 'text-slate-500'
+                          }`}
+                        >
+                          meta {target}d
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+              <div className="p-2 rounded-xl bg-slate-50">
+                <span className="text-[11px] text-slate-500 block">Sábados</span>
+                <span className="text-sm font-bold font-mono tabular-nums text-slate-900">
+                  {saturdayCount}
+                </span>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-50">
+                <span className="text-[11px] text-slate-500 block">Feriados</span>
+                <span className="text-sm font-bold font-mono tabular-nums text-slate-900">
+                  {holidays.length}
+                </span>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-50">
+                <span className="text-[11px] text-slate-500 block">Conflitos</span>
+                <span
+                  className={`text-sm font-bold font-mono tabular-nums ${
+                    parsedResult.holidayConflicts.length > 0 ? 'text-amber-700' : 'text-slate-900'
+                  }`}
+                >
+                  {parsedResult.holidayConflicts.length}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Coluna Direita: Grade Mensal Clicável e Dinâmica */}
+          <section className="lg:col-span-8 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3.5">
+            {/* Barra do Mês + Modo de Clique */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisualCalendarMonth((prev) => (prev <= 1 ? 12 : prev - 1))
+                  }
+                  aria-label="Mês anterior"
+                  className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Pré-visualização Cronológica ({filteredPreviewDays.length} de {parsedResult.totalCount} Dias)
+                  <h3 className="text-base sm:text-lg font-bold text-slate-950 leading-tight">
+                    {selectedMonthName} {selectedYear}
                   </h3>
-                  <p className="text-xs text-slate-500">
-                    Rolagem interna suave com filtro instantâneo por mês.
+                  <p className="text-xs text-slate-500 font-mono tabular-nums">
+                    {selectedMonthCount} dia(s) selecionado(s)
+                    {selectedMonthTarget > 0 ? ` · referência SME ${selectedMonthTarget}d` : ''}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisualCalendarMonth((prev) => (prev >= 12 ? 1 : prev + 1))
+                  }
+                  aria-label="Próximo mês"
+                  className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={selectedPreviewMonth}
-                    onChange={(e) => setSelectedPreviewMonth(e.target.value)}
-                    className="min-h-[38px] px-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 bg-white"
+              {/* Modo do Clique */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setClickMode('toggle_school_day')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                      clickMode === 'toggle_school_day'
+                        ? 'bg-white text-slate-950 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
                   >
-                    <option value="all">Todos os Meses ({parsedResult.totalCount}d)</option>
-                    {MONTH_NAMES_PT.map((m) => (
-                      <option key={m} value={m}>
-                        {m} ({parsedResult.monthlyDistribution[m] || 0}d)
-                      </option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="text"
-                    value={searchPreviewDate}
-                    onChange={(e) => setSearchPreviewDate(e.target.value)}
-                    placeholder="Buscar data..."
-                    className="min-h-[38px] px-2.5 rounded-lg border border-slate-200 text-xs text-slate-800 w-32 sm:w-40 outline-none"
-                  />
+                    Alternar Dia Letivo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClickMode('mark_holiday')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                      clickMode === 'mark_holiday'
+                        ? 'bg-white text-rose-800 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Marcar Feriado
+                  </button>
                 </div>
-              </div>
 
-              <div className="max-h-56 sm:max-h-64 overflow-y-auto overflow-x-auto bg-slate-50/40 rounded-xl overscroll-contain">
-                <table className="w-full min-w-[520px] text-left text-xs">
-                  <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
-                    <tr>
-                      <th className="py-2 px-3 w-12 font-mono text-center">Nº</th>
-                      <th className="py-2 px-3 w-28 font-mono">Data</th>
-                      <th className="py-2 px-3">Dia da Semana</th>
-                      <th className="py-2 px-3">Mês</th>
-                      <th className="py-2 px-3">Classificação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
-                    {filteredPreviewDays.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-5 text-center text-slate-400 font-sans text-xs">
-                          Nenhuma data corresponde aos filtros aplicados.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredPreviewDays.map((d, idx) => (
-                        <tr key={d.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-1.5 px-3 text-slate-400 text-center font-mono tabular-nums">
-                            {idx + 1}
-                          </td>
-                          <td className="py-1.5 px-3 font-semibold text-slate-900 font-mono tabular-nums">
-                            {d.date}
-                          </td>
-                          <td className="py-1.5 px-3 text-slate-700 font-sans">{d.dayOfWeek}</td>
-                          <td className="py-1.5 px-3 text-slate-600 font-sans">{d.month}</td>
-                          <td className="py-1.5 px-3 font-sans">
-                            {d.isSaturday ? (
-                              <span className="text-indigo-800 font-semibold">
-                                Sábado Letivo Temático
-                              </span>
-                            ) : d.holidayConflict ? (
-                              <span className="text-amber-800 font-medium">
-                                {d.holidayConflict}
-                              </span>
-                            ) : (
-                              <span className="text-slate-700">Dia Letivo Regular</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                {isAdmin && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleFillSelectedMonth}
+                      title="Adicionar todos os dias úteis (seg–sex) não feriados deste mês"
+                      className="min-h-[34px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      Preencher Úteis
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearSelectedMonth}
+                      title="Remover todas as datas selecionadas deste mês"
+                      className="min-h-[34px] px-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      Limpar Mês
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
 
-        {/* --------------------------------------------------------------------- */}
-        {/* ABA 2: FERIADOS & RECESSOS                                            */}
-        {/* --------------------------------------------------------------------- */}
-        {activeTab === 'feriados' && (
-          <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">
-                  Feriados Oficiais e Recessos Escolares ({holidays.length})
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Datas não-letivas com detecção automática de conflitos com os 200 dias.
-                </p>
-              </div>
+            {/* Grade Clicável 7 Colunas */}
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-7 gap-1.5 min-w-[520px]">
+                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((dayName, idx) => (
+                  <div
+                    key={dayName}
+                    className={`py-2 text-center text-xs font-semibold border-b border-slate-200 ${
+                      idx === 0 || idx === 6 ? 'text-slate-400' : 'text-slate-600'
+                    }`}
+                  >
+                    {dayName}
+                  </div>
+                ))}
 
-              <button
-                type="button"
-                onClick={handleOpenAddHoliday}
-                disabled={!isAdmin}
-                className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors duration-100 disabled:opacity-50 cursor-pointer self-start sm:self-auto"
-              >
-                <span className="material-symbols-outlined text-[16px]">add</span>
-                <span>Novo Feriado</span>
-              </button>
-            </div>
+                {visualMonthDays.map((slot) => {
+                  if (slot.isEmpty) {
+                    return <div key={slot.id} className="min-h-[64px] rounded-xl bg-slate-50/40" />;
+                  }
 
-            <div className="max-h-80 overflow-y-auto overflow-x-auto bg-slate-50/40 rounded-xl overscroll-contain">
-              <table className="w-full min-w-[520px] text-left text-xs">
-                <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
-                  <tr>
-                    <th className="py-2 px-3 w-28 font-mono">Data</th>
-                    <th className="py-2 px-3">Nome / Motivo</th>
-                    <th className="py-2 px-3 w-36">Âmbito</th>
-                    <th className="py-2 px-3 w-32">Status 200 Dias</th>
-                    <th className="py-2 px-3 w-20 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {holidays.map((h) => {
-                    const isConflict = parsedResult.validDates.includes(h.date);
-                    return (
-                      <tr key={h.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-2 px-3 font-mono font-semibold text-slate-900 tabular-nums">
-                          {h.date}
-                        </td>
-                        <td className="py-2 px-3 font-medium text-slate-800">{h.name}</td>
-                        <td className="py-2 px-3 text-slate-600 capitalize">
-                          {h.type.replace('_', ' ')}
-                        </td>
-                        <td className="py-2 px-3">
-                          {isConflict ? (
-                            <span className="text-rose-700 font-medium inline-flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[13px]">warning</span>
-                              Dia Letivo Ativo
-                            </span>
-                          ) : (
-                            <span className="text-slate-400">Sem conflito</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditHoliday(h)}
-                              disabled={!isAdmin}
-                              className="p-1 text-slate-500 hover:text-slate-900 rounded disabled:opacity-40 cursor-pointer"
-                              title="Editar"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">edit</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteHoliday(h)}
-                              disabled={!isAdmin}
-                              className="p-1 text-slate-500 hover:text-rose-600 rounded disabled:opacity-40 cursor-pointer"
-                              title="Excluir"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">delete</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                  let cellClass =
+                    'bg-white border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-50';
+                  let statusLabel = 'Não letivo';
 
-        {/* --------------------------------------------------------------------- */}
-        {/* ABA 3: GRADE VISUAL ANUAL                                             */}
-        {/* --------------------------------------------------------------------- */}
-        {activeTab === 'calendario' && (
-          <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">
-                  Grade Visual do Calendário Escolar {calendarConfig.year || 2027}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Selecione o mês para inspecionar os dias letivos e feriados.
-                </p>
-              </div>
+                  if (slot.holiday && slot.isSchoolDay) {
+                    cellClass =
+                      'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-200/70';
+                    statusLabel = `Conflito: ${slot.holiday.name}`;
+                  } else if (slot.holiday) {
+                    cellClass = 'bg-rose-50 border-rose-200 text-rose-900 hover:bg-rose-100/70';
+                    statusLabel = slot.holiday.name;
+                  } else if (slot.schoolDayType === 'sabado_letivo') {
+                    cellClass =
+                      'bg-indigo-600 border-indigo-700 text-white hover:bg-indigo-700';
+                    statusLabel = 'Sáb. Letivo';
+                  } else if (slot.isSchoolDay) {
+                    cellClass =
+                      'bg-[#111827] border-[#111827] text-white hover:bg-[#1f2937]';
+                    statusLabel = 'Dia Letivo';
+                  } else if (slot.isWeekend) {
+                    cellClass =
+                      'bg-slate-50/80 border-slate-200/60 text-slate-400 hover:border-slate-300 hover:text-slate-700';
+                    statusLabel = slot.dayOfWeek.startsWith('Sáb') ? 'Sábado' : 'Domingo';
+                  }
 
-              <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-                {MONTH_NAMES_PT.map((m, idx) => {
-                  const monthNum = idx + 1;
-                  const isSelected = visualCalendarMonth === monthNum;
                   return (
                     <button
-                      key={m}
+                      key={slot.id}
                       type="button"
-                      onClick={() => setVisualCalendarMonth(monthNum)}
-                      className={`min-h-[36px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors duration-100 cursor-pointer shrink-0 ${
-                        isSelected
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
+                      onClick={() => handleCalendarDayClick(slot)}
+                      title={`${slot.dateStr} (${slot.dayOfWeek}) — ${statusLabel}`}
+                      className={`min-h-[64px] p-2 rounded-xl border flex flex-col justify-between text-left transition-colors duration-100 cursor-pointer select-none ${cellClass}`}
                     >
-                      {m.substring(0, 3)}
+                      <div className="flex items-center justify-between gap-1 w-full">
+                        <span className="font-mono text-xs font-bold tabular-nums">
+                          {slot.dayNumber}
+                        </span>
+                        {slot.isSchoolDay && !slot.holiday && (
+                          <Check className="w-3 h-3 opacity-80 shrink-0" />
+                        )}
+                      </div>
+                      <span className="text-[11px] leading-tight line-clamp-2 break-words w-full opacity-90">
+                        {statusLabel}
+                      </span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-              <span className="text-base font-bold text-slate-900">
-                {MONTH_NAMES_PT[visualCalendarMonth - 1]} {calendarConfig.year || 2027}
+            {/* Legenda Limpa Sem Pílulas */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-2 border-t border-slate-100 text-xs text-slate-600">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#111827] inline-block" />
+                Dia Letivo Regular
               </span>
-              <span className="text-xs text-slate-600 font-mono">
-                Dias Letivos:{' '}
-                <strong>
-                  {parsedResult.monthlyDistribution[MONTH_NAMES_PT[visualCalendarMonth - 1]] || 0}d
-                </strong>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-indigo-600 inline-block" />
+                Sábado Letivo
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-rose-100 border border-rose-300 inline-block" />
+                Feriado / Recesso
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-slate-100 border border-slate-300 inline-block" />
+                Não Letivo
               </span>
             </div>
+          </section>
+        </div>
+      )}
 
-            <div className="overflow-x-auto">
-              <div className="grid grid-cols-7 gap-1 text-center text-xs min-w-[460px]">
-              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((dayName, idx) => (
-                <div
-                  key={dayName}
-                  className={`py-1.5 font-semibold text-slate-500 border-b border-slate-200 ${
-                    idx === 0 || idx === 6 ? 'bg-slate-50/70' : ''
-                  }`}
+      {/* ===================================================================== */}
+      {/* ABA 2: EDITOR EM LOTE (SINCRONIZADO 2 VIAS COM O PLANEJADOR VISUAL)   */}
+      {/* ===================================================================== */}
+      {activeTab === 'editor' && (
+        <div className="space-y-4">
+          <section className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Editor em Lote de Datas (DD/MM/AAAA)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Sincronizado em tempo real com o Planejador Visual. Cole uma data por linha ou exporte o calendário atual.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyDatesList}
+                  className="min-h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  {dayName}
-                </div>
-              ))}
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copiar Datas</span>
+                </button>
 
-              {visualMonthDays.map((slot) => {
-                if (slot.isEmpty) {
-                  return <div key={slot.id} className="min-h-14 p-1 bg-slate-50/30 rounded-md" />;
-                }
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="min-h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Exportar CSV</span>
+                </button>
 
-                let badgeColor = 'bg-white border-slate-200 text-slate-800';
-                if (slot.holiday) {
-                  badgeColor = 'bg-rose-50 border-rose-300 text-rose-900';
-                } else if (slot.schoolDayType === 'sabado_letivo') {
-                  badgeColor = 'bg-indigo-50 border-indigo-300 text-indigo-900 font-semibold';
-                } else if (slot.isSchoolDay) {
-                  badgeColor = 'bg-slate-900 text-white font-semibold border-slate-900';
-                } else if (slot.isWeekend) {
-                  badgeColor = 'bg-slate-50 border-slate-200/60 text-slate-400';
-                }
-
-                return (
-                  <div
-                    key={slot.id}
-                    className={`min-h-14 p-1.5 rounded-md border flex flex-col justify-between transition-colors duration-100 ${badgeColor}`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="font-mono text-xs tabular-nums">{slot.dayNumber}</span>
-                      {slot.isSchoolDay && (
-                        <span className="text-[11px] font-sans opacity-90">Letivo</span>
-                      )}
+                {isAdmin && rawDatesInput.trim().length > 0 && (
+                  confirmClearInput ? (
+                    <div className="inline-flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          applyDatesList([], holidays, true);
+                          setConfirmClearInput(false);
+                        }}
+                        className="min-h-[36px] px-3 rounded-xl bg-rose-600 text-white text-xs font-semibold cursor-pointer"
+                      >
+                        Confirmar Limpeza
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmClearInput(false)}
+                        className="min-h-[36px] px-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
                     </div>
-                    <div className="text-[11px] break-words text-left mt-0.5 leading-tight">
-                      {slot.holiday ? slot.holiday.name : slot.schoolDayType === 'sabado_letivo' ? 'Sábado' : ''}
-                    </div>
-                  </div>
-                );
-              })}
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmClearInput(true)}
+                      className="min-h-[36px] px-3 rounded-xl text-rose-700 hover:bg-rose-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Limpar Lista</span>
+                    </button>
+                  )
+                )}
               </div>
             </div>
-          </div>
-        )}
 
-        {/* --------------------------------------------------------------------- */}
-        {/* ABA 4: AUDITORIA                                                      */}
-        {/* --------------------------------------------------------------------- */}
-        {activeTab === 'auditoria' && (
-          <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3">
-            <div>
-              <h2 className="text-sm font-bold text-slate-900">
-                Histórico Sequencial de Auditoria ({auditLogs.length} Registros)
-              </h2>
-              <p className="text-xs text-slate-500">
-                Registro auditável de todas as publicações de dias letivos e alterações de feriados.
-              </p>
+            <div className="relative">
+              <textarea
+                value={rawDatesInput}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setRawDatesInput(val);
+                  handleValidateNow(val, holidays, true);
+                }}
+                onKeyDown={handleTextareaKeyDown}
+                disabled={!isAdmin}
+                placeholder={`03/02/${selectedYear}\n04/02/${selectedYear}\n05/02/${selectedYear}...`}
+                className="w-full h-48 font-mono text-xs p-3.5 rounded-2xl border border-slate-200 focus:border-slate-900 outline-none leading-relaxed text-slate-900 bg-slate-50/50 resize-y disabled:bg-slate-100 disabled:text-slate-500"
+              />
             </div>
 
-            <div className="max-h-80 overflow-x-auto overflow-y-auto bg-slate-50/50 rounded-xl overscroll-contain">
-              <table className="w-full min-w-[600px] text-left text-xs">
-                <thead className="sticky top-0 bg-slate-100 text-slate-700 font-semibold z-10">
+            {parsedResult.hasErrors && (
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 space-y-1.5 text-xs">
+                <p className="font-semibold text-rose-900">
+                  Erros detectados ({parsedResult.duplicateEntries.length} duplicidades ·{' '}
+                  {parsedResult.invalidEntries.length} formatos inválidos):
+                </p>
+                {parsedResult.duplicateEntries.length > 0 && (
+                  <p className="text-rose-800 break-words">
+                    Duplicadas:{' '}
+                    {parsedResult.duplicateEntries
+                      .map((d) => `${d.date} (${d.occurrences}x)`)
+                      .join(', ')}
+                  </p>
+                )}
+                {parsedResult.invalidEntries.length > 0 && (
+                  <div className="max-h-28 overflow-y-auto space-y-0.5 font-mono bg-white p-2 rounded-xl border border-rose-200">
+                    {parsedResult.invalidEntries.map((inv, idx) => (
+                      <div key={idx} className="text-rose-800 break-words">
+                        Linha {inv.line}: "{inv.raw}" — {inv.reason}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Pré-visualização Cronológica */}
+          <section className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Lista Cronológica ({filteredPreviewDays.length} de {parsedResult.totalCount} Dias)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Filtre por mês ou pesquise qualquer data para conferência rápida.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={selectedPreviewMonth}
+                  onChange={(e) => setSelectedPreviewMonth(e.target.value)}
+                  className="min-h-[36px] px-3 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-white"
+                >
+                  <option value="all">Todos os Meses ({parsedResult.totalCount}d)</option>
+                  {MONTH_NAMES_PT.map((m) => (
+                    <option key={m} value={m}>
+                      {m} ({parsedResult.monthlyDistribution[m] || 0}d)
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={searchPreviewDate}
+                  onChange={(e) => setSearchPreviewDate(e.target.value)}
+                  placeholder="Filtrar data ou dia..."
+                  className="min-h-[36px] px-3 rounded-xl border border-slate-200 text-xs text-slate-800 w-40 outline-none focus:border-slate-900"
+                />
+              </div>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto overflow-x-auto bg-slate-50/40 rounded-2xl border border-slate-200/60">
+              <table className="w-full min-w-[520px] text-left text-xs">
+                <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
                   <tr>
-                    <th className="py-2 px-3 w-36 font-mono">Data/Hora</th>
-                    <th className="py-2 px-3 w-56">Responsável</th>
-                    <th className="py-2 px-3 w-40">Operação</th>
-                    <th className="py-2 px-3 w-28 font-mono">Dias</th>
-                    <th className="py-2 px-3">Detalhes</th>
+                    <th className="py-2.5 px-3 w-12 font-mono text-center">Nº</th>
+                    <th className="py-2.5 px-3 w-28 font-mono">Data</th>
+                    <th className="py-2.5 px-3">Dia da Semana</th>
+                    <th className="py-2.5 px-3">Mês</th>
+                    <th className="py-2.5 px-3">Classificação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {auditLogs.length === 0 ? (
+                  {filteredPreviewDays.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-5 text-center text-slate-400">
-                        Nenhum registro de auditoria gravado ainda.
+                      <td colSpan={5} className="py-6 text-center text-slate-400 text-xs">
+                        Nenhuma data corresponde aos filtros aplicados.
                       </td>
                     </tr>
                   ) : (
-                    auditLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-2 px-3 font-mono text-slate-600 tabular-nums text-xs">
-                          {new Date(log.timestampISO).toLocaleString('pt-BR')}
+                    filteredPreviewDays.map((d, idx) => (
+                      <tr key={d.id} className="hover:bg-slate-50">
+                        <td className="py-2 px-3 text-slate-400 text-center font-mono tabular-nums">
+                          {idx + 1}
                         </td>
+                        <td className="py-2 px-3 font-semibold text-slate-900 font-mono tabular-nums">
+                          {d.date}
+                        </td>
+                        <td className="py-2 px-3 text-slate-700">{d.dayOfWeek}</td>
+                        <td className="py-2 px-3 text-slate-600">{d.month}</td>
                         <td className="py-2 px-3">
-                          <span className="font-semibold text-slate-900 block break-words">{log.adminName}</span>
-                          <span className="text-xs text-slate-500 font-mono block break-all">
-                            {log.adminEmail}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 font-medium text-slate-800">
-                          {log.action === 'UPDATE_200_DAYS'
-                            ? 'Publicação de 200 Dias'
-                            : log.action === 'ADD_HOLIDAY'
-                            ? 'Adição de Feriado'
-                            : log.action === 'EDIT_HOLIDAY'
-                            ? 'Edição de Feriado'
-                            : log.action === 'DELETE_HOLIDAY'
-                            ? 'Exclusão de Feriado'
-                            : log.action === 'RESTORE_DEFAULT'
-                            ? 'Restauração Padrão'
-                            : 'Operação'}
-                        </td>
-                        <td className="py-2 px-3 font-mono tabular-nums text-slate-700 text-xs">
-                          {log.previousDaysCount !== undefined && log.newDaysCount !== undefined ? (
-                            <span>
-                              {log.previousDaysCount}d → <strong>{log.newDaysCount}d</strong>
-                            </span>
+                          {d.isSaturday ? (
+                            <span className="text-indigo-800 font-semibold">Sábado Letivo</span>
+                          ) : d.holidayConflict ? (
+                            <span className="text-amber-800 font-medium">{d.holidayConflict}</span>
                           ) : (
-                            '—'
+                            <span className="text-slate-700">Dia Letivo Regular</span>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-slate-600 text-xs break-words">{log.details}</td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-      </main>
-
-      {/* ========================================================================= */}
-      {/* 3. RODAPÉ DE AÇÃO FIXO (STICKY FOOTER SHRINK-0) — SEMPRE VISÍVEL          */}
-      {/* ========================================================================= */}
-      <footer className="shrink-0 sticky bottom-0 bg-white/95 backdrop-blur-sm px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200/90 shadow-sm z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
-        {/* Zona Esquerda: Indicadores e Status */}
-        <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-          <div className="flex items-baseline gap-1 shrink-0">
-            <span className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-slate-950">
-              {parsedResult.totalCount}
-            </span>
-            <span className="text-xs text-slate-500 font-mono">/ 200 dias</span>
-          </div>
-
-          <span
-            className={`text-xs font-semibold px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 ${
-              parsedResult.isExactly200 && !parsedResult.hasErrors
-                ? 'bg-emerald-100 text-emerald-900 border border-emerald-200'
-                : parsedResult.hasErrors
-                ? 'bg-rose-100 text-rose-900 border border-rose-200'
-                : 'bg-amber-100 text-amber-900 border border-amber-200'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[15px] shrink-0">
-              {parsedResult.isExactly200 && !parsedResult.hasErrors
-                ? 'check_circle'
-                : parsedResult.hasErrors
-                ? 'error'
-                : 'schedule'}
-            </span>
-            <span>
-              {parsedResult.isExactly200 && !parsedResult.hasErrors
-                ? 'Meta de 200 Dias Atingida'
-                : parsedResult.hasErrors
-                ? 'Corrija os erros'
-                : parsedResult.remainingCount > 0
-                ? `Faltam ${parsedResult.remainingCount} dias`
-                : `Excesso de ${parsedResult.exceededCount} dias`}
-            </span>
-          </span>
-
-          <span className="text-xs text-slate-500 hidden md:inline">
-            · 40 turmas vinculadas · Base Oficial SED
-          </span>
+          </section>
         </div>
+      )}
 
-        {/* Zona Direita: Botões de Ação Imediata */}
-        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto sm:ml-auto">
-          {activeTab === 'editor' && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  const res = handleValidateNow();
-                  if (res.isExactly200 && !res.hasErrors) {
-                    toast.success('200 dias válidos identificados.');
-                  } else if (res.hasErrors) {
-                    toast.error('Corrija os erros apontados.');
-                  } else {
-                    toast.info(`Total: ${res.totalCount}/200 dias.`);
-                  }
-                }}
-                className="flex-1 sm:flex-initial min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors border border-slate-200 cursor-pointer whitespace-normal text-center"
-              >
-                <span className="material-symbols-outlined text-[16px] shrink-0">sync</span>
-                <span>Processar</span>
-                <kbd className="hidden sm:inline px-1.5 py-0.5 text-[10px] bg-slate-200 rounded font-mono">
-                  Ctrl+↵
-                </kbd>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsConfirmModalOpen(true)}
-                disabled={!isAdmin || !parsedResult.isExactly200 || parsedResult.hasErrors || isSaving}
-                className="flex-1 sm:flex-initial min-h-[40px] px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-normal text-center"
-              >
-                <span className="material-symbols-outlined text-[18px] shrink-0">verified</span>
-                <span>Confirmar &amp; Publicar (200 Dias)</span>
-              </button>
-            </>
-          )}
-
-          {activeTab === 'feriados' && (
-            <button
-              type="button"
-              onClick={handleOpenAddHoliday}
-              disabled={!isAdmin}
-              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-normal text-center"
-            >
-              <span className="material-symbols-outlined text-[16px] shrink-0">add</span>
-              <span>Novo Feriado</span>
-            </button>
-          )}
-
-          {activeTab === 'calendario' && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('editor')}
-              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-normal text-center"
-            >
-              <span className="material-symbols-outlined text-[16px] shrink-0">edit_note</span>
-              <span>Abrir Editor de Datas</span>
-            </button>
-          )}
-
-          {activeTab === 'auditoria' && (
-            <span className="text-xs text-slate-500 font-mono">
-              Registros criptografados no servidor
-            </span>
-          )}
-        </div>
-      </footer>
-
-      {/* ========================================================================= */}
-      {/* MODAL: CONFIRMAR PUBLICAÇÃO — RESPONSIVO, SEM SCROLL INFINITO             */}
-      {/* ========================================================================= */}
-      {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/65 backdrop-blur-xs overflow-hidden animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 flex flex-col max-h-[85vh] overflow-hidden animate-scale-up">
-            {/* Header Fixo */}
-            <div className="shrink-0 p-4 sm:p-5 border-b border-slate-100 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-2xl">verified</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-bold text-slate-950 break-words leading-snug">
-                  Confirmar e Publicar Calendário Oficial
-                </h3>
-                <p className="text-xs text-slate-500 font-medium break-words">
-                  Ano Letivo {calendarConfig.year || 2027} · {SCHOOL_NAME}
-                </p>
-              </div>
-            </div>
-
-            {/* Conteúdo com Scroll Contido Interno */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 overscroll-contain text-xs text-slate-700 leading-normal">
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <p className="font-bold text-slate-900 text-sm">
-                  Homologação de exatos 200 dias letivos:
-                </p>
-                <ul className="list-disc pl-5 space-y-1 text-slate-600 text-xs">
-                  <li>Replicado automaticamente para as 40 turmas da escola.</li>
-                  <li>Base oficial para cálculo de frequência escolar e relatórios SED.</li>
-                  <li className="break-words">
-                    Gravado sob o usuário: <span className="font-mono font-bold text-slate-900 break-all">{userEmail}</span>.
-                  </li>
-                </ul>
-              </div>
+      {/* ===================================================================== */}
+      {/* ABA 3: FERIADOS & RECESSOS                                            */}
+      {/* ===================================================================== */}
+      {activeTab === 'feriados' && (
+        <section className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Feriados Oficiais e Recessos ({filteredHolidays.length})
+              </h3>
               <p className="text-xs text-slate-500">
-                Após a homologação, as datas letivas passam a vigorar imediatamente em todo o sistema.
+                Conflitos com dias letivos ativos são sinalizados e podem ser removidos automaticamente.
               </p>
             </div>
 
-            {/* Rodapé Sticky Sempre Visível Sem Scroll */}
-            <div className="shrink-0 p-4 border-t border-slate-100 bg-white/95 backdrop-blur-xs sticky bottom-0 flex flex-wrap items-center justify-end gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={holidayScopeFilter}
+                onChange={(e) => setHolidayScopeFilter(e.target.value as 'all' | HolidayScopeType)}
+                className="min-h-[36px] px-3 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-white"
+              >
+                <option value="all">Todos os Âmbitos</option>
+                <option value="municipal">Municipal (Jundiaí)</option>
+                <option value="estadual">Estadual (SP)</option>
+                <option value="nacional">Nacional</option>
+                <option value="recesso">Recesso Escolar</option>
+                <option value="ponto_facultativo">Ponto Facultativo</option>
+              </select>
+
+              {isAdmin && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleRestoreDefaultHolidays}
+                    className="min-h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Restaurar Padrão SME</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddHoliday('')}
+                    className="min-h-[36px] px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Novo Feriado</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="max-h-96 overflow-y-auto overflow-x-auto bg-slate-50/40 rounded-2xl border border-slate-200/60">
+            <table className="w-full min-w-[540px] text-left text-xs">
+              <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
+                <tr>
+                  <th className="py-2.5 px-3 w-28 font-mono">Data</th>
+                  <th className="py-2.5 px-3">Descrição</th>
+                  <th className="py-2.5 px-3 w-36">Âmbito</th>
+                  <th className="py-2.5 px-3 w-36">Status 200 Dias</th>
+                  <th className="py-2.5 px-3 w-28 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredHolidays.map((h) => {
+                  const isConflict = parsedResult.validDates.includes(h.date);
+                  const isConfirmingDel = confirmDeleteHolidayId === h.id;
+                  return (
+                    <tr key={h.id} className="hover:bg-slate-50">
+                      <td className="py-2 px-3 font-mono font-semibold text-slate-900 tabular-nums">
+                        {h.date}
+                      </td>
+                      <td className="py-2 px-3 font-medium text-slate-800">{h.name}</td>
+                      <td className="py-2 px-3 text-slate-600 capitalize">
+                        {h.type.replace('_', ' ')}
+                      </td>
+                      <td className="py-2 px-3">
+                        {isConflict ? (
+                          <span className="text-rose-700 font-semibold inline-flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Conflito ativo
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Sem conflito</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        {isConfirmingDel ? (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteHoliday(h)}
+                              className="px-2 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold cursor-pointer"
+                            >
+                              Excluir
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteHolidayId(null)}
+                              className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 text-[11px] font-semibold cursor-pointer"
+                            >
+                              Não
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditHoliday(h)}
+                              disabled={!isAdmin}
+                              className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg disabled:opacity-40 cursor-pointer"
+                              title="Editar"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteHolidayId(h.id)}
+                              disabled={!isAdmin}
+                              className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg disabled:opacity-40 cursor-pointer"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* ===================================================================== */}
+      {/* ABA 4: AUDITORIA                                                      */}
+      {/* ===================================================================== */}
+      {activeTab === 'auditoria' && (
+        <section className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">
+              Histórico de Auditoria ({auditLogs.length} registros)
+            </h3>
+            <p className="text-xs text-slate-500">
+              Registro sequencial das publicações dos 200 dias e movimentações de feriados.
+            </p>
+          </div>
+
+          <div className="max-h-96 overflow-x-auto overflow-y-auto bg-slate-50/40 rounded-2xl border border-slate-200/60">
+            <table className="w-full min-w-[600px] text-left text-xs">
+              <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
+                <tr>
+                  <th className="py-2.5 px-3 w-36 font-mono">Data/Hora</th>
+                  <th className="py-2.5 px-3 w-56">Responsável</th>
+                  <th className="py-2.5 px-3 w-40">Operação</th>
+                  <th className="py-2.5 px-3 w-24 font-mono">Dias</th>
+                  <th className="py-2.5 px-3">Detalhes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {auditLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-slate-400">
+                      Nenhum registro de auditoria gravado ainda.
+                    </td>
+                  </tr>
+                ) : (
+                  auditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50">
+                      <td className="py-2 px-3 font-mono text-slate-600 tabular-nums">
+                        {new Date(log.timestampISO).toLocaleString('pt-BR')}
+                      </td>
+                      <td className="py-2 px-3">
+                        <span className="font-semibold text-slate-900 block break-words">
+                          {log.adminName}
+                        </span>
+                        <span className="text-slate-500 font-mono block break-all">
+                          {log.adminEmail}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 font-medium text-slate-800">
+                        {log.action === 'UPDATE_200_DAYS'
+                          ? 'Publicação 200 Dias'
+                          : log.action === 'ADD_HOLIDAY'
+                          ? 'Novo Feriado'
+                          : log.action === 'EDIT_HOLIDAY'
+                          ? 'Edição de Feriado'
+                          : log.action === 'DELETE_HOLIDAY'
+                          ? 'Exclusão de Feriado'
+                          : 'Operação'}
+                      </td>
+                      <td className="py-2 px-3 font-mono tabular-nums text-slate-700">
+                        {log.previousDaysCount !== undefined && log.newDaysCount !== undefined
+                          ? `${log.previousDaysCount}d → ${log.newDaysCount}d`
+                          : '—'}
+                      </td>
+                      <td className="py-2 px-3 text-slate-600 break-words">{log.details}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* MODAL: CONFIRMAR PUBLICAÇÃO DOS 200 DIAS */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-scale-up">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-slate-950">
+                    Publicar Calendário Oficial
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Ano Letivo {selectedYear} · {SCHOOL_NAME}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-800 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3 text-xs text-slate-700 leading-relaxed">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                <p className="font-bold text-slate-900">
+                  Homologação oficial de 200 dias letivos:
+                </p>
+                <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                  <li>Atualiza imediatamente a carga letiva mensal das {classes.length} turmas.</li>
+                  <li>Recalcula os limites LDB de presença e faltas em toda a escola.</li>
+                  <li className="break-all">
+                    Responsável: <span className="font-mono font-semibold text-slate-900">{userEmail}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsConfirmModalOpen(false)}
                 disabled={isSaving}
-                className="min-h-[42px] px-4 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                className="min-h-[40px] px-4 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1435,82 +1674,71 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 type="button"
                 onClick={handleConfirmSaveCalendar}
                 disabled={isSaving}
-                className="flex-1 sm:flex-initial min-h-[42px] px-5 py-2 text-xs sm:text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors inline-flex items-center justify-center gap-2 cursor-pointer shadow-xs whitespace-normal text-center"
+                className="min-h-[40px] px-5 text-xs font-bold text-white bg-[#047857] hover:bg-[#065f46] rounded-xl inline-flex items-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                {isSaving ? (
-                  <>
-                    <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
-                    <span>Gravando...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-[18px] text-emerald-400 shrink-0">done_all</span>
-                    <span>Confirmar Homologação (200 Dias)</span>
-                  </>
-                )}
+                <Check className="w-4 h-4" />
+                <span>{isSaving ? 'Publicando...' : 'Confirmar e Publicar'}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL: ADICIONAR / EDITAR FERIADO                                         */}
-      {/* ========================================================================= */}
+      {/* MODAL: ADICIONAR / EDITAR FERIADO */}
       {isHolidayModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/65 backdrop-blur-xs overflow-hidden animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
           <form
             onSubmit={handleSaveHoliday}
-            className="bg-white rounded-2xl max-w-sm sm:max-w-md w-full shadow-2xl border border-slate-200 flex flex-col max-h-[85vh] overflow-hidden animate-scale-up"
+            className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-scale-up"
           >
-            <div className="shrink-0 p-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm sm:text-base font-bold text-slate-950">
-                {editingHoliday ? 'Editar Feriado / Recesso' : 'Cadastrar Novo Feriado'}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-950">
+                {editingHoliday ? 'Editar Feriado / Recesso' : 'Novo Feriado / Recesso'}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsHolidayModalOpen(false)}
-                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 flex items-center justify-center cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-800 flex items-center justify-center cursor-pointer"
               >
-                <span className="material-symbols-outlined text-base">close</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs">
+            <div className="p-4 sm:p-5 space-y-3.5 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Data (formato DD/MM/AAAA)
+                  Data (DD/MM/AAAA)
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="20/11/2027"
+                  placeholder={`20/11/${selectedYear}`}
                   value={holidayFormDate}
                   onChange={(e) => setHolidayFormDate(e.target.value)}
-                  className="w-full font-mono px-3 py-2 border border-slate-300 rounded-xl outline-none focus:border-slate-900 text-xs sm:text-sm font-medium"
+                  className="w-full font-mono px-3 py-2.5 border border-slate-300 rounded-xl outline-none focus:border-slate-900 text-sm"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Nome / Motivo do Feriado
+                  Nome / Descrição
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Dia da Consciência Negra"
+                  placeholder="Ex: Consciência Negra / Recesso SME"
                   value={holidayFormName}
                   onChange={(e) => setHolidayFormName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:border-slate-900 text-xs sm:text-sm font-medium"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl outline-none focus:border-slate-900 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Classificação / Âmbito</label>
+                <label className="block font-semibold text-slate-700 mb-1">Âmbito</label>
                 <select
                   value={holidayFormType}
                   onChange={(e) => setHolidayFormType(e.target.value as HolidayScopeType)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:border-slate-900 bg-white text-xs sm:text-sm font-medium"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl outline-none focus:border-slate-900 bg-white text-sm"
                 >
                   <option value="municipal">Municipal (Jundiaí / SP)</option>
                   <option value="estadual">Estadual (São Paulo)</option>
@@ -1519,19 +1747,29 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   <option value="ponto_facultativo">Ponto Facultativo</option>
                 </select>
               </div>
+
+              <label className="flex items-center gap-2 pt-1 text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={removeHolidayFromSchoolDays}
+                  onChange={(e) => setRemoveHolidayFromSchoolDays(e.target.checked)}
+                  className="w-4 h-4 accent-[#047857] rounded cursor-pointer"
+                />
+                <span>Remover automaticamente esta data dos dias letivos</span>
+              </label>
             </div>
 
-            <div className="shrink-0 p-3 sm:p-4 border-t border-slate-100 bg-white/95 backdrop-blur-xs flex flex-wrap items-center justify-end gap-2">
+            <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsHolidayModalOpen(false)}
-                className="min-h-[40px] px-4 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                className="min-h-[40px] px-4 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="flex-1 sm:flex-initial min-h-[40px] px-5 py-2 text-xs sm:text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors cursor-pointer whitespace-normal text-center"
+                className="min-h-[40px] px-5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl cursor-pointer"
               >
                 {editingHoliday ? 'Salvar Alterações' : 'Cadastrar Feriado'}
               </button>

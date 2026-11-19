@@ -140,6 +140,42 @@ export interface PhotoCacheStorageStats {
   memoryObjectUrlsCount: number;
 }
 
+export interface ClassPhotoStorageBreakdown {
+  classId: string;
+  className: string;
+  turmaAbrev?: string;
+  shift: string;
+  totalStudents: number;
+  cachedStudentsCount: number;
+  cachedBytes: number;
+  canonicalBlobsCount: number;
+}
+
+export interface PhotoCacheDetailedUsageReport {
+  totalCachedBytes: number;
+  maxBudgetBytes: number;
+  maxBudgetRecords: number;
+  urlRecordsCount: number;
+  blobRecordsCount: number;
+  canonicalBlobsCount: number;
+  deduplicatedAliasCount: number;
+  activeClassesBytes: number;
+  activeClassesBlobCount: number;
+  legacyBytes: number;
+  legacyUrlRecordsCount: number;
+  legacyBlobRecordsCount: number;
+  legacyCanonicalBlobsCount: number;
+  browserEstimateUsageBytes?: number;
+  browserEstimateQuotaBytes?: number;
+  classBreakdown: ClassPhotoStorageBreakdown[];
+}
+
+export interface PrunePhotoCacheResult {
+  removedUrlRecords: number;
+  removedBlobRecords: number;
+  freedBytes: number;
+}
+
 let dbPromise: Promise<IDBDatabase> | null = null;
 let warmupPromise: Promise<void> | null = null;
 let isCacheWarmedUp = false;
@@ -1725,6 +1761,542 @@ export const getPhotoCacheStorageStats = async (): Promise<PhotoCacheStorageStat
   }
 };
 
+/**
+ * Constrói o mapa de chaves ativas pertencentes às turmas atuais do sistema para distinguir
+ * fotos ativas de caches órfãos/antigos (turmas anteriores, alunos desligados ou URLs substituídas).
+ */
+const buildActiveStudentCacheIndex = (activeClasses: ClassGroup[]) => {
+  const activeStudentKeys = new Set<string>();
+  const activeBlobKeys = new Set<string>();
+  const classToStudentKeys = new Map<string, Set<string>>();
+  const classToBlobKeys = new Map<string, Set<string>>();
+  const studentPrimaryUrlMap = new Map<string, Set<string>>();
+
+  for (const cls of activeClasses || []) {
+    const clsStudentKeys = new Set<string>();
+    const clsBlobKeys = new Set<string>();
+
+    for (const st of cls.students || []) {
+      const studentName = st.estudante || st.name || '';
+      const sKeys = buildStudentPhotoLookupKeys({
+        studentId: st.id,
+        ra: st.ra,
+        name: studentName,
+      });
+      sKeys.forEach((k) => {
+        activeStudentKeys.add(k);
+        clsStudentKeys.add(k);
+      });
+
+      const urls = [st.photo, st.photoDriveUrl].filter((u): u is string => Boolean(u && u.trim()));
+      const bKeys = new Set<string>();
+      for (const u of urls) {
+        buildPhotoBlobCacheKeys(u, st.photoDriveId).forEach((bk) => {
+          activeBlobKeys.add(bk);
+          clsBlobKeys.add(bk);
+          bKeys.add(bk);
+        });
+      }
+      if (st.photoDriveId) {
+        const dk = `drive:${st.photoDriveId.trim()}`;
+        activeBlobKeys.add(dk);
+        clsBlobKeys.add(dk);
+        bKeys.add(dk);
+      }
+
+      if (bKeys.size > 0) {
+        sKeys.forEach((sk) => studentPrimaryUrlMap.set(sk, bKeys));
+      }
+    }
+
+    classToStudentKeys.set(cls.id, clsStudentKeys);
+    classToBlobKeys.set(cls.id, clsBlobKeys);
+  }
+
+  return {
+    activeStudentKeys,
+    activeBlobKeys,
+    classToStudentKeys,
+    classToBlobKeys,
+    studentPrimaryUrlMap,
+  };
+};
+
+const revokeUnusedMemoryObjectUrls = () => {
+  const stillReferenced = new Set<string>(memoryBlobObjectUrlMap.values());
+  memoryShaToObjectUrlMap.forEach((objUrl, sha) => {
+    if (!stillReferenced.has(objUrl)) {
+      memoryShaToObjectUrlMap.delete(sha);
+      memoryShaToCanonicalKeyMap.delete(sha);
+      try {
+        URL.revokeObjectURL(objUrl);
+      } catch {
+        // ignore
+      }
+    }
+  });
+};
+
+/**
+ * Inspeciona detalhadamente o uso real de armazenamento de fotos no IndexedDB,
+ * detalhando o consumo por turma atual vs registros de turmas antigas / órfãs.
+ */
+export const inspectDetailedPhotoCacheUsage = async (
+  activeClasses: ClassGroup[]
+): Promise<PhotoCacheDetailedUsageReport> => {
+  let browserEstimateUsageBytes: number | undefined;
+  let browserEstimateQuotaBytes: number | undefined;
+
+  if (typeof navigator !== 'undefined' && navigator.storage?.estimate) {
+    try {
+      const est = await navigator.storage.estimate();
+      if (typeof est.usage === 'number') browserEstimateUsageBytes = est.usage;
+      if (typeof est.quota === 'number') browserEstimateQuotaBytes = est.quota;
+    } catch {
+      // ignore
+    }
+  }
+
+  const activeIdx = buildActiveStudentCacheIndex(activeClasses);
+
+  let urlRows: StudentPhotoUrlRecord[] = [];
+  let blobRows: StudentPhotoBlobRecord[] = [];
+
+  try {
+    const db = await openPhotoCacheDb();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction([STORE_PHOTO_URLS, STORE_PHOTO_BLOBS], 'readonly');
+      const rUrls = tx.objectStore(STORE_PHOTO_URLS).getAll();
+      const rBlobs = tx.objectStore(STORE_PHOTO_BLOBS).getAll();
+      rUrls.onsuccess = () => {
+        urlRows = (rUrls.result || []) as StudentPhotoUrlRecord[];
+      };
+      rBlobs.onsuccess = () => {
+        blobRows = (rBlobs.result || []) as StudentPhotoBlobRecord[];
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
+    });
+  } catch {
+    // retorna estrutura zerada caso IndexedDB esteja inacessível
+  }
+
+  const blobByKey = new Map<string, StudentPhotoBlobRecord>();
+  let totalCachedBytes = 0;
+  let canonicalBlobsCount = 0;
+
+  for (const row of blobRows) {
+    if (!row || !row.cacheKey) continue;
+    blobByKey.set(row.cacheKey, row);
+    if (row.blob && row.byteSize > 0) {
+      canonicalBlobsCount++;
+      totalCachedBytes += row.byteSize;
+    }
+  }
+
+  // Enriquecer chaves de blob ativas com URLs ainda vinculadas aos registros de URLs dos estudantes ativos
+  const referencedActiveBlobKeys = new Set<string>(activeIdx.activeBlobKeys);
+  const legacyUrlKeys = new Set<string>();
+
+  for (const u of urlRows) {
+    if (!u || !u.studentKey) continue;
+    if (activeIdx.activeStudentKeys.has(u.studentKey)) {
+      const urlBlobKeys = buildPhotoBlobCacheKeys(u.photoUrl || u.photoDriveUrl, u.driveFileId);
+      urlBlobKeys.forEach((bk) => referencedActiveBlobKeys.add(bk));
+    } else {
+      legacyUrlKeys.add(u.studentKey);
+    }
+  }
+
+  // Propagar referências ativas através de ponteiros (`targetCacheKey` e `sha256`)
+  const activeCanonicalBlobKeys = new Set<string>();
+  const activeShas = new Set<string>();
+  for (const bk of referencedActiveBlobKeys) {
+    const rec = blobByKey.get(bk);
+    if (!rec) continue;
+    if (rec.sha256) activeShas.add(rec.sha256);
+    if (rec.targetCacheKey) {
+      activeCanonicalBlobKeys.add(rec.targetCacheKey);
+    } else if (rec.blob && rec.byteSize > 0) {
+      activeCanonicalBlobKeys.add(rec.cacheKey);
+    }
+  }
+  for (const row of blobRows) {
+    if (row.blob && row.byteSize > 0 && row.sha256 && activeShas.has(row.sha256)) {
+      activeCanonicalBlobKeys.add(row.cacheKey);
+    }
+  }
+
+  let activeClassesBytes = 0;
+  let activeClassesBlobCount = 0;
+  let legacyBytes = 0;
+  let legacyBlobRecordsCount = 0;
+  let legacyCanonicalBlobsCount = 0;
+
+  for (const row of blobRows) {
+    const isCanonical = Boolean(row.blob && row.byteSize > 0);
+    const isActiveKey =
+      referencedActiveBlobKeys.has(row.cacheKey) ||
+      activeCanonicalBlobKeys.has(row.cacheKey) ||
+      (row.targetCacheKey ? activeCanonicalBlobKeys.has(row.targetCacheKey) : false);
+
+    if (isActiveKey) {
+      if (isCanonical) {
+        activeClassesBytes += row.byteSize;
+        activeClassesBlobCount++;
+      }
+    } else {
+      legacyBlobRecordsCount++;
+      if (isCanonical) {
+        legacyBytes += row.byteSize;
+        legacyCanonicalBlobsCount++;
+      }
+    }
+  }
+
+  // Breakdown por turma atual
+  const urlRecordMap = new Map<string, StudentPhotoUrlRecord>();
+  urlRows.forEach((r) => {
+    if (r?.studentKey) urlRecordMap.set(r.studentKey, r);
+  });
+
+  const classBreakdown: ClassPhotoStorageBreakdown[] = (activeClasses || []).map((cls) => {
+    const seenCanonicalForClass = new Set<string>();
+    let cachedStudentsCount = 0;
+    let cachedBytes = 0;
+
+    for (const st of cls.students || []) {
+      const studentName = st.estudante || st.name || '';
+      const sKeys = buildStudentPhotoLookupKeys({
+        studentId: st.id,
+        ra: st.ra,
+        name: studentName,
+      });
+
+      const candidateBlobKeys = new Set<string>();
+      for (const sk of sKeys) {
+        const uRec = urlRecordMap.get(sk);
+        if (uRec) {
+          buildPhotoBlobCacheKeys(uRec.photoUrl || uRec.photoDriveUrl, uRec.driveFileId).forEach(
+            (bk) => candidateBlobKeys.add(bk)
+          );
+        }
+      }
+      buildPhotoBlobCacheKeys(st.photo || st.photoDriveUrl, st.photoDriveId).forEach((bk) =>
+        candidateBlobKeys.add(bk)
+      );
+
+      let studentHasCachedBlob = false;
+      for (const bk of candidateBlobKeys) {
+        const rec = blobByKey.get(bk);
+        if (!rec) continue;
+        const resolvedKey = rec.targetCacheKey || rec.cacheKey;
+        const resolvedRec = blobByKey.get(resolvedKey) || rec;
+        if (resolvedRec && resolvedRec.blob && resolvedRec.byteSize > 0) {
+          studentHasCachedBlob = true;
+          if (!seenCanonicalForClass.has(resolvedRec.cacheKey)) {
+            seenCanonicalForClass.add(resolvedRec.cacheKey);
+            cachedBytes += resolvedRec.byteSize;
+          }
+        }
+      }
+
+      if (studentHasCachedBlob) {
+        cachedStudentsCount++;
+      }
+    }
+
+    return {
+      classId: cls.id,
+      className: cls.name,
+      turmaAbrev: cls.turmaAbrev,
+      shift: cls.shift || '',
+      totalStudents: (cls.students || []).length,
+      cachedStudentsCount,
+      cachedBytes,
+      canonicalBlobsCount: seenCanonicalForClass.size,
+    };
+  });
+
+  return {
+    totalCachedBytes,
+    maxBudgetBytes: MAX_IDB_TOTAL_BYTES,
+    maxBudgetRecords: MAX_IDB_BLOB_RECORDS,
+    urlRecordsCount: urlRows.length,
+    blobRecordsCount: blobRows.length,
+    canonicalBlobsCount,
+    deduplicatedAliasCount: Math.max(0, blobRows.length - canonicalBlobsCount),
+    activeClassesBytes,
+    activeClassesBlobCount,
+    legacyBytes,
+    legacyUrlRecordsCount: legacyUrlKeys.size,
+    legacyBlobRecordsCount,
+    legacyCanonicalBlobsCount,
+    browserEstimateUsageBytes,
+    browserEstimateQuotaBytes,
+    classBreakdown,
+  };
+};
+
+/**
+ * Remove em 1 clique todo o cache de fotos pertencente a turmas antigas, alunos desligados
+ * ou arquivos órfãos que não fazem mais parte da matriz ativa.
+ */
+export const pruneLegacyClassPhotoCacheFromIndexedDb = async (
+  activeClasses: ClassGroup[]
+): Promise<PrunePhotoCacheResult> => {
+  const activeIdx = buildActiveStudentCacheIndex(activeClasses);
+
+  let urlRows: StudentPhotoUrlRecord[] = [];
+  let blobRows: StudentPhotoBlobRecord[] = [];
+
+  try {
+    const db = await openPhotoCacheDb();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction([STORE_PHOTO_URLS, STORE_PHOTO_BLOBS], 'readonly');
+      tx.objectStore(STORE_PHOTO_URLS).getAll().onsuccess = (e: any) => {
+        urlRows = (e?.target?.result || []) as StudentPhotoUrlRecord[];
+      };
+      tx.objectStore(STORE_PHOTO_BLOBS).getAll().onsuccess = (e: any) => {
+        blobRows = (e?.target?.result || []) as StudentPhotoBlobRecord[];
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
+    });
+
+    const referencedActiveBlobKeys = new Set<string>(activeIdx.activeBlobKeys);
+    const urlsToDelete: string[] = [];
+
+    for (const u of urlRows) {
+      if (!u || !u.studentKey) continue;
+      if (activeIdx.activeStudentKeys.has(u.studentKey)) {
+        buildPhotoBlobCacheKeys(u.photoUrl || u.photoDriveUrl, u.driveFileId).forEach((bk) =>
+          referencedActiveBlobKeys.add(bk)
+        );
+      } else {
+        urlsToDelete.push(u.studentKey);
+      }
+    }
+
+    const blobByKey = new Map<string, StudentPhotoBlobRecord>();
+    blobRows.forEach((b) => {
+      if (b?.cacheKey) blobByKey.set(b.cacheKey, b);
+    });
+
+    const activeCanonicalKeys = new Set<string>();
+    const activeShas = new Set<string>();
+    for (const bk of referencedActiveBlobKeys) {
+      const rec = blobByKey.get(bk);
+      if (!rec) continue;
+      if (rec.sha256) activeShas.add(rec.sha256);
+      if (rec.targetCacheKey) {
+        activeCanonicalKeys.add(rec.targetCacheKey);
+      } else if (rec.blob && rec.byteSize > 0) {
+        activeCanonicalKeys.add(rec.cacheKey);
+      }
+    }
+    for (const row of blobRows) {
+      if (row.blob && row.byteSize > 0 && row.sha256 && activeShas.has(row.sha256)) {
+        activeCanonicalKeys.add(row.cacheKey);
+      }
+    }
+
+    const blobsToDelete: string[] = [];
+    let freedBytes = 0;
+
+    for (const row of blobRows) {
+      const isProtected =
+        referencedActiveBlobKeys.has(row.cacheKey) ||
+        activeCanonicalKeys.has(row.cacheKey) ||
+        (row.targetCacheKey ? activeCanonicalKeys.has(row.targetCacheKey) : false);
+
+      if (!isProtected) {
+        blobsToDelete.push(row.cacheKey);
+        if (row.blob && row.byteSize > 0) {
+          freedBytes += row.byteSize;
+        }
+      }
+    }
+
+    if (urlsToDelete.length > 0 || blobsToDelete.length > 0) {
+      await new Promise<void>((resolve) => {
+        const tx = db.transaction([STORE_PHOTO_URLS, STORE_PHOTO_BLOBS], 'readwrite');
+        const urlStore = tx.objectStore(STORE_PHOTO_URLS);
+        const blobStore = tx.objectStore(STORE_PHOTO_BLOBS);
+
+        for (const k of urlsToDelete) {
+          urlStore.delete(k);
+          memoryUrlMap.delete(k);
+        }
+        for (const bk of blobsToDelete) {
+          blobStore.delete(bk);
+          memoryBlobObjectUrlMap.delete(bk);
+        }
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
+      });
+
+      revokeUnusedMemoryObjectUrls();
+      attemptedFetchKeys.clear();
+      readyListeners.forEach((cb) => {
+        try {
+          cb();
+        } catch {
+          // ignore
+        }
+      });
+    }
+
+    return {
+      removedUrlRecords: urlsToDelete.length,
+      removedBlobRecords: blobsToDelete.length,
+      freedBytes,
+    };
+  } catch {
+    return {
+      removedUrlRecords: 0,
+      removedBlobRecords: 0,
+      freedBytes: 0,
+    };
+  }
+};
+
+/**
+ * Limpa o cache local IndexedDB exclusivamente de uma turma específica,
+ * preservando automaticamente blobs ainda referenciados por alunos de outras turmas.
+ */
+export const clearSpecificClassPhotoCacheFromIndexedDb = async (
+  targetClass: ClassGroup,
+  allClasses: ClassGroup[]
+): Promise<PrunePhotoCacheResult> => {
+  const otherClasses = (allClasses || []).filter((c) => c.id !== targetClass.id);
+  const otherIdx = buildActiveStudentCacheIndex(otherClasses);
+  const targetIdx = buildActiveStudentCacheIndex([targetClass]);
+
+  try {
+    const db = await openPhotoCacheDb();
+    let urlRows: StudentPhotoUrlRecord[] = [];
+    let blobRows: StudentPhotoBlobRecord[] = [];
+
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction([STORE_PHOTO_URLS, STORE_PHOTO_BLOBS], 'readonly');
+      tx.objectStore(STORE_PHOTO_URLS).getAll().onsuccess = (e: any) => {
+        urlRows = (e?.target?.result || []) as StudentPhotoUrlRecord[];
+      };
+      tx.objectStore(STORE_PHOTO_BLOBS).getAll().onsuccess = (e: any) => {
+        blobRows = (e?.target?.result || []) as StudentPhotoBlobRecord[];
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+      tx.onabort = () => resolve();
+    });
+
+    const otherActiveBlobKeys = new Set<string>(otherIdx.activeBlobKeys);
+    const urlsToDelete: string[] = [];
+
+    for (const u of urlRows) {
+      if (!u || !u.studentKey) continue;
+      const inTarget = targetIdx.activeStudentKeys.has(u.studentKey);
+      const inOther = otherIdx.activeStudentKeys.has(u.studentKey);
+      if (inTarget && !inOther) {
+        urlsToDelete.push(u.studentKey);
+      } else if (inOther) {
+        buildPhotoBlobCacheKeys(u.photoUrl || u.photoDriveUrl, u.driveFileId).forEach((bk) =>
+          otherActiveBlobKeys.add(bk)
+        );
+      }
+    }
+
+    const blobByKey = new Map<string, StudentPhotoBlobRecord>();
+    blobRows.forEach((b) => {
+      if (b?.cacheKey) blobByKey.set(b.cacheKey, b);
+    });
+
+    const protectedCanonicalKeys = new Set<string>();
+    for (const bk of otherActiveBlobKeys) {
+      const rec = blobByKey.get(bk);
+      if (!rec) continue;
+      if (rec.targetCacheKey) protectedCanonicalKeys.add(rec.targetCacheKey);
+      else if (rec.blob && rec.byteSize > 0) protectedCanonicalKeys.add(rec.cacheKey);
+    }
+
+    const targetCandidateKeys = new Set<string>(targetIdx.activeBlobKeys);
+    for (const u of urlRows) {
+      if (targetIdx.activeStudentKeys.has(u.studentKey)) {
+        buildPhotoBlobCacheKeys(u.photoUrl || u.photoDriveUrl, u.driveFileId).forEach((bk) =>
+          targetCandidateKeys.add(bk)
+        );
+      }
+    }
+
+    const blobsToDelete = new Set<string>();
+    let freedBytes = 0;
+
+    for (const bk of targetCandidateKeys) {
+      if (otherActiveBlobKeys.has(bk) || protectedCanonicalKeys.has(bk)) continue;
+      const rec = blobByKey.get(bk);
+      if (!rec) continue;
+      blobsToDelete.add(rec.cacheKey);
+      if (rec.blob && rec.byteSize > 0) {
+        freedBytes += rec.byteSize;
+      } else if (rec.targetCacheKey && !protectedCanonicalKeys.has(rec.targetCacheKey)) {
+        const canonical = blobByKey.get(rec.targetCacheKey);
+        if (canonical && !blobsToDelete.has(canonical.cacheKey)) {
+          blobsToDelete.add(canonical.cacheKey);
+          if (canonical.blob && canonical.byteSize > 0) freedBytes += canonical.byteSize;
+        }
+      }
+    }
+
+    if (urlsToDelete.length > 0 || blobsToDelete.size > 0) {
+      await new Promise<void>((resolve) => {
+        const tx = db.transaction([STORE_PHOTO_URLS, STORE_PHOTO_BLOBS], 'readwrite');
+        const urlStore = tx.objectStore(STORE_PHOTO_URLS);
+        const blobStore = tx.objectStore(STORE_PHOTO_BLOBS);
+
+        for (const k of urlsToDelete) {
+          urlStore.delete(k);
+          memoryUrlMap.delete(k);
+        }
+        blobsToDelete.forEach((bk) => {
+          blobStore.delete(bk);
+          memoryBlobObjectUrlMap.delete(bk);
+        });
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
+      });
+
+      revokeUnusedMemoryObjectUrls();
+      attemptedFetchKeys.clear();
+      readyListeners.forEach((cb) => {
+        try {
+          cb();
+        } catch {
+          // ignore
+        }
+      });
+    }
+
+    return {
+      removedUrlRecords: urlsToDelete.length,
+      removedBlobRecords: blobsToDelete.size,
+      freedBytes,
+    };
+  } catch {
+    return {
+      removedUrlRecords: 0,
+      removedBlobRecords: 0,
+      freedBytes: 0,
+    };
+  }
+};
+
 export const clearStudentPhotoIndexedDbCache = async (): Promise<void> => {
   memoryUrlMap.clear();
   memoryShaToObjectUrlMap.clear();
@@ -1752,6 +2324,13 @@ export const clearStudentPhotoIndexedDbCache = async (): Promise<void> => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
       tx.onabort = () => resolve();
+    });
+    readyListeners.forEach((cb) => {
+      try {
+        cb();
+      } catch {
+        // ignore
+      }
     });
   } catch {
     // ignore

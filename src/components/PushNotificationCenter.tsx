@@ -35,6 +35,9 @@ import {
   unregisterDeviceFromFcm,
   subscribeToFcmNotifications,
   evaluateAndTriggerWindowClosingReminder,
+  evaluateAndTriggerTeacherEndOfDayReminder,
+  evaluateTeacherEndOfDayPendingClasses,
+  getNextTeacherEndOfDayReminderDelayMs,
   dispatchWindowClosingFcmAlert,
   getFcmCapabilitySnapshot,
 } from '../services/fcmService';
@@ -184,16 +187,88 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
     };
   }, [userEmail, userRole, userName, assignedClassIds, visibleClasses, onNavigateScreen]);
 
-  // Monitora automaticamente o fechamento da janela de lançamento de presença
+  // Monitora automaticamente o fechamento da janela e dispara lembrete de fim de turno ao educador
   useEffect(() => {
     if (visibleClasses.length === 0) return;
-    void evaluateAndTriggerWindowClosingReminder({
-      attendanceWindowConfig,
-      visibleClasses,
-      userEmail,
-      userRole,
-    });
-  }, [attendanceWindowConfig, visibleClasses, userEmail, userRole]);
+    let cancelled = false;
+    let cutoffTimeoutId: number | null = null;
+    let pollIntervalId: number | null = null;
+
+    const runChecks = async () => {
+      if (cancelled) return;
+      await evaluateAndTriggerWindowClosingReminder({
+        attendanceWindowConfig,
+        visibleClasses,
+        userEmail,
+        userRole,
+      });
+      const eodNotice = await evaluateAndTriggerTeacherEndOfDayReminder({
+        attendanceWindowConfig,
+        visibleClasses,
+        userEmail,
+        userRole,
+        teacherRoleType,
+        assignedClassIds,
+        onOpenClassAttendance: (classId) =>
+          onNavigateScreen?.('frequencia_mensal', classId),
+      });
+      if (!cancelled && eodNotice) {
+        setCustomNotices(getStoredCustomPushNotices());
+      }
+    };
+
+    void runChecks();
+
+    const scheduleCutoffTimer = () => {
+      if (cutoffTimeoutId !== null) {
+        window.clearTimeout(cutoffTimeoutId);
+        cutoffTimeoutId = null;
+      }
+      const nextDelay = getNextTeacherEndOfDayReminderDelayMs({
+        attendanceWindowConfig,
+        visibleClasses,
+        userRole,
+        teacherRoleType,
+        assignedClassIds,
+      });
+      if (nextDelay !== null && nextDelay > 0) {
+        const safeDelay = Math.min(nextDelay + 500, 2_147_483_000);
+        cutoffTimeoutId = window.setTimeout(() => {
+          void runChecks();
+          scheduleCutoffTimer();
+        }, safeDelay);
+      }
+    };
+
+    scheduleCutoffTimer();
+
+    // Fallback de 60s para cobrir suspensão/hibernação do navegador até o fim do turno
+    pollIntervalId = window.setInterval(() => {
+      void runChecks();
+    }, 60_000);
+
+    const handleVisibilityWake = () => {
+      if (document.visibilityState === 'visible') {
+        void runChecks();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityWake);
+
+    return () => {
+      cancelled = true;
+      if (cutoffTimeoutId !== null) window.clearTimeout(cutoffTimeoutId);
+      if (pollIntervalId !== null) window.clearInterval(pollIntervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityWake);
+    };
+  }, [
+    attendanceWindowConfig,
+    visibleClasses,
+    userEmail,
+    userRole,
+    teacherRoleType,
+    assignedClassIds,
+    onNavigateScreen,
+  ]);
 
   // Auto-oculta o banner flutuante após 8 segundos (permanece na central até dar ciência)
   useEffect(() => {
@@ -230,6 +305,18 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
     if (filterCategory === 'all') return activeNotices;
     return activeNotices.filter((n) => n.category === filterCategory);
   }, [activeNotices, filterCategory]);
+
+  const teacherEodSummary = useMemo(
+    () =>
+      evaluateTeacherEndOfDayPendingClasses({
+        attendanceWindowConfig,
+        visibleClasses,
+        userRole,
+        teacherRoleType,
+        assignedClassIds,
+      }),
+    [attendanceWindowConfig, visibleClasses, userRole, teacherRoleType, assignedClassIds]
+  );
 
   const handleEnableOrTestPush = async () => {
     if (isRegisteringFcm) return;
@@ -548,6 +635,46 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 </p>
               )}
             </div>
+
+            {teacherEodSummary.isEligibleTeacherRole &&
+              teacherEodSummary.pendingEvaluations.length > 0 &&
+              teacherEodSummary.windowEvaluation.isAllowedToLaunch && (
+                <div
+                  className={`p-3 rounded-2xl flex items-center justify-between gap-2.5 ${
+                    teacherEodSummary.dueNowEvaluations.length > 0
+                      ? 'bg-amber-50 text-amber-950'
+                      : 'bg-[#f5f5f7] text-[#1d1d1f]'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold leading-snug">
+                      {teacherEodSummary.dueNowEvaluations.length > 0
+                        ? `Fim de turno (${teacherEodSummary.dueNowEvaluations[0].evaluation.closingTimeLabel}) • ${teacherEodSummary.dueNowEvaluations.length} turma(s) pendente(s)`
+                        : `Lembrete automático agendado (${teacherEodSummary.pendingEvaluations[0].evaluation.reminderStartTimeLabel} · ${teacherEodSummary.pendingEvaluations[0].evaluation.shiftLabel})`}
+                    </p>
+                    <p className="text-[11px] opacity-80 leading-snug mt-0.5 break-words">
+                      Turma:{' '}
+                      {(
+                        teacherEodSummary.dueNowEvaluations[0] ||
+                        teacherEodSummary.pendingEvaluations[0]
+                      ).cls.name}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target =
+                        teacherEodSummary.dueNowEvaluations[0] ||
+                        teacherEodSummary.pendingEvaluations[0];
+                      setIsOpen(false);
+                      onNavigateScreen?.('frequencia_mensal', target.cls.id);
+                    }}
+                    className="min-h-[32px] px-3 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer transition-colors"
+                  >
+                    Lançar Faltas
+                  </button>
+                </div>
+              )}
 
             {/* Filtros por Categoria */}
             <div className="flex items-center justify-between gap-1.5">

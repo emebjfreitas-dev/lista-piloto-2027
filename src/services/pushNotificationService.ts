@@ -443,9 +443,21 @@ export function buildContextualPushNotices(
   }
 
   const allowedClassIds = new Set(visibleClasses.map((c) => c.id));
-  const filteredCustom = customNotices.filter(
-    (n) => !n.targetClassId || n.targetClassId === 'all' || allowedClassIds.has(n.targetClassId)
-  );
+  const classPendingById = new Map(visibleClasses.map((c) => [c.id, Boolean(c.isPending)]));
+  const filteredCustom = customNotices.filter((n) => {
+    if (n.targetClassId && n.targetClassId !== 'all' && !allowedClassIds.has(n.targetClassId)) {
+      return false;
+    }
+    if (
+      n.id.startsWith('eod_teacher_') &&
+      n.targetClassId &&
+      n.targetClassId !== 'all' &&
+      classPendingById.get(n.targetClassId) === false
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const combined = [...dynamicNotices, ...filteredCustom];
   return combined.map((item) => ({

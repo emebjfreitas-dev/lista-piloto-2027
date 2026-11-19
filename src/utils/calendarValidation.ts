@@ -58,16 +58,43 @@ export const OFFICIAL_DEFAULT_HOLIDAYS_2027: SchoolHoliday[] = [
   { id: 'hol-20', date: '25/12/2027', name: 'Natal', type: 'nacional', isOfficial: true },
 ];
 
-/**
- * Gera a matriz exata de 200 dias letivos oficiais respeitando o calendário SME de Jundiaí.
- * Fevereiro (16), Março (22), Abril (20), Maio (20), Junho (20), Julho (10),
- * Agosto (22), Setembro (20), Outubro (20), Novembro (18), Dezembro (12) = 200 dias.
- */
-export const generateOfficial200SchoolDays2027 = (holidays: SchoolHoliday[] = OFFICIAL_DEFAULT_HOLIDAYS_2027): string[] => {
-  const holidayDateSet = new Set(holidays.map((h) => h.date.trim()));
-  const schoolDays: string[] = [];
+export const OFFICIAL_MONTHLY_TARGETS_2027: Record<string, number> = {
+  Janeiro: 0,
+  Fevereiro: 16,
+  Março: 22,
+  Abril: 20,
+  Maio: 20,
+  Junho: 20,
+  Julho: 10,
+  Agosto: 22,
+  Setembro: 20,
+  Outubro: 20,
+  Novembro: 18,
+  Dezembro: 12,
+};
 
-  // Alvos mensais oficiais estabelecidos pela SME
+const sortDatesChronologically = (dates: string[]): string[] =>
+  Array.from(new Set(dates)).sort((a, b) => {
+    const [da, ma, ya] = a.split('/').map(Number);
+    const [db, mb, yb] = b.split('/').map(Number);
+    return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
+  });
+
+/**
+ * Gera a matriz exata de 200 dias letivos oficiais para o ano informado respeitando os
+ * feriados cadastrados e as metas mensais da SME de Jundiaí (soma = 200 dias).
+ */
+export const generateOfficial200SchoolDaysForYear = (
+  year: number = 2027,
+  holidays: SchoolHoliday[] = OFFICIAL_DEFAULT_HOLIDAYS_2027
+): string[] => {
+  const holidayDateSet = new Set(holidays.map((h) => h.date.trim()));
+  const holidayDayMonthSet = new Set(
+    holidays.map((h) => h.date.trim().slice(0, 5)) // DD/MM para suportar outros anos letivos
+  );
+  const isHolidayDate = (dateStr: string): boolean =>
+    holidayDateSet.has(dateStr) || holidayDayMonthSet.has(dateStr.slice(0, 5));
+
   const targets: Record<number, number> = {
     2: 16, // Fevereiro
     3: 22, // Março
@@ -77,44 +104,41 @@ export const generateOfficial200SchoolDays2027 = (holidays: SchoolHoliday[] = OF
     7: 10, // Julho (férias de inverno)
     8: 22, // Agosto
     9: 20, // Setembro
-    10: 20, // Outubro (inclui 1 sábado letivo oficial)
+    10: 20, // Outubro (inclui sábado letivo quando necessário)
     11: 18, // Novembro
     12: 12, // Dezembro
   };
 
   const pad = (n: number) => n.toString().padStart(2, '0');
+  const schoolDays: string[] = [];
 
-  // Itera pelos meses letivos
   for (let month = 2; month <= 12; month++) {
     const targetCount = targets[month] || 20;
     let addedForMonth = 0;
-    const daysInMonth = new Date(2027, month, 0).getDate();
+    const daysInMonth = new Date(year, month, 0).getDate();
 
-    // 1º passo: adicionar dias de semana (segunda a sexta) que não sejam feriados
     for (let day = 1; day <= daysInMonth; day++) {
       if (addedForMonth >= targetCount) break;
-
-      // Julho: recesso escolar nas primeiras semanas (dias 1 a 18)
       if (month === 7 && day < 19) continue;
 
-      const dateObj = new Date(2027, month - 1, day);
-      const dayOfWeek = dateObj.getDay(); // 0 = Dom, 6 = Sáb
-      const dateStr = `${pad(day)}/${pad(month)}/2027`;
+      const dateObj = new Date(year, month - 1, day);
+      const dayOfWeek = dateObj.getDay();
+      const dateStr = `${pad(day)}/${pad(month)}/${year}`;
 
-      if (dayOfWeek >= 1 && dayOfWeek <= 5 && !holidayDateSet.has(dateStr)) {
+      if (dayOfWeek >= 1 && dayOfWeek <= 5 && !isHolidayDate(dateStr)) {
         schoolDays.push(dateStr);
         addedForMonth++;
       }
     }
 
-    // Se faltou algum dia para completar a meta do mês (ex: Outubro que tem 1 sábado temático de feira de ciências)
+    // Completa eventual meta com sábado letivo ou início de julho se necessário
     if (addedForMonth < targetCount) {
       for (let day = 1; day <= daysInMonth; day++) {
         if (addedForMonth >= targetCount) break;
-        const dateObj = new Date(2027, month - 1, day);
+        const dateObj = new Date(year, month - 1, day);
         const dayOfWeek = dateObj.getDay();
-        const dateStr = `${pad(day)}/${pad(month)}/2027`;
-        if (dayOfWeek === 6 && !holidayDateSet.has(dateStr) && !schoolDays.includes(dateStr)) {
+        const dateStr = `${pad(day)}/${pad(month)}/${year}`;
+        if (dayOfWeek === 6 && !isHolidayDate(dateStr) && !schoolDays.includes(dateStr)) {
           schoolDays.push(dateStr);
           addedForMonth++;
         }
@@ -122,13 +146,30 @@ export const generateOfficial200SchoolDays2027 = (holidays: SchoolHoliday[] = OF
     }
   }
 
-  // Ordena cronologicamente
-  return schoolDays.sort((a, b) => {
-    const [da, ma, ya] = a.split('/').map(Number);
-    const [db, mb, yb] = b.split('/').map(Number);
-    return new Date(ya, ma - 1, da).getTime() - new Date(yb, mb - 1, db).getTime();
-  });
+  // Garante exatamente 200 dias mesmo em anos bissextos/variações de calendário
+  if (schoolDays.length < 200) {
+    for (let month = 2; month <= 12 && schoolDays.length < 200; month++) {
+      const daysInMonth = new Date(year, month, 0).getDate();
+      for (let day = 1; day <= daysInMonth && schoolDays.length < 200; day++) {
+        const dateObj = new Date(year, month - 1, day);
+        const dow = dateObj.getDay();
+        const dateStr = `${pad(day)}/${pad(month)}/${year}`;
+        if (dow >= 1 && dow <= 5 && !isHolidayDate(dateStr) && !schoolDays.includes(dateStr)) {
+          schoolDays.push(dateStr);
+        }
+      }
+    }
+  }
+
+  return sortDatesChronologically(schoolDays).slice(0, 200);
 };
+
+/**
+ * Gera a matriz exata de 200 dias letivos oficiais respeitando o calendário SME de Jundiaí.
+ */
+export const generateOfficial200SchoolDays2027 = (
+  holidays: SchoolHoliday[] = OFFICIAL_DEFAULT_HOLIDAYS_2027
+): string[] => generateOfficial200SchoolDaysForYear(2027, holidays);
 
 export interface ParsedDateResult {
   validDates: string[]; // datas únicas DD/MM/AAAA ordenadas
@@ -343,5 +384,122 @@ export const parseAndValidateSchoolDates = (
     invalidEntries,
     holidayConflicts,
     weekendDays,
+  };
+};
+
+export const toggleDateInSchoolDaysList = (
+  currentDates: string[],
+  dateStr: string
+): { dates: string[]; added: boolean } => {
+  const exists = currentDates.includes(dateStr);
+  const next = exists
+    ? currentDates.filter((d) => d !== dateStr)
+    : [...currentDates, dateStr];
+  return {
+    dates: sortDatesChronologically(next),
+    added: !exists,
+  };
+};
+
+export const fillMonthWeekdaysInSchoolDaysList = (
+  currentDates: string[],
+  year: number,
+  monthNumber: number,
+  holidays: SchoolHoliday[]
+): string[] => {
+  const holidaySet = new Set(holidays.map((h) => h.date.trim()));
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const next = new Set(currentDates);
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (monthNumber === 7 && d < 19) continue; // Preserva recesso de inverno padrão
+    const dateObj = new Date(year, monthNumber - 1, d);
+    const dow = dateObj.getDay();
+    const dateStr = `${pad(d)}/${pad(monthNumber)}/${year}`;
+    if (dow >= 1 && dow <= 5 && !holidaySet.has(dateStr)) {
+      next.add(dateStr);
+    }
+  }
+
+  return sortDatesChronologically(Array.from(next));
+};
+
+export const clearMonthInSchoolDaysList = (
+  currentDates: string[],
+  year: number,
+  monthNumber: number
+): string[] => {
+  const suffix = `/${monthNumber.toString().padStart(2, '0')}/${year}`;
+  return sortDatesChronologically(currentDates.filter((d) => !d.endsWith(suffix)));
+};
+
+export const removeHolidayConflictsFromSchoolDays = (
+  currentDates: string[],
+  holidays: SchoolHoliday[]
+): { dates: string[]; removedCount: number } => {
+  const holidaySet = new Set(holidays.map((h) => h.date.trim()));
+  const filtered = currentDates.filter((d) => !holidaySet.has(d.trim()));
+  return {
+    dates: sortDatesChronologically(filtered),
+    removedCount: currentDates.length - filtered.length,
+  };
+};
+
+export const autoBalanceSchoolDaysTo200 = (
+  currentDates: string[],
+  year: number,
+  holidays: SchoolHoliday[]
+): { dates: string[]; addedCount: number; removedCount: number } => {
+  const holidaySet = new Set(holidays.map((h) => h.date.trim()));
+  const working = new Set(sortDatesChronologically(currentDates));
+  let addedCount = 0;
+  let removedCount = 0;
+
+  if (working.size < 200) {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    // 1. Tenta adicionar dias úteis não-feriados (Fev–Dez, respeitando férias de julho inicialmente)
+    const addCandidate = (allowEarlyJuly: boolean, allowSaturday: boolean) => {
+      for (let m = 2; m <= 12 && working.size < 200; m++) {
+        const daysInM = new Date(year, m, 0).getDate();
+        for (let d = 1; d <= daysInM && working.size < 200; d++) {
+          if (!allowEarlyJuly && m === 7 && d < 19) continue;
+          const dateObj = new Date(year, m - 1, d);
+          const dow = dateObj.getDay();
+          const dateStr = `${pad(d)}/${pad(m)}/${year}`;
+          const validDow = allowSaturday ? dow === 6 : dow >= 1 && dow <= 5;
+          if (validDow && !holidaySet.has(dateStr) && !working.has(dateStr)) {
+            working.add(dateStr);
+            addedCount++;
+          }
+        }
+      }
+    };
+    addCandidate(false, false);
+    if (working.size < 200) addCandidate(false, true);
+    if (working.size < 200) addCandidate(true, false);
+  } else if (working.size > 200) {
+    const sorted = sortDatesChronologically(Array.from(working));
+    // Prioriza remover finais de semana / excesso de dezembro de trás para frente
+    const removableOrder = [
+      ...sorted.filter((d) => {
+        const [dd, mm, yy] = d.split('/').map(Number);
+        const dow = new Date(yy, mm - 1, dd).getDay();
+        return dow === 0 || dow === 6;
+      }).reverse(),
+      ...sorted.slice().reverse(),
+    ];
+    for (const candidate of removableOrder) {
+      if (working.size <= 200) break;
+      if (working.delete(candidate)) {
+        removedCount++;
+      }
+    }
+  }
+
+  return {
+    dates: sortDatesChronologically(Array.from(working)),
+    addedCount,
+    removedCount,
   };
 };

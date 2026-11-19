@@ -408,7 +408,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {
           id: 'usuarios_acesso',
           title: 'Central Administrativa',
-          subtitle: `Acessos, segurança, banco, uploads e ${schoolStats.aeeCount} AEE`,
+          subtitle: `Acessos, calendário, segurança, uploads e ${schoolStats.aeeCount} AEE`,
           icon: <ShieldCheck className="w-5 h-5 stroke-[1.5]" />,
           accentBg: 'bg-[#0071e3]/12',
           accentText: 'text-[#0071e3]',

@@ -29,7 +29,13 @@ import {
   ScreenType,
   UserRole,
 } from '../types';
-import { evaluateAttendanceLaunchWindow, getActiveUserAuthHeadersAsync } from './db';
+import { toast } from 'sonner';
+import {
+  evaluateAttendanceLaunchWindow,
+  evaluateClassEndOfDayReminder,
+  ClassEndOfDayReminderEvaluation,
+  getActiveUserAuthHeadersAsync,
+} from './db';
 import {
   firestoreDb,
   handleFirestoreError,
@@ -55,6 +61,7 @@ const PUSH_SUB_ACTIVE_STORAGE_KEY = 'emeb_candelario_webpush_active_v1';
 const FCM_CONFIG_STORAGE_KEY = 'emeb_candelario_fcm_system_config_v1';
 const FCM_SEEN_ALERTS_STORAGE_KEY = 'emeb_candelario_fcm_seen_alerts_v1';
 const FCM_DAILY_WINDOW_REMINDER_KEY = 'emeb_candelario_fcm_window_reminder_day_v1';
+const FCM_EOD_TEACHER_REMINDER_KEY = 'emeb_candelario_eod_teacher_reminder_v1';
 
 const DEFAULT_FCM_CONFIG: FcmSystemConfig = {
   vapidPublicKey: '',
@@ -939,6 +946,246 @@ export async function evaluateAndTriggerWindowClosingReminder(params: {
       targetClassId: pendingClasses[0]?.id || 'all',
       targetScreen: 'frequencia_mensal',
       authorName: 'FCM · Monitoramento de Prazos',
+    },
+    { showBanner: true, saveToFeed: true, userEmail: params.userEmail }
+  );
+}
+
+export interface EvaluatedTeacherClassReminder {
+  cls: ClassGroup;
+  evaluation: ClassEndOfDayReminderEvaluation;
+}
+
+export interface TeacherEndOfDayReminderSummary {
+  isEligibleTeacherRole: boolean;
+  windowEvaluation: ReturnType<typeof evaluateAttendanceLaunchWindow>;
+  scopedClasses: ClassGroup[];
+  pendingEvaluations: EvaluatedTeacherClassReminder[];
+  dueNowEvaluations: EvaluatedTeacherClassReminder[];
+  upcomingEvaluations: EvaluatedTeacherClassReminder[];
+  nextDelayMs: number | null;
+}
+
+/**
+ * Avalia, a partir de `evaluateAttendanceLaunchWindow`, quais turmas atribuídas ao
+ * educador logado ainda estão com lançamento pendente (`isPending === true`) ao final
+ * do expediente do respectivo turno (Manhã até 12:00 · aviso a partir de 11:15;
+ * Tarde até 17:30 · aviso a partir de 16:45).
+ */
+export function evaluateTeacherEndOfDayPendingClasses(params: {
+  attendanceWindowConfig: AttendanceWindowConfig;
+  visibleClasses: ClassGroup[];
+  userRole: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
+  assignedClassIds?: string[];
+  referenceDate?: Date;
+}): TeacherEndOfDayReminderSummary {
+  const windowEvaluation = evaluateAttendanceLaunchWindow(
+    params.attendanceWindowConfig,
+    params.referenceDate
+  );
+
+  // Perfis exclusivamente observadores (PEB II, Apoio, AEE) não lançam diário de chamada
+  const isReadOnlyObserver =
+    params.userRole === 'peb2' ||
+    params.teacherRoleType === 'apoio' ||
+    params.teacherRoleType === 'aee';
+
+  if (isReadOnlyObserver) {
+    return {
+      isEligibleTeacherRole: false,
+      windowEvaluation,
+      scopedClasses: [],
+      pendingEvaluations: [],
+      dueNowEvaluations: [],
+      upcomingEvaluations: [],
+      nextDelayMs: null,
+    };
+  }
+
+  // Para docente regente (`usuario`), considera suas turmas visíveis; para admin/gestão,
+  // considera apenas caso possua turmas regentes explicitamente atribuídas.
+  const explicitAssigned = (params.assignedClassIds || []).filter(
+    (id) => id && id !== 'all'
+  );
+  const scopedClasses =
+    params.userRole === 'usuario'
+      ? explicitAssigned.length > 0
+        ? params.visibleClasses.filter((c) => explicitAssigned.includes(c.id))
+        : params.visibleClasses
+      : explicitAssigned.length > 0
+      ? params.visibleClasses.filter((c) => explicitAssigned.includes(c.id))
+      : [];
+
+  if (scopedClasses.length === 0) {
+    return {
+      isEligibleTeacherRole: params.userRole === 'usuario',
+      windowEvaluation,
+      scopedClasses: [],
+      pendingEvaluations: [],
+      dueNowEvaluations: [],
+      upcomingEvaluations: [],
+      nextDelayMs: null,
+    };
+  }
+
+  const pendingEvaluations: EvaluatedTeacherClassReminder[] = scopedClasses
+    .filter((cls) => cls.isPending)
+    .map((cls) => ({
+      cls,
+      evaluation: evaluateClassEndOfDayReminder(
+        params.attendanceWindowConfig,
+        cls,
+        params.referenceDate
+      ),
+    }));
+
+  const dueNowEvaluations = pendingEvaluations.filter(
+    (item) => item.evaluation.shouldRemindNow
+  );
+  const upcomingEvaluations = pendingEvaluations.filter(
+    (item) =>
+      !item.evaluation.shouldRemindNow &&
+      item.evaluation.msUntilReminder !== null &&
+      item.evaluation.msUntilReminder > 0
+  );
+
+  const delays = upcomingEvaluations
+    .map((item) => item.evaluation.msUntilReminder)
+    .filter((ms): ms is number => typeof ms === 'number' && ms > 0);
+  const nextDelayMs = delays.length > 0 ? Math.min(...delays) : null;
+
+  return {
+    isEligibleTeacherRole: true,
+    windowEvaluation,
+    scopedClasses,
+    pendingEvaluations,
+    dueNowEvaluations,
+    upcomingEvaluations,
+    nextDelayMs,
+  };
+}
+
+export function getNextTeacherEndOfDayReminderDelayMs(params: {
+  attendanceWindowConfig: AttendanceWindowConfig;
+  visibleClasses: ClassGroup[];
+  userRole: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
+  assignedClassIds?: string[];
+  referenceDate?: Date;
+}): number | null {
+  return evaluateTeacherEndOfDayPendingClasses(params).nextDelayMs;
+}
+
+/**
+ * Dispara o lembrete ao educador logado caso ainda não tenha lançado a frequência de sua(s)
+ * turma(s) até o fim do período escolar, integrando Central Push + Service Worker + Toast acionável.
+ */
+export async function evaluateAndTriggerTeacherEndOfDayReminder(params: {
+  attendanceWindowConfig: AttendanceWindowConfig;
+  visibleClasses: ClassGroup[];
+  userEmail: string;
+  userRole: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
+  assignedClassIds?: string[];
+  referenceDate?: Date;
+  forceNotify?: boolean;
+  onOpenClassAttendance?: (classId: string) => void;
+}): Promise<PushNoticeItem | null> {
+  const prefs = getStoredPushPreferences();
+  if ((!prefs.enabled || !prefs.deadlinesEnabled) && !params.forceNotify) {
+    return null;
+  }
+
+  const summary = evaluateTeacherEndOfDayPendingClasses({
+    attendanceWindowConfig: params.attendanceWindowConfig,
+    visibleClasses: params.visibleClasses,
+    userRole: params.userRole,
+    teacherRoleType: params.teacherRoleType,
+    assignedClassIds: params.assignedClassIds,
+    referenceDate: params.referenceDate,
+  });
+
+  if (!summary.isEligibleTeacherRole) return null;
+
+  const targetItems = params.forceNotify
+    ? summary.dueNowEvaluations.length > 0
+      ? summary.dueNowEvaluations
+      : summary.pendingEvaluations
+    : summary.dueNowEvaluations;
+
+  if (targetItems.length === 0) return null;
+
+  const refDate = params.referenceDate || new Date();
+  const todayKey = `${refDate.getFullYear()}-${String(refDate.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(refDate.getDate()).padStart(2, '0')}`;
+  const dueClassIds = targetItems.map((item) => item.cls.id).sort();
+  const normalizedEmail = (params.userEmail || '').trim().toLowerCase();
+  const dedupKey = `${todayKey}|${normalizedEmail}|${dueClassIds.join(',')}`;
+
+  if (!params.forceNotify) {
+    try {
+      const lastSentKey = localStorage.getItem(FCM_EOD_TEACHER_REMINDER_KEY);
+      if (lastSentKey === dedupKey) {
+        return null;
+      }
+    } catch {
+      // ignore storage read error
+    }
+  }
+
+  const primary = targetItems[0];
+  const reminderId = `eod_teacher_${todayKey}_${dueClassIds.join('_')}`;
+  if (!params.forceNotify && getReadPushNoticeIds(params.userEmail).includes(reminderId)) {
+    return null;
+  }
+
+  const classPreview =
+    targetItems.length === 1
+      ? `Turma ${primary.cls.name}`
+      : `${targetItems
+          .slice(0, 2)
+          .map((i) => i.cls.name)
+          .join(', ')}${targetItems.length > 2 ? ` e +${targetItems.length - 2}` : ''}`;
+
+  const title =
+    targetItems.length === 1
+      ? `Fim do ${primary.evaluation.shiftLabel} (${primary.evaluation.closingTimeLabel}) • Frequência Pendente`
+      : `Fim do Expediente Escolar • ${targetItems.length} Turmas Pendentes`;
+
+  const body = `Você ainda não lançou a frequência de ${classPreview} (${summary.windowEvaluation.targetMonthName}). Conclua o registro antes do encerramento às ${primary.evaluation.closingTimeLabel}.`;
+
+  if (!params.forceNotify) {
+    try {
+      localStorage.setItem(FCM_EOD_TEACHER_REMINDER_KEY, dedupKey);
+    } catch {
+      // ignore storage write error
+    }
+  }
+
+  toast.warning(title, {
+    id: reminderId,
+    description: body,
+    duration: 14000,
+    action: params.onOpenClassAttendance
+      ? {
+          label: 'Lançar Agora',
+          onClick: () => params.onOpenClassAttendance?.(primary.cls.id),
+        }
+      : undefined,
+  });
+
+  return triggerPushNotification(
+    {
+      id: reminderId,
+      title,
+      body,
+      category: 'prazo',
+      targetClassId: primary.cls.id,
+      targetScreen: 'frequencia_mensal',
+      authorName: 'Lembrete Fim de Turno · EMEB Candelário',
     },
     { showBanner: true, saveToFeed: true, userEmail: params.userEmail }
   );

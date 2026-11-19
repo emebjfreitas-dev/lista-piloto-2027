@@ -3,6 +3,7 @@ import { AttendanceWindowConfig, AuthorizedUser, ClassGroup, UserRole } from '..
 import { evaluateAttendanceLaunchWindow } from '../services/db';
 import {
   dispatchWindowClosingFcmAlert,
+  evaluateTeacherEndOfDayPendingClasses,
   getFcmCapabilitySnapshot,
   registerDeviceForFcm,
 } from '../services/fcmService';
@@ -83,6 +84,32 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     };
   }, [classes, userRole, assignedClassId, assignedClassIds]);
 
+  const teacherEodSummary = React.useMemo(() => {
+    const effectiveAssigned =
+      assignedClassIds.length > 0
+        ? assignedClassIds
+        : assignedClassId
+        ? [assignedClassId]
+        : [];
+    return evaluateTeacherEndOfDayPendingClasses({
+      attendanceWindowConfig,
+      visibleClasses: classes,
+      userRole,
+      teacherRoleType,
+      assignedClassIds: effectiveAssigned,
+    });
+  }, [
+    attendanceWindowConfig,
+    classes,
+    userRole,
+    teacherRoleType,
+    assignedClassId,
+    assignedClassIds,
+  ]);
+
+  const dueTeacherReminder = teacherEodSummary.dueNowEvaluations[0];
+  const upcomingTeacherReminder = teacherEodSummary.upcomingEvaluations[0];
+
   const handleActivateTeacherFcm = async () => {
     if (fcmActionLoading) return;
     setFcmActionLoading(true);
@@ -145,7 +172,8 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     );
   }
 
-  const isUrgent = win.urgencyLevel === 'urgent';
+  const hasEndOfDayPendingAlert = Boolean(dueTeacherReminder);
+  const isUrgent = win.urgencyLevel === 'urgent' || hasEndOfDayPendingAlert;
   const isWarning = win.urgencyLevel === 'warning';
   const isOpen = win.isAllowedToLaunch;
 
@@ -206,10 +234,14 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               <span
                 className={`px-2.5 py-0.5 rounded-md text-xs uppercase tracking-wider ${badgeBg}`}
               >
-                {isOpen ? 'Janela Aberta' : 'Lembrete de Prazo'}
+                {hasEndOfDayPendingAlert
+                  ? 'Fim do Turno · Pendente'
+                  : isOpen
+                  ? 'Janela Aberta'
+                  : 'Lembrete de Prazo'}
               </span>
 
-              <span className="text-xs text-[#374151] font-bold">
+              <span className="text-xs text-[#374151] font-bold tabular-nums">
                 {win.currentDateFormatted} · Mês de {win.targetMonthName}
               </span>
 
@@ -221,7 +253,13 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             </div>
 
             <h2 className={`text-base tracking-tight leading-snug mt-1 ${titleColor}`}>
-              {isOpen ? (
+              {dueTeacherReminder ? (
+                <span>
+                  Fim do {dueTeacherReminder.evaluation.shiftLabel} (
+                  {dueTeacherReminder.evaluation.closingTimeLabel}) — Frequência da turma{' '}
+                  {dueTeacherReminder.cls.name} ainda não lançada
+                </span>
+              ) : isOpen ? (
                 <span>
                   Prazo de Fechamento Aberto — Encerramento em {win.closingDateFormatted}
                 </span>
@@ -233,7 +271,26 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
             </h2>
 
             <p className="text-xs sm:text-sm text-[#374151] font-medium leading-normal mt-0.5">
-              {isOpen ? (
+              {dueTeacherReminder ? (
+                <span>
+                  Seu expediente do {dueTeacherReminder.evaluation.shiftLabel.toLowerCase()} encerra às{' '}
+                  <strong className="tabular-nums">
+                    {dueTeacherReminder.evaluation.closingTimeLabel}
+                  </strong>
+                  . Conclua o registro de faltas da sua turma agora (prazo oficial até{' '}
+                  {win.closingDateFormatted}).
+                </span>
+              ) : upcomingTeacherReminder ? (
+                <span>
+                  Lembrete automático de fim de turno programado para{' '}
+                  <strong className="tabular-nums">
+                    {upcomingTeacherReminder.evaluation.reminderStartTimeLabel}
+                  </strong>{' '}
+                  ({upcomingTeacherReminder.evaluation.shiftLabel} · até{' '}
+                  {upcomingTeacherReminder.evaluation.closingTimeLabel}). Prazo mensal até{' '}
+                  {win.closingDateFormatted}.
+                </span>
+              ) : isOpen ? (
                 <span>
                   Os educadores devem concluir o lançamento de faltas e atestados antes do prazo final ({win.closingDateFormatted}, 2º dia letivo).
                 </span>
@@ -248,15 +305,27 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
 
         {/* Right Side: Quick Action CTA Buttons */}
         <div className="flex flex-wrap items-center gap-2 shrink-0 pt-1 sm:pt-0">
-          {isOpen && onOpenMonthlyAttendance && targetClass && (
+          {isOpen && onOpenMonthlyAttendance && (dueTeacherReminder?.cls || targetClass) && (
             <button
               type="button"
-              onClick={() => onOpenMonthlyAttendance(pendingSummary.firstPendingClass || targetClass)}
-              className="min-h-[38px] px-3.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              onClick={() =>
+                onOpenMonthlyAttendance(
+                  dueTeacherReminder?.cls || pendingSummary.firstPendingClass || targetClass
+                )
+              }
+              className={`min-h-[38px] px-3.5 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                hasEndOfDayPendingAlert
+                  ? 'bg-rose-700 hover:bg-rose-800'
+                  : 'bg-[#047857] hover:bg-[#065f46]'
+              }`}
             >
-              <CalendarCheck className="w-3.5 h-3.5 text-white" />
+              <CalendarCheck className="w-3.5 h-3.5 text-white shrink-0" />
               <span>
-                {userRole === 'usuario' ? 'Lançar Minhas Faltas' : 'Conferir Fechamentos'}
+                {hasEndOfDayPendingAlert
+                  ? 'Lançar Minhas Faltas Agora'
+                  : userRole === 'usuario'
+                  ? 'Lançar Minhas Faltas'
+                  : 'Conferir Fechamentos'}
               </span>
             </button>
           )}

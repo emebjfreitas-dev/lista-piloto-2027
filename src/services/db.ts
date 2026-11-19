@@ -351,10 +351,36 @@ export const saveStoredAttendanceWindowConfig = (
 };
 
 /**
+ * Horários oficiais de encerramento dos turnos da rede municipal (EMEB Prof. Joaquim Candelário de Freitas):
+ * - Turno Manhã: 07h00 às 12h00 (lembrete de fim de turno a partir de 11:15)
+ * - Turno Tarde: 13h00 às 17h30 (lembrete de fim de turno a partir de 16:45)
+ */
+const MORNING_SHIFT_CLOSING_LABEL = '12:00' as const;
+const AFTERNOON_SHIFT_CLOSING_LABEL = '17:30' as const;
+const MORNING_REMINDER_START_LABEL = '11:15' as const;
+const AFTERNOON_REMINDER_START_LABEL = '16:45' as const;
+const MORNING_REMINDER_CUTOFF_MINUTES = 11 * 60 + 15; // 675 min (11:15)
+const AFTERNOON_REMINDER_CUTOFF_MINUTES = 16 * 60 + 45; // 1005 min (16:45)
+
+export const resolveClassShiftPeriod = (
+  cls: Pick<ClassGroup, 'shift' | 'periodo'>
+): 'morning' | 'afternoon' => {
+  if (cls.periodo === 'TARDE') return 'afternoon';
+  if (cls.periodo === 'MANHÃ') return 'morning';
+  const normalized = (cls.shift || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (normalized.includes('tarde')) return 'afternoon';
+  return 'morning';
+};
+
+/**
  * Evaluates whether a given date (or current date) falls within the official monthly attendance launch window:
  * - Last school day (último dia letivo) of the month, OR
  * - First 2 school days (dois primeiros dias letivos) of the next month
  * OR if exceptional override is enabled in the Access Management tab.
+ * Also computes municipal shift end-of-school-day timing (Manhã 12:00 / Tarde 17:30).
  */
 export const evaluateAttendanceLaunchWindow = (
   config: AttendanceWindowConfig,
@@ -373,15 +399,66 @@ export const evaluateAttendanceLaunchWindow = (
   urgencyLevel: 'info' | 'warning' | 'urgent';
   targetMonthName: string;
   nextWindowOpenDateFormatted: string;
+  isSchoolWeekday: boolean;
+  currentMinutesOfDay: number;
+  currentTimeFormatted: string;
+  morningShiftClosingLabel: string;
+  afternoonShiftClosingLabel: string;
+  morningReminderCutoffMinutes: number;
+  afternoonReminderCutoffMinutes: number;
+  isMorningEndOfDayReached: boolean;
+  isAfternoonEndOfDayReached: boolean;
+  msUntilMorningEndOfDay: number | null;
+  msUntilAfternoonEndOfDay: number | null;
 } => {
-  const dateObj = config.simulatedDateISO
-    ? new Date(`${config.simulatedDateISO}T12:00:00`)
-    : referenceDate || new Date();
+  const dateObj = (() => {
+    if (config.simulatedDateISO) {
+      const [sy, sm, sd] = config.simulatedDateISO.split('-').map(Number);
+      if (sy && sm && sd) {
+        return new Date(
+          sy,
+          sm - 1,
+          sd,
+          referenceDate ? referenceDate.getHours() : 12,
+          referenceDate ? referenceDate.getMinutes() : 0,
+          referenceDate ? referenceDate.getSeconds() : 0,
+          0
+        );
+      }
+      return new Date(`${config.simulatedDateISO}T12:00:00`);
+    }
+    return referenceDate || new Date();
+  })();
 
   const currentDateFormatted = dateObj.toLocaleDateString('pt-BR');
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth(); // 0..11
   const dayOfMonth = dateObj.getDate();
+  const dowToday = dateObj.getDay();
+  const isSchoolWeekday = dowToday >= 1 && dowToday <= 5;
+  const currentHours = dateObj.getHours();
+  const currentMinutes = dateObj.getMinutes();
+  const currentMinutesOfDay = currentHours * 60 + currentMinutes;
+  const currentTimeFormatted = `${String(currentHours).padStart(2, '0')}:${String(
+    currentMinutes
+  ).padStart(2, '0')}`;
+
+  const morningCutoffDate = new Date(year, month, dayOfMonth, 11, 15, 0, 0);
+  const afternoonCutoffDate = new Date(year, month, dayOfMonth, 16, 45, 0, 0);
+
+  const isMorningEndOfDayReached =
+    isSchoolWeekday && currentMinutesOfDay >= MORNING_REMINDER_CUTOFF_MINUTES;
+  const isAfternoonEndOfDayReached =
+    isSchoolWeekday && currentMinutesOfDay >= AFTERNOON_REMINDER_CUTOFF_MINUTES;
+
+  const msUntilMorningEndOfDay =
+    isSchoolWeekday && dateObj.getTime() < morningCutoffDate.getTime()
+      ? morningCutoffDate.getTime() - dateObj.getTime()
+      : null;
+  const msUntilAfternoonEndOfDay =
+    isSchoolWeekday && dateObj.getTime() < afternoonCutoffDate.getTime()
+      ? afternoonCutoffDate.getTime() - dateObj.getTime()
+      : null;
 
   const MONTH_NAMES_PT = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -488,6 +565,76 @@ export const evaluateAttendanceLaunchWindow = (
     urgencyLevel,
     targetMonthName,
     nextWindowOpenDateFormatted,
+    isSchoolWeekday,
+    currentMinutesOfDay,
+    currentTimeFormatted,
+    morningShiftClosingLabel: MORNING_SHIFT_CLOSING_LABEL,
+    afternoonShiftClosingLabel: AFTERNOON_SHIFT_CLOSING_LABEL,
+    morningReminderCutoffMinutes: MORNING_REMINDER_CUTOFF_MINUTES,
+    afternoonReminderCutoffMinutes: AFTERNOON_REMINDER_CUTOFF_MINUTES,
+    isMorningEndOfDayReached,
+    isAfternoonEndOfDayReached,
+    msUntilMorningEndOfDay,
+    msUntilAfternoonEndOfDay,
+  };
+};
+
+export interface ClassEndOfDayReminderEvaluation {
+  shouldRemindNow: boolean;
+  isWindowAllowed: boolean;
+  isClassPending: boolean;
+  isSchoolWeekday: boolean;
+  isShiftEndOfDayReached: boolean;
+  shiftPeriod: 'morning' | 'afternoon';
+  shiftLabel: 'Turno Manhã' | 'Turno Tarde';
+  reminderStartTimeLabel: '11:15' | '16:45';
+  closingTimeLabel: '12:00' | '17:30';
+  msUntilReminder: number | null;
+  windowEvaluation: ReturnType<typeof evaluateAttendanceLaunchWindow>;
+}
+
+/**
+ * Combina a regra oficial da janela mensal (`evaluateAttendanceLaunchWindow`) com o
+ * horário de encerramento do turno da turma (Manhã 12:00 / Tarde 17:30) para decidir
+ * se o educador logado deve ser lembrado imediatamente ou agendado até o fim do turno.
+ */
+export const evaluateClassEndOfDayReminder = (
+  config: AttendanceWindowConfig,
+  cls: Pick<ClassGroup, 'isPending' | 'shift' | 'periodo'>,
+  referenceDate?: Date
+): ClassEndOfDayReminderEvaluation => {
+  const windowEvaluation = evaluateAttendanceLaunchWindow(config, referenceDate);
+  const shiftPeriod = resolveClassShiftPeriod(cls);
+  const isAfternoon = shiftPeriod === 'afternoon';
+  const isShiftEndOfDayReached = isAfternoon
+    ? windowEvaluation.isAfternoonEndOfDayReached
+    : windowEvaluation.isMorningEndOfDayReached;
+  const isClassPending = Boolean(cls.isPending);
+  const isWindowAllowed = windowEvaluation.isAllowedToLaunch;
+
+  const msUntilReminder =
+    isWindowAllowed && isClassPending
+      ? isAfternoon
+        ? windowEvaluation.msUntilAfternoonEndOfDay
+        : windowEvaluation.msUntilMorningEndOfDay
+      : null;
+
+  return {
+    shouldRemindNow: isWindowAllowed && isClassPending && isShiftEndOfDayReached,
+    isWindowAllowed,
+    isClassPending,
+    isSchoolWeekday: windowEvaluation.isSchoolWeekday,
+    isShiftEndOfDayReached,
+    shiftPeriod,
+    shiftLabel: isAfternoon ? 'Turno Tarde' : 'Turno Manhã',
+    reminderStartTimeLabel: isAfternoon
+      ? AFTERNOON_REMINDER_START_LABEL
+      : MORNING_REMINDER_START_LABEL,
+    closingTimeLabel: isAfternoon
+      ? AFTERNOON_SHIFT_CLOSING_LABEL
+      : MORNING_SHIFT_CLOSING_LABEL,
+    msUntilReminder,
+    windowEvaluation,
   };
 };
 

@@ -16,12 +16,14 @@ import {
   MAX_BATCH_PHOTO_FILES_LIMIT,
   UploadedPhotoCacheEntry,
 } from '../services/photoIndexedDbCache';
+import { IndexedDbPhotoStorageModal } from './IndexedDbPhotoStorageModal';
 
 interface AdminArrasteFotosModalProps {
   isOpen: boolean;
   onClose: () => void;
   classes: ClassGroup[];
   onBatchPhotosSaved: (updatedClasses: ClassGroup[]) => void;
+  onOpenStorageManager?: () => void;
   embedded?: boolean;
 }
 
@@ -102,8 +104,10 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
   onClose,
   classes,
   onBatchPhotosSaved,
+  onOpenStorageManager,
   embedded = false,
 }) => {
+  const [internalStorageOpen, setInternalStorageOpen] = useState(false);
   const [items, setItems] = useState<DroppedPhotoItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -799,16 +803,42 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
             </p>
           </div>
         </div>
-        {!embedded && (
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors duration-100 shrink-0"
+            onClick={() => {
+              if (onOpenStorageManager) {
+                onOpenStorageManager();
+              } else {
+                setInternalStorageOpen(true);
+              }
+            }}
+            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0b3b8c] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
-            <span className="material-symbols-outlined text-[20px] shrink-0">close</span>
+            <span className="material-symbols-outlined text-[16px] shrink-0">hard_drive</span>
+            <span>Cache IndexedDB</span>
           </button>
-        )}
+
+          {!embedded && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors duration-100 shrink-0"
+            >
+              <span className="material-symbols-outlined text-[20px] shrink-0">close</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {!onOpenStorageManager && (
+        <IndexedDbPhotoStorageModal
+          isOpen={internalStorageOpen}
+          onClose={() => setInternalStorageOpen(false)}
+          classes={classes}
+          onCacheUpdated={(msg) => setStatusMessage(msg)}
+        />
+      )}
 
       {/* Corpo */}
       <div className={embedded ? 'p-4 sm:p-6 space-y-4' : 'modal-scroll-body flex-1 p-4 sm:p-6 space-y-4'}>

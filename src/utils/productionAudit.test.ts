@@ -8,6 +8,7 @@ import {
 } from './attendanceRules';
 import {
   evaluateAttendanceLaunchWindow,
+  evaluateClassEndOfDayReminder,
   mergeClassesWithConcurrencyControl,
   isValidInstitutionalEmail,
 } from '../services/db';
@@ -168,6 +169,64 @@ const windowOpenOverride = evaluateAttendanceLaunchWindow({
   exceptionalOverrideOpen: true,
 });
 assert.equal(windowOpenOverride.isAllowedToLaunch, true);
+
+// 8. Validação do Lembrete de Fim de Expediente Escolar (Turno Manhã 12:00 / Turno Tarde 17:30)
+const morningRefDate = new Date(2027, 9, 29, 10, 30, 0); // Sexta 29/10/2027 10:30 (último dia letivo)
+const winMorningBeforeCutoff = evaluateAttendanceLaunchWindow(
+  { exceptionalOverrideOpen: false },
+  morningRefDate
+);
+assert.equal(winMorningBeforeCutoff.isSchoolWeekday, true);
+assert.equal(winMorningBeforeCutoff.isAllowedToLaunch, true);
+assert.equal(winMorningBeforeCutoff.isMorningEndOfDayReached, false);
+assert.equal(winMorningBeforeCutoff.msUntilMorningEndOfDay, 45 * 60 * 1000);
+
+const morningDueDate = new Date(2027, 9, 29, 11, 30, 0); // 11:30 (>= 11:15)
+const morningPendingEval = evaluateClassEndOfDayReminder(
+  { exceptionalOverrideOpen: false },
+  { isPending: true, shift: 'Turno Manhã', periodo: 'MANHÃ' },
+  morningDueDate
+);
+assert.equal(morningPendingEval.shouldRemindNow, true);
+assert.equal(morningPendingEval.closingTimeLabel, '12:00');
+
+const morningCompletedEval = evaluateClassEndOfDayReminder(
+  { exceptionalOverrideOpen: false },
+  { isPending: false, shift: 'Turno Manhã', periodo: 'MANHÃ' },
+  morningDueDate
+);
+assert.equal(
+  morningCompletedEval.shouldRemindNow,
+  false,
+  'Turma com frequência já lançada (isPending=false) não deve disparar lembrete'
+);
+
+const afternoonBeforeDate = new Date(2027, 9, 29, 15, 0, 0); // 15:00 (< 16:45)
+const afternoonUpcomingEval = evaluateClassEndOfDayReminder(
+  { exceptionalOverrideOpen: false },
+  { isPending: true, shift: 'Turno Tarde', periodo: 'TARDE' },
+  afternoonBeforeDate
+);
+assert.equal(afternoonUpcomingEval.shouldRemindNow, false);
+assert.equal(afternoonUpcomingEval.msUntilReminder, 105 * 60 * 1000);
+
+const afternoonDueDate = new Date(2027, 9, 29, 16, 50, 0); // 16:50 (>= 16:45)
+const afternoonPendingEval = evaluateClassEndOfDayReminder(
+  { exceptionalOverrideOpen: false },
+  { isPending: true, shift: 'Turno Tarde', periodo: 'TARDE' },
+  afternoonDueDate
+);
+assert.equal(afternoonPendingEval.shouldRemindNow, true);
+assert.equal(afternoonPendingEval.closingTimeLabel, '17:30');
+
+const sundayDate = new Date(2027, 9, 31, 17, 0, 0); // Domingo
+const sundayEval = evaluateClassEndOfDayReminder(
+  { exceptionalOverrideOpen: true },
+  { isPending: true, shift: 'Turno Tarde', periodo: 'TARDE' },
+  sundayDate
+);
+assert.equal(sundayEval.isSchoolWeekday, false);
+assert.equal(sundayEval.shouldRemindNow, false);
 
 const classMetrics = getClassAttendanceMetrics(g4Class);
 assert.ok(classMetrics.presenceRate >= 0 && classMetrics.presenceRate <= 100);
