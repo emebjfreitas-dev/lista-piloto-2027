@@ -56,21 +56,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Alterna suavemente entre as fotos em alta resolução da EMEB Candelário e pré-carrega a próxima
+  // Alterna suavemente entre as fotos em alta resolução da EMEB Candelário
   useEffect(() => {
     if (availableGallery.length <= 1) return;
-
-    const currentIdx = activePhotoIndex % availableGallery.length;
-    const nextIdx = (currentIdx + 1) % availableGallery.length;
-    const preloadImg = new Image();
-    preloadImg.referrerPolicy = 'no-referrer';
-    preloadImg.src = availableGallery[nextIdx];
 
     const interval = setInterval(() => {
       setActivePhotoIndex((prev) => (prev + 1) % availableGallery.length);
     }, 7000);
 
     return () => clearInterval(interval);
+  }, [availableGallery.length]);
+
+  // Pré-carrega apenas a próxima foto da galeria
+  useEffect(() => {
+    if (availableGallery.length <= 1) return;
+    const currentIdx = activePhotoIndex % availableGallery.length;
+    const nextIdx = (currentIdx + 1) % availableGallery.length;
+    const preloadImg = new Image();
+    preloadImg.referrerPolicy = 'no-referrer';
+    preloadImg.src = availableGallery[nextIdx];
   }, [availableGallery, activePhotoIndex]);
 
   useEffect(() => {
@@ -313,8 +317,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-transparent to-slate-950/25" />
       </div>
 
-      {/* Card Minimalista e Focado */}
-      <div className="relative z-10 w-full max-w-[390px] min-w-0 bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_24px_60px_rgba(15,23,42,0.22)] border border-white/80 px-7 py-9 sm:px-9 sm:py-10 flex flex-col items-center text-center animate-apple-pop">
+      {/* Card Minimalista e Focado Sem Bordas */}
+      <div className="relative z-10 w-full max-w-[390px] min-w-0 bg-white/97 backdrop-blur-md rounded-3xl shadow-[0_28px_68px_rgba(2,6,23,0.42)] px-7 py-9 sm:px-9 sm:py-10 flex flex-col items-center text-center animate-apple-pop">
         {/* Brasão Oficial de Jundiaí */}
         <img
           src={APP_LOGO_URL}
@@ -328,16 +332,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         />
 
         {/* Identificação Institucional */}
-        <p className="text-[11px] uppercase tracking-[0.16em] font-semibold text-slate-500">
+        <p className="text-[11px] uppercase tracking-[0.16em] font-bold text-slate-700">
           Prefeitura de Jundiaí · SME
         </p>
 
         {/* Nome do Aplicativo */}
-        <h1 className="text-xl sm:text-[22px] font-bold tracking-tight text-[#0b3b8c] leading-snug mt-1.5 text-balance">
+        <h1 className="text-xl sm:text-[22px] font-bold tracking-tight text-[#092e70] leading-snug mt-1.5 text-balance">
           Lista Piloto Candelário 2027
         </h1>
 
-        <p className="text-xs sm:text-[13px] font-medium text-slate-600 leading-snug mt-1 mb-8 text-balance">
+        <p className="text-xs sm:text-[13px] font-semibold text-slate-700 leading-snug mt-1 mb-8 text-balance">
           EMEB Prof. Joaquim Candelário de Freitas
         </p>
 
@@ -352,7 +356,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             disabled={loading}
             onClick={handleGoogleLogin}
             aria-label="Fazer login com a conta Google"
-            className="w-full min-h-[50px] py-2.5 px-5 bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 rounded-full text-[#3c4043] font-medium text-sm sm:text-[15px] flex items-center justify-center gap-3.5 shadow-sm hover:shadow active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0b3b8c]"
+            className="w-full min-h-[52px] py-2.5 px-5 bg-[#edf2f7] hover:bg-[#e2e8f0] rounded-full text-slate-950 font-semibold text-sm sm:text-[15px] flex items-center justify-center gap-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.08)] hover:shadow-[0_8px_20px_rgba(11,59,140,0.16)] hover:-translate-y-px active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-60"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin text-[#0b3b8c]" />
@@ -388,16 +392,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* Mensagem de Erro com Design Limpo e Acessível */}
         {errorMsg && (
-          <div className="w-full mt-4 px-3.5 py-2.5 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-900 text-xs font-medium leading-relaxed break-words text-left flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          <div className="w-full mt-4 px-3.5 py-2.5 rounded-2xl bg-rose-100 text-rose-950 text-xs font-semibold leading-relaxed break-words text-left flex items-start gap-2 animate-fade-in">
+            <AlertCircle className="w-4 h-4 text-rose-800 shrink-0 mt-0.5" />
             <p className="flex-1">{errorMsg}</p>
           </div>
         )}
 
-        {/* Rodapé Institucional Discreto */}
-        <div className="w-full mt-7 pt-4 border-t border-slate-100">
-          <p className="text-[11px] text-slate-500 leading-relaxed text-balance">
-            Acesso exclusivo para contas institucionais autorizadas (<span className="font-medium text-slate-700">@educacao.jundiai.sp.gov.br</span>).
+        {/* Rodapé Institucional Discreto Sem Linha Divisória */}
+        <div className="w-full mt-6 pt-3">
+          <p className="text-[11px] text-slate-600 leading-relaxed text-balance">
+            Acesso exclusivo para contas institucionais autorizadas (<span className="font-bold text-slate-900">@educacao.jundiai.sp.gov.br</span>).
           </p>
         </div>
       </div>

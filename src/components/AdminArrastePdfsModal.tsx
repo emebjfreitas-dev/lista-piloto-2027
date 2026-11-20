@@ -9,6 +9,21 @@ import {
 } from '../services/db';
 import { isSupportedPdfFile, collectFilesFromDataTransfer } from '../utils/photoCompressor';
 import { validateAndOptimizePdf } from '../utils/pdfOptimizer';
+import {
+  ArrowRight,
+  CheckCheck,
+  CheckCircle2,
+  Download,
+  FileText,
+  FileUp,
+  FolderUp,
+  HelpCircle,
+  Pause,
+  Play,
+  RefreshCw,
+  Trash2,
+  X,
+} from 'lucide-react';
 
 interface AdminArrastePdfsModalProps {
   isOpen: boolean;
@@ -47,6 +62,15 @@ const formatFileSize = (bytes: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
 
+const formatEtaRemaining = (seconds: number): string => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  const rounded = Math.ceil(seconds);
+  if (rounded < 60) return `~${rounded}s restantes`;
+  const mins = Math.floor(rounded / 60);
+  const secs = rounded % 60;
+  return `~${mins}m ${secs.toString().padStart(2, '0')}s restantes`;
+};
+
 export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
   isOpen,
   onClose,
@@ -76,10 +100,46 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
     failed: 0,
   });
   const [uploadProgress, setUploadProgress] = useState<BatchUploadProgress | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isPausedRef = useRef(false);
+  const pauseWaitersRef = useRef<Array<() => void>>([]);
+  const batchStartMsRef = useRef<number>(0);
+  const pausedAccumMsRef = useRef<number>(0);
+  const pauseStartedMsRef = useRef<number | null>(null);
+
+  const resumePausedWorkers = () => {
+    if (pauseStartedMsRef.current !== null) {
+      pausedAccumMsRef.current += Date.now() - pauseStartedMsRef.current;
+      pauseStartedMsRef.current = null;
+    }
+    isPausedRef.current = false;
+    setIsPaused(false);
+    const waiters = pauseWaitersRef.current.splice(0, pauseWaitersRef.current.length);
+    waiters.forEach((resolve) => resolve());
+  };
+
+  const waitIfPaused = () => {
+    if (!isPausedRef.current || abortControllerRef.current?.signal.aborted) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      pauseWaitersRef.current.push(resolve);
+    });
+  };
+
+  const handleTogglePause = () => {
+    if (isPausedRef.current) {
+      resumePausedWorkers();
+    } else {
+      isPausedRef.current = true;
+      pauseStartedMsRef.current = Date.now();
+      setIsPaused(true);
+    }
+  };
 
   useEffect(() => {
     if (folderInputRef.current) {
@@ -87,6 +147,13 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       folderInputRef.current.setAttribute('directory', '');
     }
   }, [isOpen, embedded]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+      resumePausedWorkers();
+    };
+  }, []);
 
   const allStudentsWithClass = useMemo(() => {
     const list: { student: Student; classGroup: ClassGroup; normName: string; raDigits: string; clsAbrev: string }[] = [];
@@ -414,6 +481,11 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    batchStartMsRef.current = Date.now();
+    pausedAccumMsRef.current = 0;
+    pauseStartedMsRef.current = null;
+    isPausedRef.current = false;
+    setIsPaused(false);
 
     setIsSaving(true);
     setPipelinePhase('optimizing');
@@ -448,8 +520,10 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
 
       const runWorker = async () => {
         while (nextIndex < uniqueTargets.length) {
+          await waitIfPaused();
           if (controller.signal.aborted) break;
           const idx = nextIndex++;
+          if (idx >= uniqueTargets.length) break;
           const it = uniqueTargets[idx];
           const student = it.matchedStudent!;
 
@@ -545,12 +619,16 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       }
 
       setPipelinePhase('uploading');
+      batchStartMsRef.current = Date.now();
+      pausedAccumMsRef.current = 0;
+      pauseStartedMsRef.current = isPausedRef.current ? Date.now() : null;
       setStatusMessage(
         `Enviando ${readyPayloads.length} ficha(s) PDF em pacotes binários... (Economia lossless: ${formatFileSize(savedBytes)})`
       );
 
       const res = await uploadBatchStudentPdfsViaApi(readyPayloads, {
         signal: controller.signal,
+        waitIfPaused,
         onProgress: (p) => setUploadProgress(p),
       });
 
@@ -620,12 +698,14 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       setPipelinePhase('idle');
     } finally {
       abortControllerRef.current = null;
+      resumePausedWorkers();
       setIsSaving(false);
     }
   };
 
   const handleCancelSync = () => {
     abortControllerRef.current?.abort();
+    resumePausedWorkers();
   };
 
   const handleClearAllPdfs = async () => {
@@ -667,30 +747,65 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       ? Math.round((uploadProgress.processedItems / uploadProgress.totalItems) * 100)
       : 0;
 
+  const activeElapsedMs =
+    batchStartMsRef.current > 0
+      ? Math.max(
+          0,
+          Date.now() -
+            batchStartMsRef.current -
+            pausedAccumMsRef.current -
+            (pauseStartedMsRef.current ? Date.now() - pauseStartedMsRef.current : 0)
+        )
+      : 0;
+
+  let etaLabel = '';
+  if (isPaused && isSaving) {
+    etaLabel = 'Pausado';
+  } else if (
+    pipelinePhase === 'optimizing' &&
+    optimizeProgress.done >= 2 &&
+    optimizeProgress.done < optimizeProgress.total &&
+    activeElapsedMs > 0
+  ) {
+    const ratePerMs = optimizeProgress.done / activeElapsedMs;
+    const remainingSec = (optimizeProgress.total - optimizeProgress.done) / ratePerMs / 1000;
+    etaLabel = formatEtaRemaining(remainingSec);
+  } else if (
+    pipelinePhase === 'uploading' &&
+    uploadProgress &&
+    uploadProgress.processedItems >= 1 &&
+    uploadProgress.processedItems < uploadProgress.totalItems &&
+    activeElapsedMs > 0
+  ) {
+    const ratePerMs = uploadProgress.processedItems / activeElapsedMs;
+    const remainingSec = (uploadProgress.totalItems - uploadProgress.processedItems) / ratePerMs / 1000;
+    etaLabel = formatEtaRemaining(remainingSec);
+  }
+
   const contentNode = (
     <div
       onClick={embedded ? undefined : (e) => e.stopPropagation()}
       className={
         embedded
           ? 'bg-white w-full rounded-3xl shadow-[0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col min-w-0'
-          : 'bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]'
+          : 'modal-shell w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]'
       }
     >
       {/* Cabeçalho */}
       <div
-        className={`flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 shrink-0 border-b ${
-          embedded ? 'border-slate-100' : 'bg-slate-50 border-slate-200'
+        className={`flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 shrink-0 ${
+          embedded ? 'bg-[#f4f7fb]' : 'modal-header-surface'
         }`}
       >
         <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-          <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#be123c] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px] shrink-0">picture_as_pdf</span>
+          <div className="w-10 h-10 rounded-xl bg-rose-100 text-[#9f1239] flex items-center justify-center shrink-0">
+            <FileText className="w-[22px] h-[22px] shrink-0" strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base sm:text-lg font-semibold text-[#1d1d1f] break-words leading-snug">
+            <h3 className="text-base sm:text-lg font-bold text-slate-950 break-words leading-snug">
               Importar Fichas Informativas (PDF) em Lote (2.000+)
             </h3>
-            <p className="text-xs text-[#6e6e73] break-words leading-relaxed font-normal mt-0.5">
+            <p className="text-xs text-slate-700 break-words leading-relaxed font-medium mt-0.5">
               Suporta pastas inteiras, validação %PDF-, compactação estrutural 100% lossless e deduplicação SHA-256
             </p>
           </div>
@@ -699,9 +814,10 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 hover:text-black flex items-center justify-center cursor-pointer transition-colors duration-100 shrink-0"
+            className="w-9 h-9 rounded-full bg-white hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            aria-label="Fechar modal"
           >
-            <span className="material-symbols-outlined text-[20px] shrink-0">close</span>
+            <X className="w-5 h-5 shrink-0" strokeWidth={2} />
           </button>
         )}
       </div>
@@ -709,12 +825,12 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       {/* Corpo */}
       <div className={embedded ? 'p-4 sm:p-6 space-y-4' : 'modal-scroll-body flex-1 p-4 sm:p-6 space-y-4'}>
         {statusMessage && (
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 flex items-center justify-between gap-2 shadow-2xs">
+          <div className="p-3.5 rounded-xl bg-[#edf2f7] text-xs font-bold text-slate-950 flex items-center justify-between gap-2">
             <span className="break-words">{statusMessage}</span>
             <button
               type="button"
               onClick={() => setStatusMessage(null)}
-              className="text-slate-600 hover:text-slate-950 text-xs font-bold shrink-0 cursor-pointer"
+              className="text-slate-700 hover:text-slate-950 text-xs font-bold shrink-0 cursor-pointer"
             >
               ✕
             </button>
@@ -723,34 +839,64 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
 
         {/* Progresso */}
         {(isSaving || pipelinePhase === 'done') && optimizeProgress.total > 0 && (
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-900">
+          <div className="p-4 rounded-2xl bg-[#edf2f7] space-y-2.5 animate-fade-in">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-950">
               <span>
                 {pipelinePhase === 'optimizing'
-                  ? `Fase 1/2 · Validando e Compactando PDFs (${optimizeProgress.done}/${optimizeProgress.total})`
+                  ? `Fase 1/2 · Validando e Compactando PDFs (${optimizeProgress.done}/${optimizeProgress.total}) · ${pctOptimize}%`
                   : pipelinePhase === 'uploading'
-                  ? `Fase 2/2 · Enviando Pacotes Binários (${uploadProgress?.completedChunks || 0}/${uploadProgress?.totalChunks || 1})`
+                  ? `Fase 2/2 · Enviando Pacotes Binários (${uploadProgress?.completedChunks || 0}/${uploadProgress?.totalChunks || 1}) · ${pctUpload}%`
                   : 'Processamento Concluído'}
               </span>
-              <span className="tabular-nums text-emerald-700">
-                Economia: {formatFileSize(optimizeProgress.savedBytes)}
-              </span>
+              <div className="flex items-center gap-3">
+                {etaLabel && (
+                  <span className={`tabular-nums font-bold ${isPaused ? 'text-amber-800' : 'text-[#0b3b8c]'}`}>
+                    {etaLabel}
+                  </span>
+                )}
+                <span className="tabular-nums font-bold text-[#065f46]">
+                  Economia: {formatFileSize(optimizeProgress.savedBytes)}
+                </span>
+                {isSaving && (
+                  <button
+                    type="button"
+                    onClick={handleTogglePause}
+                    className={`min-h-[28px] px-2.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                      isPaused
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                        : 'bg-amber-200 hover:bg-amber-300 text-amber-950'
+                    }`}
+                  >
+                    {isPaused ? (
+                      <>
+                        <Play className="w-3 h-3" strokeWidth={2.5} />
+                        <span>Retomar</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-3 h-3" strokeWidth={2.5} />
+                        <span>Pausar</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+            <div className="w-full h-2.5 bg-[#dbe4f0] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#0b3b8c] transition-all duration-200 rounded-full"
+                className={`h-full transition-all duration-200 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-[#0b3b8c]'}`}
                 style={{
                   width: `${pipelinePhase === 'optimizing' ? pctOptimize : pipelinePhase === 'uploading' ? pctUpload : 100}%`,
                 }}
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-600">
+            <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-700">
               <span>Idênticos ignorados: {optimizeProgress.skippedIdentical + (uploadProgress?.skippedCount || 0)}</span>
               {uploadProgress && <span>Gravados no servidor: {uploadProgress.updatedCount}</span>}
               {(optimizeProgress.failed > 0 || (uploadProgress?.failedCount || 0) > 0) && (
-                <span className="text-rose-700 font-bold">
+                <span className="text-rose-800 font-bold">
                   Inválidos/Erros: {optimizeProgress.failed + (uploadProgress?.failedCount || 0)}
                 </span>
               )}
@@ -764,8 +910,10 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all ${
-            isDragging ? 'bg-blue-100 scale-[0.995]' : 'bg-slate-100 hover:bg-blue-50/70'
+          className={`rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
+            isDragging
+              ? 'bg-[#dce7fb] scale-[0.99] shadow-[0_14px_34px_rgba(11,59,140,0.2)]'
+              : 'bg-[#edf2f7] hover:bg-[#e2e8f0]'
           }`}
         >
           <input
@@ -784,15 +932,17 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
             className="hidden"
           />
           <div className="flex flex-col items-center justify-center gap-2">
-            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center text-[#0052cc]">
-              <span className="material-symbols-outlined text-[32px]">
-                {isDragging ? 'downloading' : 'upload_file'}
-              </span>
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center text-[#0b3b8c]">
+              {isDragging ? (
+                <Download className="w-8 h-8 animate-bounce" strokeWidth={2} />
+              ) : (
+                <FileUp className="w-8 h-8" strokeWidth={2} />
+              )}
             </div>
             <h4 className="text-sm sm:text-base font-bold text-slate-950 mt-1">
               Arraste as Fichas Informativas (PDF) ou pastas inteiras e solte aqui
             </h4>
-            <p className="text-xs text-slate-600 max-w-lg font-normal leading-relaxed break-words">
+            <p className="text-xs text-slate-700 max-w-lg font-medium leading-relaxed break-words">
               Suporta <strong>2.000+ fichas PDF</strong> sem travar a memória. Identificação automática pelo{' '}
               <strong>RA</strong>, <strong>Nome</strong> ou <strong>Turma_Nº</strong>.
             </p>
@@ -803,9 +953,9 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                   e.stopPropagation();
                   fileInputRef.current?.click();
                 }}
-                className="min-h-[40px] px-5 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold cursor-pointer shadow-xs transition-colors flex items-center gap-2"
+                className="min-h-[40px] px-5 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold cursor-pointer shadow-[0_4px_12px_rgba(11,59,140,0.28)] transition-all flex items-center gap-2"
               >
-                <span className="material-symbols-outlined text-[18px] shrink-0">picture_as_pdf</span>
+                <FileText className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                 <span>Selecionar PDFs</span>
               </button>
               <button
@@ -814,9 +964,9 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                   e.stopPropagation();
                   folderInputRef.current?.click();
                 }}
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold cursor-pointer shadow-xs transition-colors flex items-center gap-2"
+                className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-[#f4f7fb] text-slate-950 text-xs font-bold cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.08)] transition-all flex items-center gap-2"
               >
-                <span className="material-symbols-outlined text-[18px] shrink-0">drive_folder_upload</span>
+                <FolderUp className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                 <span>Selecionar Pasta Completa</span>
               </button>
             </div>
@@ -827,15 +977,15 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
         {items.length > 0 && (
           <div className="space-y-3 pt-2">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pb-1">
-              <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs">
+              <div className="flex flex-wrap items-center gap-1 bg-[#e2e8f0] p-1 rounded-xl text-xs">
                 <button
                   type="button"
                   onClick={() => {
                     setFilterMode('all');
                     setCurrentPage(1);
                   }}
-                  className={`min-h-[34px] px-3 py-1.5 rounded-lg font-medium cursor-pointer ${
-                    filterMode === 'all' ? 'bg-white text-slate-950 font-semibold shadow-2xs' : 'text-slate-600'
+                  className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
+                    filterMode === 'all' ? 'bg-white text-slate-950 shadow-xs' : 'text-slate-800'
                   }`}
                 >
                   Todos ({totalCount})
@@ -846,8 +996,8 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     setFilterMode('matched');
                     setCurrentPage(1);
                   }}
-                  className={`min-h-[34px] px-3 py-1.5 rounded-lg font-medium cursor-pointer ${
-                    filterMode === 'matched' ? 'bg-emerald-700 text-white font-semibold shadow-2xs' : 'text-emerald-800'
+                  className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
+                    filterMode === 'matched' ? 'bg-emerald-700 text-white shadow-xs' : 'text-emerald-950'
                   }`}
                 >
                   Identificados ({matchedCount})
@@ -858,8 +1008,8 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     setFilterMode('unmatched');
                     setCurrentPage(1);
                   }}
-                  className={`min-h-[34px] px-3 py-1.5 rounded-lg font-medium cursor-pointer ${
-                    filterMode === 'unmatched' ? 'bg-amber-700 text-white font-semibold shadow-2xs' : 'text-amber-800'
+                  className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
+                    filterMode === 'unmatched' ? 'bg-amber-700 text-white shadow-xs' : 'text-amber-950'
                   }`}
                 >
                   Pendentes ({unmatchedCount})
@@ -871,8 +1021,8 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                       setFilterMode('errors');
                       setCurrentPage(1);
                     }}
-                    className={`min-h-[34px] px-3 py-1.5 rounded-lg font-medium cursor-pointer ${
-                      filterMode === 'errors' ? 'bg-rose-700 text-white font-semibold shadow-2xs' : 'text-rose-800'
+                    className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
+                      filterMode === 'errors' ? 'bg-rose-700 text-white shadow-xs' : 'text-rose-950'
                     }`}
                   >
                     Erros ({errorCount})
@@ -889,7 +1039,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     setCurrentPage(1);
                   }}
                   placeholder="Filtrar por nome, PDF ou RA..."
-                  className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 w-full sm:w-56 focus:outline-none focus:border-slate-950"
+                  className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#edf2f7] focus:bg-white text-xs text-slate-950 w-full sm:w-56"
                 />
                 <button
                   type="button"
@@ -898,7 +1048,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     setPipelinePhase('idle');
                   }}
                   disabled={isSaving}
-                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs cursor-pointer disabled:opacity-40"
+                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 font-bold text-xs cursor-pointer disabled:opacity-40"
                 >
                   Limpar Lista
                 </button>
@@ -911,26 +1061,26 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                 return (
                   <div
                     key={item.id}
-                    className={`rounded-2xl p-3.5 flex flex-col justify-between gap-2.5 shadow-2xs min-w-0 border ${
+                    className={`rounded-2xl p-3.5 flex flex-col justify-between gap-2.5 min-w-0 transition-colors ${
                       item.status === 'error'
-                        ? 'bg-rose-50/70 border-rose-200'
+                        ? 'bg-rose-100/80'
                         : item.status === 'uploaded' || item.status === 'skipped_identical'
-                        ? 'bg-emerald-50/60 border-emerald-200'
+                        ? 'bg-emerald-100/80'
                         : isMatched
-                        ? 'bg-white border-slate-200/80'
-                        : 'bg-amber-50/60 border-amber-200'
+                        ? 'bg-[#edf2f7]'
+                        : 'bg-amber-100/75'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 min-w-0">
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[22px] shrink-0">picture_as_pdf</span>
+                          <FileText className="w-[22px] h-[22px] shrink-0" strokeWidth={2} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-semibold text-slate-950 break-all leading-snug" title={item.relativePath}>
                             {item.filename}
                           </p>
-                          <p className="text-xs text-slate-500 font-mono tabular-nums mt-0.5">
+                          <p className="text-xs text-slate-700 font-mono tabular-nums mt-0.5">
                             {formatFileSize(item.fileSizeBytes)}
                             {item.optimizedResult?.pageCount ? ` · ${item.optimizedResult.pageCount} pág.` : ''}
                           </p>
@@ -941,10 +1091,10 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                         type="button"
                         onClick={() => handleRemoveItem(item.id)}
                         disabled={isSaving}
-                        className="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
+                        className="w-8 h-8 rounded-lg text-slate-600 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40 transition-colors"
                         title="Remover arquivo"
                       >
-                        <span className="material-symbols-outlined text-[18px]">close</span>
+                        <X className="w-[18px] h-[18px]" strokeWidth={2} />
                       </button>
                     </div>
 
@@ -963,10 +1113,10 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                         <>
                           <div className="flex flex-wrap items-center justify-between gap-1.5">
                             <span className="text-[11px] font-semibold text-emerald-800 flex items-center gap-1 min-w-0">
-                              <span className="material-symbols-outlined text-[14px] shrink-0">check_circle</span>
+                              <CheckCircle2 className="w-[14px] h-[14px] shrink-0" strokeWidth={2} />
                               <span className="break-words">{item.matchReason}</span>
                             </span>
-                            <span className="text-[11px] font-medium text-slate-500 tabular-nums shrink-0">
+                            <span className="text-[11px] font-medium text-slate-700 tabular-nums shrink-0">
                               Nº {item.matchedStudent!.number.toString().padStart(2, '0')}
                             </span>
                           </div>
@@ -981,7 +1131,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                               <p className="text-xs font-semibold text-slate-950 break-words leading-snug">
                                 {item.matchedStudent!.name}
                               </p>
-                              <p className="text-[11px] text-slate-500 break-words mt-0.5">
+                              <p className="text-[11px] text-slate-700 break-words mt-0.5">
                                 {item.matchedClass?.turmaAbrev || item.matchedClass?.name} · RA{' '}
                                 {item.matchedStudent!.ra || '—'}
                               </p>
@@ -990,7 +1140,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                         </>
                       ) : (
                         <span className="text-xs font-semibold text-amber-800 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[15px] shrink-0">help</span>
+                          <HelpCircle className="w-[15px] h-[15px] shrink-0" strokeWidth={2} />
                           <span>Estudante não identificado</span>
                         </span>
                       )}
@@ -1001,7 +1151,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                           setPickerItemId(item.id);
                           setPickerSearch('');
                         }}
-                        className="w-full min-h-[34px] px-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 cursor-pointer"
+                        className="w-full min-h-[34px] px-2.5 bg-white hover:bg-[#e2e8f0] rounded-lg text-xs font-bold text-slate-950 cursor-pointer"
                       >
                         {isMatched ? 'Trocar estudante...' : 'Escolher aluno da escola...'}
                       </button>
@@ -1012,7 +1162,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-2 text-xs text-slate-600 font-semibold">
+              <div className="flex items-center justify-between pt-2 text-xs text-slate-700 font-semibold">
                 <span>
                   Mostrando {(safePage - 1) * PAGE_SIZE + 1}–
                   {Math.min(safePage * PAGE_SIZE, filteredItems.length)} de {filteredItems.length}
@@ -1022,7 +1172,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     type="button"
                     disabled={safePage <= 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 disabled:opacity-40 cursor-pointer"
+                    className="h-8 px-3 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 disabled:opacity-40 cursor-pointer"
                   >
                     Anterior
                   </button>
@@ -1033,7 +1183,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     type="button"
                     disabled={safePage >= totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    className="h-8 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 disabled:opacity-40 cursor-pointer"
+                    className="h-8 px-3 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 disabled:opacity-40 cursor-pointer"
                   >
                     Próxima
                   </button>
@@ -1045,7 +1195,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       </div>
 
       {/* Rodapé */}
-      <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm p-4 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10 border-t border-slate-100">
+      <div className="sticky bottom-0 bg-[#f4f7fb] p-4 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10">
         <div className="flex items-center gap-2">
           {confirmClearAll ? (
             <div className="flex items-center gap-2">
@@ -1072,7 +1222,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
               disabled={isClearingAll || isSaving}
               className="min-h-[40px] px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 font-medium text-xs rounded-xl cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
             >
-              <span className="material-symbols-outlined text-[16px] text-rose-600 shrink-0">delete_sweep</span>
+              <Trash2 className="w-4 h-4 text-rose-600 shrink-0" strokeWidth={2} />
               <span>Limpar Todos os PDFs Atuais</span>
             </button>
           )}
@@ -1091,13 +1241,32 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
           )}
 
           {isSaving && (
-            <button
-              type="button"
-              onClick={handleCancelSync}
-              className="min-h-[40px] px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold text-xs rounded-xl cursor-pointer"
-            >
-              Cancelar Envio
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleTogglePause}
+                className="min-h-[40px] px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs rounded-xl cursor-pointer inline-flex items-center gap-1.5"
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="w-4 h-4" strokeWidth={2.2} />
+                    <span>Retomar</span>
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-4 h-4" strokeWidth={2.2} />
+                    <span>Pausar</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelSync}
+                className="min-h-[40px] px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cancelar Envio
+              </button>
+            </>
           )}
 
           {errorCount > 0 && !isSaving && (
@@ -1106,7 +1275,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
               onClick={() => void handleConfirmBatch(true)}
               className="min-h-[40px] px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl cursor-pointer flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-[17px]">refresh</span>
+              <RefreshCw className="w-[17px] h-[17px]" strokeWidth={2} />
               <span>Reenviar Falhas ({errorCount})</span>
             </button>
           )}
@@ -1117,8 +1286,18 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
             disabled={isSaving || isProcessing || matchedCount === 0}
             className="min-h-[40px] px-6 py-2 bg-slate-950 hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-xl cursor-pointer flex items-center gap-2 disabled:opacity-40 shadow-xs"
           >
-            <span className="material-symbols-outlined text-[18px] shrink-0">verified</span>
-            <span>{isSaving ? 'Sincronizando Fichas...' : `Otimizar e Sincronizar ${matchedCount} Ficha(s)`}</span>
+            {isSaving ? (
+              <RefreshCw className="w-[18px] h-[18px] shrink-0 animate-spin" strokeWidth={2} />
+            ) : (
+              <CheckCheck className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
+            )}
+            <span>
+              {isSaving
+                ? isPaused
+                  ? 'Envio Pausado...'
+                  : 'Sincronizando Fichas...'
+                : `Otimizar e Sincronizar ${matchedCount} Ficha(s)`}
+            </span>
           </button>
         </div>
       </div>
@@ -1127,52 +1306,53 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       {pickerItemId && (
         <div
           onClick={() => setPickerItemId(null)}
-          className="fixed inset-0 z-[90] bg-slate-950/50 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-[90] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh]"
+            className="modal-shell w-full max-w-md rounded-3xl overflow-hidden flex flex-col max-h-[80vh] animate-apple-pop"
           >
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div className="p-4 modal-header-surface flex items-center justify-between gap-2">
               <h4 className="text-sm font-bold text-slate-950">Vincular Estudante Manualmente</h4>
               <button
                 type="button"
                 onClick={() => setPickerItemId(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer"
+                aria-label="Fechar seleção"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <X className="w-[18px] h-[18px]" strokeWidth={2} />
               </button>
             </div>
-            <div className="p-3 border-b border-slate-100">
+            <div className="p-3 bg-[#f4f7fb]">
               <input
                 type="search"
                 autoFocus
                 value={pickerSearch}
                 onChange={(e) => setPickerSearch(e.target.value)}
                 placeholder="Buscar por nome, turma ou RA..."
-                className="w-full min-h-[40px] px-3 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-slate-950"
+                className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs text-slate-950"
               />
             </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {pickerResults.map(({ student, classGroup }) => (
                 <button
                   key={student.id}
                   type="button"
                   onClick={() => handleManualStudentChange(pickerItemId, student.id)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors cursor-pointer flex items-center justify-between gap-2"
+                  className="w-full text-left px-3.5 py-2.5 rounded-xl even:bg-[#f4f7fb] hover:bg-[#dce7fb] transition-colors cursor-pointer flex items-center justify-between gap-2"
                 >
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">{student.name}</p>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs font-bold text-slate-950 truncate">{student.name}</p>
+                    <p className="text-[11px] font-medium text-slate-700">
                       {classGroup.turmaAbrev || classGroup.name} · Nº {student.number.toString().padStart(2, '0')} · RA{' '}
                       {student.ra || '—'}
                     </p>
                   </div>
-                  <span className="material-symbols-outlined text-[18px] text-slate-400 shrink-0">arrow_forward</span>
+                  <ArrowRight className="w-[18px] h-[18px] text-slate-600 shrink-0" strokeWidth={2} />
                 </button>
               ))}
               {pickerResults.length === 0 && (
-                <p className="p-6 text-center text-xs text-slate-500">Nenhum estudante encontrado.</p>
+                <p className="p-6 text-center text-xs font-medium text-slate-700">Nenhum estudante encontrado.</p>
               )}
             </div>
           </div>
@@ -1186,7 +1366,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-100"
+      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
     >
       {contentNode}
     </div>

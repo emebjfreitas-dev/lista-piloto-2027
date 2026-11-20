@@ -518,10 +518,10 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
         <div className="w-14 h-14 rounded-2xl bg-[#fee2e2] text-[#991b1b] flex items-center justify-center mx-auto">
           <Lock className="w-7 h-7" />
         </div>
-        <h1 className="text-lg font-semibold text-[#111827]">
+        <h1 className="text-lg font-semibold text-slate-950">
           Acesso Exclusivo da Administração
         </h1>
-        <p className="text-xs sm:text-sm text-[#48484a] leading-relaxed">
+        <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
           O Diagnóstico de Consistência do Banco de Dados é restrito ao perfil Administrador e não fica disponível para docentes PEB I, PEB II ou AEE.
         </p>
         <button
@@ -579,18 +579,18 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
               <button
                 type="button"
                 onClick={onBack}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#48484a] hover:text-[#111827] cursor-pointer transition-colors duration-100"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-slate-950 cursor-pointer transition-colors duration-100"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Voltar</span>
               </button>
             )}
 
-            <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-[#111827] break-words">
+            <h1 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-950 break-words">
               Diagnóstico de Consistência do Banco
             </h1>
 
-            <p className="text-xs sm:text-sm text-[#48484a] break-words leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-700 break-words leading-relaxed">
               Auditoria técnica de {classes.length} turmas, {structuralAnalysis.activeStudents} estudantes ativos ({structuralAnalysis.aeeCount} AEE) e sincronia Firebase · Atualizado às {lastAuditAt}
             </p>
           </div>
@@ -670,8 +670,8 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
 
         {/* KPIs Estruturais e de Consistência */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f2f2f7] min-w-0 break-words">
-            <span className="text-xs font-medium text-[#48484a] block">Índice de Saúde</span>
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0 break-words">
+            <span className="text-xs font-medium text-slate-700 block">Índice de Saúde</span>
             <span
               className={`text-2xl sm:text-3xl font-semibold tabular-nums block mt-0.5 ${
                 baseReport.scorePercentage >= 90
@@ -683,71 +683,71 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
             >
               {baseReport.scorePercentage}%
             </span>
-            <span className="text-xs text-[#48484a] block mt-0.5">Base SED + Diário</span>
+            <span className="text-xs text-slate-700 block mt-0.5">Base SED + Diário</span>
           </div>
 
           <button
             type="button"
             onClick={() => setSeverityFilter(severityFilter === 'critical' ? 'all' : 'critical')}
             className={`text-left p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-colors duration-100 min-w-0 break-words ${
-              severityFilter === 'critical' ? 'bg-[#fee2e2]' : 'bg-[#f2f2f7] hover:bg-[#e9e9ef]'
+              severityFilter === 'critical' ? 'bg-[#fee2e2]' : 'bg-[#f4f7fb] hover:bg-[#e8eff9]'
             }`}
           >
             <span className="text-xs font-medium text-[#991b1b] block">Críticas</span>
             <span className="text-2xl sm:text-3xl font-semibold text-[#991b1b] tabular-nums block mt-0.5">
               {totalCritical}
             </span>
-            <span className="text-xs text-[#48484a] block mt-0.5">Ação imediata</span>
+            <span className="text-xs text-slate-700 block mt-0.5">Ação imediata</span>
           </button>
 
           <button
             type="button"
             onClick={() => setSeverityFilter(severityFilter === 'warning' ? 'all' : 'warning')}
             className={`text-left p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-colors duration-100 min-w-0 break-words ${
-              severityFilter === 'warning' ? 'bg-[#fef3c7]' : 'bg-[#f2f2f7] hover:bg-[#e9e9ef]'
+              severityFilter === 'warning' ? 'bg-[#fef3c7]' : 'bg-[#f4f7fb] hover:bg-[#e8eff9]'
             }`}
           >
             <span className="text-xs font-medium text-[#92400e] block">Alertas</span>
             <span className="text-2xl sm:text-3xl font-semibold text-[#92400e] tabular-nums block mt-0.5">
               {totalWarning}
             </span>
-            <span className="text-xs text-[#48484a] block mt-0.5">Revisar cadastro</span>
+            <span className="text-xs text-slate-700 block mt-0.5">Revisar cadastro</span>
           </button>
 
           <button
             type="button"
             onClick={() => setSeverityFilter(severityFilter === 'info' ? 'all' : 'info')}
             className={`text-left p-3.5 sm:p-4 rounded-2xl cursor-pointer transition-colors duration-100 min-w-0 break-words ${
-              severityFilter === 'info' ? 'bg-[#e8f0fe]' : 'bg-[#f2f2f7] hover:bg-[#e9e9ef]'
+              severityFilter === 'info' ? 'bg-[#dce7fb]' : 'bg-[#f4f7fb] hover:bg-[#e8eff9]'
             }`}
           >
-            <span className="text-xs font-medium text-[#1a4fa3] block">Informativas</span>
-            <span className="text-2xl sm:text-3xl font-semibold text-[#1a4fa3] tabular-nums block mt-0.5">
+            <span className="text-xs font-medium text-[#092e70] block">Informativas</span>
+            <span className="text-2xl sm:text-3xl font-semibold text-[#092e70] tabular-nums block mt-0.5">
               {totalInfo}
             </span>
-            <span className="text-xs text-[#48484a] block mt-0.5">Melhorias</span>
+            <span className="text-xs text-slate-700 block mt-0.5">Melhorias</span>
           </button>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f2f2f7] min-w-0 break-words">
-            <span className="text-xs font-medium text-[#48484a] block">RAs Duplicados</span>
-            <span className="text-2xl sm:text-3xl font-semibold text-[#111827] tabular-nums block mt-0.5">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0 break-words">
+            <span className="text-xs font-medium text-slate-700 block">RAs Duplicados</span>
+            <span className="text-2xl sm:text-3xl font-semibold text-slate-950 tabular-nums block mt-0.5">
               {structuralAnalysis.duplicateRaCount}
             </span>
-            <span className="text-xs text-[#48484a] block mt-0.5">
+            <span className="text-xs text-slate-700 block mt-0.5">
               {structuralAnalysis.attendanceMismatchCount} diverg. faltas
             </span>
           </div>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f2f2f7] min-w-0 break-words">
-            <span className="text-xs font-medium text-[#48484a] block">Nuvem Firebase</span>
-            <span className="text-base sm:text-lg font-semibold text-[#111827] block mt-1 break-words">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0 break-words">
+            <span className="text-xs font-medium text-slate-700 block">Nuvem Firebase</span>
+            <span className="text-base sm:text-lg font-semibold text-slate-950 block mt-1 break-words">
               {syncSnapshot.pendingCount > 0
                 ? `${syncSnapshot.pendingCount} pendente(s)`
                 : syncSnapshot.status === 'error'
                 ? 'Atenção'
                 : 'Sincronizado'}
             </span>
-            <span className="text-xs text-[#48484a] block mt-0.5">
+            <span className="text-xs text-slate-700 block mt-0.5">
               {structuralAnalysis.aeeCount} alunos com AEE
             </span>
           </div>
@@ -809,7 +809,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
         {/* Busca + Filtro por Turma */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-[#48484a] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-700 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchTerm}
@@ -818,13 +818,13 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                 setVisibleLimit(40);
               }}
               placeholder="Buscar por estudante, turma, campo afetado ou descrição..."
-              className="w-full min-h-[46px] pl-10 pr-9 rounded-2xl bg-[#f2f2f7] focus:bg-[#e9e9ef] text-sm text-[#111827] placeholder:text-[#6b7280] focus:outline-none"
+              className="w-full min-h-[46px] pl-10 pr-9 rounded-2xl bg-[#edf2f7] focus:bg-[#e2e8f0] text-sm text-slate-950 placeholder:text-slate-600"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#48484a] p-1 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 hover:text-slate-950 p-1 cursor-pointer"
                 aria-label="Limpar busca"
               >
                 <X className="w-4 h-4" />
@@ -839,7 +839,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
               setVisibleLimit(40);
             }}
             aria-label="Filtrar por turma"
-            className="min-h-[42px] px-3.5 rounded-2xl bg-[#f2f2f7] text-xs font-semibold text-[#111827] cursor-pointer focus:outline-none"
+            className="min-h-[42px] px-3.5 rounded-2xl bg-[#edf2f7] text-xs font-semibold text-slate-950 cursor-pointer"
           >
             <option value="all">Todas as turmas ({classes.length})</option>
             {classes.map((cls) => (
@@ -856,7 +856,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
               setVisibleLimit(40);
             }}
             aria-label="Filtrar por gravidade"
-            className="min-h-[42px] px-3.5 rounded-2xl bg-[#f2f2f7] text-xs font-semibold text-[#111827] cursor-pointer focus:outline-none"
+            className="min-h-[42px] px-3.5 rounded-2xl bg-[#edf2f7] text-xs font-semibold text-slate-950 cursor-pointer"
           >
             <option value="all">Todas gravidades</option>
             <option value="critical">Críticas ({totalCritical})</option>
@@ -867,15 +867,15 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
 
         {categoryFilter === 'sync_queue' ? (
           <div className="space-y-4">
-            <div className="p-5 rounded-2xl bg-[#f2f2f7] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="p-5 rounded-2xl bg-[#f4f7fb] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
-                <span className="text-xs font-semibold text-[#48484a] uppercase tracking-wider">
+                <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                   SyncQueueManager (Fila Atômica Local & Nuvem)
                 </span>
-                <p className="text-sm font-semibold text-[#111827]">
+                <p className="text-sm font-semibold text-slate-950">
                   {queueSnapshot.isProcessing ? 'Processando fila...' : queueSnapshot.pendingTasksCount > 0 ? `${queueSnapshot.pendingTasksCount} tarefa(s) pendente(s) na fila` : 'Fila de sincronização totalmente sincronizada'}
                 </p>
-                <p className="text-xs text-[#48484a]">
+                <p className="text-xs text-slate-700">
                   {queueSnapshot.lastCompletedAtISO ? `Última sincronização concluída: ${new Date(queueSnapshot.lastCompletedAtISO).toLocaleTimeString('pt-BR')}` : 'Nenhuma sincronização executada nesta sessão ainda'}
                   {queueSnapshot.lastError && <span className="block text-[#991b1b] mt-0.5">Último erro: {queueSnapshot.lastError}</span>}
                 </p>
@@ -918,13 +918,13 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                       }`}>
                         {task.status === 'processing' ? 'Processando' : task.status === 'retrying' ? `Retentando (Tentativa ${task.attempts})` : 'Na Fila'}
                       </span>
-                      <span className="text-xs font-medium text-[#48484a] font-mono">
+                      <span className="text-xs font-medium text-slate-700 font-mono">
                         {task.dedupeKey}
                       </span>
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-[#111827]">{task.description}</h3>
-                      <p className="text-xs text-[#48484a] mt-0.5">Criada em: {new Date(task.createdAtMs).toLocaleTimeString('pt-BR')} · Coalesced: {task.coalescedCount || 1}x</p>
+                      <h3 className="text-sm font-semibold text-slate-950">{task.description}</h3>
+                      <p className="text-xs text-slate-700 mt-0.5">Criada em: {new Date(task.createdAtMs).toLocaleTimeString('pt-BR')} · Coalesced: {task.coalescedCount || 1}x</p>
                     </div>
                     {task.lastError && (
                       <div className="p-3 rounded-xl bg-[#fee2e2] text-xs text-[#991b1b] font-mono break-all">
@@ -1029,8 +1029,8 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
 
             {/* Tabela Desktop com Zebra Striping (Sem divide-y, Sem contornos) */}
             <div className="hidden lg:block overflow-x-auto rounded-2xl">
-              <table className="w-full text-left text-xs sm:text-[13px] border-collapse">
-                <thead className="bg-[#f2f2f7] text-[#374151] font-semibold text-xs">
+              <table className="w-full text-left text-xs sm:text-[13px]">
+                <thead className="bg-[#edf2f7] text-slate-800 font-semibold text-xs">
                   <tr>
                     <th className="py-3 px-3 rounded-tl-xl">Gravidade</th>
                     <th className="py-3 px-3">Categoria</th>
@@ -1052,36 +1052,36 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                     return (
                       <tr
                         key={issue.id}
-                        className="odd:bg-[#f8f8fb] even:bg-white hover:bg-[#eef0f5] transition-colors duration-100"
+                        className="odd:bg-[#f4f7fb] even:bg-white hover:bg-[#e8eff9] transition-colors duration-100"
                       >
                         <td className="py-3 px-3 align-top whitespace-nowrap">
                           <span
                             className={`px-2 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1 ${
                               isCrit
-                                ? 'bg-[#fee2e2] text-[#991b1b]'
+                                ? 'bg-rose-100 text-rose-950'
                                 : isWarn
-                                ? 'bg-[#fef3c7] text-[#92400e]'
-                                : 'bg-[#e8f0fe] text-[#1a4fa3]'
+                                ? 'bg-amber-100 text-amber-950'
+                                : 'bg-[#dce7fb] text-[#092e70]'
                             }`}
                           >
                             {isCrit ? 'Crítica' : isWarn ? 'Alerta' : 'Info'}
                           </span>
                         </td>
-                        <td className="py-3 px-3 align-top text-[#374151] font-medium whitespace-nowrap">
+                        <td className="py-3 px-3 align-top text-slate-800 font-medium whitespace-nowrap">
                           {issue.categoryLabel}
                         </td>
                         <td className="py-3 px-3 align-top">
-                          <span className="font-semibold text-[#111827] block">
+                          <span className="font-semibold text-slate-950 block">
                             {issue.className || 'EMEB Geral'}
                           </span>
                           {issue.studentName && (
-                            <span className="text-xs text-[#374151] block break-words">
+                            <span className="text-xs text-slate-700 block break-words">
                               {issue.studentNumber ? `Nº ${issue.studentNumber} · ` : ''}
                               {issue.studentName}
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-3 align-top font-semibold text-[#111827] break-words">
+                        <td className="py-3 px-3 align-top font-semibold text-slate-950 break-words">
                           {issue.affectedField}
                         </td>
                         <td className="py-3 px-3 align-top text-xs break-words">
@@ -1092,9 +1092,9 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                             Esperado: {issue.expectedValue}
                           </span>
                         </td>
-                        <td className="py-3 px-3 align-top text-[#374151] max-w-md break-words">
+                        <td className="py-3 px-3 align-top text-slate-800 max-w-md break-words">
                           <span className="block">{issue.description}</span>
-                          <span className="text-xs text-[#48484a] block mt-0.5">
+                          <span className="text-xs text-slate-700 block mt-0.5">
                             Sugestão: {issue.suggestedAction}
                           </span>
                         </td>
@@ -1103,12 +1103,12 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                             <button
                               type="button"
                               onClick={() => onOpenClassDetails(targetCls)}
-                              className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] text-xs font-semibold cursor-pointer"
+                              className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-950 text-xs font-semibold cursor-pointer"
                             >
                               Abrir Turma
                             </button>
                           ) : (
-                            <span className="text-xs text-[#6b7280]">—</span>
+                            <span className="text-xs text-slate-600">—</span>
                           )}
                         </td>
                       </tr>
@@ -1123,14 +1123,14 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
                 <button
                   type="button"
                   onClick={() => setVisibleLimit((prev) => prev + 60)}
-                  className="min-h-[42px] px-4 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs sm:text-[13px] font-semibold cursor-pointer"
+                  className="min-h-[42px] px-4 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs sm:text-[13px] font-semibold cursor-pointer"
                 >
                   Carregar mais (+60 de {filteredIssues.length - visibleLimit} restantes)
                 </button>
                 <button
                   type="button"
                   onClick={() => setVisibleLimit(filteredIssues.length)}
-                  className="min-h-[42px] px-4 rounded-xl bg-white text-[#48484a] hover:text-[#111827] text-xs sm:text-[13px] font-semibold cursor-pointer"
+                  className="min-h-[42px] px-4 rounded-xl bg-white text-slate-700 hover:text-slate-950 text-xs sm:text-[13px] font-semibold cursor-pointer"
                 >
                   Exibir todos ({filteredIssues.length})
                 </button>
@@ -1140,7 +1140,7 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
         )}
       </section>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-xs text-[#48484a]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-xs text-slate-200">
         <span className="inline-flex items-center gap-1.5">
           <Database className="w-4 h-4 shrink-0" />
           <span>Auditoria local + Firestore em tempo real</span>

@@ -51,22 +51,22 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
 
           {showIOSGuide && (
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-gentle-fade"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-backdrop-in"
               onClick={() => setShowIOSGuide(false)}
             >
               <div
-                className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl space-y-4"
+                className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-[0_28px_68px_rgba(2,6,23,0.45)] space-y-4 animate-apple-pop"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center justify-between pb-1">
                   <div className="flex items-center gap-2">
                     <Smartphone className="w-5 h-5 text-[#0b3b8c]" />
-                    <h3 className="text-sm font-bold text-slate-900">Instalar no iPhone / iPad</h3>
+                    <h3 className="text-sm font-bold text-slate-950">Instalar no iPhone / iPad</h3>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowIOSGuide(false)}
-                    className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 cursor-pointer"
+                    className="p-1.5 rounded-xl bg-[#edf2f7] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -133,22 +133,22 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
 
         {showIOSGuide && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-gentle-fade"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-backdrop-in"
             onClick={() => setShowIOSGuide(false)}
           >
             <div
-              className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl space-y-4 text-left"
+              className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-[0_28px_68px_rgba(2,6,23,0.45)] space-y-4 text-left animate-apple-pop"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2">
                   <Smartphone className="w-5 h-5 text-[#0b3b8c]" />
-                  <h3 className="text-sm font-bold text-slate-900">Instalar no iPhone / iPad</h3>
+                  <h3 className="text-sm font-bold text-slate-950">Instalar no iPhone / iPad</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowIOSGuide(false)}
-                  className="p-1 rounded-lg text-slate-500 hover:bg-slate-100 cursor-pointer"
+                  className="p-1.5 rounded-xl bg-[#edf2f7] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>

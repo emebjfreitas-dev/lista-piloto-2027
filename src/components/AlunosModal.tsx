@@ -9,6 +9,7 @@ import { getSavedPhotosDriveFolderInfo, OFFICIAL_FOLDER_NAME } from '../services
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import { findStudentSiblings } from '../utils/siblingDetection';
 import { StudentSiblingsCard } from './StudentSiblingsCard';
+import { ChevronRight, FileSpreadsheet, FileText, Search, Users, X, XCircle } from 'lucide-react';
 
 interface AlunosModalProps {
   isOpen: boolean;
@@ -62,25 +63,25 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 p-4 sm:p-6 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]"
+        className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] animate-apple-pop"
       >
         {/* Header: Proporcional e Elegante */}
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 shrink-0">
+        <div className="flex items-center justify-between gap-3 pb-3 shrink-0">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="material-symbols-outlined text-[20px] text-blue-600 shrink-0">groups</span>
-              <h3 className="text-base sm:text-lg font-semibold text-slate-900 break-words leading-snug">
+              <Users className="w-5 h-5 text-[#0b3b8c] shrink-0" strokeWidth={2} />
+              <h3 className="text-base sm:text-lg font-semibold text-slate-950 break-words leading-snug">
                 {className} · Relação de Estudantes
               </h3>
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-mono font-semibold tabular-nums shrink-0">
+              <span className="px-2 py-0.5 rounded-md bg-[#edf2f7] text-slate-900 text-xs font-mono font-semibold tabular-nums shrink-0">
                 {students.length}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 break-words">
+            <p className="text-xs text-slate-700 mt-0.5 break-words">
               Selecione o estudante para visualizar detalhes, fotos e Ficha Informativa.
             </p>
           </div>
@@ -88,33 +89,32 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-9 h-9 rounded-lg bg-[#edf2f7] text-slate-700 hover:text-slate-950 hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer transition-colors shrink-0"
             aria-label="Fechar visualização da turma"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <X className="w-5 h-5" strokeWidth={2} />
           </button>
         </div>
 
         {/* Search Bar Minimalista */}
         <div className="py-2.5 shrink-0">
           <div className="relative flex items-center">
-            <span className="material-symbols-outlined absolute left-3.5 text-[#86868b] text-[20px]">
-              search
-            </span>
+            <Search className="w-[18px] h-[18px] absolute left-3.5 text-slate-600" strokeWidth={2} />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nome, nº da chamada ou RA..."
-              className="w-full h-10 pl-10 pr-9 bg-[#f5f5f7] text-[#1d1d1f] font-medium text-xs sm:text-sm rounded-xl border border-black/[0.06] focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all"
+              className="w-full h-10 pl-10 pr-9 bg-[#edf2f7] text-slate-950 placeholder:text-slate-600 font-medium text-xs sm:text-sm rounded-xl focus:bg-white transition-all"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-3 text-[#86868b] hover:text-[#1d1d1f] cursor-pointer"
+                className="absolute right-3 text-slate-600 hover:text-slate-950 cursor-pointer"
+                aria-label="Limpar busca"
               >
-                <span className="material-symbols-outlined text-[18px]">cancel</span>
+                <XCircle className="w-[18px] h-[18px]" strokeWidth={2} />
               </button>
             )}
           </div>
@@ -132,12 +132,12 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                 <div
                   key={student.id}
                   onClick={() => setSelectedStudentId(student.id)}
-                  className={`p-3 rounded-xl border-2 flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                  className={`p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 ${
                     isSelected
-                      ? 'bg-[#c3e5f4]/45 border-[#003440] shadow-xs'
+                      ? 'bg-[#dce7fb] shadow-[0_6px_18px_-6px_rgba(11,59,140,0.22)] -translate-y-px'
                       : hasAlert
-                      ? 'bg-[#fff8f7] hover:bg-[#ffdad6]/30 border-[#ba1a1a]/40'
-                      : 'bg-[#f9faf8] hover:bg-[#f3f4f2] border-[#b4c0c4]/80'
+                      ? 'bg-rose-50 hover:bg-rose-100/80'
+                      : 'bg-[#f4f7fb] hover:bg-[#edf2f7]'
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
@@ -145,16 +145,16 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-xs font-semibold text-[#374144]">
+                        <span className="text-xs font-semibold text-slate-800">
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         {student.ra && (
-                          <span className="text-xs bg-[#edeeec] px-1.5 py-0.5 rounded font-mono font-bold text-[#003440]">
+                          <span className="text-xs bg-white px-1.5 py-0.5 rounded font-mono font-bold text-[#003440]">
                             RA: {student.ra}-{student.digRa}
                           </span>
                         )}
                         {student.deficiencia && (
-                          <span className="text-xs font-semibold text-[#003723] bg-[#a4f3ca] px-2 py-0.5 rounded-full break-words">
+                          <span className="text-xs font-semibold text-emerald-950 bg-emerald-100 px-2 py-0.5 rounded-full break-words">
                             {student.deficiencia}
                           </span>
                         )}
@@ -162,7 +162,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                       <span className="text-base font-semibold text-[#003440] break-words leading-snug mt-0.5 block">
                         {student.name}
                       </span>
-                      <p className="text-xs font-semibold text-[#2c373a] break-words">
+                      <p className="text-xs font-semibold text-slate-700 break-words">
                         {student.filiacao1 || student.guardianName || 'Responsável cadastrado'}
                       </p>
                     </div>
@@ -172,16 +172,14 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                     <span
                       className={`text-xs font-semibold px-2 py-0.5 rounded-lg ${
                         student.totalAbsencesMonth > 0
-                          ? 'bg-[#ffdad6] text-[#ba1a1a]'
-                          : 'bg-[#eaf6ef] text-[#005035]'
+                          ? 'bg-rose-100 text-rose-950'
+                          : 'bg-emerald-100 text-emerald-950'
                       }`}
                     >
                       {student.totalAbsencesMonth}{' '}
                       {student.totalAbsencesMonth === 1 ? 'falta' : 'faltas'}
                     </span>
-                    <span className="material-symbols-outlined text-[#003440] text-[18px] mt-0.5">
-                      chevron_right
-                    </span>
+                    <ChevronRight className="w-[18px] h-[18px] text-[#003440] mt-0.5" strokeWidth={2} />
                   </div>
                 </div>
               );
@@ -190,20 +188,20 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
           {/* Right Column (5 cols on Widescreen, Bottom Card on Mobile): Selected Student Detail Ficha */}
           {selectedStudent && (
-            <div className="mt-3 lg:mt-0 lg:col-span-5 p-4 sm:p-5 bg-[#f4f7f5] rounded-2xl border-2 border-[#003440]/25 flex flex-col justify-between gap-3 max-h-[42vh] lg:max-h-full modal-scroll-body">
+            <div className="mt-3 lg:mt-0 lg:col-span-5 p-4 sm:p-5 bg-[#f4f7fb] rounded-2xl flex flex-col justify-between gap-3 max-h-[42vh] lg:max-h-full modal-scroll-body">
               <div className="space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b-2 border-[#b4c0c4]/70">
+                <div className="flex items-center justify-between pb-2">
                   <span className="text-sm font-semibold text-[#003440] uppercase tracking-wide">
                     Ficha {getStudentGenderLabel(selectedStudent).doEstudante} — Nº{' '}
                     {selectedStudent.number.toString().padStart(2, '0')}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#c3e5f4] text-[#001f29] font-semibold text-xs">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#dce7fb] text-[#090f1d] font-semibold text-xs">
                     {className}
                   </span>
                 </div>
 
                 {/* Avatar + Name + Ficha Informativa Escaneada (Drive) */}
-                <div className="flex items-center gap-4 bg-white p-3.5 rounded-2xl border border-[#b4c0c4]">
+                <div className="flex items-center gap-4 bg-white p-3.5 rounded-2xl shadow-[0_4px_14px_-6px_rgba(9,15,29,0.06)]">
                   <StudentAvatar
                     student={selectedStudent}
                     size="xl"
@@ -231,11 +229,9 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                             e.preventDefault();
                             onOpenStudentPdf(selectedStudent);
                           }}
-                          className="doc-hyperlink px-3 py-1.5 bg-white hover:bg-[#003440] text-[#003440] hover:!text-white border border-black/[0.08] rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          className="doc-hyperlink px-3 py-1.5 bg-[#edf2f7] hover:bg-[#003440] text-[#003440] hover:!text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                         >
-                          <span className="material-symbols-outlined text-[16px]">
-                            document_scanner
-                          </span>
+                          <FileText className="w-4 h-4" strokeWidth={2} />
                           <span>Ficha Informativa Escaneada (Drive)</span>
                         </a>
                       )}
@@ -247,9 +243,9 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                             onClose();
                             onOpenStudentGrid(selectedStudent);
                           }}
-                          className="px-3 py-1.5 bg-[#003440] hover:bg-[#1e4b58] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          className="px-3 py-1.5 bg-[#003440] hover:bg-[#1e4b58] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
                         >
-                          <span className="material-symbols-outlined text-[16px]">grid_on</span>
+                          <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
                           <span>Abrir 48 Campos SED</span>
                         </button>
                       )}
@@ -259,8 +255,8 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
                 {/* Key Student Data Grid (Mobile + Widescreen friendly) */}
                 <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-2 text-sm">
-                  <div className="bg-white p-2.5 rounded-xl border border-[#d5dddf] min-w-0">
-                    <span className="text-xs font-semibold text-[#647073] uppercase block">
+                  <div className="bg-white p-2.5 rounded-xl shadow-[0_3px_10px_-5px_rgba(9,15,29,0.06)] min-w-0">
+                    <span className="text-xs font-semibold text-slate-700 uppercase block">
                       Nascimento / Idade
                     </span>
                     <span className="font-semibold text-[#003440] break-words">
@@ -269,18 +265,18 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                     </span>
                   </div>
 
-                  <div className="bg-white p-2.5 rounded-xl border border-[#d5dddf] min-w-0">
-                    <span className="text-xs font-semibold text-[#647073] uppercase block">
+                  <div className="bg-white p-2.5 rounded-xl shadow-[0_3px_10px_-5px_rgba(9,15,29,0.06)] min-w-0">
+                    <span className="text-xs font-semibold text-slate-700 uppercase block">
                       Frequência no Mês
                     </span>
-                    <span className="font-semibold text-[#005035] break-words">
+                    <span className="font-semibold text-[#065f46] break-words">
                       {selectedStudent.totalAbsencesMonth} faltas •{' '}
                       {selectedStudent.justifiedAbsences || 0} atestados
                     </span>
                   </div>
 
-                  <div className="min-[400px]:col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf] min-w-0">
-                    <span className="text-xs font-semibold text-[#647073] uppercase block">
+                  <div className="min-[400px]:col-span-2 bg-white p-2.5 rounded-xl shadow-[0_3px_10px_-5px_rgba(9,15,29,0.06)] min-w-0">
+                    <span className="text-xs font-semibold text-slate-700 uppercase block">
                       Filiação / Responsáveis (Gênero &amp; Vínculo)
                     </span>
                     {(() => {
@@ -296,11 +292,11 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                       );
                       return (
                         <>
-                          <span className="font-bold text-[#151a18] block break-words">
+                          <span className="font-bold text-slate-950 block break-words">
                             1. {g1.roleLabel}: {g1.cleanName || '—'}
                           </span>
                           {selectedStudent.filiacao2 && (
-                            <span className="font-bold text-[#374144] block break-words">
+                            <span className="font-bold text-slate-800 block break-words">
                               2. {g2.roleLabel}: {g2.cleanName}
                             </span>
                           )}
@@ -325,25 +321,25 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                     </div>
                   )}
 
-                  <div className="min-[400px]:col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf] min-w-0">
-                    <span className="text-xs font-semibold text-[#647073] uppercase block">
-                      Telefones & Contato
+                  <div className="min-[400px]:col-span-2 bg-white p-2.5 rounded-xl shadow-[0_3px_10px_-5px_rgba(9,15,29,0.06)] min-w-0">
+                    <span className="text-xs font-semibold text-slate-700 uppercase block">
+                      Telefones &amp; Contato
                     </span>
                     <span className="font-semibold text-[#003440] break-words">
                       {selectedStudent.telefones || selectedStudent.guardianPhone || '(11) 98765-4321'}
                     </span>
                     {selectedStudent.emailMunicipal && (
-                      <span className="block font-mono text-xs text-[#005035] mt-0.5 break-all">
+                      <span className="block font-mono text-xs text-[#065f46] mt-0.5 break-all">
                         {selectedStudent.emailMunicipal}
                       </span>
                     )}
                   </div>
 
-                  <div className="min-[400px]:col-span-2 bg-white p-2.5 rounded-xl border border-[#d5dddf] min-w-0">
-                    <span className="text-xs font-semibold text-[#647073] uppercase block">
+                  <div className="min-[400px]:col-span-2 bg-white p-2.5 rounded-xl shadow-[0_3px_10px_-5px_rgba(9,15,29,0.06)] min-w-0">
+                    <span className="text-xs font-semibold text-slate-700 uppercase block">
                       Endereço Residencial
                     </span>
-                    <span className="font-semibold text-[#151a18] break-words">
+                    <span className="font-semibold text-slate-950 break-words">
                       {selectedStudent.logradouro || '—'}, {selectedStudent.numeroResidencia || 'S/N'}{' '}
                       {selectedStudent.complemento ? `(${selectedStudent.complemento})` : ''} —{' '}
                       {selectedStudent.bairro || 'Jundiaí/SP'} (CEP: {selectedStudent.cep || '—'})
@@ -355,11 +351,11 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
           )}
         </div>
 
-        <div className="pt-3 border-t border-slate-100 mt-2 flex justify-end shrink-0">
+        <div className="pt-3 mt-2 flex justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto min-w-[160px] h-10 px-5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center justify-center transition-colors cursor-pointer shadow-xs"
+            className="w-full sm:w-auto min-w-[160px] h-10 px-5 bg-slate-950 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center justify-center transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-xs"
           >
             Fechar Relação
           </button>

@@ -60,7 +60,6 @@ export interface StudentSedData {
   emailGoogle?: string;
   emailMicrosoft?: string;
   emailMunicipal?: string;
-  rotaOnibus?: string;
   sucessaoEscolar?: string;
 }
 

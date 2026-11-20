@@ -26,6 +26,34 @@ import {
   getStoredClasses,
 } from '../services/db';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  BellRing,
+  CalendarCheck2,
+  Camera,
+  CheckCircle2,
+  ClipboardList,
+  CreditCard,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  FileText,
+  Lock,
+  MapPin,
+  Maximize2,
+  MessageCircle,
+  MessageSquare,
+  Pencil,
+  Phone,
+  Save,
+  ShieldAlert,
+  ShieldCheck,
+  User,
+  X,
+} from 'lucide-react';
 import { findStudentSiblings } from '../utils/siblingDetection';
 import { StudentSiblingsCard } from './StudentSiblingsCard';
 
@@ -565,26 +593,26 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-backdrop-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white w-full max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] min-w-0"
+        className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] min-w-0 animate-apple-pop"
       >
         {/* Top Clean Header + Navegação */}
-        <div className="px-4 sm:px-6 py-3.5 bg-[#fafafc] flex flex-wrap items-center justify-between gap-2.5 shrink-0 min-w-0">
+        <div className="modal-header-surface px-4 sm:px-6 py-3.5 bg-[#edf2f7] flex flex-wrap items-center justify-between gap-2.5 shrink-0 min-w-0">
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
-            <span className="text-xs font-semibold text-slate-900 tabular-nums shrink-0">
+            <span className="text-xs font-semibold text-slate-950 tabular-nums shrink-0">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
             </span>
-            <span className="text-slate-300" aria-hidden="true">·</span>
-            <span className="text-xs font-medium text-slate-600 break-words">
+            <span className="text-slate-600" aria-hidden="true">·</span>
+            <span className="text-xs font-medium text-slate-700 break-words">
               {className}
             </span>
             {orderedList.length > 1 && currentStudentIdx >= 0 && (
               <>
-                <span className="text-slate-300" aria-hidden="true">·</span>
-                <span className="text-xs text-slate-400 tabular-nums">
+                <span className="text-slate-600" aria-hidden="true">·</span>
+                <span className="text-xs font-medium text-slate-700 tabular-nums">
                   {currentStudentIdx + 1} de {orderedList.length}
                 </span>
               </>
@@ -610,9 +638,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   }
                   className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-30 disabled:pointer-events-none tabular-nums"
                 >
-                  <span className="material-symbols-outlined text-[17px]">
-                    arrow_back
-                  </span>
+                  <ArrowLeft className="w-[17px] h-[17px]" />
                   <span className="hidden sm:inline">
                     {prevStudent
                       ? `Nº ${prevStudent.number.toString().padStart(2, '0')}`
@@ -636,9 +662,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       ? `Nº ${nextStudent.number.toString().padStart(2, '0')}`
                       : 'Próximo'}
                   </span>
-                  <span className="material-symbols-outlined text-[17px]">
-                    arrow_forward
-                  </span>
+                  <ArrowRight className="w-[17px] h-[17px]" />
                 </button>
               </div>
             )}
@@ -646,10 +670,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
               aria-label="Fechar ficha do estudante"
             >
-              <span className="material-symbols-outlined text-[20px]">close</span>
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -678,11 +702,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   <StudentAvatar
                     student={st}
                     size="xs"
-                    className="shrink-0 border-0 bg-slate-100"
+                    className="shrink-0 bg-slate-100"
                     expandableOnClick={false}
                   />
                   <div className="min-w-0 flex-1 leading-tight">
-                    <span className="text-[10px] font-semibold tabular-nums text-slate-500 block">
+                    <span className="text-[10px] font-semibold tabular-nums text-slate-700 block">
                       Nº {st.number.toString().padStart(2, '0')}
                     </span>
                     <span className="text-xs font-semibold truncate block">
@@ -703,7 +727,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-2xl bg-orange-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                    <span className="material-symbols-outlined text-[22px]">notification_important</span>
+                    <BellRing className="w-[22px] h-[22px]" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -733,14 +757,14 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   </span>
                 </div>
                 <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95">
-                  <span className="text-[11px] font-medium uppercase text-slate-500 block">Responsável Principal</span>
-                  <span className="font-semibold text-slate-900 block mt-0.5 break-words" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
+                  <span className="text-[11px] font-bold uppercase text-slate-700 block">Responsável Principal</span>
+                  <span className="font-semibold text-slate-950 block mt-0.5 break-words" title={`${guardian1Info.parentesco}: ${guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}`}>
                     {guardian1Info.parentesco}: {guardian1Info.nomeLimpo || draft.guardianName || 'Não informado'}
                   </span>
                 </div>
                 <div className="bg-white/90 rounded-2xl p-3 shadow-2xs min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95">
-                  <span className="text-[11px] font-medium uppercase text-slate-500 block">Status do Acompanhamento</span>
-                  <span className={`font-semibold block mt-0.5 break-words ${hasFamilyFeedback ? 'text-emerald-900' : 'text-orange-950'}`}>
+                  <span className="text-[11px] font-bold uppercase text-slate-700 block">Status do Acompanhamento</span>
+                  <span className={`font-semibold block mt-0.5 break-words ${hasFamilyFeedback ? 'text-emerald-950' : 'text-orange-950'}`}>
                     {hasFamilyFeedback ? `Feedback: "${familyFeedbackText}"` : 'Pendente de contato'}
                   </span>
                 </div>
@@ -758,13 +782,13 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 shadow-xs transition-all cursor-pointer"
                       title={`Abrir WhatsApp com mensagem preenchida de Busca Ativa para ${link.display}`}
                     >
-                      <span className="material-symbols-outlined text-[18px] shrink-0">chat</span>
+                      <MessageCircle className="w-[18px] h-[18px] shrink-0" />
                       <span>Contato de Busca Ativa ({link.display})</span>
                     </a>
                   ))
                 ) : (
                   <span className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-slate-600 text-white font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 opacity-80">
-                    <span className="material-symbols-outlined text-[17px] shrink-0">chat</span>
+                    <MessageCircle className="w-[17px] h-[17px] shrink-0" />
                     <span>Sem Telefone Cadastrado</span>
                   </span>
                 )}
@@ -775,7 +799,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     className="w-full sm:w-auto min-h-[40px] px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1 transition-all cursor-pointer shadow-xs"
                     title="Realizar ligação telefônica para o responsável"
                   >
-                    <span className="material-symbols-outlined text-[18px] text-emerald-800 shrink-0">call</span>
+                    <Phone className="w-[18px] h-[18px] text-emerald-800 shrink-0" />
                     <span>Ligar</span>
                   </a>
                 )}
@@ -790,9 +814,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   }`}
                   title="Disparar notificação push imediata para a equipe escolar e coordenação"
                 >
-                  <span className="material-symbols-outlined text-[18px] shrink-0">
-                    {pushAlertSent ? 'check_circle' : 'notifications_active'}
-                  </span>
+                  {pushAlertSent ? (
+                    <CheckCircle2 className="w-[18px] h-[18px] shrink-0" />
+                  ) : (
+                    <BellRing className="w-[18px] h-[18px] shrink-0" />
+                  )}
                   <span>
                     {pushAlertSent
                       ? '✓ Notificação Push Enviada à Equipe!'
@@ -810,13 +836,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-950 font-bold text-xs flex items-center justify-center text-center whitespace-normal gap-1 transition-all cursor-pointer sm:ml-auto shadow-xs"
                     title="Ir para a aba de Faltas Seguidas para registrar ocorrência ou feedback oficial"
                   >
-                    <span className="material-symbols-outlined text-[18px] text-slate-900 shrink-0">
-                      history_edu
-                    </span>
+                    <ClipboardList className="w-[18px] h-[18px] text-slate-950 shrink-0" />
                     <span>Ficha de Faltas Seguidas</span>
-                    <span className="material-symbols-outlined text-[16px] text-slate-500 shrink-0">
-                      arrow_forward
-                    </span>
+                    <ArrowRight className="w-4 h-4 text-slate-700 shrink-0" />
                   </button>
                 )}
               </div>
@@ -851,7 +873,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     />
                     <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/35 to-transparent flex items-center justify-between text-white">
                       <span className="text-xs font-semibold flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[17px]">fullscreen</span>
+                        <Maximize2 className="w-[17px] h-[17px]" />
                         Ampliar foto
                       </span>
                       <button
@@ -862,7 +884,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         }}
                         className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/35 backdrop-blur-md text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[15px]">photo_camera</span>
+                        <Camera className="w-[15px] h-[15px]" />
                         Trocar Foto
                       </button>
                     </div>
@@ -892,7 +914,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       }}
                       className="mt-5 px-4 py-2.5 rounded-2xl bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] font-bold text-sm flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
+                      <Camera className="w-[18px] h-[18px]" />
                       <span>Subir Foto do Dispositivo</span>
                     </button>
                   </div>
@@ -942,13 +964,13 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         : 'bg-slate-100 text-slate-700'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[16px] shrink-0">
-                      {currentConsecutiveDaysCount >= 10
-                        ? 'gpp_maybe'
-                        : isConsecutiveRisk
-                        ? 'warning'
-                        : 'verified'}
-                    </span>
+                    {currentConsecutiveDaysCount >= 10 ? (
+                      <ShieldAlert className="w-4 h-4 shrink-0" />
+                    ) : isConsecutiveRisk ? (
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <BadgeCheck className="w-4 h-4 shrink-0" />
+                    )}
                     <span>
                       {isConsecutiveDaysBadgeLabel(
                         currentConsecutiveDaysCount,
@@ -1019,9 +1041,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           : 'text-slate-600'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[14px] shrink-0">
-                        {isConsecutiveRisk ? 'notification_important' : 'event_available'}
-                      </span>
+                      {isConsecutiveRisk ? (
+                        <BellRing className="w-3.5 h-3.5 shrink-0" />
+                      ) : (
+                        <CalendarCheck2 className="w-3.5 h-3.5 shrink-0" />
+                      )}
                       <span>Faltas Seguidas</span>
                     </span>
                     <div className="flex flex-wrap items-baseline gap-1 mt-0.5">
@@ -1061,17 +1085,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     }`}
                   >
                     <div className="flex items-start gap-2 min-w-0">
-                      <span
-                        className={`material-symbols-outlined text-[20px] shrink-0 mt-0.5 ${
-                          latestConsecutiveOccurrence.familyFeedback
-                            ? 'text-emerald-800'
-                            : 'text-rose-700'
-                        }`}
-                      >
-                        {latestConsecutiveOccurrence.familyFeedback
-                          ? 'mark_chat_read'
-                          : 'rule'}
-                      </span>
+                      {latestConsecutiveOccurrence.familyFeedback ? (
+                        <MessageSquare className="w-5 h-5 shrink-0 mt-0.5 text-emerald-800" />
+                      ) : (
+                        <ClipboardList className="w-5 h-5 shrink-0 mt-0.5 text-rose-700" />
+                      )}
                       <div className="min-w-0">
                         <span className="font-bold block">
                           Datas seguidas ({latestConsecutiveOccurrence.sequenceNumber}ª ocorrência):{' '}
@@ -1107,9 +1125,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         hasPdf ? 'bg-white/20 text-white' : 'bg-[#be123c] text-white'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[26px]">
-                        {hasPdf ? 'picture_as_pdf' : 'notification_important'}
-                      </span>
+                      {hasPdf ? (
+                        <FileText className="w-[26px] h-[26px]" />
+                      ) : (
+                        <BellRing className="w-[26px] h-[26px]" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <span
@@ -1135,7 +1155,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     }`}
                   >
                     <span>{hasPdf ? 'Abrir Ficha' : 'Ver Aviso'}</span>
-                    <span className="material-symbols-outlined text-[17px]">open_in_new</span>
+                    <ExternalLink className="w-[17px] h-[17px]" />
                   </div>
                 </button>
               )}
@@ -1157,11 +1177,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     return (
                       <>
                         <div className="flex items-start gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="material-symbols-outlined text-[18px]">person</span>
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                            <User className="w-[18px] h-[18px]" />
                           </div>
                           <div className="min-w-0">
-                            <span className="text-xs font-semibold text-slate-500 block">
+                            <span className="text-xs font-semibold text-slate-700 block">
                               {g1.shortRoleLabel || 'Mãe / Responsável 1'}
                             </span>
                             <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5 break-words">
@@ -1171,11 +1191,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         </div>
 
                         <div className="flex items-start gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="material-symbols-outlined text-[18px]">person</span>
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                            <User className="w-[18px] h-[18px]" />
                           </div>
                           <div className="min-w-0">
-                            <span className="text-xs font-semibold text-slate-500 block">
+                            <span className="text-xs font-semibold text-slate-700 block">
                               {g2.shortRoleLabel || 'Pai / Responsável 2'}
                             </span>
                             <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5 break-words">
@@ -1203,10 +1223,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-[#25D366]/20 text-[#128C7E] flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-[18px]">call</span>
+                      <Phone className="w-[18px] h-[18px]" />
                     </div>
                     <div>
-                      <span className="text-xs font-semibold text-slate-500 block">
+                      <span className="text-xs font-semibold text-slate-700 block">
                         Telefone da família
                       </span>
                       <span className="text-sm font-semibold text-slate-950 tabular-nums">
@@ -1223,9 +1243,9 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           href={ph.waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full sm:w-auto min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold text-xs tabular-nums flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors cursor-pointer"
+                          className="w-full sm:w-auto min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs tabular-nums flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-[16px] shrink-0">chat</span>
+                          <MessageCircle className="w-4 h-4 shrink-0" />
                           <span>WhatsApp {ph.display}</span>
                         </a>
                       ))}
@@ -1237,11 +1257,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 {fullAddress && (
                   <div className="pt-2 flex flex-wrap items-center justify-between gap-2 min-w-0">
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                      <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
-                        <span className="material-symbols-outlined text-[18px]">location_on</span>
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                        <MapPin className="w-[18px] h-[18px]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-semibold text-slate-500 block">
+                        <span className="text-xs font-semibold text-slate-700 block">
                           Endereço onde mora
                         </span>
                         <p className="text-sm font-semibold text-slate-950 leading-snug mt-0.5 break-words">
@@ -1259,7 +1279,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       onClick={handleSaveAll}
                       className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer shadow-xs transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[16px] shrink-0">save</span>
+                      <Save className="w-4 h-4 shrink-0" />
                       <span>Salvar Alterações</span>
                     </button>
                   </div>
@@ -1273,13 +1293,13 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[18px]">badge</span>
+                  <CreditCard className="w-[18px] h-[18px]" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm sm:text-base font-bold text-slate-950 break-words">
                     Dados Preenchidos do Estudante ({populatedFieldsCount} Campos)
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium break-words">
+                  <p className="text-xs text-slate-700 font-medium break-words">
                     Exibindo apenas os campos com informação registrada · Toque em uma categoria ou pesquise
                   </p>
                 </div>
@@ -1291,7 +1311,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   value={searchField}
                   onChange={(e) => setSearchField(e.target.value)}
                   placeholder="Procurar dado (ex: CPF, SUS, CEP)..."
-                  className="min-h-[40px] px-3.5 bg-slate-100 hover:bg-slate-200/60 focus:bg-white rounded-xl text-xs font-medium focus:outline-none transition-colors flex-1 min-w-0 sm:w-60"
+                  className="min-h-[40px] px-3.5 bg-[#edf2f7] hover:bg-slate-200/70 focus:bg-white rounded-xl text-xs font-medium text-slate-950 placeholder:text-slate-600 transition-colors flex-1 min-w-0 sm:w-60"
                 />
                 {canEdit && (
                   <button
@@ -1299,7 +1319,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     onClick={handleSaveAll}
                     className="min-h-[40px] py-2 px-4 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer shadow-xs shrink-0 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[16px] shrink-0">save</span>
+                    <Save className="w-4 h-4 shrink-0" />
                     <span>Salvar</span>
                   </button>
                 )}
@@ -1332,9 +1352,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               {/* Barra de Privacidade dos Dados (Proteção LGPD) */}
               <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100/90">
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="material-symbols-outlined text-[17px] text-emerald-800">
-                    security
-                  </span>
+                  <ShieldCheck className="w-[17px] h-[17px] text-emerald-800 shrink-0" />
                   <span className="font-semibold text-slate-800">
                     Privacidade:
                   </span>
@@ -1355,13 +1373,15 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         : 'bg-[#0b3b8c] hover:bg-[#082d6b] text-white'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[15px]">
-                      {isLgpdRevealed ? 'visibility_off' : 'visibility'}
-                    </span>
+                    {isLgpdRevealed ? (
+                      <EyeOff className="w-[15px] h-[15px]" />
+                    ) : (
+                      <Eye className="w-[15px] h-[15px]" />
+                    )}
                     <span>{isLgpdRevealed ? 'Ocultar Dados Protegidos' : 'Mostrar Todos os Dados'}</span>
                   </button>
                 ) : (
-                  <span className="text-xs font-medium text-slate-500">
+                  <span className="text-xs font-medium text-slate-700">
                     Visível apenas para a direção
                   </span>
                 )}
@@ -1408,25 +1428,23 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       }}
                       className={`p-3 rounded-xl shadow-2xs min-h-[70px] flex flex-col justify-between transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 ${
                         isEditingThis
-                          ? 'bg-white ring-2 ring-[#0071e3] scale-[1.01] opacity-100'
+                          ? 'bg-[#dce7fb] shadow-[0_6px_18px_-4px_rgba(9,46,112,0.22)] scale-[1.01] opacity-100'
                           : canEdit
                           ? 'bg-slate-100 hover:bg-slate-200 cursor-pointer opacity-100'
                           : 'bg-slate-100 opacity-100'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-1">
-                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight flex items-center gap-1 break-words leading-snug">
+                        <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-tight flex items-center gap-1 break-words leading-snug">
                           {isSensitiveField && (
-                            <span className="material-symbols-outlined text-[13px] text-amber-700 shrink-0" title="Dado Pessoal Sensível (LGPD Art. 14)">
-                              lock
+                            <span title="Dado Pessoal Sensível (LGPD Art. 14)" className="inline-flex shrink-0">
+                              <Lock className="w-3.5 h-3.5 text-amber-700" />
                             </span>
                           )}
                           <span>{field.label}</span>
                         </span>
                         {canEdit && (
-                          <span className="material-symbols-outlined text-[13px] text-slate-400 shrink-0">
-                            edit
-                          </span>
+                          <Pencil className="w-3.5 h-3.5 text-slate-700 shrink-0" />
                         )}
                       </div>
 
@@ -1441,7 +1459,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') setEditingKey(null);
                           }}
-                          className="w-full mt-1.5 px-2 py-1 bg-white text-slate-950 font-semibold text-sm tabular-nums rounded-lg ring-2 ring-[#0071e3] focus:outline-none"
+                          className="w-full mt-1.5 px-2.5 py-1 bg-white text-slate-950 font-semibold text-sm tabular-nums rounded-lg shadow-[0_0_0_2px_rgba(9,46,112,0.28)]"
                         />
                       ) : (
                         <p className="text-sm font-semibold tabular-nums mt-1.5 break-words text-slate-900 leading-snug">
@@ -1549,10 +1567,10 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                             key={`extra-${extraKey}`}
                             className="p-3 rounded-xl bg-slate-100 shadow-2xs min-h-[70px] flex flex-col justify-between min-w-0 break-words transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95"
                           >
-                            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight flex items-center gap-1 break-words leading-snug">
+                            <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-tight flex items-center gap-1 break-words leading-snug">
                               {isExtraSensitive && (
-                                <span className="material-symbols-outlined text-[13px] text-amber-700 shrink-0" title="Dado Pessoal Sensível (LGPD Art. 14)">
-                                  lock
+                                <span title="Dado Pessoal Sensível (LGPD Art. 14)" className="inline-flex shrink-0">
+                                  <Lock className="w-3.5 h-3.5 text-amber-700" />
                                 </span>
                               )}
                               <span>{extraKey}</span>
@@ -1575,7 +1593,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
           <div className="flex items-center gap-2 text-xs text-slate-600 min-w-0 break-words">
             {savedBanner ? (
               <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px] shrink-0">check_circle</span>
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 Alterações salvas com sucesso!
               </span>
             ) : (
@@ -1596,7 +1614,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 onClick={handleSaveAll}
                 className="flex-1 sm:flex-initial min-h-[40px] py-2 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors shadow-xs"
               >
-                <span className="material-symbols-outlined text-[17px] text-emerald-400 shrink-0">save</span>
+                <Save className="w-[17px] h-[17px] text-emerald-400 shrink-0" />
                 <span>Salvar Alterações</span>
               </button>
             )}
@@ -1608,11 +1626,11 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
       {isLightboxOpen && hasPhoto && (
         <div
           onClick={() => setIsLightboxOpen(false)}
-          className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-gentle-fade"
+          className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-backdrop-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-2xl w-full flex flex-col items-center"
+            className="relative max-w-2xl w-full flex flex-col items-center animate-apple-pop"
           >
             <img
               src={effectivePhotoUrl}

@@ -57,6 +57,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
   const [isPruningLegacy, setIsPruningLegacy] = useState(false);
   const [clearingClassId, setClearingClassId] = useState<string | null>(null);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [confirmPruneLegacy, setConfirmPruneLegacy] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState<ClassCacheFilter>('all');
@@ -85,6 +86,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
   useEffect(() => {
     if (!isOpen) return;
     setConfirmClearAll(false);
+    setConfirmPruneLegacy(false);
     setStatusBanner(null);
     void loadStorageReport();
   }, [isOpen, loadStorageReport]);
@@ -103,6 +105,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
 
   const handlePruneLegacyOneClick = async () => {
     if (isPruningLegacy) return;
+    setConfirmPruneLegacy(false);
     setIsPruningLegacy(true);
     setStatusBanner(null);
     try {
@@ -230,7 +233,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
 
   return (
     <div
-      className="fixed inset-0 z-[130] bg-slate-950/55 backdrop-blur-xs flex items-end sm:items-center justify-center p-2 sm:p-4 animate-gentle-fade"
+      className="fixed inset-0 z-[130] bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-2 sm:p-4 animate-backdrop-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -238,19 +241,19 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[min(92vh,calc(100dvh-1rem))] text-[#111827]"
+        className="modal-shell w-full max-w-4xl bg-white rounded-3xl overflow-hidden flex flex-col max-h-[min(92vh,calc(100dvh-1rem))] text-slate-950 animate-apple-pop"
       >
         {/* Cabeçalho */}
-        <div className="flex items-start sm:items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 border-b border-slate-200/80 shrink-0">
+        <div className="modal-header-surface flex items-start sm:items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 shrink-0">
           <div className="flex items-start sm:items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-[#f2f2f7] text-[#0b3b8c] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-[#dce7fb] text-[#092e70] flex items-center justify-center shrink-0">
               <HardDrive className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-lg font-semibold text-[#111827] leading-snug">
+              <h2 className="text-base sm:text-lg font-bold text-slate-950 leading-snug">
                 Armazenamento IndexedDB · Cache de Fotos
               </h2>
-              <p className="text-xs text-[#48484a] leading-relaxed mt-0.5">
+              <p className="text-xs text-slate-700 leading-relaxed mt-0.5">
                 Uso local offline de fotos compactadas via Canvas WebP e limpeza rápida de turmas antigas
               </p>
             </div>
@@ -261,7 +264,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
               type="button"
               onClick={() => void loadStorageReport()}
               disabled={isLoading}
-              className="min-h-[38px] px-3 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
+              className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#dce7fb] text-slate-950 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               <span>Atualizar</span>
@@ -271,7 +274,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
               type="button"
               onClick={onClose}
               aria-label="Fechar modal de armazenamento"
-              className="w-9 h-9 rounded-full bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              className="w-9 h-9 rounded-full bg-white hover:bg-[#dce7fb] text-slate-950 flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-xs"
             >
               <X className="w-4 h-4" />
             </button>
@@ -308,48 +311,48 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
 
           {/* Indicadores Principais */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f5f5f7] min-w-0">
-              <span className="text-xs font-medium text-[#48484a] block">Uso IndexedDB (Fotos)</span>
-              <span className="text-xl sm:text-2xl font-semibold text-[#111827] font-mono tabular-nums block mt-0.5">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0">
+              <span className="text-xs font-semibold text-slate-700 block">Uso IndexedDB (Fotos)</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-950 font-mono tabular-nums block mt-0.5">
                 {isLoading && !report ? '...' : formatStorageBytes(totalBytes)}
               </span>
-              <span className="text-xs text-[#6e6e73] tabular-nums block mt-0.5">
+              <span className="text-xs text-slate-700 tabular-nums block mt-0.5">
                 {totalBudgetPct}% do limite ({formatStorageBytes(maxBytes)})
               </span>
             </div>
 
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f5f5f7] min-w-0">
-              <span className="text-xs font-medium text-[#48484a] block">Arquivos em Cache</span>
-              <span className="text-xl sm:text-2xl font-semibold text-[#111827] font-mono tabular-nums block mt-0.5">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0">
+              <span className="text-xs font-semibold text-slate-700 block">Arquivos em Cache</span>
+              <span className="text-xl sm:text-2xl font-bold text-slate-950 font-mono tabular-nums block mt-0.5">
                 {isLoading && !report ? '...' : (report?.canonicalBlobsCount || 0).toLocaleString('pt-BR')}
               </span>
-              <span className="text-xs text-[#6e6e73] tabular-nums block mt-0.5">
+              <span className="text-xs text-slate-700 tabular-nums block mt-0.5">
                 {(report?.urlRecordsCount || 0).toLocaleString('pt-BR')} índices nominais
               </span>
             </div>
 
             <div
               className={`p-3.5 sm:p-4 rounded-2xl min-w-0 ${
-                hasLegacyCache ? 'bg-[#fef3c7]' : 'bg-[#eaf6ef]'
+                hasLegacyCache ? 'bg-amber-100/85' : 'bg-emerald-100/85'
               }`}
             >
               <span
-                className={`text-xs font-medium block ${
-                  hasLegacyCache ? 'text-[#92400e]' : 'text-[#005035]'
+                className={`text-xs font-semibold block ${
+                  hasLegacyCache ? 'text-amber-950' : 'text-emerald-950'
                 }`}
               >
                 Turmas Antigas / Órfãs
               </span>
               <span
-                className={`text-xl sm:text-2xl font-semibold font-mono tabular-nums block mt-0.5 ${
-                  hasLegacyCache ? 'text-[#92400e]' : 'text-[#047857]'
+                className={`text-xl sm:text-2xl font-bold font-mono tabular-nums block mt-0.5 ${
+                  hasLegacyCache ? 'text-amber-950' : 'text-[#065f46]'
                 }`}
               >
                 {isLoading && !report ? '...' : formatStorageBytes(legacyBytes)}
               </span>
               <span
                 className={`text-xs tabular-nums block mt-0.5 ${
-                  hasLegacyCache ? 'text-[#78350f]' : 'text-[#005035]'
+                  hasLegacyCache ? 'text-amber-900' : 'text-emerald-950'
                 }`}
               >
                 {hasLegacyCache
@@ -358,12 +361,12 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
               </span>
             </div>
 
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f5f5f7] min-w-0">
-              <span className="text-xs font-medium text-[#48484a] block">Economia SHA-256</span>
-              <span className="text-xl sm:text-2xl font-semibold text-[#047857] font-mono tabular-nums block mt-0.5">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0">
+              <span className="text-xs font-semibold text-slate-700 block">Economia SHA-256</span>
+              <span className="text-xl sm:text-2xl font-bold text-[#046c4e] font-mono tabular-nums block mt-0.5">
                 {isLoading && !report ? '...' : (report?.deduplicatedAliasCount || 0).toLocaleString('pt-BR')}
               </span>
-              <span className="text-xs text-[#6e6e73] tabular-nums block mt-0.5">
+              <span className="text-xs text-slate-700 tabular-nums block mt-0.5">
                 {report?.browserEstimateUsageBytes !== undefined && report?.browserEstimateQuotaBytes
                   ? `Navegador: ${formatStorageBytes(report.browserEstimateUsageBytes)} / ${formatStorageBytes(report.browserEstimateQuotaBytes)}`
                   : 'Ponteiros sem duplicação'}
@@ -372,72 +375,108 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
           </div>
 
           {/* Barra visual de distribuição e Ação Principal em 1 Clique */}
-          <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#f4f7fb] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-[#111827]">
+                <h3 className="text-sm font-bold text-slate-950">
                   Ocupação do Cache Local (Limite 2.000+ fotos / 140 MB)
                 </h3>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#48484a] tabular-nums">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-700 tabular-nums">
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-xs bg-[#0b3b8c] inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-xs bg-[#092e70] inline-block" />
                     Turmas Atuais: {formatStorageBytes(activeBytes)}
                   </span>
                   <span aria-hidden="true">·</span>
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-xs bg-[#d97706] inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-xs bg-amber-600 inline-block" />
                     Turmas Antigas / Órfãs: {formatStorageBytes(legacyBytes)}
                   </span>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={handlePruneLegacyOneClick}
-                  disabled={isPruningLegacy || isLoading}
-                  className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap shrink-0 disabled:opacity-50 ${
-                    hasLegacyCache
-                      ? 'bg-[#0b3b8c] hover:bg-[#082d6b] text-white'
-                      : 'bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827]'
-                  }`}
-                >
-                  {isPruningLegacy ? (
-                    <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
-                  ) : (
-                    <Sparkles className="w-4 h-4 shrink-0" />
-                  )}
-                  <span>
-                    {isPruningLegacy
-                      ? 'Limpando...'
-                      : 'Limpar Cache de Turmas Antigas'}
-                  </span>
-                </button>
+                {!confirmPruneLegacy ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (hasLegacyCache) {
+                        setConfirmClearAll(false);
+                        setConfirmPruneLegacy(true);
+                      } else {
+                        void handlePruneLegacyOneClick();
+                      }
+                    }}
+                    disabled={isPruningLegacy || isLoading}
+                    className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap shrink-0 disabled:opacity-50 ${
+                      hasLegacyCache
+                        ? 'bg-[#092e70] hover:bg-[#051d47] text-white'
+                        : 'bg-white hover:bg-[#edf2f7] text-slate-950 shadow-xs'
+                    }`}
+                  >
+                    {isPruningLegacy ? (
+                      <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>
+                      {isPruningLegacy
+                        ? 'Limpando...'
+                        : 'Limpar Cache de Turmas Antigas'}
+                    </span>
+                  </button>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl bg-amber-100/90 shadow-xs">
+                    <span className="text-xs font-semibold text-amber-950 tabular-nums">
+                      Remover {legacyItemsCount.toLocaleString('pt-BR')} antigo(s) (libera {formatStorageBytes(legacyBytes)})?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handlePruneLegacyOneClick}
+                      disabled={isPruningLegacy}
+                      className="min-h-[34px] px-3 rounded-lg bg-[#092e70] hover:bg-[#051d47] text-white text-xs font-semibold cursor-pointer"
+                    >
+                      {isPruningLegacy ? 'Limpando...' : 'Confirmar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmPruneLegacy(false)}
+                      className="min-h-[34px] px-3 rounded-lg bg-white text-slate-950 text-xs font-semibold cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
 
                 {!confirmClearAll ? (
                   <button
                     type="button"
-                    onClick={() => setConfirmClearAll(true)}
+                    onClick={() => {
+                      setConfirmPruneLegacy(false);
+                      setConfirmClearAll(true);
+                    }}
                     disabled={isClearingAll || totalBytes === 0 && (report?.urlRecordsCount || 0) === 0}
-                    className="min-h-[42px] px-3.5 py-2 rounded-xl bg-[#fee2e2] hover:bg-[#fecaca] text-[#991b1b] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 disabled:opacity-45"
+                    className="min-h-[42px] px-3.5 py-2 rounded-xl bg-rose-100/90 hover:bg-rose-200 text-rose-950 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 disabled:opacity-45"
                   >
                     <Trash2 className="w-3.5 h-3.5 shrink-0" />
                     <span>Zerar Cache Completo</span>
                   </button>
                 ) : (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl bg-rose-100/90 shadow-xs">
+                    <span className="text-xs font-semibold text-rose-950 tabular-nums">
+                      Zerar {(report?.canonicalBlobsCount || 0).toLocaleString('pt-BR')} foto(s) e {(report?.urlRecordsCount || 0).toLocaleString('pt-BR')} índice(s) ({formatStorageBytes(totalBytes)})?
+                    </span>
                     <button
                       type="button"
                       onClick={handleClearAllCache}
                       disabled={isClearingAll}
-                      className="min-h-[40px] px-3 py-1.5 rounded-xl bg-[#991b1b] hover:bg-[#7f1d1d] text-white text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
+                      className="min-h-[34px] px-3 rounded-lg bg-[#9f1239] hover:bg-[#881337] text-white text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
                     >
-                      {isClearingAll ? 'Zerando...' : 'Confirmar'}
+                      {isClearingAll ? 'Zerando...' : 'Confirmar Limpeza Total'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmClearAll(false)}
-                      className="min-h-[40px] px-3 py-1.5 rounded-xl bg-[#f2f2f7] text-[#111827] text-xs font-medium cursor-pointer whitespace-nowrap shrink-0"
+                      className="min-h-[34px] px-3 rounded-lg bg-white text-slate-950 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
                     >
                       Cancelar
                     </button>
@@ -491,27 +530,27 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="relative flex-1">
-                <Search className="w-4 h-4 text-[#48484a] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-slate-700 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar turma ou turno..."
-                  className="w-full min-h-[42px] pl-10 pr-8 rounded-xl bg-[#f5f5f7] text-xs sm:text-sm text-[#111827] placeholder:text-[#6e6e73] focus:outline-none focus:bg-[#ededf0]"
+                  className="w-full min-h-[42px] pl-10 pr-8 rounded-xl bg-[#f4f7fb] text-xs sm:text-sm text-slate-950 placeholder:text-slate-600 focus:bg-[#edf2f7]"
                 />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
                     aria-label="Limpar busca"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[#48484a] cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-700 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
-              <div className="flex items-center gap-1 p-1 bg-[#f5f5f7] rounded-xl shrink-0">
+              <div className="flex items-center gap-1 p-1 bg-[#edf2f7] rounded-xl shrink-0">
                 {(
                   [
                     { id: 'all', label: `Todas (${report?.classBreakdown.length || classes.length})` },
@@ -529,10 +568,10 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                     key={tab.id}
                     type="button"
                     onClick={() => setFilterMode(tab.id)}
-                    className={`min-h-[34px] px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
+                    className={`min-h-[34px] px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
                       filterMode === tab.id
-                        ? 'bg-white text-[#111827] shadow-2xs font-semibold'
-                        : 'text-[#48484a] hover:text-[#111827]'
+                        ? 'bg-white text-slate-950 shadow-xs'
+                        : 'text-slate-700 hover:text-slate-950'
                     }`}
                   >
                     {tab.label}
@@ -542,20 +581,20 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
             </div>
 
             {filteredClasses.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-[#f5f5f7] text-center space-y-1.5">
-                <Database className="w-6 h-6 text-[#6e6e73] mx-auto" />
-                <p className="text-sm font-semibold text-[#111827]">
+              <div className="p-8 rounded-2xl bg-[#f4f7fb] text-center space-y-1.5">
+                <Database className="w-6 h-6 text-slate-700 mx-auto" />
+                <p className="text-sm font-semibold text-slate-950">
                   Nenhuma turma encontrada neste filtro
                 </p>
-                <p className="text-xs text-[#6e6e73]">
+                <p className="text-xs text-slate-700">
                   Ajuste a busca ou o filtro acima para visualizar as turmas.
                 </p>
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="bg-[#f4f7fb] rounded-2xl overflow-hidden shadow-[0_2px_10px_-4px_rgba(9,15,29,0.06)]">
                 <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-[#f5f5f7] text-[#374151] font-semibold sticky top-0 z-10">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#edf2f7] text-slate-800 font-bold sticky top-0 z-10">
                       <tr>
                         <th className="py-2.5 px-3.5">Turma</th>
                         <th className="py-2.5 px-3.5">Turno</th>
@@ -571,18 +610,18 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                         return (
                           <tr
                             key={row.classId}
-                            className={idx % 2 === 0 ? 'bg-white' : 'bg-[#f9f9fb]'}
+                            className={idx % 2 === 0 ? 'bg-white' : 'bg-[#f4f7fb]'}
                           >
-                            <td className="py-2.5 px-3.5 font-semibold text-[#111827]">
+                            <td className="py-2.5 px-3.5 font-semibold text-slate-950">
                               {row.className}
                             </td>
-                            <td className="py-2.5 px-3.5 text-[#48484a]">
+                            <td className="py-2.5 px-3.5 text-slate-700">
                               {row.shift.replace('Turno ', '') || '—'}
                             </td>
-                            <td className="py-2.5 px-3.5 text-right font-mono tabular-nums text-[#111827]">
+                            <td className="py-2.5 px-3.5 text-right font-mono tabular-nums text-slate-950">
                               {row.cachedStudentsCount}/{row.totalStudents}
                             </td>
-                            <td className="py-2.5 px-3.5 text-right font-mono tabular-nums font-medium text-[#111827]">
+                            <td className="py-2.5 px-3.5 text-right font-mono tabular-nums font-semibold text-slate-950">
                               {formatStorageBytes(row.cachedBytes)}
                             </td>
                             <td className="py-2.5 px-3.5 text-right">
@@ -590,7 +629,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                                 type="button"
                                 disabled={!hasData || isClearingThis}
                                 onClick={() => handleClearSingleClass(row.classId, row.className)}
-                                className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#f2f2f7] hover:bg-[#fee2e2] hover:text-[#991b1b] text-[#111827] text-xs font-medium inline-flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+                                className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-rose-100 hover:text-rose-950 text-slate-950 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
                               >
                                 <Trash2 className="w-3 h-3 shrink-0" />
                                 <span>{isClearingThis ? 'Limpando...' : 'Limpar'}</span>

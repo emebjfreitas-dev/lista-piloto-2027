@@ -292,7 +292,7 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <IconComp
                       className={`w-[17px] h-[17px] shrink-0 ${
-                        item.activeMatch ? 'text-[#0b3b8c] stroke-[1.8]' : 'text-slate-500 stroke-[1.5]'
+                        item.activeMatch ? 'text-[#0b3b8c] stroke-[1.8]' : 'text-slate-700 stroke-[1.6]'
                       }`}
                     />
                     <span>{item.label}</span>
@@ -320,7 +320,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className={`w-[17px] h-[17px] shrink-0 ${
                         isAdminScreenActive || showAdminNavDropdown
                           ? 'text-[#0b3b8c] stroke-[1.8]'
-                          : 'text-slate-500 stroke-[1.5]'
+                          : 'text-slate-700 stroke-[1.6]'
                       }`}
                     />
                     <span>Gestão</span>
@@ -331,15 +331,15 @@ export const Header: React.FC<HeaderProps> = ({
                       />
                     )}
                     <ChevronDown
-                      className={`w-3.5 h-3.5 text-slate-500 stroke-[1.6] transition-transform duration-150 ${
+                      className={`w-3.5 h-3.5 text-slate-700 stroke-[1.7] transition-transform duration-150 ${
                         showAdminNavDropdown ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
 
                   {showAdminNavDropdown && (
-                    <div className="absolute right-0 mt-2.5 w-[min(22rem,calc(100vw-1.5rem))] bg-white rounded-3xl shadow-[0_18px_48px_rgba(15,23,42,0.18)] border border-slate-100 p-3 space-y-1.5 z-50 animate-gentle-fade">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-3 pt-1 pb-0.5 block">
+                    <div className="absolute right-0 mt-2.5 w-[min(22rem,calc(100vw-1.5rem))] bg-white rounded-3xl shadow-[0_24px_56px_rgba(2,6,23,0.26),0_4px_14px_rgba(2,6,23,0.12)] p-3 space-y-2 z-50 animate-apple-pop">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 px-3 pt-1 pb-0.5 block">
                         Ferramentas de Gestão
                       </span>
                       <div className="space-y-1">
@@ -355,10 +355,10 @@ export const Header: React.FC<HeaderProps> = ({
                               key={item.id}
                               type="button"
                               onClick={() => navigateTo(item.id)}
-                              className={`w-full px-3 py-2.5 rounded-2xl text-left flex items-center gap-3 transition-colors cursor-pointer min-w-0 ${
+                              className={`w-full px-3 py-2.5 rounded-2xl text-left flex items-center gap-3 transition-all duration-200 cursor-pointer min-w-0 ${
                                 active
-                                  ? 'bg-[#0b3b8c] text-white'
-                                  : 'text-slate-900 hover:bg-slate-100/90'
+                                  ? 'bg-[#0b3b8c] text-white shadow-[0_6px_16px_rgba(11,59,140,0.28)]'
+                                  : 'text-slate-950 hover:bg-[#edf2f7]'
                               }`}
                             >
                               <div
@@ -366,7 +366,7 @@ export const Header: React.FC<HeaderProps> = ({
                                   active ? 'bg-white/20 text-white' : item.tintClass
                                 }`}
                               >
-                                <IconComp className="w-[18px] h-[18px] stroke-[1.6]" />
+                                <IconComp className="w-[18px] h-[18px] stroke-[1.7]" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <span className="text-sm font-semibold block break-words leading-snug">
@@ -374,7 +374,7 @@ export const Header: React.FC<HeaderProps> = ({
                                 </span>
                                 <span
                                   className={`text-xs block break-words leading-snug mt-0.5 ${
-                                    active ? 'text-blue-100' : 'text-slate-500'
+                                    active ? 'text-blue-100' : 'text-slate-600'
                                   }`}
                                 >
                                   {item.subtitle}
@@ -386,7 +386,7 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
 
                       {/* Controle de Sincronização em Nuvem dentro de Gestão */}
-                      <div className="pt-2 mt-1 border-t border-slate-100">
+                      <div className="pt-1">
                         <div
                           className={`p-3 rounded-2xl flex items-center justify-between gap-2.5 min-w-0 ${
                             syncSnapshot.pendingCount > 0
@@ -480,12 +480,12 @@ export const Header: React.FC<HeaderProps> = ({
                   name={userName || userEmail || 'Educador'}
                   size="xs"
                   expandableOnClick={false}
-                  className="w-6 h-6 text-[11px] rounded-lg border-0 bg-[#0b3b8c]/12 text-[#0b3b8c]"
+                  className="w-6 h-6 text-[11px] rounded-lg bg-[#0b3b8c]/15 text-[#092e70]"
                 />
-                <span className="hidden sm:inline text-[13px] font-semibold text-slate-800 max-w-[78px] truncate">
+                <span className="hidden sm:inline text-[13px] font-semibold text-slate-900 max-w-[78px] truncate">
                   {roleShortLabel}
                 </span>
-                <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-slate-500 stroke-[1.6]" />
+                <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-slate-700 stroke-[1.7]" />
               </button>
 
               {showProfileMenu && (
@@ -494,8 +494,8 @@ export const Header: React.FC<HeaderProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setShowProfileMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2.5 w-[min(20rem,calc(100vw-1.5rem))] bg-white/98 backdrop-blur-2xl rounded-3xl shadow-[0_18px_48px_rgba(0,0,0,0.16)] p-3 z-50 animate-gentle-fade space-y-2">
-                    <div className="p-3 rounded-2xl bg-[#f5f5f7] flex items-center gap-3 min-w-0">
+                  <div className="absolute right-0 mt-2.5 w-[min(20rem,calc(100vw-1.5rem))] bg-white rounded-3xl shadow-[0_24px_56px_rgba(2,6,23,0.26),0_4px_14px_rgba(2,6,23,0.12)] p-3 z-50 animate-apple-pop space-y-2">
+                    <div className="p-3 rounded-2xl bg-[#edf2f7] flex items-center gap-3 min-w-0">
                       <StudentAvatar
                         name={userName || userEmail || 'Educador'}
                         size="sm"
@@ -503,13 +503,13 @@ export const Header: React.FC<HeaderProps> = ({
                         className="w-10 h-10 text-sm shrink-0"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-[#1d1d1f] break-words leading-snug">
+                        <p className="text-sm font-bold text-slate-950 break-words leading-snug">
                           {userName || 'Professor(a)'}
                         </p>
-                        <p className="text-xs text-[#0071e3] break-all leading-snug mt-0.5">
+                        <p className="text-xs font-semibold text-[#0047b3] break-all leading-snug mt-0.5">
                           {userEmail || ''}
                         </p>
-                        <p className="text-xs text-[#6e6e73] mt-0.5">
+                        <p className="text-xs font-medium text-slate-700 mt-0.5">
                           {isAdmin
                             ? 'Equipe Administrativa'
                             : teacherRoleType === 'aee'
@@ -545,7 +545,7 @@ export const Header: React.FC<HeaderProps> = ({
                         onClick={() => navigateTo('usuarios_acesso')}
                         className="w-full min-h-[42px] text-left px-3.5 py-2 rounded-2xl text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
                       >
-                        <ShieldCheck className="w-4 h-4 text-[#48484a] shrink-0" />
+                        <ShieldCheck className="w-4 h-4 text-slate-700 shrink-0" />
                         <span>Central Admin</span>
                       </button>
                     )}
@@ -574,12 +574,12 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Modal de Saída Segura */}
       {showLogoutSheet && (
         <div
-          className="fixed inset-0 z-50 bg-black/35 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-gentle-fade"
+          className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-4 animate-backdrop-in"
           onClick={() => !isLoggingOut && setShowLogoutSheet(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[400px] bg-white rounded-3xl shadow-2xl overflow-hidden text-center p-6 space-y-4 animate-apple-pop"
+            className="w-full max-w-[400px] bg-white rounded-3xl shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden text-center p-6 space-y-4 animate-apple-pop"
           >
             <div className="mx-auto w-14 h-14 rounded-full bg-[#f2f2f7] flex items-center justify-center">
               <StudentAvatar

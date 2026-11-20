@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx';
-import { getAuth } from 'firebase/auth';
 import {
   ClassGroup,
   Student,
@@ -9,35 +7,16 @@ import {
   AttendanceWindowConfig,
   UserAccessSessionLog,
   SchoolNotice,
-  SchoolHoliday,
-  OfficialCalendarDay,
-  OfficialCalendarConfig,
-  CalendarAuditLogEntry,
-  SecurityAuditLogEntry,
   SecurityEventType,
-  RbacRoleDefinition,
-  LgpdProtectionConfig,
 } from '../types';
-import {
-  parseAndValidateSchoolDates,
-  OFFICIAL_DEFAULT_HOLIDAYS_2027,
-  generateOfficial200SchoolDays2027,
-} from '../utils/calendarValidation';
 import {
   INITIAL_CLASSES,
   OFFICIAL_OCTOBER_DAYS,
-  MONTHLY_SCHOOL_DAYS_2027,
   INITIAL_AUTHORIZED_USERS,
   INSTITUTIONAL_EMAIL_DOMAIN,
 } from '../data/mockData';
 import { sortClassesInOfficialOrder } from '../data/officialMatrix2027';
 import { resolveCanonicalClassId } from '../data/officialSedStudents';
-import {
-  getStudentAttendanceMetrics,
-  getClassAttendanceMetrics,
-  getStudentBimesterReport,
-  OFFICIAL_BIMESTERS_2027,
-} from '../utils/attendanceRules';
 import {
   saveClassesToFirestoreCloud,
   saveConfigMetaToFirestoreCloud,
@@ -54,17 +33,100 @@ import {
   touchLocalEpochState,
   shouldAllowRemoteClassesOverwrite,
 } from './firebaseSync';
-import {
-  resolveStudentGender,
-  getStudentGenderLabel,
-  resolveGuardianRelationshipInfo,
-} from '../utils/genderDictionary';
+import { resolveStudentGender } from '../utils/genderDictionary';
 import { isBackendApiAvailable } from './apiEnvironment';
+import { hasForbiddenPrototypeKey } from '../utils/serverValidation';
 import {
   warmupPhotoIndexedDbCache,
   persistStudentPhotoUrlsToIndexedDb,
   clearStudentPhotoIndexedDbCache,
 } from './photoIndexedDbCache';
+import {
+  getActiveUserAuthHeaders,
+  getActiveUserAuthHeadersAsync,
+  establishServerAuthSessionCookie,
+  clearServerAuthSessionCookie,
+  formatDurationHuman,
+  getLocalTodayDateISO,
+  isUserAccessExpired,
+  isUserAccessEffectivelyActive,
+  formatAccessExpirationDateBR,
+} from './authSessionService';
+import {
+  SECURITY_AUDIT_STORAGE_KEY,
+  LGPD_CONFIG_STORAGE_KEY,
+  RBAC_ROLE_DEFINITIONS,
+  getStoredSecurityAuditLogs,
+  addSecurityAuditLog,
+  clearStoredSecurityAuditLogs,
+  getStoredLgpdConfig,
+  saveStoredLgpdConfig,
+  maskSensitiveText,
+  sanitizeStudentForLgpd,
+  exportSecurityAuditLogsCSV,
+} from './securityAuditService';
+import {
+  registerClassesCalendarCascadeHandler,
+  getStoredHolidays,
+  getStoredCalendarAuditLogs,
+  getStoredOfficialCalendarConfig,
+  pullOfficialCalendarFromServer,
+  saveStoredOfficialCalendarConfig,
+  saveStoredHolidayAction,
+} from './calendarConfigService';
+import {
+  exportOfficialMatrixToXLS,
+  downloadSpreadsheetXLSX,
+  CLASS_EXPORT_COLUMNS,
+  DEFAULT_CLASS_EXPORT_COLUMN_IDS,
+  CLASS_EXPORT_PRESETS,
+  buildCustomClassExportPreview,
+  downloadClassCustomXLS,
+  downloadClassCSV,
+} from './xlsExportService';
+export type {
+  ClassExportCategory,
+  ClassExportColumnDef,
+  ClassExportSortOrder,
+  ClassExportStatusFilter,
+  ClassCustomExportOptions,
+} from './xlsExportService';
+export {
+  getActiveUserAuthHeaders,
+  getActiveUserAuthHeadersAsync,
+  establishServerAuthSessionCookie,
+  clearServerAuthSessionCookie,
+  formatDurationHuman,
+  getLocalTodayDateISO,
+  isUserAccessExpired,
+  isUserAccessEffectivelyActive,
+  formatAccessExpirationDateBR,
+  SECURITY_AUDIT_STORAGE_KEY,
+  LGPD_CONFIG_STORAGE_KEY,
+  RBAC_ROLE_DEFINITIONS,
+  getStoredSecurityAuditLogs,
+  addSecurityAuditLog,
+  clearStoredSecurityAuditLogs,
+  getStoredLgpdConfig,
+  saveStoredLgpdConfig,
+  maskSensitiveText,
+  sanitizeStudentForLgpd,
+  exportSecurityAuditLogsCSV,
+  getStoredHolidays,
+  getStoredCalendarAuditLogs,
+  getStoredOfficialCalendarConfig,
+  pullOfficialCalendarFromServer,
+  saveStoredOfficialCalendarConfig,
+  saveStoredHolidayAction,
+  exportOfficialMatrixToXLS,
+  downloadSpreadsheetXLSX,
+  CLASS_EXPORT_COLUMNS,
+  DEFAULT_CLASS_EXPORT_COLUMN_IDS,
+  CLASS_EXPORT_PRESETS,
+  buildCustomClassExportPreview,
+  downloadClassCustomXLS,
+  downloadClassCSV,
+};
 
 if (typeof window !== 'undefined') {
   void warmupPhotoIndexedDbCache();
@@ -205,104 +267,7 @@ const safeSetLocalStorage = (key: string, value: string): boolean => {
   }
 };
 
-export const getActiveUserAuthHeaders = (): Record<string, string> => {
-  try {
-    const raw = localStorage.getItem('emeb_candelario_active_session_2027_v1');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.email) {
-        const email = String(parsed.email).trim().toLowerCase();
-        const role = String(
-          parsed.role || (email.startsWith('emebjfreitas@') ? 'admin' : 'usuario')
-        ).trim().toLowerCase();
-        return {
-          'x-user-email': email,
-          'x-user-role': role,
-          'x-user-name': encodeURIComponent(String(parsed.name || '')),
-          'x-clean-epoch': CLEAN_DB_RESET_EPOCH_ID,
-        };
-      }
-    }
-  } catch {
-    // fallback
-  }
-  return {
-    'x-clean-epoch': CLEAN_DB_RESET_EPOCH_ID,
-  };
-};
-
-export const getActiveUserAuthHeadersAsync = async (
-  forceRefresh = false
-): Promise<Record<string, string>> => {
-  const base = getActiveUserAuthHeaders();
-  try {
-    const currentUser = getAuth().currentUser;
-    if (currentUser) {
-      const idToken = await currentUser.getIdToken(forceRefresh);
-      if (idToken) {
-        return {
-          ...base,
-          Authorization: `Bearer ${idToken}`,
-        };
-      }
-    }
-  } catch {
-    // fallback to signed HttpOnly session cookie
-  }
-  return base;
-};
-
-export const establishServerAuthSessionCookie = async (
-  explicitIdToken?: string
-): Promise<boolean> => {
-  if (!isBackendApiAvailable()) return false;
-  try {
-    const token =
-      explicitIdToken ||
-      (await getAuth().currentUser?.getIdToken().catch(() => null)) ||
-      '';
-    if (!token) return false;
-    const res = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: 'include',
-      body: JSON.stringify({ idToken: token }),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-};
-
-export const clearServerAuthSessionCookie = async (): Promise<void> => {
-  if (!isBackendApiAvailable()) return;
-  try {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
-  } catch {
-    // ignore logout error
-  }
-};
-
-export const formatDurationHuman = (seconds?: number): string => {
-  const s = Math.max(0, Math.round(seconds || 0));
-  if (s === 0) return '0s';
-  const hrs = Math.floor(s / 3600);
-  const mins = Math.floor((s % 3600) / 60);
-  const secs = s % 60;
-  if (hrs > 0) {
-    return `${hrs}h ${String(mins).padStart(2, '0')}m`;
-  }
-  if (mins > 0) {
-    return `${mins}m ${String(secs).padStart(2, '0')}s`;
-  }
-  return `${secs}s`;
-};
+// Auth session helpers and duration formatters imported & re-exported from ./authSessionService
 
 export const getStoredAccessSessionLogs = (): UserAccessSessionLog[] => {
   if (memoryCachedLogs) return memoryCachedLogs;
@@ -1483,32 +1448,7 @@ export const findAuthorizedUserByEmail = (
   return list.find((u) => u.email.trim().toLowerCase() === normalized);
 };
 
-export const getLocalTodayDateISO = (referenceDate: Date = new Date()): string => {
-  const year = referenceDate.getFullYear();
-  const month = String(referenceDate.getMonth() + 1).padStart(2, '0');
-  const day = String(referenceDate.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-export const isUserAccessExpired = (
-  user: Pick<AuthorizedUser, 'accessExpiresAt'>,
-  referenceDate: Date = new Date()
-): boolean => {
-  const raw = typeof user.accessExpiresAt === 'string' ? user.accessExpiresAt.trim() : '';
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
-  return getLocalTodayDateISO(referenceDate) > raw;
-};
-
-export const isUserAccessEffectivelyActive = (
-  user: Pick<AuthorizedUser, 'active' | 'accessExpiresAt'>,
-  referenceDate: Date = new Date()
-): boolean => Boolean(user.active) && !isUserAccessExpired(user, referenceDate);
-
-export const formatAccessExpirationDateBR = (dateISO?: string): string => {
-  if (!dateISO || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO.trim())) return '';
-  const [y, m, d] = dateISO.trim().split('-');
-  return `${d}/${m}/${y}`;
-};
+// Expiration date helpers imported & re-exported from ./authSessionService
 
 export const syncExpiredAuthorizedUsers = (
   users: AuthorizedUser[],
@@ -1701,10 +1641,6 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
 
       const resolvedNis =
         st.nis !== undefined && st.nis !== '' ? st.nis : officialFallback?.nis || '';
-      const resolvedRota =
-        st.rotaOnibus !== undefined && st.rotaOnibus !== ''
-          ? st.rotaOnibus
-          : officialFallback?.rotaOnibus || '';
 
       return {
         ...(officialFallback || {}),
@@ -1715,7 +1651,6 @@ const enrichClassesWithOfficialMatrix = (loadedClasses: ClassGroup[]): ClassGrou
         initials: st.initials || officialFallback?.initials || computedInitials,
         genero: st.genero || officialFallback?.genero || resolveStudentGender(st),
         nis: resolvedNis || undefined,
-        rotaOnibus: resolvedRota || undefined,
       };
     });
 
@@ -1827,2097 +1762,19 @@ export const resetDatabase = (): ClassGroup[] => {
   return INITIAL_CLASSES;
 };
 
-export const exportOfficialMatrixToXLS = (
-  classes: ClassGroup[],
-  authorizedUsers: AuthorizedUser[]
-): void => {
-  const wb = XLSX.utils.book_new();
-  const matrixRows = classes.map((cls) => {
-    const activeCount = cls.students.filter((s) => {
-      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
-      return !sit.includes('BXTR') && !sit.includes('TRANSF') && !sit.includes('REMAN') && !sit.includes('RM');
-    }).length;
-    const transfCount = cls.students.filter((s) => {
-      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
-      return sit.includes('BXTR') || sit.includes('TRANSF');
-    }).length;
-    const remanCount = cls.students.filter((s) => {
-      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
-      return sit.includes('REMAN') || sit.includes('RM');
-    }).length;
-    const regenteUser = authorizedUsers.find(
-      (u) =>
-        u.role === 'usuario' &&
-        ((u.assignedClassIds && u.assignedClassIds.includes(cls.id)) ||
-          u.assignedClassId === cls.id)
-    );
-    const periodo = cls.shift.toUpperCase().includes('TARDE') ? 'TARDE' : 'MANHÃ';
-
-    return {
-      'TURMA ABREV': cls.turmaAbrev || cls.id.toUpperCase(),
-      'PROFESSOR(A)': regenteUser?.name || cls.teacherName || '',
-      'E-MAIL INSTITUCIONAL REGENTE': regenteUser?.email || cls.teacherEmail || '',
-      'TURMA': cls.name,
-      'SALA DE AULA': cls.room,
-      'PERÍODO': periodo,
-      'TURMA SED': cls.sedClassName || '',
-      'QTD SED': cls.sedExpectedStudents ?? cls.students.length,
-      'QTD ATIVOS REAIS': activeCount,
-      'TRANSFERIDOS (BXTR)': transfCount,
-      'REMANEJADOS': remanCount,
-      'CLASSE SED': cls.classeSedCode || '',
-      'PRONOME TRAT': regenteUser?.pronoun || cls.pronoun || 'PROFESSORA',
-      'PRINOME': regenteUser?.firstName || cls.teacherFirstName || '',
-      'ARTE': cls.artTeacher || '',
-      'E-MAIL ARTE': cls.artTeacherEmail || '',
-      'EDUCAÇÃO FÍSICA': cls.peTeacher || '',
-      'E-MAIL EDUCAÇÃO FÍSICA': cls.peTeacherEmail || '',
-      'LÍNGUA INGLESA': cls.englishTeacher || '',
-      'E-MAIL LÍNGUA INGLESA': cls.englishTeacherEmail || '',
-    };
-  });
-
-  const wsMatrix = XLSX.utils.json_to_sheet(matrixRows);
-  wsMatrix['!cols'] = [
-    { wch: 13 },
-    { wch: 36 },
-    { wch: 40 },
-    { wch: 15 },
-    { wch: 20 },
-    { wch: 11 },
-    { wch: 36 },
-    { wch: 10 },
-    { wch: 16 },
-    { wch: 18 },
-    { wch: 14 },
-    { wch: 14 },
-    { wch: 15 },
-    { wch: 18 },
-    { wch: 30 },
-    { wch: 38 },
-    { wch: 40 },
-    { wch: 38 },
-    { wch: 30 },
-    { wch: 38 },
-  ];
-  XLSX.utils.book_append_sheet(wb, wsMatrix, 'QUADRO TURMAS E PROFESSORES');
-
-  const accessRows = authorizedUsers.map((u, idx) => ({
-    'ORDEM': idx + 1,
-    'NOME DO(A) SERVIDOR(A)': u.name,
-    'PRONOME': u.pronoun || '',
-    'PRINOME': u.firstName || '',
-    'E-MAIL INSTITUCIONAL': u.email,
-    'PERFIL / FUNÇÃO':
-      u.role === 'admin'
-        ? 'ADMINISTRADOR (Acesso Pleno)'
-        : u.role === 'usuario'
-        ? 'PROFESSOR(A) REGENTE PEB I'
-        : `ESPECIALISTA PEB II (${u.subjectName || 'Arte / Ed. Física / Inglês'})`,
-    'TURMAS VINCULADAS':
-      u.assignedClassNames && u.assignedClassNames.length > 0
-        ? u.assignedClassNames.join(' + ')
-        : u.assignedClassName,
-    'STATUS': isUserAccessExpired(u)
-      ? 'EXPIRADO'
-      : u.active
-      ? 'ATIVO'
-      : 'BLOQUEADO',
-    'VALIDADE DO ACESSO': u.accessExpiresAt
-      ? formatAccessExpirationDateBR(u.accessExpiresAt)
-      : 'Permanente',
-    'ACESSOS TOTAIS': u.totalAccessCount || 0,
-    'TEMPO CONECTADO': formatDurationHuman(u.totalDurationSeconds || 0),
-    'ÚLTIMO ACESSO': u.lastLoginAt || 'Ainda não acessou',
-  }));
-  const wsAccess = XLSX.utils.json_to_sheet(accessRows);
-  wsAccess['!cols'] = [
-    { wch: 8 },
-    { wch: 38 },
-    { wch: 14 },
-    { wch: 18 },
-    { wch: 42 },
-    { wch: 38 },
-    { wch: 48 },
-    { wch: 12 },
-    { wch: 15 },
-    { wch: 18 },
-    { wch: 22 },
-  ];
-  XLSX.utils.book_append_sheet(wb, wsAccess, 'ACESSOS E EMAILS');
-
-  XLSX.writeFile(wb, 'Quadro_Oficial_Turmas_Professores_Acessos_EMEB_Candelario_2027.xls', {
-    bookType: 'biff8',
-  });
-};
-
-const isEducacaoInfantilClass = (cls: ClassGroup): boolean => {
-  return (
-    cls.name.toUpperCase().startsWith('GRUPO') ||
-    cls.grade.toUpperCase().includes('INFANTIL')
-  );
-};
-
-// Helper to build detailed nominal rows for a specific education stage (Educação Infantil or Ensino Fundamental)
-const buildNominalAttendanceRowsForStage = (
-  classes: ClassGroup[],
-  stage: 'EDUCACAO INFANTIL' | 'ENSINO FUNDAMENTAL',
-  calendar: SchoolDay[]
-): any[] => {
-  const stageClasses = classes.filter((cls) =>
-    stage === 'EDUCACAO INFANTIL'
-      ? isEducacaoInfantilClass(cls)
-      : !isEducacaoInfantilClass(cls)
-  );
-
-  const rows: any[] = [];
-  let totalDiasRecorte = 0;
-  let totalPresencas = 0;
-  let totalFaltas = 0;
-  let totalAtestados = 0;
-  let totalSemAtestado = 0;
-  let totalEstudantes = 0;
-
-  stageClasses.forEach((cls) => {
-    const diasLetivosMes = cls.classesHeld || 20;
-    const turnoLabel = cls.shift.replace('Turno ', '').toUpperCase();
-
-    cls.students.forEach((s) => {
-      const m = getStudentAttendanceMetrics(s, diasLetivosMes, calendar);
-      const faltasSemAtestado = Math.max(0, m.faltas - m.atestados);
-      const percentFaltas =
-        m.diasLetivosMatriculados > 0
-          ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
-          : 0;
-      const percentAtestadosSobreFaltas =
-        m.faltas > 0 ? Math.round((m.atestados / m.faltas) * 100) : 0;
-      const percentAtestadosSobreDias =
-        m.diasLetivosMatriculados > 0
-          ? Math.round((m.atestados / m.diasLetivosMatriculados) * 100)
-          : 0;
-
-      totalEstudantes += 1;
-      totalDiasRecorte += m.diasLetivosMatriculados;
-      totalPresencas += m.presencas;
-      totalFaltas += m.faltas;
-      totalAtestados += m.atestados;
-      totalSemAtestado += faltasSemAtestado;
-
-      rows.push({
-        'SEGMENTO DE ENSINO': stage,
-        'ETAPA / SÉRIE': cls.grade,
-        'TURMA': cls.name,
-        'TURNO': turnoLabel,
-        'SALA': cls.room,
-        'Nº CHAMADA': s.number,
-        'NOME NOMINAL DO(A) ESTUDANTE': s.name,
-        'RA': s.ra ? `${s.ra}-${s.digRa || ''}/${s.ufRa || 'SP'}` : '',
-        'DATA DE MATRÍCULA (SED)': s.dataMatriculaSed || '03/02/2027',
-        'DATA DE MOVIMENTAÇÃO': s.dataMovimentacao || '',
-        'SITUAÇÃO DO RECORTE': m.recorteLabel,
-        'QTD DIAS LETIVOS DO MÊS': m.diasLetivosMes,
-        'QTD DIAS NO RECORTE DA MATRÍCULA': m.diasLetivosMatriculados,
-        'QTD PRESENÇAS NO PERÍODO': m.presencas,
-        '% PRESENÇA (FREQUÊNCIA)': `${m.frequenciaPercent}%`,
-        'QTD TOTAL DE FALTAS NO MÊS': m.faltas,
-        '% FALTAS SOBRE DIAS MATRICULADOS': `${percentFaltas}%`,
-        'QTD ATESTADOS APRESENTADOS (FALTAS JUSTIFICADAS)': m.atestados,
-        '% ATESTADOS SOBRE O TOTAL DE FALTAS': `${percentAtestadosSobreFaltas}%`,
-        '% ATESTADOS SOBRE DIAS MATRICULADOS': `${percentAtestadosSobreDias}%`,
-        'QTD FALTAS NÃO JUSTIFICADAS (SEM ATESTADO)': faltasSemAtestado,
-        'STATUS DE FREQUÊNCIA':
-          m.faltas >= 4
-            ? 'ALERTA DE INFREQUÊNCIA'
-            : m.frequenciaPercent === 100
-            ? '100% PRESENÇA'
-            : 'REGULAR',
-        'OBSERVAÇÕES / DETALHE DO ATESTADO': s.notes || '',
-        'FILIAÇÃO 1 (NOME DA MÃE)': s.filiacao1 || s.guardianName || '',
-        'FILIAÇÃO 2 (NOME DO PAI)': s.filiacao2 || '',
-        'TELEFONE DE CONTATO': s.telefones || s.guardianPhone || '',
-        'E-MAIL INSTITUCIONAL': s.emailMunicipal || '',
-      });
-    });
-  });
-
-  // Add consolidated summary row at the bottom of the nominal sheet
-  if (totalEstudantes > 0) {
-    const mediaPresenca =
-      totalDiasRecorte > 0 ? Math.round((totalPresencas / totalDiasRecorte) * 100) : 100;
-    const mediaFaltas =
-      totalDiasRecorte > 0 ? Math.round((totalFaltas / totalDiasRecorte) * 100) : 0;
-    const mediaAtestadosSobreFaltas =
-      totalFaltas > 0 ? Math.round((totalAtestados / totalFaltas) * 100) : 0;
-    const mediaAtestadosSobreDias =
-      totalDiasRecorte > 0 ? Math.round((totalAtestados / totalDiasRecorte) * 100) : 0;
-
-    rows.push({
-      'SEGMENTO DE ENSINO': `TOTAL CONSOLIDADO — ${stage}`,
-      'ETAPA / SÉRIE': `${stageClasses.length} TURMAS`,
-      'TURMA': 'TODAS',
-      'TURNO': 'MANHÃ + TARDE',
-      'SALA': '—',
-      'Nº CHAMADA': totalEstudantes,
-      'NOME NOMINAL DO(A) ESTUDANTE': `TOTAL: ${totalEstudantes} ESTUDANTES TABULADOS`,
-      'RA': '—',
-      'DATA DE MATRÍCULA (SED)': '—',
-      'DATA DE MOVIMENTAÇÃO': '—',
-      'SITUAÇÃO DO RECORTE': 'SOMA DO SEGMENTO',
-      'QTD DIAS LETIVOS DO MÊS': 20,
-      'QTD DIAS NO RECORTE DA MATRÍCULA': totalDiasRecorte,
-      'QTD PRESENÇAS NO PERÍODO': totalPresencas,
-      '% PRESENÇA (FREQUÊNCIA)': `${mediaPresenca}%`,
-      'QTD TOTAL DE FALTAS NO MÊS': totalFaltas,
-      '% FALTAS SOBRE DIAS MATRICULADOS': `${mediaFaltas}%`,
-      'QTD ATESTADOS APRESENTADOS (FALTAS JUSTIFICADAS)': totalAtestados,
-      '% ATESTADOS SOBRE O TOTAL DE FALTAS': `${mediaAtestadosSobreFaltas}%`,
-      '% ATESTADOS SOBRE DIAS MATRICULADOS': `${mediaAtestadosSobreDias}%`,
-      'QTD FALTAS NÃO JUSTIFICADAS (SEM ATESTADO)': totalSemAtestado,
-      'STATUS DE FREQUÊNCIA': `FREQUÊNCIA MÉDIA: ${mediaPresenca}%`,
-      'OBSERVAÇÕES / DETALHE DO ATESTADO': '—',
-      'FILIAÇÃO 1 (NOME DA MÃE)': '—',
-      'FILIAÇÃO 2 (NOME DO PAI)': '—',
-      'TELEFONE DE CONTATO': '—',
-      'E-MAIL INSTITUCIONAL': '—',
-    });
-  }
-
-  return rows;
-};
-
-// Generate and trigger download of a real Excel/Google Sheets (.xlsx) workbook with SED modeling & nominal tabs separated by Educação Infantil and Ensino Fundamental
-export const downloadSpreadsheetXLSX = (
-  classes: ClassGroup[],
-  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
-): void => {
-  const wb = XLSX.utils.book_new();
-
-  // Tab 1: Faltas e Atestados Nominais — EDUCAÇÃO INFANTIL (G4 e G5 separados, quantidade e porcentagem)
-  const rowsNominalInfantil = buildNominalAttendanceRowsForStage(
-    classes,
-    'EDUCACAO INFANTIL',
-    calendar
-  );
-  const wsInfantil = XLSX.utils.json_to_sheet(rowsNominalInfantil);
-  XLSX.utils.book_append_sheet(wb, wsInfantil, 'Faltas_Atestados_Infantil');
-
-  // Tab 2: Faltas e Atestados Nominais — ENSINO FUNDAMENTAL (1º ao 5º Ano separados, quantidade e porcentagem)
-  const rowsNominalFundamental = buildNominalAttendanceRowsForStage(
-    classes,
-    'ENSINO FUNDAMENTAL',
-    calendar
-  );
-  const wsFundamental = XLSX.utils.json_to_sheet(rowsNominalFundamental);
-  XLSX.utils.book_append_sheet(wb, wsFundamental, 'Faltas_Atestados_Fundamental');
-
-  // Tab 3: Matrículas e Frequência SED 2027 (Com todas as 48 colunas SED + Recorte da Matrícula e Frequência)
-  const rowsSedFrequencia: any[] = [];
-  classes.forEach((cls) => {
-    const diasLetivosMes = cls.classesHeld || 20;
-    cls.students.forEach((s) => {
-      const m = getStudentAttendanceMetrics(s, diasLetivosMes, calendar);
-      const faltasSemAtestado = Math.max(0, m.faltas - m.atestados);
-      const percentFaltas =
-        m.diasLetivosMatriculados > 0
-          ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
-          : 0;
-      const percentAtestados =
-        m.faltas > 0 ? Math.round((m.atestados / m.faltas) * 100) : 0;
-
-      rowsSedFrequencia.push({
-        'TIPO DE ENSINO': s.tipoEnsino || (cls.name.startsWith('GRUPO') ? 'EDUCACAO INFANTIL' : 'ENSINO FUNDAMENTAL'),
-        'SÉRIE': s.serie || (cls.name.includes('04') ? '1' : cls.name.includes('05') ? '2' : cls.name[0]),
-        'Nº CHAMADA': s.numeroChamada || s.number,
-        'ESTUDANTE': s.estudante || s.name,
-        'RA': s.ra || '',
-        'DIG. RA': s.digRa || '',
-        'UF RA': s.ufRa || 'SP',
-        'DATA DE NASCIMENTO': s.dataNascimento || '',
-        'TIPO ALOCAÇÃO': s.tipoAlocacao || '',
-        'SITUAÇÃO': s.situacao || (m.faltas >= 4 ? 'ALERTA INFREQUÊNCIA' : 'ATIVO'),
-        'DATA MOVIMENTAÇÃO': s.dataMovimentacao || '',
-        'CATEGORIA PROFISSIONAL CENSO': s.categoriaProfissionalCenso || '',
-        'DEFICIÊNCIA': s.deficiencia || '',
-        'PÓS DATA CENSO': s.posDataCenso || '',
-        'TURMA': s.turma || cls.name,
-        'PERÍODO': s.periodo || (cls.shift === 'Turno Manhã' ? 'MANHÃ' : 'TARDE'),
-        'DATA DE MATRÍCULA (SED)': s.dataMatriculaSed || '03/02/2027',
-        'PROCEDÊNCIA ESCOLAR': s.procedenciaEscolar || '',
-        'IRMÃOS': s.irmaos || '',
-        'IDADE': s.idade || '',
-        'ARQUIVO': s.arquivo || '',
-        'FILIAÇÃO 1': s.filiacao1 || s.guardianName || '',
-        'FILIAÇÃO 2': s.filiacao2 || '',
-        'NOME SOCIAL': s.nomeSocial || '',
-        'GÊNERO': s.genero || '',
-        'TIPO SANGUÍNEO': s.tipoSanguineo || '',
-        'RAÇA/COR': s.racaCor || '',
-        'NACIONALIDADE': s.nacionalidade || 'BRASILEIRA',
-        'PAÍS DE ORIGEM': s.paisOrigem || '',
-        'MUNICÍPIO DE NASCIMENTO': s.municipioNascimento || 'JUNDIAI - SP',
-        'CPF': s.cpf || '',
-        'RG': s.rg || '',
-        'DATA EMISSÃO RG': s.dataEmissaoRg || '',
-        'CARTÃO SUS': s.cartaoSus || '',
-        'NIS': s.nis || '',
-        'CEP': s.cep || '13.214-000',
-        'LOGRADOURO': s.logradouro || '',
-        'N. RESIDENCIA': s.numeroResidencia || '',
-        'COMPLEMENTO': s.complemento || '',
-        'BAIRRO': s.bairro || '',
-        'CIDADE': s.cidade || 'JUNDIAI',
-        'UF': s.uf || 'SP',
-        'TELEFONES': s.telefones || s.guardianPhone || '',
-        'E-MAIL GOOGLE': s.emailGoogle || '',
-        'E-MAIL MICROSOFT': s.emailMicrosoft || '',
-        'EMAIL MUNICIPAL': s.emailMunicipal || '',
-        'SUCESSÃO ESCOLAR': s.sucessaoEscolar || '',
-        // Colunas de Controle de Frequência pelo Recorte da Matrícula no Mês + Vínculos Google Drive
-        'DIAS LETIVOS DO MÊS': m.diasLetivosMes,
-        'DIAS LETIVOS NO RECORTE DA MATRÍCULA': m.diasLetivosMatriculados,
-        'DETALHE DO RECORTE': m.recorteLabel,
-        'QTD FALTAS NO MÊS': m.faltas,
-        '% FALTAS NO RECORTE': `${percentFaltas}%`,
-        'QTD ATESTADOS APRESENTADOS': m.atestados,
-        '% ATESTADOS SOBRE FALTAS': `${percentAtestados}%`,
-        'QTD FALTAS SEM ATESTADO': faltasSemAtestado,
-        'QTD PRESENÇAS NO PERÍODO': m.presencas,
-        '% FREQUÊNCIA NO RECORTE': `${m.frequenciaPercent}%`,
-        'LINK FOTO GOOGLE DRIVE': s.photoDriveUrl || '',
-        'ID FOTO DRIVE': s.photoDriveId || '',
-        'VÍNCULO FOTO': s.photoManualLink ? 'MANUAL' : 'AUTO',
-        'ID FICHA PDF DRIVE': s.fichaPdfDriveId || '',
-        'LINK FICHA PDF DRIVE': s.fichaPdfDriveUrl || '',
-        'SUBPASTA FICHA PDF': s.fichaPdfSubfolder || '',
-        'ATESTADO / ANOTAÇÕES': s.notes || '',
-      });
-    });
-  });
-
-  const wsSed = XLSX.utils.json_to_sheet(rowsSedFrequencia);
-  XLSX.utils.book_append_sheet(wb, wsSed, 'SED_Matrículas_e_Frequência');
-
-  // Tab 4: Busca Ativa — Faltas Consecutivas (3+ dias seguidos)
-  const rowsBuscaAtiva: any[] = [];
-  classes.forEach((cls) => {
-    const periodo = cls.shift.replace('Turno ', '').toUpperCase();
-    cls.students.forEach((s) => {
-      const alert = s.consecutiveAbsenceAlert;
-      if (!alert) return;
-      const occurrences =
-        alert.occurrences && alert.occurrences.length > 0
-          ? alert.occurrences
-          : alert.active || (alert.selectedDates && alert.selectedDates.length > 0) || alert.familyFeedback
-          ? [
-              {
-                id: `${s.id}_occ_1`,
-                sequenceNumber: 1,
-                selectedDates: alert.selectedDates || [],
-                reportedAt: alert.reportedAt || '',
-                reportedByTeacher: alert.reportedByTeacher || cls.teacherName || 'PEB I',
-                familyFeedback: alert.familyFeedback || '',
-                feedbackUpdatedAt: alert.feedbackUpdatedAt || '',
-              },
-            ]
-          : [];
-      occurrences.forEach((occ, idx) => {
-        const datesList = occ.selectedDates || [];
-        if (datesList.length === 0 && !occ.familyFeedback) return;
-        rowsBuscaAtiva.push({
-          'TURMA': cls.name,
-          'PERÍODO': periodo,
-          'PROFESSOR(A) PEB I': occ.reportedByTeacher || cls.teacherName || 'PEB I',
-          'Nº CHAMADA': s.number,
-          'ESTUDANTE': s.name,
-          'RA': s.ra ? `${s.ra}-${s.digRa || ''}` : '',
-          'DIAS DE FALTA CONSECUTIVA': datesList.join(', '),
-          'QTD DIAS SEGUIDOS': datesList.length,
-          'DATA DO AVISO': occ.reportedAt || '',
-          'RESPONSÁVEL': s.filiacao1 || s.guardianName || '',
-          'TELEFONE / WHATSAPP': s.telefones || s.guardianPhone || '',
-          'DEVOLUTIVA DA SECRETARIA / FAMÍLIA': occ.familyFeedback || '',
-          'DATA DA DEVOLUTIVA': occ.feedbackUpdatedAt || '',
-          'SEQUÊNCIA NO ANO': `${occ.sequenceNumber || idx + 1}ª Ocorrência`,
-        });
-      });
-    });
-  });
-  if (rowsBuscaAtiva.length > 0) {
-    const wsBusca = XLSX.utils.json_to_sheet(rowsBuscaAtiva);
-    XLSX.utils.book_append_sheet(wb, wsBusca, 'Busca_Ativa_Consecutivas');
-  }
-
-  // Tab 5: Bolsa Família & Controle Bimestral LDB (Fev+Mar a Out+Nov 2027)
-  const bimesters = OFFICIAL_BIMESTERS_2027.filter((b) => b.id !== 'anual');
-  const allEntries: Array<{ cls: ClassGroup; student: Student }> = [];
-  classes.forEach((cls) =>
-    cls.students.forEach((student) => allEntries.push({ cls, student }))
-  );
-  allEntries.sort((a, b) =>
-    a.student.name.localeCompare(b.student.name, 'pt-BR', { sensitivity: 'base' })
-  );
-  const rowsBolsaBimestral = allEntries.map(({ cls, student }) => {
-    const annualRep = getStudentBimesterReport(student, cls, 'anual');
-    const rowObj: Record<string, any> = {
-      'SEGMENTO': annualRep.isEducacaoInfantil ? 'EDUCAÇÃO INFANTIL' : 'ENSINO FUNDAMENTAL',
-      'TURMA': cls.name,
-      'PERÍODO': annualRep.shift,
-      'Nº CHAMADA': student.number,
-      'ESTUDANTE': student.name,
-      'NIS (BOLSA FAMÍLIA)': student.nis || '—',
-      'RA OFICIAL': student.ra ? `${student.ra}-${student.digRa || ''}` : '',
-      'META MÍNIMA LDB': `${annualRep.minLegalPresencePercent}%`,
-    };
-    bimesters.forEach((b) => {
-      const rep = getStudentBimesterReport(student, cls, b.id);
-      rowObj[b.shortLabel] = `${rep.frequenciaBimestrePercent}%`;
-    });
-    rowObj['TOTAL FALTAS ANO'] = annualRep.totalFaltasBimestre;
-    rowObj['TOTAL ATESTADOS ANO'] = annualRep.totalAtestadosBimestre;
-    rowObj['POSSUI ATESTADO?'] =
-      annualRep.totalAtestadosBimestre > 0
-        ? `SIM (${annualRep.totalAtestadosBimestre})`
-        : 'NÃO';
-    rowObj['% PRESENÇA CONSOLIDADA'] = `${annualRep.frequenciaBimestrePercent}%`;
-    rowObj['STATUS META'] = annualRep.isBelowLegalThresholdBimestre
-      ? `ABAIXO DA META (<${annualRep.minLegalPresencePercent}%)`
-      : `DENTRO DA META (≥${annualRep.minLegalPresencePercent}%)`;
-    rowObj['PROVIDÊNCIA MEC'] = annualRep.bolsaFamiliaMotivoPadrao;
-    return rowObj;
-  });
-  const wsBolsaBim = XLSX.utils.json_to_sheet(rowsBolsaBimestral);
-  XLSX.utils.book_append_sheet(wb, wsBolsaBim, 'Bolsa_Familia_Bimestral');
-
-  // Tab 6: Dias Letivos por Mês e Calendário SME Jundiaí 2027
-  const rowsCalendario = calendar.map((d) => ({
-    'Data': d.date,
-    'Dia da Semana': d.dayOfWeek,
-    'Mês': d.month,
-    'Ano': 2027,
-    'Tipo':
-      d.type === 'dia_letivo'
-        ? 'Dia Letivo'
-        : d.type === 'feriado'
-        ? 'Feriado'
-        : d.type === 'sabado_letivo'
-        ? 'Sábado Letivo'
-        : d.type === 'planejamento'
-        ? 'Planejamento'
-        : 'Recesso',
-    'Descrição Oficial': d.description,
-  }));
-  const wsCalendario = XLSX.utils.json_to_sheet(rowsCalendario);
-  XLSX.utils.book_append_sheet(wb, wsCalendario, 'Dias_Letivos_SME_2027');
-
-  // Tab 8: Dias Letivos por Turma e Mês (Configuração Mensal do Administrador 2027)
-  const rowsMesesPorTurma = classes.map((c) => {
-    const row: Record<string, any> = {
-      'Segmento': isEducacaoInfantilClass(c) ? 'EDUCAÇÃO INFANTIL' : 'ENSINO FUNDAMENTAL',
-      'Turma': c.name,
-      'Turno': c.shift,
-      'Etapa / Ano': c.grade,
-    };
-    let somaAnual = 0;
-    MONTHLY_SCHOOL_DAYS_2027.forEach((m) => {
-      const days =
-        c.monthlySchoolDays && typeof c.monthlySchoolDays[m.month] === 'number'
-          ? c.monthlySchoolDays[m.month]
-          : m.schoolDays;
-      row[m.month] = days;
-      somaAnual += days;
-    });
-    row['TOTAL ANUAL DE DIAS LETIVOS'] = somaAnual;
-    return row;
-  });
-  const wsMeses = XLSX.utils.json_to_sheet(rowsMesesPorTurma);
-  XLSX.utils.book_append_sheet(wb, wsMeses, 'Dias_Letivos_Turma_Mês');
-
-  // Tab 9: Resumo das 40 Turmas (Ano Letivo 2027)
-  const rowsTurmas = classes.map((c) => {
-    const cm = getClassAttendanceMetrics(c, calendar);
-    const percentFaltasTurma =
-      cm.totalDiasMatriculadosTurma > 0
-        ? Math.round((cm.totalFaltasTurma / cm.totalDiasMatriculadosTurma) * 100)
-        : 0;
-    const percentAtestadosTurma =
-      cm.totalFaltasTurma > 0
-        ? Math.round((cm.totalAtestadosTurma / cm.totalFaltasTurma) * 100)
-        : 0;
-
-    return {
-      'Segmento': isEducacaoInfantilClass(c) ? 'EDUCAÇÃO INFANTIL' : 'ENSINO FUNDAMENTAL',
-      'Turma': c.name,
-      'Turno': c.shift,
-      'Etapa / Ano': c.grade,
-      'Sala': c.room,
-      'Total de Estudantes': c.totalStudents,
-      'Dias Letivos do Mês': cm.diasLetivosMes,
-      'Soma Dias Letivos (Recorte Matrículas)': cm.totalDiasMatriculadosTurma,
-      'Qtd Presenças Acumuladas': cm.totalPresencasTurma,
-      '% Presença Média (Recorte)': `${cm.presenceRate}%`,
-      'Qtd Faltas Acumuladas': cm.totalFaltasTurma,
-      '% Faltas da Turma': `${percentFaltasTurma}%`,
-      'Qtd Atestados Apresentados': cm.totalAtestadosTurma,
-      '% Atestados sobre Faltas': `${percentAtestadosTurma}%`,
-      'Status Fechamento': c.isPending ? 'Pendente' : 'Concluído',
-    };
-  });
-  const wsTurmas = XLSX.utils.json_to_sheet(rowsTurmas);
-  XLSX.utils.book_append_sheet(wb, wsTurmas, 'Turmas_Salas_2027');
-
-  // Tab 10: USUÁRIOS CADASTRADOS (@educacao.jundiai.sp.gov.br)
-  const authorizedUsers = getStoredAuthorizedUsers();
-  const rowsUsuarios = authorizedUsers.map((u, idx) => ({
-    'Nº': idx + 1,
-    'E-MAIL INSTITUCIONAL (@educacao.jundiai.sp.gov.br)': u.email,
-    'NOME DO SERVIDOR / DOCENTE': u.name,
-    'NÍVEL DE ACESSO CONCEDIDO':
-      u.role === 'admin'
-        ? 'ADMIN (Acesso Pleno)'
-        : u.role === 'usuario'
-        ? 'PROFESSOR PEB I (Acesso Limitado à Turma)'
-        : 'PROFESSOR PEB II (Somente Visualização)',
-    'TURMA VINCULADA': u.assignedClassName,
-    'STATUS DO ACESSO': isUserAccessExpired(u)
-      ? 'EXPIRADO (REVOGADO)'
-      : u.active
-      ? 'ATIVO / LIBERADO'
-      : 'BLOQUEADO / SUSPENSO',
-    'VALIDADE DO ACESSO': u.accessExpiresAt
-      ? formatAccessExpirationDateBR(u.accessExpiresAt)
-      : 'Permanente',
-    'DATA DE CADASTRO': u.createdAt,
-    'TOTAL DE ACESSOS': u.totalAccessCount || 0,
-    'TEMPO TOTAL CONECTADO': formatDurationHuman(u.totalDurationSeconds),
-    'TEMPO ÚLTIMA SESSÃO': formatDurationHuman(u.lastSessionDurationSeconds),
-    'ÚLTIMO LOGIN': u.lastLoginAt || 'Nunca acessou',
-    'ÚLTIMA ATIVIDADE': u.lastActiveAt || '—',
-  }));
-  const wsUsuarios = XLSX.utils.json_to_sheet(rowsUsuarios);
-  XLSX.utils.book_append_sheet(wb, wsUsuarios, 'Usuarios_Autorizados_2027');
-
-  // Tab 11: HISTÓRICO DE ACESSOS E TEMPO CONECTADO POR SESSÃO
-  const sessionLogs = getStoredAccessSessionLogs();
-  const rowsLogs = sessionLogs.map((log, idx) => ({
-    'Nº SESSÃO': idx + 1,
-    'E-MAIL INSTITUCIONAL': log.email,
-    'NOME DO EDUCADOR / SERVIDOR': log.name,
-    'PERFIL':
-      log.role === 'admin'
-        ? 'ADMIN'
-        : log.role === 'usuario'
-        ? 'PEB I'
-        : 'PEB II',
-    'TURMA VINCULADA': log.assignedClassName,
-    'ENTRADA (DATA / HORA)': new Date(log.loginTimeISO).toLocaleString('pt-BR'),
-    'ÚLTIMO PULSO / SAÍDA': new Date(
-      log.logoutTimeISO || log.lastHeartbeatISO
-    ).toLocaleString('pt-BR'),
-    'TEMPO DE ACESSO (FORMATADO)': formatDurationHuman(log.durationSeconds),
-    'TEMPO DE ACESSO (SEGUNDOS)': log.durationSeconds,
-    'TELA VISITADA': log.lastScreen || 'Turmas',
-    'STATUS SESSÃO': log.logoutTimeISO ? 'Encerrada' : 'Ativa / Recente',
-  }));
-  if (rowsLogs.length > 0) {
-    const wsLogs = XLSX.utils.json_to_sheet(rowsLogs);
-    XLSX.utils.book_append_sheet(wb, wsLogs, 'Monitoramento_Acessos_2027');
-  }
-
-  // Generate binary and trigger download
-  XLSX.writeFile(wb, 'Base_Oficial_SED_EMEB_Candelario_Freitas_2027.xlsx');
-};
-
-export type ClassExportCategory =
-  | 'Identificação & Matrícula'
-  | 'Filiação (Mãe e Pai) & Contatos'
-  | 'Frequência, Presença & Faltas'
-  | 'Documentos, Saúde & AEE'
-  | 'Endereço'
-  | 'Outros Campos SED';
-
-export interface ClassExportColumnDef {
-  id: string;
-  label: string;
-  shortLabel: string;
-  category: ClassExportCategory;
-  width?: number;
-  getValue: (s: Student, cls: ClassGroup, calendar: SchoolDay[]) => string | number;
-}
-
-export const CLASS_EXPORT_COLUMNS: ClassExportColumnDef[] = [
-  // 1. Identificação & Matrícula
-  {
-    id: 'numeroChamada',
-    label: 'Nº CHAMADA',
-    shortLabel: 'Nº Chamada',
-    category: 'Identificação & Matrícula',
-    width: 12,
-    getValue: (s) => s.numeroChamada || s.number,
-  },
-  {
-    id: 'estudante',
-    label: 'ESTUDANTE',
-    shortLabel: 'Nome do Estudante',
-    category: 'Identificação & Matrícula',
-    width: 34,
-    getValue: (s) => s.estudante || s.name,
-  },
-  {
-    id: 'raCompleto',
-    label: 'RA COMPLETO',
-    shortLabel: 'RA Completo (RA-Dig/UF)',
-    category: 'Identificação & Matrícula',
-    width: 18,
-    getValue: (s) => (s.ra ? `${s.ra}-${s.digRa || ''}/${s.ufRa || 'SP'}` : ''),
-  },
-  {
-    id: 'ra',
-    label: 'RA',
-    shortLabel: 'RA (Número)',
-    category: 'Identificação & Matrícula',
-    width: 15,
-    getValue: (s) => s.ra || '',
-  },
-  {
-    id: 'digRa',
-    label: 'DIG. RA',
-    shortLabel: 'Dígito RA',
-    category: 'Identificação & Matrícula',
-    width: 10,
-    getValue: (s) => s.digRa || '',
-  },
-  {
-    id: 'ufRa',
-    label: 'UF RA',
-    shortLabel: 'UF do RA',
-    category: 'Identificação & Matrícula',
-    width: 10,
-    getValue: (s) => s.ufRa || 'SP',
-  },
-  {
-    id: 'dataNascimento',
-    label: 'DATA DE NASCIMENTO',
-    shortLabel: 'Data de Nascimento',
-    category: 'Identificação & Matrícula',
-    width: 18,
-    getValue: (s) => s.dataNascimento || '',
-  },
-  {
-    id: 'idade',
-    label: 'IDADE',
-    shortLabel: 'Idade',
-    category: 'Identificação & Matrícula',
-    width: 10,
-    getValue: (s) => s.idade || '',
-  },
-  {
-    id: 'genero',
-    label: 'GÊNERO',
-    shortLabel: 'Gênero (Fem./Masc.)',
-    category: 'Identificação & Matrícula',
-    width: 14,
-    getValue: (s) => getStudentGenderLabel(s).label.toUpperCase(),
-  },
-  {
-    id: 'situacao',
-    label: 'SITUAÇÃO',
-    shortLabel: 'Situação (Ativo/Transf./Reman.)',
-    category: 'Identificação & Matrícula',
-    width: 18,
-    getValue: (s) => s.situacao || 'ATIVO',
-  },
-  {
-    id: 'dataMatriculaSed',
-    label: 'DATA DE MATRÍCULA (SED)',
-    shortLabel: 'Data Matrícula SED',
-    category: 'Identificação & Matrícula',
-    width: 20,
-    getValue: (s) => s.dataMatriculaSed || '03/02/2027',
-  },
-  {
-    id: 'dataMovimentacao',
-    label: 'DATA MOVIMENTAÇÃO',
-    shortLabel: 'Data Movimentação',
-    category: 'Identificação & Matrícula',
-    width: 18,
-    getValue: (s) => s.dataMovimentacao || '',
-  },
-  {
-    id: 'turma',
-    label: 'TURMA',
-    shortLabel: 'Turma',
-    category: 'Identificação & Matrícula',
-    width: 16,
-    getValue: (s, cls) => s.turma || cls.name,
-  },
-  {
-    id: 'periodo',
-    label: 'PERÍODO',
-    shortLabel: 'Período / Turno',
-    category: 'Identificação & Matrícula',
-    width: 14,
-    getValue: (s, cls) => s.periodo || (cls.shift === 'Turno Manhã' ? 'MANHÃ' : 'TARDE'),
-  },
-  {
-    id: 'serie',
-    label: 'SÉRIE',
-    shortLabel: 'Série / Etapa',
-    category: 'Identificação & Matrícula',
-    width: 14,
-    getValue: (s, cls) =>
-      s.serie || (cls.name.includes('04') ? '1' : cls.name.includes('05') ? '2' : cls.name[0]),
-  },
-  {
-    id: 'tipoEnsino',
-    label: 'TIPO DE ENSINO',
-    shortLabel: 'Tipo de Ensino',
-    category: 'Identificação & Matrícula',
-    width: 22,
-    getValue: (s, cls) =>
-      s.tipoEnsino ||
-      (cls.name.startsWith('GRUPO') ? 'EDUCACAO INFANTIL' : 'ENSINO FUNDAMENTAL'),
-  },
-
-  // 2. Filiação (Mãe/Pai/Tio/Tia/Avó/Avô/Vizinho) & Contatos
-  {
-    id: 'filiacao1',
-    label: 'FILIAÇÃO 1',
-    shortLabel: 'Filiação 1 (Mãe / Resp.)',
-    category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 34,
-    getValue: (s) => {
-      const raw = s.filiacao1 || s.guardianName || '';
-      if (!raw) return '';
-      const info = resolveGuardianRelationshipInfo(raw, 'filiacao1', s.notes);
-      return `${info.cleanName} (${info.roleLabel})`;
-    },
-  },
-  {
-    id: 'filiacao2',
-    label: 'FILIAÇÃO 2',
-    shortLabel: 'Filiação 2 (Pai / Resp.)',
-    category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 34,
-    getValue: (s) => {
-      const raw = s.filiacao2 || '';
-      if (!raw) return '';
-      const info = resolveGuardianRelationshipInfo(raw, 'filiacao2', s.notes);
-      return `${info.cleanName} (${info.roleLabel})`;
-    },
-  },
-  {
-    id: 'telefones',
-    label: 'TELEFONES',
-    shortLabel: 'Telefones de Contato',
-    category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 26,
-    getValue: (s) => s.telefones || s.guardianPhone || '',
-  },
-  {
-    id: 'emailMunicipal',
-    label: 'EMAIL MUNICIPAL',
-    shortLabel: 'E-mail Institucional (@educacao)',
-    category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 34,
-    getValue: (s) => s.emailMunicipal || '',
-  },
-  {
-    id: 'emailGoogle',
-    label: 'E-MAIL GOOGLE',
-    shortLabel: 'E-mail Google',
-    category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 30,
-    getValue: (s) => s.emailGoogle || '',
-  },
-  {
-    id: 'emailMicrosoft',
-    label: 'E-MAIL MICROSOFT',
-    shortLabel: 'E-mail Microsoft',
-    category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 30,
-    getValue: (s) => s.emailMicrosoft || '',
-  },
-  {
-    id: 'irmaos',
-    label: 'IRMÃOS',
-    shortLabel: 'Irmãos na Escola',
-    category: 'Filiação (Mãe e Pai) & Contatos',
-    width: 16,
-    getValue: (s) => s.irmaos || '',
-  },
-
-  // 3. Frequência, Presença & Faltas
-  {
-    id: 'presencasQtd',
-    label: 'PRESENÇA TOTAL (DIAS)',
-    shortLabel: 'Presença Total (Dias)',
-    category: 'Frequência, Presença & Faltas',
-    width: 18,
-    getValue: (s, cls, cal) =>
-      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).presencas,
-  },
-  {
-    id: 'presencaPercent',
-    label: '% PRESENÇA TOTAL',
-    shortLabel: '% Presença Total',
-    category: 'Frequência, Presença & Faltas',
-    width: 16,
-    getValue: (s, cls, cal) =>
-      `${getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).frequenciaPercent}%`,
-  },
-  {
-    id: 'faltasQtd',
-    label: 'FALTA TOTAL (QTD)',
-    shortLabel: 'Falta Total (Qtd)',
-    category: 'Frequência, Presença & Faltas',
-    width: 16,
-    getValue: (s, cls, cal) =>
-      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).faltas,
-  },
-  {
-    id: 'faltasPercent',
-    label: '% FALTA TOTAL',
-    shortLabel: '% Falta Total',
-    category: 'Frequência, Presença & Faltas',
-    width: 16,
-    getValue: (s, cls, cal) => {
-      const m = getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal);
-      const pct =
-        m.diasLetivosMatriculados > 0
-          ? Math.round((m.faltas / m.diasLetivosMatriculados) * 100)
-          : 0;
-      return `${pct}%`;
-    },
-  },
-  {
-    id: 'atestadosQtd',
-    label: 'QTD ATESTADOS APRESENTADOS',
-    shortLabel: 'Atestados (Qtd)',
-    category: 'Frequência, Presença & Faltas',
-    width: 18,
-    getValue: (s, cls, cal) =>
-      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).atestados,
-  },
-  {
-    id: 'atestadosPercent',
-    label: '% ATESTADOS SOBRE FALTAS',
-    shortLabel: '% Atestados s/ Faltas',
-    category: 'Frequência, Presença & Faltas',
-    width: 18,
-    getValue: (s, cls, cal) => {
-      const m = getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal);
-      const pct = m.faltas > 0 ? Math.round((m.atestados / m.faltas) * 100) : 0;
-      return `${pct}%`;
-    },
-  },
-  {
-    id: 'faltasSemAtestado',
-    label: 'QTD FALTAS SEM ATESTADO',
-    shortLabel: 'Faltas s/ Atestado',
-    category: 'Frequência, Presença & Faltas',
-    width: 18,
-    getValue: (s, cls, cal) => {
-      const m = getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal);
-      return Math.max(0, m.faltas - m.atestados);
-    },
-  },
-  {
-    id: 'diasLetivosMes',
-    label: 'DIAS LETIVOS DO MÊS',
-    shortLabel: 'Dias Letivos Mês',
-    category: 'Frequência, Presença & Faltas',
-    width: 16,
-    getValue: (s, cls, cal) =>
-      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).diasLetivosMes,
-  },
-  {
-    id: 'diasLetivosRecorte',
-    label: 'DIAS LETIVOS NO RECORTE DA MATRÍCULA',
-    shortLabel: 'Dias no Recorte Matrícula',
-    category: 'Frequência, Presença & Faltas',
-    width: 20,
-    getValue: (s, cls, cal) =>
-      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).diasLetivosMatriculados,
-  },
-  {
-    id: 'detalheRecorte',
-    label: 'DETALHE DO RECORTE',
-    shortLabel: 'Detalhe do Recorte',
-    category: 'Frequência, Presença & Faltas',
-    width: 24,
-    getValue: (s, cls, cal) =>
-      getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal).recorteLabel,
-  },
-  {
-    id: 'statusLegal',
-    label: 'STATUS FREQUÊNCIA / BOLSA FAMÍLIA',
-    shortLabel: 'Status Legal (<60% / <75%)',
-    category: 'Frequência, Presença & Faltas',
-    width: 24,
-    getValue: (s, cls, cal) => {
-      const m = getStudentAttendanceMetrics(s, cls.classesHeld || 20, cal);
-      return m.isBelowLegalThreshold
-        ? `ALERTA (<${m.minLegalPresencePercent}%)`
-        : `REGULAR (>=${m.minLegalPresencePercent}%)`;
-    },
-  },
-  {
-    id: 'observacoes',
-    label: 'ATESTADO / ANOTAÇÕES',
-    shortLabel: 'Anotações & Atestados',
-    category: 'Frequência, Presença & Faltas',
-    width: 28,
-    getValue: (s) => s.notes || '',
-  },
-
-  // 4. Documentos, Saúde & AEE
-  {
-    id: 'cpf',
-    label: 'CPF',
-    shortLabel: 'CPF',
-    category: 'Documentos, Saúde & AEE',
-    width: 16,
-    getValue: (s) => s.cpf || '',
-  },
-  {
-    id: 'rg',
-    label: 'RG',
-    shortLabel: 'RG',
-    category: 'Documentos, Saúde & AEE',
-    width: 15,
-    getValue: (s) => s.rg || '',
-  },
-  {
-    id: 'dataEmissaoRg',
-    label: 'DATA EMISSÃO RG',
-    shortLabel: 'Data Emissão RG',
-    category: 'Documentos, Saúde & AEE',
-    width: 16,
-    getValue: (s) => s.dataEmissaoRg || '',
-  },
-  {
-    id: 'nis',
-    label: 'NIS',
-    shortLabel: 'NIS (Bolsa Família)',
-    category: 'Documentos, Saúde & AEE',
-    width: 16,
-    getValue: (s) => s.nis || '',
-  },
-  {
-    id: 'cartaoSus',
-    label: 'CARTÃO SUS',
-    shortLabel: 'Cartão SUS',
-    category: 'Documentos, Saúde & AEE',
-    width: 20,
-    getValue: (s) => s.cartaoSus || '',
-  },
-  {
-    id: 'deficiencia',
-    label: 'DEFICIÊNCIA',
-    shortLabel: 'Deficiência / AEE',
-    category: 'Documentos, Saúde & AEE',
-    width: 24,
-    getValue: (s) => s.deficiencia || '',
-  },
-  {
-    id: 'tipoSanguineo',
-    label: 'TIPO SANGUÍNEO',
-    shortLabel: 'Tipo Sanguíneo',
-    category: 'Documentos, Saúde & AEE',
-    width: 14,
-    getValue: (s) => s.tipoSanguineo || '',
-  },
-  {
-    id: 'racaCor',
-    label: 'RAÇA/COR',
-    shortLabel: 'Raça / Cor',
-    category: 'Documentos, Saúde & AEE',
-    width: 14,
-    getValue: (s) => s.racaCor || '',
-  },
-  {
-    id: 'nomeSocial',
-    label: 'NOME SOCIAL',
-    shortLabel: 'Nome Social',
-    category: 'Documentos, Saúde & AEE',
-    width: 20,
-    getValue: (s) => s.nomeSocial || '',
-  },
-  {
-    id: 'nacionalidade',
-    label: 'NACIONALIDADE',
-    shortLabel: 'Nacionalidade',
-    category: 'Documentos, Saúde & AEE',
-    width: 16,
-    getValue: (s) => s.nacionalidade || 'BRASILEIRA',
-  },
-  {
-    id: 'paisOrigem',
-    label: 'PAÍS DE ORIGEM',
-    shortLabel: 'País de Origem',
-    category: 'Documentos, Saúde & AEE',
-    width: 16,
-    getValue: (s) => s.paisOrigem || 'BRASIL',
-  },
-  {
-    id: 'municipioNascimento',
-    label: 'MUNICÍPIO DE NASCIMENTO',
-    shortLabel: 'Município de Nascimento',
-    category: 'Documentos, Saúde & AEE',
-    width: 22,
-    getValue: (s) => s.municipioNascimento || 'JUNDIAI - SP',
-  },
-  {
-    id: 'arquivo',
-    label: 'ARQUIVO',
-    shortLabel: 'Nº Arquivo / Pasta',
-    category: 'Documentos, Saúde & AEE',
-    width: 12,
-    getValue: (s) => s.arquivo || '',
-  },
-
-  // 5. Endereço
-  {
-    id: 'cep',
-    label: 'CEP',
-    shortLabel: 'CEP',
-    category: 'Endereço',
-    width: 14,
-    getValue: (s) => s.cep || '13.214-000',
-  },
-  {
-    id: 'logradouro',
-    label: 'LOGRADOURO',
-    shortLabel: 'Logradouro (Rua/Av.)',
-    category: 'Endereço',
-    width: 28,
-    getValue: (s) => s.logradouro || '',
-  },
-  {
-    id: 'numeroResidencia',
-    label: 'N. RESIDENCIA',
-    shortLabel: 'Nº Residência',
-    category: 'Endereço',
-    width: 12,
-    getValue: (s) => s.numeroResidencia || '',
-  },
-  {
-    id: 'complemento',
-    label: 'COMPLEMENTO',
-    shortLabel: 'Complemento',
-    category: 'Endereço',
-    width: 18,
-    getValue: (s) => s.complemento || '',
-  },
-  {
-    id: 'bairro',
-    label: 'BAIRRO',
-    shortLabel: 'Bairro',
-    category: 'Endereço',
-    width: 20,
-    getValue: (s) => s.bairro || '',
-  },
-  {
-    id: 'cidade',
-    label: 'CIDADE',
-    shortLabel: 'Cidade',
-    category: 'Endereço',
-    width: 16,
-    getValue: (s) => s.cidade || 'JUNDIAI',
-  },
-  {
-    id: 'uf',
-    label: 'UF',
-    shortLabel: 'UF',
-    category: 'Endereço',
-    width: 8,
-    getValue: (s) => s.uf || 'SP',
-  },
-
-  // 6. Outros Campos SED
-  {
-    id: 'tipoAlocacao',
-    label: 'TIPO ALOCAÇÃO',
-    shortLabel: 'Tipo Alocação',
-    category: 'Outros Campos SED',
-    width: 16,
-    getValue: (s) => s.tipoAlocacao || '',
-  },
-  {
-    id: 'categoriaProfissionalCenso',
-    label: 'CATEGORIA PROFISSIONAL CENSO',
-    shortLabel: 'Cat. Profissional Censo',
-    category: 'Outros Campos SED',
-    width: 22,
-    getValue: (s) => s.categoriaProfissionalCenso || '',
-  },
-  {
-    id: 'posDataCenso',
-    label: 'PÓS DATA CENSO',
-    shortLabel: 'Pós Data Censo',
-    category: 'Outros Campos SED',
-    width: 16,
-    getValue: (s) => s.posDataCenso || '',
-  },
-  {
-    id: 'procedenciaEscolar',
-    label: 'PROCEDÊNCIA ESCOLAR',
-    shortLabel: 'Procedência Escolar',
-    category: 'Outros Campos SED',
-    width: 24,
-    getValue: (s) => s.procedenciaEscolar || '',
-  },
-  {
-    id: 'sucessaoEscolar',
-    label: 'SUCESSÃO ESCOLAR',
-    shortLabel: 'Sucessão Escolar',
-    category: 'Outros Campos SED',
-    width: 20,
-    getValue: (s) => s.sucessaoEscolar || '',
-  },
-];
-
-export const DEFAULT_CLASS_EXPORT_COLUMN_IDS: string[] = [
-  'numeroChamada',
-  'estudante',
-  'raCompleto',
-  'situacao',
-  'genero',
-  'filiacao1',
-  'filiacao2',
-  'telefones',
-  'emailMunicipal',
-  'presencasQtd',
-  'presencaPercent',
-  'faltasQtd',
-  'faltasPercent',
-  'atestadosQtd',
-  'observacoes',
-];
-
-export const CLASS_EXPORT_PRESETS: {
-  id: string;
-  label: string;
-  description: string;
-  columnIds: string[];
-}[] = [
-  {
-    id: 'padrao_turma',
-    label: 'Padrão da Turma (Completo & Limpo)',
-    description: 'Nº, Estudante, RA, Situação, Gênero, Filiação 1 (Mãe), Filiação 2 (Pai), Telefones, E-mail, Presença Total e Falta Total',
-    columnIds: DEFAULT_CLASS_EXPORT_COLUMN_IDS,
-  },
-  {
-    id: 'frequencia_bolsa',
-    label: 'Frequência, Faltas & Bolsa Família',
-    description: 'Focado em presença, faltas, atestados, NIS e status legal (<60% / <75%)',
-    columnIds: [
-      'numeroChamada',
-      'estudante',
-      'raCompleto',
-      'nis',
-      'dataNascimento',
-      'situacao',
-      'diasLetivosRecorte',
-      'presencasQtd',
-      'presencaPercent',
-      'faltasQtd',
-      'faltasPercent',
-      'atestadosQtd',
-      'faltasSemAtestado',
-      'statusLegal',
-      'observacoes',
-    ],
-  },
-  {
-    id: 'filiacao_contatos',
-    label: 'Filiação (Mãe e Pai) & Contatos',
-    description: 'Lista nominal com Nome da Mãe (Filiação 1), Nome do Pai (Filiação 2), Telefones, E-mail e Endereço',
-    columnIds: [
-      'numeroChamada',
-      'estudante',
-      'raCompleto',
-      'dataNascimento',
-      'filiacao1',
-      'filiacao2',
-      'telefones',
-      'emailMunicipal',
-      'logradouro',
-      'numeroResidencia',
-      'bairro',
-      'cep',
-    ],
-  },
-  {
-    id: 'completo_sed',
-    label: 'Base Oficial SED Completa (Todos os Campos)',
-    description: 'Todas as 61 colunas oficiais da SED + indicadores de frequência e recorte',
-    columnIds: CLASS_EXPORT_COLUMNS.map((c) => c.id),
-  },
-];
-
-export type ClassExportSortOrder =
-  | 'number_asc'
-  | 'name_asc'
-  | 'name_desc'
-  | 'absences_desc'
-  | 'presence_asc';
-
-export type ClassExportStatusFilter = 'all' | 'ativos' | 'movimentados' | 'alerta';
-
-export interface ClassCustomExportOptions {
-  columnIds: string[];
-  sortBy: ClassExportSortOrder;
-  statusFilter: ClassExportStatusFilter;
-  includeSummarySheet: boolean;
-  fileFormat?: 'xls' | 'xlsx';
-}
-
-export const buildCustomClassExportPreview = (
-  cls: ClassGroup,
-  options: ClassCustomExportOptions,
-  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
-): {
-  headers: string[];
-  rows: Record<string, string | number>[];
-  orderedStudents: Student[];
-} => {
-  const diasLetivosMes = cls.classesHeld || 20;
-  const colDefs = options.columnIds
-    .map((id) => CLASS_EXPORT_COLUMNS.find((c) => c.id === id))
-    .filter((c): c is ClassExportColumnDef => Boolean(c));
-
-  const finalCols =
-    colDefs.length > 0
-      ? colDefs
-      : DEFAULT_CLASS_EXPORT_COLUMN_IDS.map((id) =>
-          CLASS_EXPORT_COLUMNS.find((c) => c.id === id)!
-        ).filter(Boolean);
-
-  // Filter students
-  const filtered = cls.students.filter((s) => {
-    const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
-    const isMov =
-      sit.includes('BXTR') ||
-      sit.includes('TRANSF') ||
-      sit.includes('REMAN') ||
-      sit.includes('RM');
-    if (options.statusFilter === 'ativos') return !isMov;
-    if (options.statusFilter === 'movimentados') return isMov;
-    if (options.statusFilter === 'alerta') {
-      const m = getStudentAttendanceMetrics(s, diasLetivosMes, calendar);
-      return m.isBelowLegalThreshold;
-    }
-    return true;
-  });
-
-  // Sort students according to user preference
-  const sorted = [...filtered].sort((a, b) => {
-    if (options.sortBy === 'name_asc') {
-      return a.name.localeCompare(b.name, 'pt-BR');
-    }
-    if (options.sortBy === 'name_desc') {
-      return b.name.localeCompare(a.name, 'pt-BR');
-    }
-    if (options.sortBy === 'absences_desc') {
-      const ma = getStudentAttendanceMetrics(a, diasLetivosMes, calendar);
-      const mb = getStudentAttendanceMetrics(b, diasLetivosMes, calendar);
-      if (mb.faltas !== ma.faltas) return mb.faltas - ma.faltas;
-      return a.number - b.number;
-    }
-    if (options.sortBy === 'presence_asc') {
-      const ma = getStudentAttendanceMetrics(a, diasLetivosMes, calendar);
-      const mb = getStudentAttendanceMetrics(b, diasLetivosMes, calendar);
-      if (ma.frequenciaPercent !== mb.frequenciaPercent) {
-        return ma.frequenciaPercent - mb.frequenciaPercent;
-      }
-      return a.number - b.number;
-    }
-    // Default: strict numerical call order (Nº 01, 02, 03...)
-    return a.number - b.number;
-  });
-
-  const rows = sorted.map((s) => {
-    const rowObj: Record<string, string | number> = {};
-    finalCols.forEach((col) => {
-      rowObj[col.label] = col.getValue(s, cls, calendar);
-    });
-    return rowObj;
-  });
-
-  return {
-    headers: finalCols.map((c) => c.label),
-    rows,
-    orderedStudents: sorted,
-  };
-};
-
-// Generate and trigger download of custom .xls (or .xlsx) file exclusively for the selected ClassGroup
-export const downloadClassCustomXLS = (
-  cls: ClassGroup,
-  options: ClassCustomExportOptions,
-  calendar: SchoolDay[] = OFFICIAL_OCTOBER_DAYS
-): void => {
-  const { headers, rows } = buildCustomClassExportPreview(cls, options, calendar);
-  const colDefs = options.columnIds
-    .map((id) => CLASS_EXPORT_COLUMNS.find((c) => c.id === id))
-    .filter((c): c is ClassExportColumnDef => Boolean(c));
-
-  const wb = XLSX.utils.book_new();
-
-  // Sheet 1: Dados Nominais da Turma com as Colunas e Ordem escolhidas pelo usuário
-  const wsTurma = XLSX.utils.json_to_sheet(rows, { header: headers });
-  wsTurma['!cols'] = colDefs.map((c) => ({ wch: c.width || 20 }));
-
-  const safeSheetName = `Turma_${cls.name.replace(/[^A-Za-z0-9_]/g, '_')}`.slice(0, 31);
-  XLSX.utils.book_append_sheet(wb, wsTurma, safeSheetName);
-
-  // Sheet 2 (Optional): Alta da Turma (Resumo de Ativos, Feminino, Masculino, Transferidos, Remanejados, Presença e Faltas)
-  if (options.includeSummarySheet) {
-    const diasLetivosMes = cls.classesHeld || 20;
-    let ativos = 0;
-    let feminino = 0;
-    let masculino = 0;
-    let transferidos = 0;
-    let remanejados = 0;
-    let pcd = 0;
-    let somaDias = 0;
-    let somaPresencas = 0;
-    let somaFaltas = 0;
-    let somaAtestados = 0;
-
-    cls.students.forEach((s) => {
-      const sit = (s.situacao || 'ATIVO').toUpperCase().trim();
-      const genCode = resolveStudentGender(s);
-      if (sit.includes('BXTR') || sit.includes('TRANSF')) transferidos++;
-      else if (sit.includes('REMAN') || sit.includes('RM')) remanejados++;
-      else ativos++;
-
-      if (genCode === 'F') feminino++;
-      else masculino++;
-
-      if (s.deficiencia && s.deficiencia.trim().length > 0) pcd++;
-
-      const m = getStudentAttendanceMetrics(s, diasLetivosMes, calendar);
-      somaDias += m.diasLetivosMatriculados;
-      somaPresencas += m.presencas;
-      somaFaltas += m.faltas;
-      somaAtestados += m.atestados;
-    });
-
-    const pctPresenca = somaDias > 0 ? Math.round((somaPresencas / somaDias) * 100) : 100;
-    const pctFalta = somaDias > 0 ? Math.round((somaFaltas / somaDias) * 100) : 0;
-
-    const resumoRows = [
-      { INDICADOR: 'TURMA', VALOR: cls.name, DETALHE: `${cls.grade} • ${cls.shift}` },
-      { INDICADOR: 'SALA', VALOR: cls.room, DETALHE: `${diasLetivosMes} dias letivos no mês` },
-      { INDICADOR: 'TOTAL MATRICULADOS', VALOR: cls.students.length, DETALHE: '100% da lista nominal' },
-      { INDICADOR: 'ESTUDANTES ATIVOS', VALOR: ativos, DETALHE: 'Frequentes na turma' },
-      {
-        INDICADOR: 'FEMININO (MENINAS)',
-        VALOR: feminino,
-        DETALHE:
-          cls.students.length > 0
-            ? `${Math.round((feminino / cls.students.length) * 100)}% da turma`
-            : '0%',
-      },
-      {
-        INDICADOR: 'MASCULINO (MENINOS)',
-        VALOR: masculino,
-        DETALHE:
-          cls.students.length > 0
-            ? `${Math.round((masculino / cls.students.length) * 100)}% da turma`
-            : '0%',
-      },
-      { INDICADOR: 'TRANSFERIDOS (BXTR)', VALOR: transferidos, DETALHE: 'Baixa por transferência' },
-      { INDICADOR: 'REMANEJADOS', VALOR: remanejados, DETALHE: 'Movimentação entre turmas' },
-      { INDICADOR: 'EDUCAÇÃO ESPECIAL / AEE', VALOR: pcd, DETALHE: 'Estudantes com laudo/AEE' },
-      {
-        INDICADOR: 'PRESENÇA TOTAL DA TURMA',
-        VALOR: `${pctPresenca}%`,
-        DETALHE: `${somaPresencas} presenças em ${somaDias} dias matriculados`,
-      },
-      {
-        INDICADOR: 'FALTA TOTAL DA TURMA',
-        VALOR: somaFaltas,
-        DETALHE: `${pctFalta}% de ausências no período`,
-      },
-      {
-        INDICADOR: 'ATESTADOS APRESENTADOS',
-        VALOR: somaAtestados,
-        DETALHE: 'Faltas justificadas por documento médico',
-      },
-    ];
-
-    const wsResumo = XLSX.utils.json_to_sheet(resumoRows);
-    wsResumo['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 38 }];
-    XLSX.utils.book_append_sheet(wb, wsResumo, 'Alta_Resumo_Turma');
-  }
-
-  const format = options.fileFormat || 'xls';
-  const cleanFileName = `Relatorio_${cls.name.replace(/\s+/g, '_')}_2027.${format}`;
-
-  if (format === 'xls') {
-    XLSX.writeFile(wb, cleanFileName, { bookType: 'biff8' });
-  } else {
-    XLSX.writeFile(wb, cleanFileName, { bookType: 'xlsx' });
-  }
-};
-
-// Legacy alias kept for compatibility, now defaults to .xls format
-export const downloadClassCSV = (cls: ClassGroup): void => {
-  downloadClassCustomXLS(cls, {
-    columnIds: DEFAULT_CLASS_EXPORT_COLUMN_IDS,
-    sortBy: 'number_asc',
-    statusFilter: 'all',
-    includeSummarySheet: true,
-    fileFormat: 'xls',
-  });
-};
-
-// ============================================================================
-// MÓDULO ÚNICO E CENTRALIZADO DE DIAS LETIVOS (200 DIAS), FERIADOS E AUDITORIA
-// ============================================================================
-const CALENDAR_STORAGE_KEY = 'emeb_candelario_official_calendar_2027_v1';
-const HOLIDAYS_STORAGE_KEY = 'emeb_candelario_holidays_2027_v1';
-const CALENDAR_AUDIT_STORAGE_KEY = 'emeb_candelario_calendar_audit_2027_v1';
-
-let memoryCalendarConfig: OfficialCalendarConfig | null = null;
-let memoryHolidays: SchoolHoliday[] | null = null;
-let memoryAuditLogs: CalendarAuditLogEntry[] | null = null;
-
-export const getStoredHolidays = (): SchoolHoliday[] => {
-  if (memoryHolidays && memoryHolidays.length > 0) return memoryHolidays;
-  try {
-    const raw = localStorage.getItem(HOLIDAYS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        memoryHolidays = parsed;
-        return parsed;
-      }
-    }
-  } catch {
-    // fallback
-  }
-  memoryHolidays = OFFICIAL_DEFAULT_HOLIDAYS_2027;
-  return memoryHolidays;
-};
-
-export const getStoredCalendarAuditLogs = (): CalendarAuditLogEntry[] => {
-  if (memoryAuditLogs && memoryAuditLogs.length > 0) return memoryAuditLogs;
-  try {
-    const raw = localStorage.getItem(CALENDAR_AUDIT_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        memoryAuditLogs = parsed;
-        return parsed;
-      }
-    }
-  } catch {
-    // fallback
-  }
-  return [];
-};
-
-export const getStoredOfficialCalendarConfig = (): OfficialCalendarConfig => {
-  if (memoryCalendarConfig && Array.isArray(memoryCalendarConfig.schoolDays) && memoryCalendarConfig.schoolDays.length === 200) {
-    return memoryCalendarConfig;
-  }
-  const currentHolidays = getStoredHolidays();
-  try {
-    const raw = localStorage.getItem(CALENDAR_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.schoolDays) && parsed.schoolDays.length === 200) {
-        memoryCalendarConfig = parsed;
-        return parsed;
-      }
-    }
-  } catch {
-    // fallback
-  }
-
-  // Gera o padrão oficial de 200 dias se ainda não houver salvo
-  const defaultDays = generateOfficial200SchoolDays2027(currentHolidays);
-  const validation = parseAndValidateSchoolDates(defaultDays.join('\n'), currentHolidays);
-  const initialConfig: OfficialCalendarConfig = {
-    year: 2027,
-    schoolDays: defaultDays,
-    calendarDays: validation.calendarDays,
-    monthlyDistribution: validation.monthlyDistribution,
-    holidays: currentHolidays,
-    updatedAtMs: Date.now(),
-    updatedByEmail: 'emebjfreitas@jundiai.sp.gov.br',
-    updatedByName: 'Administrador EMEB Joaquim Candelário de Freitas',
-    version: 1,
-  };
-  memoryCalendarConfig = initialConfig;
-  try {
-    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(initialConfig));
-  } catch {
-    // memory fallback
-  }
-  return initialConfig;
-};
-
-export const pullOfficialCalendarFromServer = async (): Promise<{
-  calendarConfig: OfficialCalendarConfig;
-  holidays: SchoolHoliday[];
-  auditLogs: CalendarAuditLogEntry[];
-} | null> => {
-  if (!isBackendApiAvailable()) return null;
-  try {
-    const headers = await getActiveUserAuthHeadersAsync();
-    const res = await fetch('/api/calendar-config', {
-      headers: {
-        'Cache-Control': 'no-cache',
-        ...headers,
-      },
-      credentials: 'include',
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data?.calendarConfig && Array.isArray(data.calendarConfig.schoolDays)) {
-      memoryCalendarConfig = data.calendarConfig;
-      if (Array.isArray(data.holidays)) memoryHolidays = data.holidays;
-      if (Array.isArray(data.auditLogs)) memoryAuditLogs = data.auditLogs;
-      try {
-        localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(data.calendarConfig));
-        if (data.holidays) localStorage.setItem(HOLIDAYS_STORAGE_KEY, JSON.stringify(data.holidays));
-        if (data.auditLogs) localStorage.setItem(CALENDAR_AUDIT_STORAGE_KEY, JSON.stringify(data.auditLogs));
-      } catch {
-        // ignore
-      }
-      return {
-        calendarConfig: data.calendarConfig,
-        holidays: data.holidays || getStoredHolidays(),
-        auditLogs: data.auditLogs || [],
-      };
-    }
-  } catch {
-    // offline
-  }
-  return null;
-};
-
-export const saveStoredOfficialCalendarConfig = async (
-  rawDatesText: string,
-  adminEmail: string = 'emebjfreitas@jundiai.sp.gov.br',
-  adminName: string = 'Administrador Escolar',
-  year: number = 2027
-): Promise<{ ok: boolean; calendarConfig?: OfficialCalendarConfig; error?: string; auditEntry?: CalendarAuditLogEntry }> => {
-  const currentHolidays = getStoredHolidays();
-  const validation = parseAndValidateSchoolDates(rawDatesText, currentHolidays);
-
-  if (validation.hasErrors) {
-    const errDetails = validation.invalidEntries.map((e) => `Linha ${e.line}: ${e.reason}`).join(' | ');
-    return { ok: false, error: `Erros de formato nas datas: ${errDetails}` };
-  }
-
-  if (validation.totalCount !== 200) {
-    return {
-      ok: false,
-      error: `A meta exige exatamente 200 dias letivos distintos. O lote enviado contém ${validation.totalCount} datas (${
-        validation.remainingCount > 0 ? `faltam ${validation.remainingCount} dias` : `excedente de ${validation.exceededCount} dias`
-      }).`,
-    };
-  }
-
-  const prevConfig = getStoredOfficialCalendarConfig();
-  const newConfig: OfficialCalendarConfig = {
-    year,
-    schoolDays: validation.validDates,
-    calendarDays: validation.calendarDays,
-    monthlyDistribution: validation.monthlyDistribution,
-    holidays: currentHolidays,
-    updatedAtMs: Date.now(),
-    updatedByEmail: adminEmail,
-    updatedByName: adminName,
-    version: (prevConfig?.version || 1) + 1,
-  };
-
-  const auditEntry: CalendarAuditLogEntry = {
-    id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    timestampISO: new Date().toISOString(),
-    adminEmail,
-    adminName,
-    action: 'UPDATE_200_DAYS',
-    previousDaysCount: prevConfig?.schoolDays?.length || 200,
-    newDaysCount: 200,
-    holidaysCount: currentHolidays.length,
-    details: `Configuração única dos 200 dias letivos (${year}) homologada com sucesso via processamento centralizado.`,
-  };
-
-  // Salva em memória e localStorage
-  memoryCalendarConfig = newConfig;
-  const currentLogs = getStoredCalendarAuditLogs();
-  const nextLogs = [auditEntry, ...currentLogs].slice(0, 150);
-  memoryAuditLogs = nextLogs;
-
-  try {
-    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(newConfig));
-    localStorage.setItem(CALENDAR_AUDIT_STORAGE_KEY, JSON.stringify(nextLogs));
-  } catch {
-    // quota
-  }
-
-  // Cascata imediata para as turmas escolares em memória e localStorage
+registerClassesCalendarCascadeHandler((monthlyDistribution) => {
   const currentClasses = getStoredClasses();
   const updatedClasses = currentClasses.map((cls) => ({
     ...cls,
-    classesHeld: validation.monthlyDistribution['Outubro'] || cls.classesHeld || 20,
+    classesHeld: monthlyDistribution['Outubro'] || cls.classesHeld || 20,
     monthlySchoolDays: {
       ...(cls.monthlySchoolDays || {}),
-      ...validation.monthlyDistribution,
+      ...monthlyDistribution,
     },
     updatedAtMs: Date.now(),
   }));
   saveStoredClasses(updatedClasses);
-
-  // Sincroniza com o backend seguro (autenticado com Bearer Firebase ID Token)
-  if (isBackendApiAvailable()) {
-    try {
-      const headers = await getActiveUserAuthHeadersAsync();
-      const serverRes = await fetch('/api/calendar-config', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          rawDatesText,
-          adminEmail,
-          adminName,
-          year,
-        }),
-      });
-      if (serverRes.ok) {
-        const serverData = await serverRes.json();
-        if (serverData.calendarConfig) {
-          memoryCalendarConfig = serverData.calendarConfig;
-          localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(serverData.calendarConfig));
-        }
-      }
-    } catch {
-      // offline fallback
-    }
-  }
-
-  return { ok: true, calendarConfig: newConfig, auditEntry };
-};
-
-export const saveStoredHolidayAction = async (
-  action: 'add' | 'edit' | 'delete' | 'restore_defaults',
-  holiday?: Partial<SchoolHoliday>,
-  holidayId?: string,
-  adminEmail: string = 'emebjfreitas@jundiai.sp.gov.br',
-  adminName: string = 'Administrador Escolar'
-): Promise<{ ok: boolean; holidays: SchoolHoliday[]; error?: string }> => {
-  let list = [...getStoredHolidays()];
-  let auditDetail = '';
-
-  if (action === 'delete') {
-    if (!holidayId) return { ok: false, holidays: list, error: 'ID do feriado não informado.' };
-    const target = list.find((h) => h.id === holidayId);
-    list = list.filter((h) => h.id !== holidayId);
-    auditDetail = `Exclusão do feriado/recesso: "${target?.name || holidayId}".`;
-  } else if (action === 'add') {
-    if (!holiday?.date || !holiday?.name) {
-      return { ok: false, holidays: list, error: 'Data e nome do feriado são obrigatórios.' };
-    }
-    const newHol: SchoolHoliday = {
-      id: `hol-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      date: holiday.date.trim(),
-      name: holiday.name.trim(),
-      type: holiday.type || 'municipal',
-      description: holiday.description || '',
-      createdAtISO: new Date().toISOString(),
-      updatedByEmail: adminEmail,
-    };
-    list.push(newHol);
-    auditDetail = `Cadastro de feriado/recesso: "${newHol.name}" (${newHol.date}).`;
-  } else if (action === 'edit') {
-    if (!holiday?.id) return { ok: false, holidays: list, error: 'ID do feriado inválido para edição.' };
-    list = list.map((h) => (h.id === holiday.id ? ({ ...h, ...holiday } as SchoolHoliday) : h));
-    auditDetail = `Edição do feriado/recesso: "${holiday.name}" (${holiday.date}).`;
-  } else if (action === 'restore_defaults') {
-    list = [...OFFICIAL_DEFAULT_HOLIDAYS_2027];
-    auditDetail = 'Restauração da lista oficial padrão de feriados e recessos de Jundiaí/SP.';
-  }
-
-  memoryHolidays = list;
-  try {
-    localStorage.setItem(HOLIDAYS_STORAGE_KEY, JSON.stringify(list));
-  } catch {
-    // ignore
-  }
-
-  const auditEntry: CalendarAuditLogEntry = {
-    id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    timestampISO: new Date().toISOString(),
-    adminEmail,
-    adminName,
-    action: action === 'delete' ? 'DELETE_HOLIDAY' : action === 'edit' ? 'EDIT_HOLIDAY' : 'ADD_HOLIDAY',
-    previousDaysCount: memoryCalendarConfig?.schoolDays?.length || 200,
-    newDaysCount: memoryCalendarConfig?.schoolDays?.length || 200,
-    holidaysCount: list.length,
-    details: auditDetail,
-  };
-  const nextLogs = [auditEntry, ...getStoredCalendarAuditLogs()].slice(0, 150);
-  memoryAuditLogs = nextLogs;
-  try {
-    localStorage.setItem(CALENDAR_AUDIT_STORAGE_KEY, JSON.stringify(nextLogs));
-  } catch {
-    // ignore
-  }
-
-  if (isBackendApiAvailable()) {
-    try {
-      const headers = await getActiveUserAuthHeadersAsync();
-      await fetch('/api/holidays', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        credentials: 'include',
-        body: JSON.stringify({ action, holiday, holidayId, adminEmail, adminName }),
-      });
-    } catch {
-      // offline fallback
-    }
-  }
-
-  return { ok: true, holidays: list };
-};
-
-// ==========================================
-// SEGURANÇA MÁXIMA & LGPD (LEI Nº 13.709/2018)
-// AUDITORIA, MENOR PRIVILÉGIO & PROTEÇÃO DE DADOS
-// ==========================================
-
-export const SECURITY_AUDIT_STORAGE_KEY = 'emeb_candelario_security_audit_logs_2027_v1';
-export const LGPD_CONFIG_STORAGE_KEY = 'emeb_candelario_lgpd_config_2027_v1';
-
-export const RBAC_ROLE_DEFINITIONS: RbacRoleDefinition[] = [
-  {
-    roleKey: 'admin',
-    name: 'Administrador / Gestão Escolar Plena',
-    badgeLabel: 'ADMIN GESTÃO',
-    description: 'Direção escolar e secretaria com controle pleno de parâmetros, turmas, acessos, homologação de 200 dias e auditoria completa.',
-    color: '#1d1d1f',
-    canViewStudents: true,
-    canEditAttendance: true,
-    canAccessReports: true,
-    canViewSensitiveData: true,
-    canManageCalendar: true,
-    canManageAccess: true,
-    canSyncGoogleSheets: true,
-  },
-  {
-    roleKey: 'usuario',
-    name: 'Professor(a) Regente (PEB I)',
-    badgeLabel: 'PEB I REGENTE',
-    description: 'Acesso estrito e exclusivo aos estudantes e chamadas da(s) sua(s) turma(s) atribuída(s), conforme o Princípio do Menor Privilégio.',
-    color: '#0071e3',
-    canViewStudents: true,
-    canEditAttendance: true,
-    canAccessReports: true,
-    canViewSensitiveData: false,
-    canManageCalendar: false,
-    canManageAccess: false,
-    canSyncGoogleSheets: false,
-  },
-  {
-    roleKey: 'peb2',
-    name: 'Professor(a) Especialista (PEB II)',
-    badgeLabel: 'PEB II ESPECIALISTA',
-    description: 'Docentes de Arte, Educação Física e Língua Inglesa. Visualização das 40 turmas para planejamento pedagógico, sem permissão de alteração estrutural.',
-    color: '#ff9500',
-    canViewStudents: true,
-    canEditAttendance: false,
-    canAccessReports: true,
-    canViewSensitiveData: false,
-    canManageCalendar: false,
-    canManageAccess: false,
-    canSyncGoogleSheets: false,
-  },
-  {
-    roleKey: 'coordenacao',
-    name: 'Coordenação Pedagógica / Apoio',
-    badgeLabel: 'COORDENAÇÃO',
-    description: 'Acompanhamento de faltas consecutivas, busca ativa e desempenho escolar com restrição a configurações críticas de sistema.',
-    color: '#10b981',
-    canViewStudents: true,
-    canEditAttendance: false,
-    canAccessReports: true,
-    canViewSensitiveData: true,
-    canManageCalendar: false,
-    canManageAccess: false,
-    canSyncGoogleSheets: false,
-  },
-];
-
-const INITIAL_SECURITY_AUDIT_LOGS: SecurityAuditLogEntry[] = [];
-
-let memorySecurityAuditLogs: SecurityAuditLogEntry[] | null = null;
-let memoryLgpdConfig: LgpdProtectionConfig | null = null;
-
-export const getStoredSecurityAuditLogs = (): SecurityAuditLogEntry[] => {
-  if (memorySecurityAuditLogs) return memorySecurityAuditLogs;
-  try {
-    const raw = localStorage.getItem(SECURITY_AUDIT_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        memorySecurityAuditLogs = parsed;
-        return parsed;
-      }
-    }
-  } catch {
-    // fallback
-  }
-  memorySecurityAuditLogs = INITIAL_SECURITY_AUDIT_LOGS;
-  return INITIAL_SECURITY_AUDIT_LOGS;
-};
-
-export const addSecurityAuditLog = (
-  entry: Omit<SecurityAuditLogEntry, 'id' | 'timestampISO'>
-): SecurityAuditLogEntry => {
-  const currentLogs = getStoredSecurityAuditLogs();
-  const newEntry: SecurityAuditLogEntry = {
-    ...entry,
-    id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    timestampISO: new Date().toISOString(),
-  };
-
-  const updatedLogs = [newEntry, ...currentLogs].slice(0, 300);
-  memorySecurityAuditLogs = updatedLogs;
-
-  try {
-    localStorage.setItem(SECURITY_AUDIT_STORAGE_KEY, JSON.stringify(updatedLogs));
-  } catch {
-    // ignore
-  }
-
-  // Notificar backend se disponível e autenticado
-  if (isBackendApiAvailable()) {
-    try {
-      void getActiveUserAuthHeadersAsync().then((headers) => {
-        if (!headers.Authorization) return;
-        fetch('/api/security-logs', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-          },
-          credentials: 'include',
-          body: JSON.stringify(newEntry),
-        }).catch(() => {});
-      });
-    } catch {
-      // offline safe
-    }
-  }
-
-  return newEntry;
-};
-
-export const clearStoredSecurityAuditLogs = (): void => {
-  memorySecurityAuditLogs = [];
-  try {
-    localStorage.removeItem(SECURITY_AUDIT_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-};
-
-export const getStoredLgpdConfig = (): LgpdProtectionConfig => {
-  if (memoryLgpdConfig) return memoryLgpdConfig;
-  try {
-    const raw = localStorage.getItem(LGPD_CONFIG_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.maskSensitiveDataByDefault === 'boolean') {
-        memoryLgpdConfig = parsed;
-        return parsed;
-      }
-    }
-  } catch {
-    // fallback
-  }
-
-  const defaultConfig: LgpdProtectionConfig = {
-    maskSensitiveDataByDefault: true,
-    requireMfaForAdmin: true,
-    dataRetentionDays: 1825, // 5 anos letivos legais
-    lastAuditedAtISO: new Date().toISOString(),
-    complianceOfficer: 'Encarregado de Dados DPO / EMEB Candelário',
-    anonymizeExportedSpreadsheets: true,
-  };
-  memoryLgpdConfig = defaultConfig;
-  return defaultConfig;
-};
-
-export const saveStoredLgpdConfig = (
-  updates: Partial<LgpdProtectionConfig>
-): LgpdProtectionConfig => {
-  const current = getStoredLgpdConfig();
-  const nextConfig: LgpdProtectionConfig = {
-    ...current,
-    ...updates,
-    lastAuditedAtISO: new Date().toISOString(),
-  };
-  memoryLgpdConfig = nextConfig;
-  try {
-    localStorage.setItem(LGPD_CONFIG_STORAGE_KEY, JSON.stringify(nextConfig));
-  } catch {
-    // ignore
-  }
-  return nextConfig;
-};
-
-// ==========================================
-// MASCARAMENTO SEGURO DE DADOS (LGPD ART. 14)
-// Proteção de dados pessoais de crianças
-// ==========================================
-
-export const maskSensitiveText = (
-  text: string | undefined | null,
-  type: 'cpf' | 'nis' | 'phone' | 'rg' | 'address' | 'sus' | 'cep' = 'cpf'
-): string => {
-  if (!text || typeof text !== 'string') return '—';
-  const clean = text.trim();
-  if (clean.length < 3) return '***';
-
-  if (type === 'cpf') {
-    // 123.456.789-00 -> ***.456.789-**
-    const digits = clean.replace(/\D/g, '');
-    if (digits.length === 11) {
-      return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
-    }
-    return `***.***.***-${digits.slice(-2) || '**'}`;
-  }
-
-  if (type === 'nis') {
-    // 207.41000.80-1 -> ***.41000.***-*
-    const digits = clean.replace(/\D/g, '');
-    if (digits.length >= 10) {
-      return `***.${digits.slice(3, 8)}.***-*`;
-    }
-    return `***.*****.***-*`;
-  }
-
-  if (type === 'sus') {
-    // 700 0000 0000 1234 -> *** **** **** 1234
-    const digits = clean.replace(/\D/g, '');
-    if (digits.length >= 4) {
-      return `*** **** **** ${digits.slice(-4)}`;
-    }
-    return `*** **** **** ****`;
-  }
-
-  if (type === 'phone') {
-    // (11) 98765-4321 -> (11) *****-4321 (suporta múltiplos telefones separados)
-    const parts = clean.split(/[/;,|]+/).map((p) => p.trim()).filter(Boolean);
-    if (parts.length > 1) {
-      return parts
-        .map((part) => {
-          const digits = part.replace(/\D/g, '');
-          if (digits.length >= 10) return `(${digits.slice(0, 2)}) *****-${digits.slice(-4)}`;
-          if (digits.length >= 4) return `*****-${digits.slice(-4)}`;
-          return '(**) *****-****';
-        })
-        .join(' · ');
-    }
-    const digits = clean.replace(/\D/g, '');
-    if (digits.length >= 10) {
-      return `(${digits.slice(0, 2)}) *****-${digits.slice(-4)}`;
-    }
-    if (digits.length >= 4) {
-      return `(11) *****-${digits.slice(-4)}`;
-    }
-    return '(**) *****-****';
-  }
-
-  if (type === 'rg') {
-    const alnum = clean.replace(/[^a-zA-Z0-9]/g, '');
-    if (alnum.length >= 3) {
-      return `**.***.***-${alnum.slice(-1).toUpperCase()}`;
-    }
-    return `**.***.***-*`;
-  }
-
-  if (type === 'cep') {
-    const digits = clean.replace(/\D/g, '');
-    if (digits.length === 8) {
-      return `*****-${digits.slice(-3)}`;
-    }
-    return `*****-***`;
-  }
-
-  if (type === 'address') {
-    // Rua das Flores, 123 -> Rua das Flores, ***
-    return clean.replace(/\d+/g, '***');
-  }
-
-  return `***${clean.slice(Math.ceil(clean.length / 2))}`;
-};
-
-/**
- * Aplica mascaramento de dados da criança de acordo com a política LGPD ativa.
- * Administradores podem visualizar temporariamente mediante ação intencional.
- */
-export const sanitizeStudentForLgpd = (
-  student: Student,
-  maskActive: boolean
-): Student => {
-  if (!maskActive) return student;
-
-  return {
-    ...student,
-    cpf: student.cpf ? maskSensitiveText(student.cpf, 'cpf') : undefined,
-    nis: student.nis ? maskSensitiveText(student.nis, 'nis') : undefined,
-    rg: student.rg ? maskSensitiveText(student.rg, 'rg') : undefined,
-    telefones: student.telefones ? maskSensitiveText(student.telefones, 'phone') : undefined,
-    guardianPhone: student.guardianPhone ? maskSensitiveText(student.guardianPhone, 'phone') : undefined,
-    cartaoSus: student.cartaoSus ? maskSensitiveText(student.cartaoSus, 'nis') : undefined,
-    logradouro: student.logradouro ? maskSensitiveText(student.logradouro, 'address') : undefined,
-    numeroResidencia: student.numeroResidencia ? '***' : undefined,
-    complemento: student.complemento ? '***' : undefined,
-  };
-};
-
-export const exportSecurityAuditLogsCSV = (): void => {
-  const logs = getStoredSecurityAuditLogs();
-  const header = ['ID', 'Data/Hora (ISO)', 'Usuário (E-mail)', 'Nome', 'Perfil', 'Evento', 'Ação', 'Severidade', 'Detalhes', 'IP'];
-  const rows = logs.map((l) => [
-    l.id,
-    new Date(l.timestampISO).toLocaleString('pt-BR'),
-    l.userEmail,
-    `"${(l.userName || '').replace(/"/g, '""')}"`,
-    l.userRole.toUpperCase(),
-    l.eventType,
-    `"${(l.actionTitle || '').replace(/"/g, '""')}"`,
-    l.severity.toUpperCase(),
-    `"${(l.details || '').replace(/"/g, '""')}"`,
-    l.clientIp || '127.0.0.1',
-  ]);
-
-  const csvContent = '\uFEFF' + [header.join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', `auditoria_seguranca_lgpd_candelario_${new Date().toISOString().slice(0, 10)}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
+});
 
 // -------------------------------------------------------------
 // RECURSO DE ATUALIZAÇÃO E RESTAURAÇÃO VIA ARQUIVO JSON (SEGURO)
@@ -3981,7 +1838,11 @@ export const exportSchoolDataToJsonFile = (
 };
 
 const stripScriptTags = (value: string): string =>
-  value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').trim();
+  value
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/\bon\w+\s*=/gi, '')
+    .trim();
 
 const normalizeJsonKey = (key: string): string =>
   key
@@ -4161,7 +2022,6 @@ const normalizeRawJsonStudentRow = (
     emailGoogle: pickJsonValue(lookup, ['emailGoogle', 'email_google']) || undefined,
     emailMicrosoft: pickJsonValue(lookup, ['emailMicrosoft', 'email_microsoft']) || undefined,
     emailMunicipal: pickJsonValue(lookup, ['emailMunicipal', 'email_municipal', 'email']) || undefined,
-    rotaOnibus: pickJsonValue(lookup, ['rotaOnibus', 'rota_onibus', 'rota_de_onibus', 'rota', 'transporte', 'transporte_escolar']) || undefined,
     sucessaoEscolar: pickJsonValue(lookup, ['sucessaoEscolar', 'sucessao_escolar']) || undefined,
     guardianName: filiacao1 || rawSt.guardianName || undefined,
     guardianPhone: telefones || rawSt.guardianPhone || undefined,
@@ -4220,6 +2080,12 @@ export const validateAndSanitizeJsonPayload = (
 } => {
   if (!rawJson) {
     return { isValid: false, error: 'Arquivo JSON vazio ou nulo.' };
+  }
+  if (hasForbiddenPrototypeKey(rawJson)) {
+    return {
+      isValid: false,
+      error: 'Arquivo JSON rejeitado por conter chaves de sistema não permitidas (__proto__/constructor/prototype).',
+    };
   }
 
   let rawClasses: any[] | null = null;
@@ -4530,7 +2396,7 @@ export const resetEntireAppData = async (
 ): Promise<ClassGroup[]> => {
   const nowMs = Date.now();
   clearLocalSchoolDataOnly();
-  memorySecurityAuditLogs = [];
+  clearStoredSecurityAuditLogs();
   try {
     localStorage.setItem(DB_CLEAN_EPOCH_STORAGE_KEY, CLEAN_DB_RESET_EPOCH_ID);
   } catch {
@@ -4765,6 +2631,7 @@ export const uploadBatchStudentPhotosViaApi = async (
     maxChunkBytes?: number;
     maxChunkItems?: number;
     signal?: AbortSignal;
+    waitIfPaused?: () => Promise<void>;
     onProgress?: (progress: BatchUploadProgress) => void;
   }
 ): Promise<{
@@ -4842,6 +2709,12 @@ export const uploadBatchStudentPhotosViaApi = async (
   const allResults: Array<{ studentId: string; photoUrl: string; sha256: string }> = [];
 
   for (let i = 0; i < chunks.length; i++) {
+    if (options?.waitIfPaused) {
+      await options.waitIfPaused();
+    }
+    if (options?.signal?.aborted) {
+      throw new DOMException('Upload abortado pelo usuário.', 'AbortError');
+    }
     const chunk = chunks[i];
     const packetBuffer = buildBinaryUploadPacket(chunk);
     try {
@@ -4991,6 +2864,7 @@ export const uploadBatchStudentPdfsViaApi = async (
     maxChunkBytes?: number;
     maxChunkItems?: number;
     signal?: AbortSignal;
+    waitIfPaused?: () => Promise<void>;
     onProgress?: (progress: BatchUploadProgress) => void;
   }
 ): Promise<{
@@ -5097,6 +2971,12 @@ export const uploadBatchStudentPdfsViaApi = async (
   const allResults: Array<{ studentId: string; pdfUrl: string; pdfId: string; sha256: string }> = [];
 
   for (let i = 0; i < chunks.length; i++) {
+    if (options?.waitIfPaused) {
+      await options.waitIfPaused();
+    }
+    if (options?.signal?.aborted) {
+      throw new DOMException('Upload abortado pelo usuário.', 'AbortError');
+    }
     const chunk = chunks[i];
     const packetBuffer = buildBinaryUploadPacket(chunk);
     try {

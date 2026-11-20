@@ -8,6 +8,21 @@ import {
 import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { findStudentSiblings } from '../utils/siblingDetection';
+import {
+  AlertTriangle,
+  BarChart3,
+  Check,
+  CheckCircle2,
+  Copy,
+  FileText,
+  LayoutGrid,
+  MapPin,
+  MessageCircle,
+  MessageSquare,
+  Phone,
+  Users,
+  X,
+} from 'lucide-react';
 import { StudentSiblingsCard } from './StudentSiblingsCard';
 import { StudentAvatar } from './StudentAvatar';
 
@@ -151,7 +166,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               student={student}
               size="xl"
               onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-              className="border-0 bg-white shadow-xs"
+              className="bg-white shadow-xs"
             />
             <div className="min-w-0 flex-1 space-y-1">
               <h4 className="font-bold text-[17px] sm:text-[18px] tracking-[-0.02em] text-[#0f172a] leading-snug break-words min-w-0">
@@ -201,7 +216,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               }}
               className="flex-1 sm:flex-initial min-h-[38px] py-2 px-3.5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[12.5px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100"
             >
-              <span className="material-symbols-outlined text-[16px] shrink-0">grid_view</span>
+              <LayoutGrid className="w-4 h-4 shrink-0" />
               <span>Ficha</span>
             </button>
           )}
@@ -219,9 +234,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                   : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] shrink-0">
-                picture_as_pdf
-              </span>
+              <FileText className="w-4 h-4 shrink-0" />
               <span>{hasPdf ? 'PDF' : 'Enviar PDF'}</span>
             </button>
           )}
@@ -231,9 +244,11 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             onClick={handleCopyPlainSummary}
             className="min-h-[38px] py-2 px-3 rounded-2xl bg-white hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[12.5px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100"
           >
-            <span className="material-symbols-outlined text-[16px] shrink-0">
-              {copied ? 'check' : 'content_copy'}
-            </span>
+            {copied ? (
+              <Check className="w-4 h-4 shrink-0" />
+            ) : (
+              <Copy className="w-4 h-4 shrink-0" />
+            )}
             <span>{copied ? 'Copiado' : 'Copiar'}</span>
           </button>
 
@@ -247,7 +262,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               aria-label="Fechar resumo do estudante"
               className="min-h-[38px] min-w-[38px] py-2 px-2.5 rounded-2xl bg-white hover:bg-[#e2e8f0] text-[#475569] flex items-center justify-center cursor-pointer transition-colors duration-100"
             >
-              <span className="material-symbols-outlined text-[18px] shrink-0">close</span>
+              <X className="w-[18px] h-[18px] shrink-0" />
             </button>
           )}
         </div>
@@ -276,9 +291,11 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 : 'bg-rose-50 text-[#b42318]'
             }`}
           >
-            <span className="material-symbols-outlined text-[15px] shrink-0">
-              {isCompliant ? 'check_circle' : 'warning'}
-            </span>
+            {isCompliant ? (
+              <CheckCircle2 className="w-[15px] h-[15px] shrink-0" />
+            ) : (
+              <AlertTriangle className="w-[15px] h-[15px] shrink-0" />
+            )}
             <span>
               {isCompliant
                 ? `Meta ${effectiveMinPresence}%`
@@ -334,7 +351,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               Sem just. {unexcusedAbsences}d
             </span>
           </div>
-          <span className="text-[#64748b]">Meta {effectiveMinPresence}%</span>
+          <span className="text-slate-700">Meta {effectiveMinPresence}%</span>
         </div>
       </div>
 
@@ -347,9 +364,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               : 'bg-amber-50 text-amber-950'
           }`}
         >
-          <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">
-            warning
-          </span>
+          <AlertTriangle className="w-[18px] h-[18px] shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">
               {consecInfo.tier === '10d'
@@ -390,10 +405,10 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'frequencia'
                 ? 'bg-white text-[#0b3b8c] shadow-2xs'
-                : 'text-[#64748b] hover:text-[#0f172a]'
+                : 'text-slate-700 hover:text-slate-950'
             }`}
           >
-            <span className="material-symbols-outlined text-[15px] shrink-0">bar_chart</span>
+            <BarChart3 className="w-[15px] h-[15px] shrink-0" />
             <span>Frequência</span>
           </button>
 
@@ -405,13 +420,13 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'familia'
                 ? 'bg-white text-[#0b3b8c] shadow-2xs'
-                : 'text-[#64748b] hover:text-[#0f172a]'
+                : 'text-slate-700 hover:text-slate-950'
             }`}
           >
-            <span className="material-symbols-outlined text-[15px] shrink-0">family_restroom</span>
+            <Users className="w-[15px] h-[15px] shrink-0" />
             <span>Família</span>
             {detectedSiblings.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-extrabold tabular-nums">
+              <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-950 text-[10px] font-extrabold tabular-nums">
                 {detectedSiblings.length}
               </span>
             )}
@@ -425,10 +440,10 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'endereco'
                 ? 'bg-white text-[#0b3b8c] shadow-2xs'
-                : 'text-[#64748b] hover:text-[#0f172a]'
+                : 'text-slate-700 hover:text-slate-950'
             }`}
           >
-            <span className="material-symbols-outlined text-[15px] shrink-0">location_on</span>
+            <MapPin className="w-[15px] h-[15px] shrink-0" />
             <span>Endereço</span>
           </button>
         </div>
@@ -453,9 +468,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
 
             {familyFeedback ? (
               <div className="rounded-2xl p-3 bg-[#ecfdf5] text-[#064e3b] flex items-start gap-2 text-[13px]">
-                <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5 text-[#047857]">
-                  mark_chat_read
-                </span>
+                <MessageSquare className="w-[18px] h-[18px] shrink-0 mt-0.5 text-[#047857]" />
                 <div>
                   <p className="font-semibold text-[11px] uppercase tracking-[0.03em] text-[#047857]">
                     Devolutiva da Família
@@ -464,7 +477,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 </div>
               </div>
             ) : (
-              <p className="text-[12px] text-[#64748b] font-medium tabular-nums">
+              <p className="text-[12px] text-slate-700 font-medium tabular-nums">
                 {enrollmentStatusText} · {metrics.diasLetivosMatriculados} dias letivos
               </p>
             )}
@@ -475,26 +488,26 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
         {activeTab === 'familia' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-gentle-fade">
             <div className="space-y-2">
-              <div className="p-3 rounded-2xl bg-[#f8fafc]">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+              <div className="p-3 rounded-2xl bg-[#f4f7fb]">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                   {guardian1Info.shortRoleLabel || 'Responsável 1'}
                 </span>
                 <p
                   className={`text-[14px] font-semibold tracking-[-0.012em] leading-snug mt-0.5 ${
-                    hasGuardian1 ? 'text-[#0f172a]' : 'text-[#94a3b8] font-normal'
+                    hasGuardian1 ? 'text-slate-950' : 'text-slate-600 font-normal'
                   }`}
                 >
                   {hasGuardian1 ? guardian1Info.cleanName : 'Não informado'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-[#f8fafc]">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+              <div className="p-3 rounded-2xl bg-[#f4f7fb]">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                   {guardian2Info.shortRoleLabel || 'Responsável 2'}
                 </span>
                 <p
                   className={`text-[14px] font-semibold tracking-[-0.012em] leading-snug mt-0.5 ${
-                    hasGuardian2 ? 'text-[#0f172a]' : 'text-[#94a3b8] font-normal'
+                    hasGuardian2 ? 'text-slate-950' : 'text-slate-600 font-normal'
                   }`}
                 >
                   {hasGuardian2 ? guardian2Info.cleanName : 'Não informado'}
@@ -502,14 +515,14 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#f8fafc] flex flex-col justify-between gap-3">
+            <div className="p-3.5 rounded-2xl bg-[#f4f7fb] flex flex-col justify-between gap-3">
               {waList.length > 0 ? (
                 <>
                   <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                       Telefone
                     </span>
-                    <p className="text-[16px] font-semibold tracking-[-0.015em] text-[#0f172a] tabular-nums mt-0.5">
+                    <p className="text-[16px] font-semibold tracking-[-0.015em] text-slate-950 tabular-nums mt-0.5">
                       {waList[0].display}
                     </p>
                   </div>
@@ -520,20 +533,20 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                       rel="noopener noreferrer"
                       className="flex-1 min-h-[40px] py-2 px-3.5 rounded-2xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[17px] shrink-0">chat</span>
+                      <MessageCircle className="w-[17px] h-[17px] shrink-0" />
                       <span>WhatsApp</span>
                     </a>
                     <a
                       href={`tel:${rawPhones.replace(/\D/g, '')}`}
-                      className="flex-1 sm:flex-initial min-h-[40px] py-2 px-3.5 rounded-2xl bg-white hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer shrink-0"
+                      className="flex-1 sm:flex-initial min-h-[40px] py-2 px-3.5 rounded-2xl bg-white hover:bg-[#e2e8f0] text-slate-950 font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 transition-colors duration-100 cursor-pointer shrink-0"
                     >
-                      <span className="material-symbols-outlined text-[17px] shrink-0">call</span>
+                      <Phone className="w-[17px] h-[17px] shrink-0" />
                       <span>Ligar</span>
                     </a>
                   </div>
                 </>
               ) : (
-                <p className="text-[13px] font-normal text-[#64748b]">
+                <p className="text-[13px] font-normal text-slate-700">
                   Nenhum telefone cadastrado.
                 </p>
               )}
@@ -552,35 +565,35 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
         {/* Aba 3: Endereço e Apoios */}
         {activeTab === 'endereco' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-gentle-fade">
-            <div className="p-3.5 rounded-2xl bg-[#f8fafc] space-y-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+            <div className="p-3.5 rounded-2xl bg-[#f4f7fb] space-y-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                 Endereço
               </span>
               <p
                 className={`text-[13.5px] font-medium leading-snug ${
-                  formattedAddress ? 'text-[#0f172a]' : 'text-[#94a3b8]'
+                  formattedAddress ? 'text-slate-950' : 'text-slate-600'
                 }`}
               >
                 {formattedAddress || 'Não cadastrado'}
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#f8fafc] space-y-2">
+            <div className="p-3.5 rounded-2xl bg-[#f4f7fb] space-y-2">
               {student.deficiencia ? (
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                     AEE
                   </span>
-                  <p className="text-[13.5px] font-semibold text-purple-900 mt-0.5">
+                  <p className="text-[13.5px] font-semibold text-purple-950 mt-0.5">
                     {student.deficiencia}
                   </p>
                 </div>
               ) : (
                 <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                     Identificação Social
                   </span>
-                  <p className="text-[13.5px] font-semibold text-[#0f172a] mt-0.5 tabular-nums">
+                  <p className="text-[13.5px] font-semibold text-slate-950 mt-0.5 tabular-nums">
                     {student.nis ? `NIS ${student.nis}` : 'Sem NIS informado'}
                   </p>
                 </div>

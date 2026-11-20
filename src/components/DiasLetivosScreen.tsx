@@ -684,13 +684,13 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       }
     >
       {/* 1. CABEÇALHO UNIFICADO + BARRA DE PROGRESSO DINÂMICA 200 DIAS */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] border border-slate-200/70 space-y-4 min-w-0">
+      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-4 min-w-0">
         {!embedded && (
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 font-medium">
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 font-medium hover:text-slate-950 cursor-pointer"
+              className="inline-flex items-center gap-1.5 font-semibold hover:text-slate-950 cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Voltar</span>
@@ -707,11 +707,11 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-950">
                 Configurador do Calendário Oficial
               </h2>
-              <span className="text-xs text-slate-500 tabular-nums">
+              <span className="text-xs font-semibold text-slate-700 tabular-nums">
                 Ano {selectedYear} · LDB 200 Dias · {classes.length} turmas
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-600">
+            <p className="text-xs sm:text-sm text-slate-700">
               Clique nos dias da grade para alternar datas letivas, ajuste feriados e publique direto para todas as turmas.
             </p>
           </div>
@@ -723,7 +723,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               value={selectedYear}
               onChange={(e) => handleYearChange(Number(e.target.value))}
               disabled={!isAdmin}
-              className="min-h-[38px] px-3 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-900 cursor-pointer disabled:opacity-50"
+              className="min-h-[38px] px-3 rounded-xl bg-[#edf2f7] text-xs font-bold text-slate-950 cursor-pointer disabled:opacity-50"
             >
               <option value={2026}>Ano Letivo 2026</option>
               <option value={2027}>Ano Letivo 2027</option>
@@ -735,7 +735,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               value={syncFrequency}
               onChange={(e) => handleSelectFrequency(Number(e.target.value) as GoogleSheetsSyncFrequency)}
               disabled={!isAdmin}
-              className="min-h-[38px] px-3 rounded-xl bg-slate-100 border border-slate-200/80 text-xs font-medium text-slate-800 cursor-pointer disabled:opacity-50"
+              className="min-h-[38px] px-3 rounded-xl bg-[#edf2f7] text-xs font-semibold text-slate-900 cursor-pointer disabled:opacity-50"
             >
               <option value={30}>Sync: 30 min</option>
               <option value={60}>Sync: 60 min</option>
@@ -746,7 +746,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               type="button"
               onClick={handleManualSyncTrigger}
               disabled={isSyncingNow || isLoadingServer}
-              className="min-h-[38px] px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50"
+              className="min-h-[38px] px-3.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-3.5 h-3.5 ${isSyncingNow || isLoadingServer ? 'animate-spin' : ''}`}
@@ -757,14 +757,14 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
         </div>
 
         {/* Medidor Vivo LDB 200 Dias + Ações Dinâmicas */}
-        <div className="pt-2 border-t border-slate-100 space-y-3">
+        <div className="p-4 rounded-2xl bg-[#f4f7fb] space-y-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
               <div className="flex items-baseline gap-1.5">
                 <span className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-slate-950">
                   {parsedResult.totalCount}
                 </span>
-                <span className="text-xs sm:text-sm font-mono text-slate-500 tabular-nums">
+                <span className="text-xs sm:text-sm font-mono text-slate-700 tabular-nums">
                   / 200 dias letivos
                 </span>
               </div>
@@ -775,7 +775,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                     ? 'text-[#047857]'
                     : parsedResult.hasErrors
                     ? 'text-rose-700'
-                    : 'text-amber-700'
+                    : 'text-amber-800'
                 }`}
               >
                 {parsedResult.isExactly200 && !parsedResult.hasErrors ? (
@@ -846,9 +846,9 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
           </div>
 
           {/* Barra visual de progresso */}
-          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div className="w-full h-2.5 rounded-full bg-[#dbe4f0] overflow-hidden">
             <div
-              className={`h-full transition-all duration-200 ${
+              className={`h-full transition-all duration-300 ${
                 parsedResult.isExactly200 && !parsedResult.hasErrors
                   ? 'bg-[#047857]'
                   : parsedResult.totalCount > 200
@@ -861,7 +861,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
           {/* Alerta dinâmico de conflito com feriados */}
           {parsedResult.holidayConflicts.length > 0 && (
-            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-amber-950">
+            <div className="p-3 rounded-2xl bg-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-amber-950">
               <div className="flex items-start sm:items-center gap-2 min-w-0">
                 <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5 sm:mt-0" />
                 <span className="break-words">
@@ -901,8 +901,8 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             onClick={() => setActiveTab('calendario')}
             className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'calendario'
-                ? 'bg-[#1d1d1f] text-white'
-                : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+                ? 'bg-[#091b3b] text-white'
+                : 'bg-[#edf2f7] text-slate-800 hover:bg-[#dce7fb]'
             }`}
           >
             <CalendarDays className="w-3.5 h-3.5" />
@@ -914,13 +914,13 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             onClick={() => setActiveTab('editor')}
             className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'editor'
-                ? 'bg-[#1d1d1f] text-white'
-                : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+                ? 'bg-[#091b3b] text-white'
+                : 'bg-[#edf2f7] text-slate-800 hover:bg-[#dce7fb]'
             }`}
           >
             <ListChecks className="w-3.5 h-3.5" />
             <span>Lista &amp; Importação</span>
-            <span className="tabular-nums opacity-75">({parsedResult.totalCount})</span>
+            <span className="tabular-nums opacity-85">({parsedResult.totalCount})</span>
           </button>
 
           <button
@@ -928,13 +928,13 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             onClick={() => setActiveTab('feriados')}
             className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'feriados'
-                ? 'bg-[#1d1d1f] text-white'
-                : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+                ? 'bg-[#091b3b] text-white'
+                : 'bg-[#edf2f7] text-slate-800 hover:bg-[#dce7fb]'
             }`}
           >
             <CalendarPlus className="w-3.5 h-3.5" />
             <span>Feriados &amp; Recessos</span>
-            <span className="tabular-nums opacity-75">({holidays.length})</span>
+            <span className="tabular-nums opacity-85">({holidays.length})</span>
           </button>
 
           <button
@@ -942,13 +942,13 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             onClick={() => setActiveTab('auditoria')}
             className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
               activeTab === 'auditoria'
-                ? 'bg-[#1d1d1f] text-white'
-                : 'bg-[#f5f5f7] text-[#48484a] hover:bg-[#e8e8ed]'
+                ? 'bg-[#091b3b] text-white'
+                : 'bg-[#edf2f7] text-slate-800 hover:bg-[#dce7fb]'
             }`}
           >
             <History className="w-3.5 h-3.5" />
             <span>Auditoria</span>
-            <span className="tabular-nums opacity-75">({auditLogs.length})</span>
+            <span className="tabular-nums opacity-85">({auditLogs.length})</span>
           </button>
         </div>
       </section>
@@ -957,12 +957,12 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       {/* ABA 1: PLANEJADOR VISUAL INTERATIVO (MÊS A MÊS + CLIQUE NO DIA)       */}
       {/* ===================================================================== */}
       {activeTab === 'calendario' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start animate-fade-in">
           {/* Coluna Esquerda: Navegador Dinâmico de Meses & Metas SME */}
-          <section className="lg:col-span-4 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+          <section className="lg:col-span-4 bg-white rounded-3xl p-4 sm:p-5 shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900">Distribuição por Mês</h3>
-              <span className="text-xs font-mono tabular-nums text-slate-500">
+              <h3 className="text-sm font-bold text-slate-950">Distribuição por Mês</h3>
+              <span className="text-xs font-mono font-bold tabular-nums text-slate-700">
                 Meta: 200d
               </span>
             </div>
@@ -980,10 +980,10 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                     key={mName}
                     type="button"
                     onClick={() => setVisualCalendarMonth(monthNum)}
-                    className={`p-2.5 rounded-2xl text-left transition-colors cursor-pointer border flex flex-col gap-1 ${
+                    className={`p-2.5 rounded-2xl text-left transition-all duration-200 cursor-pointer flex flex-col gap-1 ${
                       isSelected
-                        ? 'bg-[#0b3b8c] text-white border-[#0b3b8c]'
-                        : 'bg-[#f8fafc] hover:bg-slate-100 text-slate-900 border-slate-200/70'
+                        ? 'bg-[#0b3b8c] text-white shadow-[0_8px_18px_rgba(11,59,140,0.3)]'
+                        : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-1">
@@ -1000,8 +1000,8 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                       <span className="text-sm font-bold">{count}d</span>
                       {target > 0 && (
                         <span
-                          className={`text-[11px] ${
-                            isSelected ? 'text-white/75' : 'text-slate-500'
+                          className={`text-[11px] font-medium ${
+                            isSelected ? 'text-blue-100' : 'text-slate-700'
                           }`}
                         >
                           meta {target}d
@@ -1013,24 +1013,24 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               })}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-              <div className="p-2 rounded-xl bg-slate-50">
-                <span className="text-[11px] text-slate-500 block">Sábados</span>
-                <span className="text-sm font-bold font-mono tabular-nums text-slate-900">
+            <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+              <div className="p-2.5 rounded-xl bg-[#edf2f7]">
+                <span className="text-[11px] font-semibold text-slate-700 block">Sábados</span>
+                <span className="text-sm font-bold font-mono tabular-nums text-slate-950">
                   {saturdayCount}
                 </span>
               </div>
-              <div className="p-2 rounded-xl bg-slate-50">
-                <span className="text-[11px] text-slate-500 block">Feriados</span>
-                <span className="text-sm font-bold font-mono tabular-nums text-slate-900">
+              <div className="p-2.5 rounded-xl bg-[#edf2f7]">
+                <span className="text-[11px] font-semibold text-slate-700 block">Feriados</span>
+                <span className="text-sm font-bold font-mono tabular-nums text-slate-950">
                   {holidays.length}
                 </span>
               </div>
-              <div className="p-2 rounded-xl bg-slate-50">
-                <span className="text-[11px] text-slate-500 block">Conflitos</span>
+              <div className="p-2.5 rounded-xl bg-[#edf2f7]">
+                <span className="text-[11px] font-semibold text-slate-700 block">Conflitos</span>
                 <span
                   className={`text-sm font-bold font-mono tabular-nums ${
-                    parsedResult.holidayConflicts.length > 0 ? 'text-amber-700' : 'text-slate-900'
+                    parsedResult.holidayConflicts.length > 0 ? 'text-amber-800' : 'text-slate-950'
                   }`}
                 >
                   {parsedResult.holidayConflicts.length}
@@ -1040,7 +1040,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
           </section>
 
           {/* Coluna Direita: Grade Mensal Clicável e Dinâmica */}
-          <section className="lg:col-span-8 bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3.5">
+          <section className="lg:col-span-8 bg-white rounded-3xl p-4 sm:p-5 shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-3.5">
             {/* Barra do Mês + Modo de Clique */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -1058,7 +1058,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   <h3 className="text-base sm:text-lg font-bold text-slate-950 leading-tight">
                     {selectedMonthName} {selectedYear}
                   </h3>
-                  <p className="text-xs text-slate-500 font-mono tabular-nums">
+                  <p className="text-xs text-slate-700 font-mono tabular-nums">
                     {selectedMonthCount} dia(s) selecionado(s)
                     {selectedMonthTarget > 0 ? ` · referência SME ${selectedMonthTarget}d` : ''}
                   </p>
@@ -1125,14 +1125,14 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               </div>
             </div>
 
-            {/* Grade Clicável 7 Colunas */}
+            {/* Grade Clicável 7 Colunas Sem Bordas */}
             <div className="overflow-x-auto">
               <div className="grid grid-cols-7 gap-1.5 min-w-[520px]">
                 {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((dayName, idx) => (
                   <div
                     key={dayName}
-                    className={`py-2 text-center text-xs font-semibold border-b border-slate-200 ${
-                      idx === 0 || idx === 6 ? 'text-slate-400' : 'text-slate-600'
+                    className={`py-2 text-center text-xs font-bold rounded-lg bg-[#f4f7fb] ${
+                      idx === 0 || idx === 6 ? 'text-slate-600' : 'text-slate-900'
                     }`}
                   >
                     {dayName}
@@ -1141,31 +1141,31 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
                 {visualMonthDays.map((slot) => {
                   if (slot.isEmpty) {
-                    return <div key={slot.id} className="min-h-[64px] rounded-xl bg-slate-50/40" />;
+                    return <div key={slot.id} className="min-h-[64px] rounded-xl bg-[#f4f7fb]/60" />;
                   }
 
                   let cellClass =
-                    'bg-white border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-50';
+                    'bg-[#edf2f7] text-slate-900 hover:bg-[#dce7fb]';
                   let statusLabel = 'Não letivo';
 
                   if (slot.holiday && slot.isSchoolDay) {
                     cellClass =
-                      'bg-amber-100 border-amber-400 text-amber-950 hover:bg-amber-200/70';
+                      'bg-amber-200 text-amber-950 hover:bg-amber-300 shadow-[0_4px_12px_rgba(217,119,6,0.2)]';
                     statusLabel = `Conflito: ${slot.holiday.name}`;
                   } else if (slot.holiday) {
-                    cellClass = 'bg-rose-50 border-rose-200 text-rose-900 hover:bg-rose-100/70';
+                    cellClass = 'bg-rose-100 text-rose-950 hover:bg-rose-200';
                     statusLabel = slot.holiday.name;
                   } else if (slot.schoolDayType === 'sabado_letivo') {
                     cellClass =
-                      'bg-indigo-600 border-indigo-700 text-white hover:bg-indigo-700';
+                      'bg-indigo-700 text-white hover:bg-indigo-800 shadow-[0_6px_14px_rgba(67,56,202,0.28)]';
                     statusLabel = 'Sáb. Letivo';
                   } else if (slot.isSchoolDay) {
                     cellClass =
-                      'bg-[#111827] border-[#111827] text-white hover:bg-[#1f2937]';
+                      'bg-[#090f1d] text-white hover:bg-black shadow-[0_6px_14px_rgba(9,15,29,0.22)]';
                     statusLabel = 'Dia Letivo';
                   } else if (slot.isWeekend) {
                     cellClass =
-                      'bg-slate-50/80 border-slate-200/60 text-slate-400 hover:border-slate-300 hover:text-slate-700';
+                      'bg-[#f4f7fb] text-slate-600 hover:bg-[#e2e8f0] hover:text-slate-900';
                     statusLabel = slot.dayOfWeek.startsWith('Sáb') ? 'Sábado' : 'Domingo';
                   }
 
@@ -1175,17 +1175,17 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                       type="button"
                       onClick={() => handleCalendarDayClick(slot)}
                       title={`${slot.dateStr} (${slot.dayOfWeek}) — ${statusLabel}`}
-                      className={`min-h-[64px] p-2 rounded-xl border flex flex-col justify-between text-left transition-colors duration-100 cursor-pointer select-none ${cellClass}`}
+                      className={`min-h-[64px] p-2 rounded-xl flex flex-col justify-between text-left transition-all duration-150 hover:-translate-y-0.5 cursor-pointer select-none ${cellClass}`}
                     >
                       <div className="flex items-center justify-between gap-1 w-full">
                         <span className="font-mono text-xs font-bold tabular-nums">
                           {slot.dayNumber}
                         </span>
                         {slot.isSchoolDay && !slot.holiday && (
-                          <Check className="w-3 h-3 opacity-80 shrink-0" />
+                          <Check className="w-3 h-3 opacity-90 shrink-0" />
                         )}
                       </div>
-                      <span className="text-[11px] leading-tight line-clamp-2 break-words w-full opacity-90">
+                      <span className="text-[11px] font-medium leading-tight line-clamp-2 break-words w-full">
                         {statusLabel}
                       </span>
                     </button>
@@ -1194,22 +1194,22 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               </div>
             </div>
 
-            {/* Legenda Limpa Sem Pílulas */}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-2 border-t border-slate-100 text-xs text-slate-600">
+            {/* Legenda Limpa Sem Contorno */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 p-3 rounded-2xl bg-[#f4f7fb] text-xs font-semibold text-slate-800">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-[#111827] inline-block" />
+                <span className="w-3 h-3 rounded-xs bg-[#090f1d] inline-block" />
                 Dia Letivo Regular
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-indigo-600 inline-block" />
+                <span className="w-3 h-3 rounded-xs bg-indigo-700 inline-block" />
                 Sábado Letivo
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-rose-100 border border-rose-300 inline-block" />
+                <span className="w-3 h-3 rounded-xs bg-rose-200 inline-block" />
                 Feriado / Recesso
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-xs bg-slate-100 border border-slate-300 inline-block" />
+                <span className="w-3 h-3 rounded-xs bg-[#dbe4f0] inline-block" />
                 Não Letivo
               </span>
             </div>
@@ -1221,14 +1221,14 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       {/* ABA 2: EDITOR EM LOTE (SINCRONIZADO 2 VIAS COM O PLANEJADOR VISUAL)   */}
       {/* ===================================================================== */}
       {activeTab === 'editor' && (
-        <div className="space-y-4">
-          <section className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+        <div className="space-y-4 animate-fade-in">
+          <section className="bg-white p-4 sm:p-5 rounded-3xl shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-slate-950">
                   Editor em Lote de Datas (DD/MM/AAAA)
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-700">
                   Sincronizado em tempo real com o Planejador Visual. Cole uma data por linha ou exporte o calendário atual.
                 </p>
               </div>
@@ -1237,7 +1237,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleCopyDatesList}
-                  className="min-h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+                  className="min-h-[36px] px-3 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>Copiar Datas</span>
@@ -1246,7 +1246,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 <button
                   type="button"
                   onClick={handleExportCsv}
-                  className="min-h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+                  className="min-h-[36px] px-3 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                   <span>Exportar CSV</span>
@@ -1261,14 +1261,14 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                           applyDatesList([], holidays, true);
                           setConfirmClearInput(false);
                         }}
-                        className="min-h-[36px] px-3 rounded-xl bg-rose-600 text-white text-xs font-semibold cursor-pointer"
+                        className="min-h-[36px] px-3 rounded-xl bg-rose-700 text-white text-xs font-semibold cursor-pointer"
                       >
                         Confirmar Limpeza
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmClearInput(false)}
-                        className="min-h-[36px] px-2.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer"
+                        className="min-h-[36px] px-2.5 rounded-xl bg-[#edf2f7] text-slate-800 text-xs font-semibold cursor-pointer"
                       >
                         Cancelar
                       </button>
@@ -1277,7 +1277,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setConfirmClearInput(true)}
-                      className="min-h-[36px] px-3 rounded-xl text-rose-700 hover:bg-rose-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
+                      className="min-h-[36px] px-3 rounded-xl text-rose-800 hover:bg-rose-100 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Limpar Lista</span>
@@ -1298,18 +1298,18 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 onKeyDown={handleTextareaKeyDown}
                 disabled={!isAdmin}
                 placeholder={`03/02/${selectedYear}\n04/02/${selectedYear}\n05/02/${selectedYear}...`}
-                className="w-full h-48 font-mono text-xs p-3.5 rounded-2xl border border-slate-200 focus:border-slate-900 outline-none leading-relaxed text-slate-900 bg-slate-50/50 resize-y disabled:bg-slate-100 disabled:text-slate-500"
+                className="w-full h-48 font-mono text-xs p-3.5 rounded-2xl leading-relaxed text-slate-950 bg-[#edf2f7] focus:bg-white resize-y disabled:bg-slate-200 disabled:text-slate-600"
               />
             </div>
 
             {parsedResult.hasErrors && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 space-y-1.5 text-xs">
-                <p className="font-semibold text-rose-900">
+              <div className="p-3 rounded-2xl bg-rose-100 text-rose-950 space-y-1.5 text-xs">
+                <p className="font-bold text-rose-950">
                   Erros detectados ({parsedResult.duplicateEntries.length} duplicidades ·{' '}
                   {parsedResult.invalidEntries.length} formatos inválidos):
                 </p>
                 {parsedResult.duplicateEntries.length > 0 && (
-                  <p className="text-rose-800 break-words">
+                  <p className="text-rose-900 break-words font-semibold">
                     Duplicadas:{' '}
                     {parsedResult.duplicateEntries
                       .map((d) => `${d.date} (${d.occurrences}x)`)
@@ -1317,9 +1317,9 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   </p>
                 )}
                 {parsedResult.invalidEntries.length > 0 && (
-                  <div className="max-h-28 overflow-y-auto space-y-0.5 font-mono bg-white p-2 rounded-xl border border-rose-200">
+                  <div className="max-h-28 overflow-y-auto space-y-0.5 font-mono bg-white p-2.5 rounded-xl">
                     {parsedResult.invalidEntries.map((inv, idx) => (
-                      <div key={idx} className="text-rose-800 break-words">
+                      <div key={idx} className="text-rose-900 break-words">
                         Linha {inv.line}: "{inv.raw}" — {inv.reason}
                       </div>
                     ))}
@@ -1330,13 +1330,13 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
           </section>
 
           {/* Pré-visualização Cronológica */}
-          <section className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+          <section className="bg-white p-4 sm:p-5 rounded-3xl shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-slate-950">
                   Lista Cronológica ({filteredPreviewDays.length} de {parsedResult.totalCount} Dias)
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-700">
                   Filtre por mês ou pesquise qualquer data para conferência rápida.
                 </p>
               </div>
@@ -1344,7 +1344,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 <select
                   value={selectedPreviewMonth}
                   onChange={(e) => setSelectedPreviewMonth(e.target.value)}
-                  className="min-h-[36px] px-3 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-white"
+                  className="min-h-[36px] px-3 rounded-xl text-xs font-semibold text-slate-950 bg-[#edf2f7]"
                 >
                   <option value="all">Todos os Meses ({parsedResult.totalCount}d)</option>
                   {MONTH_NAMES_PT.map((m) => (
@@ -1358,14 +1358,14 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   value={searchPreviewDate}
                   onChange={(e) => setSearchPreviewDate(e.target.value)}
                   placeholder="Filtrar data ou dia..."
-                  className="min-h-[36px] px-3 rounded-xl border border-slate-200 text-xs text-slate-800 w-40 outline-none focus:border-slate-900"
+                  className="min-h-[36px] px-3 rounded-xl bg-[#edf2f7] focus:bg-white text-xs text-slate-950 w-40"
                 />
               </div>
             </div>
 
-            <div className="max-h-72 overflow-y-auto overflow-x-auto bg-slate-50/40 rounded-2xl border border-slate-200/60">
+            <div className="max-h-72 overflow-y-auto overflow-x-auto bg-[#f4f7fb] rounded-2xl">
               <table className="w-full min-w-[520px] text-left text-xs">
-                <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
+                <thead className="sticky top-0 bg-[#e2e8f0] text-slate-950 font-bold z-10">
                   <tr>
                     <th className="py-2.5 px-3 w-12 font-mono text-center">Nº</th>
                     <th className="py-2.5 px-3 w-28 font-mono">Data</th>
@@ -1374,31 +1374,31 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                     <th className="py-2.5 px-3">Classificação</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {filteredPreviewDays.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-6 text-center text-slate-400 text-xs">
+                      <td colSpan={5} className="py-6 text-center text-slate-600 text-xs font-medium">
                         Nenhuma data corresponde aos filtros aplicados.
                       </td>
                     </tr>
                   ) : (
                     filteredPreviewDays.map((d, idx) => (
-                      <tr key={d.id} className="hover:bg-slate-50">
-                        <td className="py-2 px-3 text-slate-400 text-center font-mono tabular-nums">
+                      <tr key={d.id} className="odd:bg-white even:bg-[#f4f7fb] hover:bg-[#dce7fb]/60 transition-colors">
+                        <td className="py-2 px-3 text-slate-600 text-center font-mono tabular-nums">
                           {idx + 1}
                         </td>
-                        <td className="py-2 px-3 font-semibold text-slate-900 font-mono tabular-nums">
+                        <td className="py-2 px-3 font-bold text-slate-950 font-mono tabular-nums">
                           {d.date}
                         </td>
-                        <td className="py-2 px-3 text-slate-700">{d.dayOfWeek}</td>
-                        <td className="py-2 px-3 text-slate-600">{d.month}</td>
+                        <td className="py-2 px-3 text-slate-800">{d.dayOfWeek}</td>
+                        <td className="py-2 px-3 text-slate-700">{d.month}</td>
                         <td className="py-2 px-3">
                           {d.isSaturday ? (
-                            <span className="text-indigo-800 font-semibold">Sábado Letivo</span>
+                            <span className="text-indigo-900 font-bold">Sábado Letivo</span>
                           ) : d.holidayConflict ? (
-                            <span className="text-amber-800 font-medium">{d.holidayConflict}</span>
+                            <span className="text-amber-900 font-bold">{d.holidayConflict}</span>
                           ) : (
-                            <span className="text-slate-700">Dia Letivo Regular</span>
+                            <span className="text-slate-800 font-medium">Dia Letivo Regular</span>
                           )}
                         </td>
                       </tr>
@@ -1415,13 +1415,13 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       {/* ABA 3: FERIADOS & RECESSOS                                            */}
       {/* ===================================================================== */}
       {activeTab === 'feriados' && (
-        <section className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3.5">
+        <section className="bg-white p-4 sm:p-5 rounded-3xl shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-3.5 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
+              <h3 className="text-sm font-bold text-slate-950">
                 Feriados Oficiais e Recessos ({filteredHolidays.length})
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-700">
                 Conflitos com dias letivos ativos são sinalizados e podem ser removidos automaticamente.
               </p>
             </div>
@@ -1430,7 +1430,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               <select
                 value={holidayScopeFilter}
                 onChange={(e) => setHolidayScopeFilter(e.target.value as 'all' | HolidayScopeType)}
-                className="min-h-[36px] px-3 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-white"
+                className="min-h-[36px] px-3 rounded-xl text-xs font-semibold text-slate-950 bg-[#edf2f7]"
               >
                 <option value="all">Todos os Âmbitos</option>
                 <option value="municipal">Municipal (Jundiaí)</option>
@@ -1445,7 +1445,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   <button
                     type="button"
                     onClick={handleRestoreDefaultHolidays}
-                    className="min-h-[36px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+                    className="min-h-[36px] px-3 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Restaurar Padrão SME</span>
@@ -1453,7 +1453,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => handleOpenAddHoliday('')}
-                    className="min-h-[36px] px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
+                    className="min-h-[36px] px-3.5 rounded-xl bg-slate-950 hover:bg-black text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Novo Feriado</span>
@@ -1463,9 +1463,9 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto overflow-x-auto bg-slate-50/40 rounded-2xl border border-slate-200/60">
+          <div className="max-h-96 overflow-y-auto overflow-x-auto bg-[#f4f7fb] rounded-2xl">
             <table className="w-full min-w-[540px] text-left text-xs">
-              <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
+              <thead className="sticky top-0 bg-[#e2e8f0] text-slate-950 font-bold z-10">
                 <tr>
                   <th className="py-2.5 px-3 w-28 font-mono">Data</th>
                   <th className="py-2.5 px-3">Descrição</th>
@@ -1474,27 +1474,27 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   <th className="py-2.5 px-3 w-28 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {filteredHolidays.map((h) => {
                   const isConflict = parsedResult.validDates.includes(h.date);
                   const isConfirmingDel = confirmDeleteHolidayId === h.id;
                   return (
-                    <tr key={h.id} className="hover:bg-slate-50">
-                      <td className="py-2 px-3 font-mono font-semibold text-slate-900 tabular-nums">
+                    <tr key={h.id} className="odd:bg-white even:bg-[#f4f7fb] hover:bg-[#dce7fb]/60 transition-colors">
+                      <td className="py-2 px-3 font-mono font-bold text-slate-950 tabular-nums">
                         {h.date}
                       </td>
-                      <td className="py-2 px-3 font-medium text-slate-800">{h.name}</td>
-                      <td className="py-2 px-3 text-slate-600 capitalize">
+                      <td className="py-2 px-3 font-semibold text-slate-900">{h.name}</td>
+                      <td className="py-2 px-3 text-slate-700 capitalize font-medium">
                         {h.type.replace('_', ' ')}
                       </td>
                       <td className="py-2 px-3">
                         {isConflict ? (
-                          <span className="text-rose-700 font-semibold inline-flex items-center gap-1">
+                          <span className="text-rose-800 font-bold inline-flex items-center gap-1">
                             <AlertTriangle className="w-3.5 h-3.5" />
                             Conflito ativo
                           </span>
                         ) : (
-                          <span className="text-slate-400">Sem conflito</span>
+                          <span className="text-slate-600 font-medium">Sem conflito</span>
                         )}
                       </td>
                       <td className="py-2 px-3 text-right">
@@ -1503,14 +1503,14 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                             <button
                               type="button"
                               onClick={() => handleDeleteHoliday(h)}
-                              className="px-2 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold cursor-pointer"
+                              className="px-2 py-1 rounded-lg bg-rose-700 text-white text-[11px] font-semibold cursor-pointer"
                             >
                               Excluir
                             </button>
                             <button
                               type="button"
                               onClick={() => setConfirmDeleteHolidayId(null)}
-                              className="px-2 py-1 rounded-lg bg-slate-200 text-slate-700 text-[11px] font-semibold cursor-pointer"
+                              className="px-2 py-1 rounded-lg bg-[#e2e8f0] text-slate-900 text-[11px] font-semibold cursor-pointer"
                             >
                               Não
                             </button>
@@ -1521,7 +1521,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                               type="button"
                               onClick={() => handleOpenEditHoliday(h)}
                               disabled={!isAdmin}
-                              className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg disabled:opacity-40 cursor-pointer"
+                              className="p-1.5 text-slate-700 hover:text-slate-950 rounded-lg disabled:opacity-40 cursor-pointer"
                               title="Editar"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
@@ -1530,7 +1530,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                               type="button"
                               onClick={() => setConfirmDeleteHolidayId(h.id)}
                               disabled={!isAdmin}
-                              className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg disabled:opacity-40 cursor-pointer"
+                              className="p-1.5 text-slate-700 hover:text-rose-700 rounded-lg disabled:opacity-40 cursor-pointer"
                               title="Excluir"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -1551,19 +1551,19 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
       {/* ABA 4: AUDITORIA                                                      */}
       {/* ===================================================================== */}
       {activeTab === 'auditoria' && (
-        <section className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/70 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+        <section className="bg-white p-4 sm:p-5 rounded-3xl shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-3 animate-fade-in">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">
+            <h3 className="text-sm font-bold text-slate-950">
               Histórico de Auditoria ({auditLogs.length} registros)
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-700">
               Registro sequencial das publicações dos 200 dias e movimentações de feriados.
             </p>
           </div>
 
-          <div className="max-h-96 overflow-x-auto overflow-y-auto bg-slate-50/40 rounded-2xl border border-slate-200/60">
+          <div className="max-h-96 overflow-x-auto overflow-y-auto bg-[#f4f7fb] rounded-2xl">
             <table className="w-full min-w-[600px] text-left text-xs">
-              <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold z-10">
+              <thead className="sticky top-0 bg-[#e2e8f0] text-slate-950 font-bold z-10">
                 <tr>
                   <th className="py-2.5 px-3 w-36 font-mono">Data/Hora</th>
                   <th className="py-2.5 px-3 w-56">Responsável</th>
@@ -1572,28 +1572,28 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   <th className="py-2.5 px-3">Detalhes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {auditLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-slate-400">
+                    <td colSpan={5} className="py-6 text-center text-slate-600 font-medium">
                       Nenhum registro de auditoria gravado ainda.
                     </td>
                   </tr>
                 ) : (
                   auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50">
-                      <td className="py-2 px-3 font-mono text-slate-600 tabular-nums">
+                    <tr key={log.id} className="odd:bg-white even:bg-[#f4f7fb] hover:bg-[#dce7fb]/60 transition-colors">
+                      <td className="py-2 px-3 font-mono text-slate-700 tabular-nums">
                         {new Date(log.timestampISO).toLocaleString('pt-BR')}
                       </td>
                       <td className="py-2 px-3">
-                        <span className="font-semibold text-slate-900 block break-words">
+                        <span className="font-bold text-slate-950 block break-words">
                           {log.adminName}
                         </span>
-                        <span className="text-slate-500 font-mono block break-all">
+                        <span className="text-slate-700 font-mono block break-all">
                           {log.adminEmail}
                         </span>
                       </td>
-                      <td className="py-2 px-3 font-medium text-slate-800">
+                      <td className="py-2 px-3 font-semibold text-slate-900">
                         {log.action === 'UPDATE_200_DAYS'
                           ? 'Publicação 200 Dias'
                           : log.action === 'ADD_HOLIDAY'
@@ -1604,12 +1604,12 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                           ? 'Exclusão de Feriado'
                           : 'Operação'}
                       </td>
-                      <td className="py-2 px-3 font-mono tabular-nums text-slate-700">
+                      <td className="py-2 px-3 font-mono tabular-nums text-slate-800">
                         {log.previousDaysCount !== undefined && log.newDaysCount !== undefined
                           ? `${log.previousDaysCount}d → ${log.newDaysCount}d`
                           : '—'}
                       </td>
-                      <td className="py-2 px-3 text-slate-600 break-words">{log.details}</td>
+                      <td className="py-2 px-3 text-slate-700 break-words">{log.details}</td>
                     </tr>
                   ))
                 )}
@@ -1621,18 +1621,18 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
       {/* MODAL: CONFIRMAR PUBLICAÇÃO DOS 200 DIAS */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-scale-up">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden animate-apple-pop">
+            <div className="p-5 bg-[#f4f7fb] flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center shrink-0">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-base font-bold text-slate-950">
                     Publicar Calendário Oficial
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-700">
                     Ano Letivo {selectedYear} · {SCHOOL_NAME}
                   </p>
                 </div>
@@ -1640,33 +1640,33 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-800 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-[#e2e8f0] text-slate-700 hover:text-slate-950 flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-3 text-xs text-slate-700 leading-relaxed">
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
-                <p className="font-bold text-slate-900">
+            <div className="p-5 space-y-3 text-xs text-slate-800 leading-relaxed">
+              <div className="p-3.5 rounded-2xl bg-[#edf2f7] space-y-1.5">
+                <p className="font-bold text-slate-950">
                   Homologação oficial de 200 dias letivos:
                 </p>
-                <ul className="list-disc pl-5 space-y-1 text-slate-600">
+                <ul className="list-disc pl-5 space-y-1 text-slate-700 font-medium">
                   <li>Atualiza imediatamente a carga letiva mensal das {classes.length} turmas.</li>
                   <li>Recalcula os limites LDB de presença e faltas em toda a escola.</li>
                   <li className="break-all">
-                    Responsável: <span className="font-mono font-semibold text-slate-900">{userEmail}</span>
+                    Responsável: <span className="font-mono font-bold text-slate-950">{userEmail}</span>
                   </li>
                 </ul>
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2">
+            <div className="p-4 bg-[#f4f7fb] flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsConfirmModalOpen(false)}
                 disabled={isSaving}
-                className="min-h-[40px] px-4 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer"
+                className="min-h-[40px] px-4 text-xs font-semibold text-slate-800 hover:bg-[#e2e8f0] rounded-xl cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1686,19 +1686,19 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
       {/* MODAL: ADICIONAR / EDITAR FERIADO */}
       {isHolidayModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
           <form
             onSubmit={handleSaveHoliday}
-            className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-scale-up"
+            className="bg-white rounded-3xl max-w-md w-full shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden animate-apple-pop"
           >
-            <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-4 sm:p-5 bg-[#f4f7fb] flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-950">
                 {editingHoliday ? 'Editar Feriado / Recesso' : 'Novo Feriado / Recesso'}
               </h3>
               <button
                 type="button"
                 onClick={() => setIsHolidayModalOpen(false)}
-                className="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-800 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-[#e2e8f0] text-slate-700 hover:text-slate-950 flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1706,7 +1706,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
             <div className="p-4 sm:p-5 space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-bold text-slate-800 mb-1">
                   Data (DD/MM/AAAA)
                 </label>
                 <input
@@ -1715,12 +1715,12 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   placeholder={`20/11/${selectedYear}`}
                   value={holidayFormDate}
                   onChange={(e) => setHolidayFormDate(e.target.value)}
-                  className="w-full font-mono px-3 py-2.5 border border-slate-300 rounded-xl outline-none focus:border-slate-900 text-sm"
+                  className="w-full font-mono px-3 py-2.5 bg-[#edf2f7] focus:bg-white rounded-xl text-sm text-slate-950"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
+                <label className="block font-bold text-slate-800 mb-1">
                   Nome / Descrição
                 </label>
                 <input
@@ -1729,16 +1729,16 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                   placeholder="Ex: Consciência Negra / Recesso SME"
                   value={holidayFormName}
                   onChange={(e) => setHolidayFormName(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl outline-none focus:border-slate-900 text-sm"
+                  className="w-full px-3 py-2.5 bg-[#edf2f7] focus:bg-white rounded-xl text-sm text-slate-950"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Âmbito</label>
+                <label className="block font-bold text-slate-800 mb-1">Âmbito</label>
                 <select
                   value={holidayFormType}
                   onChange={(e) => setHolidayFormType(e.target.value as HolidayScopeType)}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-xl outline-none focus:border-slate-900 bg-white text-sm"
+                  className="w-full px-3 py-2.5 rounded-xl bg-[#edf2f7] text-sm font-medium text-slate-950"
                 >
                   <option value="municipal">Municipal (Jundiaí / SP)</option>
                   <option value="estadual">Estadual (São Paulo)</option>
@@ -1748,7 +1748,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
                 </select>
               </div>
 
-              <label className="flex items-center gap-2 pt-1 text-slate-700 cursor-pointer">
+              <label className="flex items-center gap-2 pt-1 text-slate-800 font-medium cursor-pointer">
                 <input
                   type="checkbox"
                   checked={removeHolidayFromSchoolDays}
@@ -1759,17 +1759,17 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
               </label>
             </div>
 
-            <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2">
+            <div className="p-4 bg-[#f4f7fb] flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsHolidayModalOpen(false)}
-                className="min-h-[40px] px-4 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                className="min-h-[40px] px-4 text-xs font-semibold text-slate-800 hover:bg-[#e2e8f0] rounded-xl cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="min-h-[40px] px-5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl cursor-pointer"
+                className="min-h-[40px] px-5 text-xs font-bold text-white bg-slate-950 hover:bg-black rounded-xl cursor-pointer"
               >
                 {editingHoliday ? 'Salvar Alterações' : 'Cadastrar Feriado'}
               </button>

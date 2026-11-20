@@ -11,15 +11,15 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold tracking-tight transition-colors duration-100 tabular-nums';
+    'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold tracking-tight transition-all duration-200 tabular-nums';
 
   const variants = {
-    default: 'bg-slate-900 text-white',
-    secondary: 'bg-slate-100 text-slate-900 font-bold',
+    default: 'bg-slate-950 text-white',
+    secondary: 'bg-[#e2e8f0] text-slate-950 font-bold',
     success: 'bg-emerald-100 text-emerald-950 font-bold',
     warning: 'bg-amber-100 text-amber-950 font-bold',
     destructive: 'bg-rose-100 text-rose-950 font-bold',
-    outline: 'bg-slate-100 text-slate-900 font-bold',
+    outline: 'bg-[#e2e8f0] text-slate-950 font-bold',
   };
 
   return (

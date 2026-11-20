@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Camera, Maximize2, X } from 'lucide-react';
 import { Student } from '../types';
 import { findPhotoInDiscoveredCache } from '../services/googleSheetsApi';
 import { isBackendApiAvailable } from '../services/apiEnvironment';
@@ -364,13 +364,13 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
         }
         onClick={isInteractive ? handleAvatarClick : undefined}
         onKeyDown={isInteractive ? handleAvatarKeyDown : undefined}
-        className={`group relative shrink-0 overflow-hidden bg-slate-100 text-slate-700 font-semibold flex items-center justify-center border border-slate-200/80 select-none ${
+        className={`group relative shrink-0 overflow-hidden bg-[#edf2f7] text-slate-900 font-semibold flex items-center justify-center select-none shadow-[0_2px_8px_-2px_rgba(9,15,29,0.08)] ${
           sizeMap[size]
         } ${
           canExpand
-            ? 'cursor-zoom-in hover:ring-2 hover:ring-[#0b3b8c]/45 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#0b3b8c]'
+            ? 'cursor-zoom-in hover:shadow-[0_6px_16px_-4px_rgba(9,46,112,0.22)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200'
             : canClickUploadFallback
-            ? 'cursor-pointer hover:bg-slate-200/80 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0b3b8c]'
+            ? 'cursor-pointer hover:bg-[#dce7fb] hover:text-[#092e70] transition-all duration-200 active:scale-[0.97]'
             : ''
         } ${className}`}
       >
@@ -392,9 +392,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
                 aria-hidden="true"
                 className="pointer-events-none absolute bottom-1.5 right-1.5 w-6 h-6 rounded-lg bg-slate-950/60 text-white backdrop-blur-xs flex items-center justify-center opacity-75 group-hover:opacity-100 transition-opacity duration-150 shadow-xs"
               >
-                <span className="material-symbols-outlined text-[14px] leading-none">
-                  open_in_full
-                </span>
+                <Maximize2 className="w-[13px] h-[13px]" strokeWidth={2.2} />
               </span>
             )}
           </>
@@ -411,14 +409,14 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
               e.stopPropagation();
               setIsLightboxOpen(false);
             }}
-            className="fixed inset-0 z-[140] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-gentle-fade"
+            className="fixed inset-0 z-[140] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-backdrop-in"
             role="dialog"
             aria-modal="true"
             aria-label={`Foto ampliada de ${effectiveName}`}
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-xl rounded-3xl overflow-hidden bg-slate-900 shadow-2xl border border-white/10 flex flex-col max-h-[90dvh]"
+              className="modal-shell animate-apple-pop relative w-full max-w-xl rounded-3xl overflow-hidden bg-slate-900 shadow-2xl flex flex-col max-h-[90dvh]"
             >
               <button
                 type="button"
@@ -465,7 +463,7 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
                       }}
                       className="min-h-[38px] px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[15px]">photo_camera</span>
+                      <Camera className="w-[15px] h-[15px]" strokeWidth={2} />
                       <span>Alterar foto</span>
                     </button>
                   )}

@@ -154,22 +154,22 @@ const OUTCOME_STATUS_OPTIONS: Array<{
   {
     id: 'contato_realizado',
     label: 'Retorno obtido',
-    toneClass: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+    toneClass: 'text-emerald-950 bg-emerald-100/85 hover:bg-emerald-200/80',
   },
   {
     id: 'justificado_atestado',
     label: 'Atestado / Saúde',
-    toneClass: 'text-sky-800 bg-sky-50 border-sky-200',
+    toneClass: 'text-sky-950 bg-sky-100/85 hover:bg-sky-200/80',
   },
   {
     id: 'em_tentativa',
     label: 'Em tentativa',
-    toneClass: 'text-amber-800 bg-amber-50 border-amber-200',
+    toneClass: 'text-amber-950 bg-amber-100/85 hover:bg-amber-200/80',
   },
   {
     id: 'encaminhado_busca',
     label: 'Busca / Conselho',
-    toneClass: 'text-rose-800 bg-rose-50 border-rose-200',
+    toneClass: 'text-rose-950 bg-rose-100/85 hover:bg-rose-200/80',
   },
 ];
 
@@ -202,7 +202,7 @@ function getOutcomeMeta(
     return {
       status,
       label: 'Aguardando contato da secretaria',
-      toneClass: 'text-amber-900 bg-amber-50 border-amber-200',
+      toneClass: 'text-amber-950 bg-amber-100/85 hover:bg-amber-200/80',
     };
   }
   const found = OUTCOME_STATUS_OPTIONS.find((o) => o.id === status);
@@ -216,7 +216,7 @@ function getOutcomeMeta(
   return {
     status: 'contato_realizado',
     label: 'Retorno registrado',
-    toneClass: 'text-emerald-800 bg-emerald-50 border-emerald-200',
+    toneClass: 'text-emerald-950 bg-emerald-100/85 hover:bg-emerald-200/80',
   };
 }
 
@@ -781,26 +781,26 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   };
 
   return (
-    <div className="flex flex-col w-full min-w-0 max-w-[1440px] mx-auto space-y-4 pb-20 animate-gentle-fade">
+    <div className="flex flex-col w-full min-w-0 max-w-[1440px] mx-auto space-y-4 pb-20 animate-fade-in">
       {/* Cabeçalho Institucional Limpo por Papel */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4 min-w-0">
+      <section className="bg-white rounded-2xl p-4 sm:p-5 space-y-4 min-w-0 shadow-[0_8px_28px_-10px_rgba(9,15,29,0.08)]">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 min-w-0">
           <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 min-w-0">
               {onBack && (
                 <>
                   <button
                     type="button"
                     onClick={onBack}
-                    className="text-[#0b3b8c] hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer shrink-0"
+                    className="text-[#0b3b8c] hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer shrink-0 active:scale-[0.97] transition-transform"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>Voltar</span>
                   </button>
-                  <span className="text-slate-300" aria-hidden="true">/</span>
+                  <span className="text-slate-600" aria-hidden="true">/</span>
                 </>
               )}
-              <span className="font-semibold text-[#be123c]">
+              <span className="font-semibold text-[#9f1239]">
                 {canManageFamilyFeedback
                   ? 'Atendimento da Secretaria · Contato com Famílias'
                   : canRequestSecretariaContact
@@ -817,7 +817,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 : 'Acompanhamento de Busca Ativa (3+ Faltas)'}
             </h1>
 
-            <p className="text-xs sm:text-sm text-slate-600 max-w-3xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-700 max-w-3xl leading-relaxed">
               {canManageFamilyFeedback
                 ? 'Apenas o(a) regente PEB I solicita contato quando há 3 ou mais faltas seguidas. Utilize esta fila para contatar os responsáveis e registrar o retorno para o professor.'
                 : canRequestSecretariaContact
@@ -831,23 +831,23 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             <button
               type="button"
               onClick={() => setIsFamiliesModalOpen(true)}
-              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-950 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-emerald-100/85 hover:bg-emerald-200/85 text-emerald-950 text-xs font-semibold inline-flex items-center gap-1.5 transition-all duration-200 hover:-translate-y-px active:scale-[0.97] cursor-pointer whitespace-nowrap"
               title="Visualizar automaticamente todos os estudantes que compartilham os mesmos responsáveis"
             >
-              <Users className="w-4 h-4 text-emerald-700 shrink-0" />
+              <Users className="w-4 h-4 text-emerald-800 shrink-0" />
               <span>Famílias / Irmãos ({multiStudentFamiliesCount})</span>
             </button>
 
             {!isPeb1 && availableClasses.length > 1 && onSelectClass ? (
               <>
-                <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                <div className="inline-flex items-center gap-1 bg-[#edf2f7] p-1 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setViewAllClassesMode(true)}
-                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.97] ${
                       viewAllClassesMode
-                        ? 'bg-white text-slate-950 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-950'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-slate-700 hover:text-slate-950'
                     }`}
                   >
                     Todas ({availableClasses.length})
@@ -855,10 +855,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   <button
                     type="button"
                     onClick={() => setViewAllClassesMode(false)}
-                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                    className={`min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.97] ${
                       !viewAllClassesMode
-                        ? 'bg-white text-slate-950 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-950'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-slate-700 hover:text-slate-950'
                     }`}
                   >
                     Por Turma
@@ -872,7 +872,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       const target = availableClasses.find((c) => c.id === e.target.value);
                       if (target) onSelectClass(target);
                     }}
-                    className="h-9 px-3 rounded-xl bg-slate-100 text-slate-950 text-xs font-semibold cursor-pointer focus:outline-none"
+                    className="h-9 px-3 rounded-xl bg-[#edf2f7] text-slate-950 text-xs font-semibold cursor-pointer"
                   >
                     {availableClasses.map((cls) => (
                       <option key={cls.id} value={cls.id}>
@@ -883,22 +883,22 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 )}
               </>
             ) : (
-              <div className="text-xs font-semibold text-slate-700 pt-1">
+              <div className="text-xs font-semibold text-slate-800 pt-1">
                 Turma {classGroup.name} · {classGroup.shift.replace('Turno ', '')}
               </div>
             )}
           </div>
         </div>
 
-        {/* Barra de Filtros / Indicadores Clicáveis (Zero Cards Aninhados Pesados) */}
+        {/* Barra de Filtros / Indicadores Clicáveis */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 min-w-0">
           <button
             type="button"
             onClick={() => setFilterMode('aguardando_feedback')}
-            className={`text-left p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+            className={`text-left p-3.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
               filterMode === 'aguardando_feedback'
-                ? 'bg-[#b45309] border-[#b45309] text-white'
-                : 'bg-amber-50/70 border-amber-200 text-amber-950 hover:bg-amber-100/70'
+                ? 'bg-[#b45309] text-white shadow-[0_10px_24px_-8px_rgba(180,83,9,0.45)]'
+                : 'bg-amber-100/80 text-amber-950 hover:bg-amber-200/75'
             }`}
           >
             <div className="min-w-0">
@@ -909,16 +909,16 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 {summaryStats.totalWaitingFeedback}
               </span>
             </div>
-            <Clock className="w-5 h-5 opacity-80 shrink-0" />
+            <Clock className="w-5 h-5 opacity-85 shrink-0" />
           </button>
 
           <button
             type="button"
             onClick={() => setFilterMode('com_feedback')}
-            className={`text-left p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+            className={`text-left p-3.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
               filterMode === 'com_feedback'
-                ? 'bg-[#047857] border-[#047857] text-white'
-                : 'bg-emerald-50/70 border-emerald-200 text-emerald-950 hover:bg-emerald-100/70'
+                ? 'bg-[#047857] text-white shadow-[0_10px_24px_-8px_rgba(4,120,87,0.45)]'
+                : 'bg-emerald-100/80 text-emerald-950 hover:bg-emerald-200/75'
             }`}
           >
             <div className="min-w-0">
@@ -929,16 +929,16 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 {summaryStats.totalWithFeedback}
               </span>
             </div>
-            <CheckCheck className="w-5 h-5 opacity-80 shrink-0" />
+            <CheckCheck className="w-5 h-5 opacity-85 shrink-0" />
           </button>
 
           <button
             type="button"
             onClick={() => setFilterMode('com_ocorrencia')}
-            className={`text-left p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+            className={`text-left p-3.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
               filterMode === 'com_ocorrencia'
-                ? 'bg-[#be123c] border-[#be123c] text-white'
-                : 'bg-rose-50/70 border-rose-200 text-rose-950 hover:bg-rose-100/70'
+                ? 'bg-[#be123c] text-white shadow-[0_10px_24px_-8px_rgba(190,18,60,0.45)]'
+                : 'bg-rose-100/80 text-rose-950 hover:bg-rose-200/75'
             }`}
           >
             <div className="min-w-0">
@@ -949,16 +949,16 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 {summaryStats.totalOccurrencesCount}
               </span>
             </div>
-            <Send className="w-5 h-5 opacity-80 shrink-0" />
+            <Send className="w-5 h-5 opacity-85 shrink-0" />
           </button>
 
           <button
             type="button"
             onClick={() => setFilterMode('all')}
-            className={`text-left p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
+            className={`text-left p-3.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
               filterMode === 'all'
-                ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
-                : 'bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100'
+                ? 'bg-[#0b3b8c] text-white shadow-[0_10px_24px_-8px_rgba(11,59,140,0.45)]'
+                : 'bg-[#edf2f7] text-slate-950 hover:bg-[#e2e8f0]'
             }`}
           >
             <div className="min-w-0">
@@ -969,13 +969,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 {scopedEntries.length}
               </span>
             </div>
-            <UserCheck className="w-5 h-5 opacity-80 shrink-0" />
+            <UserCheck className="w-5 h-5 opacity-85 shrink-0" />
           </button>
         </div>
 
         {/* Busca Rápida */}
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-slate-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -985,13 +985,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 ? 'Buscar estudante da sua turma por nome ou número...'
                 : 'Buscar por estudante, turma, professor(a) ou RA...'
             }
-            className="w-full h-10 pl-10 pr-9 bg-slate-100 text-slate-950 text-sm rounded-xl focus:bg-slate-200/70 focus:outline-none transition-colors"
+            className="w-full h-10 pl-10 pr-9 bg-[#edf2f7] text-slate-950 placeholder:text-slate-600 text-sm rounded-xl focus:bg-white transition-all duration-200"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 cursor-pointer p-1"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-950 cursor-pointer p-1"
               aria-label="Limpar busca"
             >
               <X className="w-4 h-4" />
@@ -1002,13 +1002,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
       {/* Destaque para PEB I: Devolutivas Novas da Secretaria aguardando ciência */}
       {isPeb1 && summaryStats.unreadFeedbacksForTeacher.length > 0 && (
-        <section className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3 min-w-0">
+        <section className="bg-emerald-100/75 rounded-2xl p-4 space-y-3 min-w-0 shadow-[0_8px_24px_-10px_rgba(4,120,87,0.18)]">
           <div className="flex items-center justify-between gap-2">
             <div>
               <h2 className="text-sm sm:text-base font-bold text-emerald-950">
                 Novos Retornos da Secretaria ({summaryStats.unreadFeedbacksForTeacher.length})
               </h2>
-              <p className="text-xs text-emerald-900/80">
+              <p className="text-xs text-emerald-950/85">
                 A equipe administrativa contatou as famílias abaixo. Leia a devolutiva e confirme ciência.
               </p>
             </div>
@@ -1018,25 +1018,25 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             {summaryStats.unreadFeedbacksForTeacher.map(({ cls, student, occ }) => (
               <div
                 key={`unread-${occ.id}`}
-                className="bg-white border border-emerald-200 rounded-xl p-3.5 space-y-2 flex flex-col justify-between"
+                className="bg-white rounded-xl p-3.5 space-y-2.5 flex flex-col justify-between shadow-[0_6px_18px_-8px_rgba(9,15,29,0.08)]"
               >
                 <div className="space-y-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 text-xs text-slate-600 tabular-nums">
+                  <div className="flex items-center justify-between gap-2 text-xs text-slate-700 tabular-nums">
                     <span className="font-bold text-slate-950 truncate">
                       {student.number.toString().padStart(2, '0')} · {student.name}
                     </span>
                     <span className="shrink-0">{occ.feedbackUpdatedAt || 'Recente'}</span>
                   </div>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-slate-700">
                     {occ.sequenceNumber}ª solicitação ({occ.selectedDates.join(', ')}) ·{' '}
                     {getChannelLabel(occ.contactChannel)} · {occ.feedbackByName || 'Secretaria'}
                   </p>
-                  <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-snug pt-0.5 break-words">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-950 leading-snug pt-0.5 break-words">
                     “{occ.familyFeedback}”
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => openOccurrencePopup(cls, student, occ.id)}
@@ -1049,7 +1049,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                     onClick={() =>
                       handleMarkFeedbackAsReadByTeacher(cls, student, occ.id)
                     }
-                    className="min-h-[34px] px-3 py-1 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="min-h-[34px] px-3 py-1 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
                   >
                     <Check className="w-3.5 h-3.5" />
                     <span>Confirmar leitura</span>
@@ -1064,13 +1064,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       {/* Lista Principal de Estudantes / Fila de Atendimento */}
       <div className="space-y-3">
         {filteredEntries.length === 0 ? (
-          <div className="p-8 text-center space-y-2 bg-white border border-slate-200 rounded-2xl">
+          <div className="p-8 text-center space-y-2 bg-white rounded-2xl shadow-[0_8px_28px_-10px_rgba(9,15,29,0.08)]">
             <p className="text-sm sm:text-base font-bold text-slate-950">
               {filterMode === 'aguardando_feedback'
                 ? 'Nenhuma solicitação pendente de contato no momento'
                 : 'Nenhum registro encontrado neste filtro'}
             </p>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
+            <p className="text-xs sm:text-sm text-slate-700 max-w-md mx-auto">
               {canManageFamilyFeedback && filterMode === 'aguardando_feedback'
                 ? 'Todas as solicitações enviadas pelos docentes PEB I já receberam retorno ou ainda não há pedidos abertos.'
                 : canRequestSecretariaContact
@@ -1081,7 +1081,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               <button
                 type="button"
                 onClick={() => setFilterMode('com_ocorrencia')}
-                className="mt-2 min-h-[38px] px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-semibold cursor-pointer"
+                className="mt-2 min-h-[38px] px-4 py-1.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer transition-colors"
               >
                 Ver todas as solicitações ({summaryStats.totalOccurrencesCount})
               </button>
@@ -1118,14 +1118,14 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             return (
               <div
                 key={compositeKey}
-                className="bg-white border border-slate-200 rounded-2xl overflow-hidden transition-colors"
+                className="bg-white rounded-2xl overflow-hidden transition-all duration-200 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)]"
               >
                 {/* Cabeçalho do Estudante */}
                 <div
                   onClick={() =>
                     setExpandedStudentKey(isExpanded ? null : compositeKey)
                   }
-                  className="p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/70 transition-colors"
+                  className="p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-[#f4f7fb] transition-colors"
                 >
                   <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                     <span
@@ -1134,7 +1134,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           ? 'bg-[#be123c] text-white'
                           : hasOccurrences
                           ? 'bg-emerald-700 text-white'
-                          : 'bg-slate-100 text-slate-800'
+                          : 'bg-[#edf2f7] text-slate-900'
                       }`}
                     >
                       {student.number.toString().padStart(2, '0')}
@@ -1147,7 +1147,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         <h3 className="font-bold text-sm sm:text-base text-slate-950 break-words leading-snug">
                           {student.name}
                         </h3>
-                        <span className="text-xs text-slate-600 tabular-nums">
+                        <span className="text-xs text-slate-700 tabular-nums font-medium">
                           {!isPeb1 ? `${cls.name} · ` : ''}
                           {accumulatedMonthAbsences} falta(s) no mês
                           {hasOccurrences ? ` · ${occurrences.length} solicitação(ões)` : ''}
@@ -1172,7 +1172,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                     openOccurrencePopup(cls, student, occ.id);
                                   }
                                 }}
-                                className={`min-h-[30px] px-2.5 py-1 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors ${outcome.toneClass}`}
+                                className={`min-h-[30px] px-2.5 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] ${outcome.toneClass}`}
                               >
                                 <span className="tabular-nums">
                                   {occ.sequenceNumber}ª ({occ.selectedDates.join(', ')})
@@ -1186,7 +1186,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           })}
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-600">
                           {canRequestSecretariaContact
                             ? 'Sem pedido enviado · Toque para marcar 3+ faltas seguidas e solicitar contato'
                             : 'Nenhuma solicitação de busca ativa registrada pela PEB I'}
@@ -1203,7 +1203,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="min-h-[38px] px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                        className="min-h-[38px] px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-all duration-200 active:scale-[0.97] whitespace-nowrap"
                       >
                         <MessageCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>WhatsApp</span>
@@ -1211,10 +1211,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                     )}
 
                     <span
-                      className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap ${
+                      className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap transition-colors ${
                         isExpanded
-                          ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
-                          : 'bg-slate-50 border-slate-200 text-slate-900'
+                          ? 'bg-[#0b3b8c] text-white'
+                          : 'bg-[#edf2f7] text-slate-950'
                       }`}
                     >
                       <span>
@@ -1231,7 +1231,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           : 'Ver Histórico'}
                       </span>
                       <ChevronDown
-                        className={`w-4 h-4 transition-transform ${
+                        className={`w-4 h-4 transition-transform duration-200 ${
                           isExpanded ? 'rotate-180' : ''
                         }`}
                       />
@@ -1241,12 +1241,12 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                 {/* Conteúdo Expandido — Separado por Papel */}
                 {isExpanded && (
-                  <div className="px-3.5 sm:px-5 pb-5 pt-4 bg-slate-50/70 border-t border-slate-200 space-y-4 animate-gentle-fade">
-                    {/* Faixa de Contato Familiar (Sempre visível para Admin ao atender; útil para leitura dos demais) */}
+                  <div className="px-3.5 sm:px-5 pb-5 pt-4 bg-[#f4f7fb] space-y-4 animate-fade-in">
+                    {/* Faixa de Contato Familiar */}
                     {(canManageFamilyFeedback || hasOccurrences) && (
-                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div className="bg-white rounded-xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-[0_4px_14px_-6px_rgba(9,15,29,0.06)]">
                         <div className="space-y-0.5 min-w-0">
-                          <span className="text-xs font-semibold text-slate-500 block">
+                          <span className="text-xs font-semibold text-slate-700 block">
                             Responsáveis &amp; Telefone Cadastrado
                           </span>
                           <p className="text-sm font-bold text-slate-950 break-words">
@@ -1258,7 +1258,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                               ? ` · ${contactData.guardian2.cleanName}`
                               : ''}
                           </p>
-                          <p className="text-xs text-slate-600 tabular-nums">
+                          <p className="text-xs text-slate-700 tabular-nums">
                             {contactData.rawPhones || 'Nenhum telefone cadastrado na ficha SED'}
                           </p>
                         </div>
@@ -1270,7 +1270,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                 href={contactData.waLinks[0].waUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="min-h-[40px] px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                                className="min-h-[40px] px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-all duration-200 active:scale-[0.97] whitespace-nowrap"
                               >
                                 <MessageCircle className="w-4 h-4 shrink-0" />
                                 <span>Contatar via WhatsApp</span>
@@ -1279,7 +1279,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             {contactData.cleanTelDigits && (
                               <a
                                 href={`tel:${contactData.cleanTelDigits}`}
-                                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-900 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors whitespace-nowrap"
+                                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold inline-flex items-center gap-1.5 transition-all duration-200 active:scale-[0.97] whitespace-nowrap"
                               >
                                 <Phone className="w-4 h-4 shrink-0" />
                                 <span>Ligar</span>
@@ -1293,7 +1293,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                     {/* Histórico de Solicitações e Devolutivas */}
                     {occurrences.length > 0 && (
                       <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-700">
+                        <h4 className="text-xs font-bold text-slate-800">
                           Solicitações da Turma e Retornos da Secretaria ({occurrences.length})
                         </h4>
 
@@ -1309,13 +1309,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             return (
                               <div
                                 key={occ.id}
-                                className="bg-white border border-slate-200 rounded-xl p-4 space-y-3"
+                                className="bg-white rounded-xl p-4 space-y-3 shadow-[0_4px_14px_-6px_rgba(9,15,29,0.06)]"
                               >
                                 {/* Metadados da Solicitação PEB I */}
-                                <div className="flex flex-wrap items-start justify-between gap-2 pb-2.5 border-b border-slate-100">
+                                <div className="flex flex-wrap items-start justify-between gap-2 pb-2">
                                   <div className="space-y-1 min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-600 tabular-nums">
-                                      <span className="font-bold text-[#be123c]">
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-700 tabular-nums">
+                                      <span className="font-bold text-[#9f1239]">
                                         {occ.sequenceNumber}ª Solicitação ({occ.selectedDates.length} dias seguidos)
                                       </span>
                                       <span aria-hidden="true">·</span>
@@ -1327,8 +1327,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                       Datas faltosas: {occ.selectedDates.join(' · ')}
                                     </p>
                                     {occ.teacherObservation && (
-                                      <p className="text-xs text-slate-700 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200/80 mt-1">
-                                        <span className="font-semibold text-slate-900">Observação PEB I: </span>
+                                      <p className="text-xs text-slate-800 bg-[#f4f7fb] px-3 py-2 rounded-lg mt-1">
+                                        <span className="font-semibold text-slate-950">Observação PEB I: </span>
                                         {occ.teacherObservation}
                                       </p>
                                     )}
@@ -1338,7 +1338,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                     <button
                                       type="button"
                                       onClick={() => openOccurrencePopup(cls, student, occ.id)}
-                                      className="min-h-[34px] px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-semibold cursor-pointer transition-colors"
+                                      className="min-h-[34px] px-3 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer transition-colors"
                                     >
                                       Resumo
                                     </button>
@@ -1348,7 +1348,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                         onClick={() => handleRemoveOccurrence(cls, student, occ.id)}
                                         title="Excluir solicitação enviada por engano"
                                         aria-label="Excluir solicitação"
-                                        className="w-8 h-8 rounded-lg hover:bg-rose-50 text-slate-500 hover:text-[#be123c] flex items-center justify-center cursor-pointer transition-colors"
+                                        className="w-8 h-8 rounded-lg hover:bg-rose-100 text-slate-600 hover:text-[#9f1239] flex items-center justify-center cursor-pointer transition-colors"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </button>
@@ -1356,11 +1356,11 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                   </div>
                                 </div>
 
-                                {/* Visualização do Feedback já preenchido (para Todos os Perfis) */}
+                                {/* Visualização do Feedback já preenchido */}
                                 {hasFeedback && !isEditingThis && (
-                                  <div className="rounded-xl bg-emerald-50/70 border border-emerald-200 p-3.5 space-y-2">
+                                  <div className="rounded-xl bg-emerald-100/75 p-3.5 space-y-2">
                                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-emerald-900 font-semibold">
+                                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-emerald-950 font-semibold">
                                         <span>{outcome.label}</span>
                                         <span aria-hidden="true">·</span>
                                         <span>Via {getChannelLabel(occ.contactChannel)}</span>
@@ -1376,7 +1376,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                                       <div className="flex items-center gap-2">
                                         {occ.feedbackReadByTeacher ? (
-                                          <span className="text-xs font-semibold text-emerald-800 inline-flex items-center gap-1">
+                                          <span className="text-xs font-semibold text-emerald-950 inline-flex items-center gap-1">
                                             <CheckCheck className="w-3.5 h-3.5" />
                                             <span>
                                               Lido pela PEB I
@@ -1389,13 +1389,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                             onClick={() =>
                                               handleMarkFeedbackAsReadByTeacher(cls, student, occ.id)
                                             }
-                                            className="min-h-[32px] px-3 py-1 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                            className="min-h-[32px] px-3 py-1 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-all duration-200 active:scale-[0.97]"
                                           >
                                             <Check className="w-3.5 h-3.5" />
                                             <span>Confirmar leitura</span>
                                           </button>
                                         ) : (
-                                          <span className="text-xs text-slate-600">
+                                          <span className="text-xs text-slate-700 font-medium">
                                             Aguardando leitura docente
                                           </span>
                                         )}
@@ -1409,7 +1409,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                                 [occ.id]: true,
                                               }))
                                             }
-                                            className="min-h-[32px] px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-emerald-300 text-emerald-950 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                            className="min-h-[32px] px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-950 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors shadow-xs"
                                           >
                                             <Edit3 className="w-3.5 h-3.5" />
                                             <span>Editar</span>
@@ -1424,21 +1424,21 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                   </div>
                                 )}
 
-                                {/* Estado Aguardando (para PEB I e Demais Usuários) */}
+                                {/* Estado Aguardando */}
                                 {!hasFeedback && !canManageFamilyFeedback && (
-                                  <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-950 text-xs font-medium flex items-center justify-between gap-2">
+                                  <div className="p-3 rounded-xl bg-amber-100/80 text-amber-950 text-xs font-semibold flex items-center justify-between gap-2">
                                     <span>
                                       Solicitação recebida · Aguardando a equipe administrativa contatar a família e preencher o feedback.
                                     </span>
-                                    <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+                                    <Clock className="w-4 h-4 text-amber-900 shrink-0" />
                                   </div>
                                 )}
 
-                                {/* METODOLOGIA ESTRUTURADA DE PREENCHIMENTO DO ADMIN (Exclusivo Equipe Administrativa) */}
+                                {/* Preenchimento do Admin */}
                                 {canManageFamilyFeedback && isEditingThis && (
-                                  <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5 space-y-3">
+                                  <div className="rounded-xl bg-[#f4f7fb] p-3.5 space-y-3">
                                     <div className="flex items-center justify-between gap-2">
-                                      <span className="text-xs font-bold text-slate-900">
+                                      <span className="text-xs font-bold text-slate-950">
                                         {hasFeedback
                                           ? 'Atualizar Devolutiva da Secretaria'
                                           : 'Registrar Contato com a Família e Feedback'}
@@ -1452,7 +1452,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                               [occ.id]: false,
                                             }))
                                           }
-                                          className="text-xs font-semibold text-slate-600 hover:text-slate-950 cursor-pointer"
+                                          className="text-xs font-semibold text-slate-700 hover:text-slate-950 cursor-pointer"
                                         >
                                           Cancelar
                                         </button>
@@ -1461,7 +1461,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                                     {/* Passo 1: Canal utilizado */}
                                     <div className="space-y-1.5">
-                                      <span className="text-xs font-semibold text-slate-700 block">
+                                      <span className="text-xs font-semibold text-slate-800 block">
                                         1. Canal de contato utilizado
                                       </span>
                                       <div className="flex flex-wrap gap-1.5">
@@ -1478,10 +1478,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                                     : adminDraft.status,
                                               })
                                             }
-                                            className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer whitespace-nowrap ${
+                                            className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.97] ${
                                               adminDraft.channel === ch.id
-                                                ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
-                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                ? 'bg-[#0b3b8c] text-white shadow-sm'
+                                                : 'bg-white text-slate-800 hover:bg-[#edf2f7]'
                                             }`}
                                           >
                                             {ch.label}
@@ -1492,7 +1492,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                                     {/* Passo 2: Situação / Desfecho */}
                                     <div className="space-y-1.5">
-                                      <span className="text-xs font-semibold text-slate-700 block">
+                                      <span className="text-xs font-semibold text-slate-800 block">
                                         2. Resultado do contato
                                       </span>
                                       <div className="flex flex-wrap gap-1.5">
@@ -1503,10 +1503,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                             onClick={() =>
                                               updateAdminDraft(occ, { status: st.id })
                                             }
-                                            className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold border transition-colors cursor-pointer whitespace-nowrap ${
+                                            className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.97] ${
                                               adminDraft.status === st.id
-                                                ? 'bg-slate-900 border-slate-900 text-white'
-                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                ? 'bg-slate-950 text-white shadow-sm'
+                                                : 'bg-white text-slate-800 hover:bg-[#edf2f7]'
                                             }`}
                                           >
                                             {st.label}
@@ -1517,7 +1517,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                                     {/* Passo 3: Modelos rápidos + Parecer */}
                                     <div className="space-y-1.5">
-                                      <span className="text-xs font-semibold text-slate-700 block">
+                                      <span className="text-xs font-semibold text-slate-800 block">
                                         3. Feedback para o(a) docente PEB I
                                       </span>
                                       <div className="flex flex-wrap gap-1.5">
@@ -1528,7 +1528,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                             onClick={() =>
                                               updateAdminDraft(occ, { text: chip })
                                             }
-                                            className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer text-left"
+                                            className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#edf2f7] text-slate-800 text-xs font-medium transition-colors cursor-pointer text-left"
                                           >
                                             + {chip}
                                           </button>
@@ -1542,7 +1542,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                           updateAdminDraft(occ, { text: e.target.value })
                                         }
                                         placeholder="Descreva com clareza o retorno obtido da família para orientar o professor..."
-                                        className="w-full p-2.5 rounded-xl bg-white border border-slate-300 text-slate-950 text-xs sm:text-sm focus:border-[#0b3b8c] focus:outline-none resize-none"
+                                        className="w-full p-2.5 rounded-xl bg-white text-slate-950 placeholder:text-slate-600 text-xs sm:text-sm resize-none"
                                       />
                                     </div>
 
@@ -1552,7 +1552,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                         onClick={() =>
                                           handleSaveAdminFeedback(cls, student, occ.id, adminDraft)
                                         }
-                                        className="min-h-[40px] px-4 py-2 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs sm:text-sm inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                                        className="min-h-[40px] px-4 py-2 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs sm:text-sm inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
                                       >
                                         <Check className="w-4 h-4 shrink-0" />
                                         <span>Salvar Feedback e Notificar PEB I</span>
@@ -1567,15 +1567,15 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       </div>
                     )}
 
-                    {/* FORMULÁRIO EXCLUSIVO PEB I: Solicitar contato à Secretaria (3+ faltas seguidas) */}
+                    {/* FORMULÁRIO EXCLUSIVO PEB I */}
                     {canRequestSecretariaContact ? (
-                      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 min-w-0">
+                      <div className="bg-white rounded-xl p-4 space-y-3 min-w-0 shadow-[0_4px_14px_-6px_rgba(9,15,29,0.06)]">
                         <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
                           <div>
                             <h4 className="text-sm font-bold text-slate-950">
                               Pedir para a Secretaria Contatar a Família ({occurrences.length + 1}ª Solicitação)
                             </h4>
-                            <p className="text-xs text-slate-600">
+                            <p className="text-xs text-slate-700">
                               Marque pelo menos 3 dias letivos consecutivos em que o(a) estudante faltou.
                             </p>
                           </div>
@@ -1584,7 +1584,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             <button
                               type="button"
                               onClick={() => handleSelectLastThreeDaysShortcut(compositeKey)}
-                              className="min-h-[34px] px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-900 text-xs font-semibold cursor-pointer whitespace-nowrap"
+                              className="min-h-[34px] px-3 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer whitespace-nowrap transition-colors"
                             >
                               Últimos 3 dias letivos
                             </button>
@@ -1597,7 +1597,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                     [compositeKey]: [],
                                   }))
                                 }
-                                className="text-xs font-semibold text-slate-600 hover:text-[#be123c] cursor-pointer"
+                                className="text-xs font-semibold text-slate-700 hover:text-[#9f1239] cursor-pointer"
                               >
                                 Limpar
                               </button>
@@ -1613,10 +1613,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                 key={day.key}
                                 type="button"
                                 onClick={() => handleToggleDraftDay(compositeKey, day.key)}
-                                className={`min-h-[38px] px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center justify-between gap-1 cursor-pointer transition-colors tabular-nums ${
+                                className={`min-h-[38px] px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center justify-between gap-1 cursor-pointer transition-all duration-200 active:scale-[0.97] tabular-nums ${
                                   isSelected
-                                    ? 'bg-[#be123c] text-white'
-                                    : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+                                    ? 'bg-[#be123c] text-white shadow-sm'
+                                    : 'bg-[#edf2f7] text-slate-950 hover:bg-[#e2e8f0]'
                                 }`}
                               >
                                 <span>{day.fullLabel}</span>
@@ -1629,7 +1629,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         <div className="space-y-1.5">
                           <label
                             htmlFor={`obs-${compositeKey}`}
-                            className="text-xs font-semibold text-slate-700 block"
+                            className="text-xs font-semibold text-slate-800 block"
                           >
                             Observação para a secretaria (opcional)
                           </label>
@@ -1644,7 +1644,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                               }))
                             }
                             placeholder="Ex.: Colega comentou que está com febre / família não respondeu recado na agenda..."
-                            className="w-full h-9 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-950 text-xs sm:text-sm focus:bg-white focus:border-[#0b3b8c] focus:outline-none"
+                            className="w-full h-9 px-3 rounded-xl bg-[#edf2f7] text-slate-950 placeholder:text-slate-600 text-xs sm:text-sm focus:bg-white transition-colors"
                           />
                         </div>
 
@@ -1652,10 +1652,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           <span
                             className={`text-xs font-semibold ${
                               draftValidation.isValid
-                                ? 'text-[#047857]'
+                                ? 'text-[#065f46]'
                                 : draftDays.length > 0
-                                ? 'text-[#b45309]'
-                                : 'text-slate-600'
+                                ? 'text-[#92400e]'
+                                : 'text-slate-700'
                             }`}
                           >
                             {draftValidation.isValid
@@ -1669,7 +1669,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             type="button"
                             disabled={!draftValidation.isValid}
                             onClick={() => handleRequestSecretariaContact(cls, student)}
-                            className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-xl bg-[#be123c] hover:bg-[#9f1239] text-white font-semibold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors disabled:opacity-40 disabled:pointer-events-none shrink-0"
+                            className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-xl bg-[#be123c] hover:bg-[#9f1239] text-white font-semibold text-xs sm:text-sm inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none shrink-0"
                           >
                             <Send className="w-4 h-4 shrink-0" />
                             <span>Pedir para Secretaria Contatar</span>
@@ -1678,7 +1678,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       </div>
                     ) : (
                       occurrences.length === 0 && (
-                        <div className="bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-600">
+                        <div className="bg-white rounded-xl p-3.5 text-xs text-slate-700">
                           {canManageFamilyFeedback
                             ? 'Este estudante não possui solicitação aberta. Apenas o(a) docente PEB I da turma envia o pedido de contato quando identifica 3 ou mais faltas seguidas.'
                             : 'Nenhuma solicitação de busca ativa registrada para este estudante até o momento.'}
@@ -1697,11 +1697,11 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       {activeModalData && (
         <div
           onClick={() => setReadingOccurrenceModal(null)}
-          className="fixed inset-0 z-[85] flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
+          className="fixed inset-0 z-[85] flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] min-w-0"
+            className="bg-white w-full max-w-lg rounded-2xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.38)] overflow-hidden flex flex-col max-h-[88dvh] min-w-0 animate-apple-pop"
           >
             <div className="px-4 py-3.5 bg-[#0b3b8c] text-white flex items-center justify-between gap-2.5 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -1722,15 +1722,15 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 type="button"
                 onClick={() => setReadingOccurrenceModal(null)}
                 aria-label="Fechar pop-up"
-                className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer shrink-0 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {activeModalData.occurrences.length > 1 && (
-              <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-                <span className="text-xs font-semibold text-slate-600 shrink-0 mr-1">
+              <div className="px-4 py-2 bg-[#edf2f7] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+                <span className="text-xs font-semibold text-slate-700 shrink-0 mr-1">
                   Solicitações:
                 </span>
                 {activeModalData.occurrences.map((occ) => {
@@ -1747,10 +1747,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           occurrenceId: occ.id,
                         });
                       }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors shrink-0 border tabular-nums ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 shrink-0 tabular-nums ${
                         isCurrent
-                          ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
-                          : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50'
+                          ? 'bg-[#0b3b8c] text-white shadow-xs'
+                          : 'bg-white text-slate-900 hover:bg-slate-100'
                       }`}
                     >
                       {occ.sequenceNumber}ª ({occ.selectedDates.length}d)
@@ -1762,13 +1762,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
             <div className="p-4 overflow-y-auto space-y-3 min-w-0">
               {/* Dias Faltosos e Pedido PEB I */}
-              <div className="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200 space-y-2">
+              <div className="p-3.5 rounded-xl bg-rose-100/75 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
-                  <span className="font-bold text-[#be123c]">
+                  <span className="font-bold text-[#9f1239]">
                     {activeModalData.activeOcc.sequenceNumber}ª Solicitação ·{' '}
                     {activeModalData.activeOcc.selectedDates.length} dias seguidos
                   </span>
-                  <span className="text-slate-600 tabular-nums">
+                  <span className="text-slate-800 tabular-nums font-medium">
                     {activeModalData.activeOcc.reportedAt || '2027'} ·{' '}
                     {activeModalData.activeOcc.reportedByTeacher ||
                       activeModalData.cls.teacherName ||
@@ -1779,7 +1779,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   {activeModalData.activeOcc.selectedDates.join(' · ')}
                 </p>
                 {activeModalData.activeOcc.teacherObservation && (
-                  <p className="text-xs text-slate-700 pt-1 border-t border-rose-200/70">
+                  <p className="text-xs text-slate-800 pt-1">
                     <span className="font-semibold">Obs. PEB I: </span>
                     {activeModalData.activeOcc.teacherObservation}
                   </p>
@@ -1793,16 +1793,16 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 const hasFb = Boolean((occ.familyFeedback || '').trim());
                 return (
                   <div
-                    className={`p-3.5 rounded-xl border space-y-1.5 ${
+                    className={`p-3.5 rounded-xl space-y-1.5 ${
                       hasFb
-                        ? 'bg-emerald-50/70 border-emerald-200'
-                        : 'bg-amber-50/70 border-amber-200'
+                        ? 'bg-emerald-100/75'
+                        : 'bg-amber-100/80'
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
                       <span
                         className={`font-bold ${
-                          hasFb ? 'text-[#047857]' : 'text-[#b45309]'
+                          hasFb ? 'text-[#065f46]' : 'text-[#92400e]'
                         }`}
                       >
                         {hasFb
@@ -1810,7 +1810,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           : 'Aguardando contato da secretaria'}
                       </span>
                       {occ.feedbackUpdatedAt && (
-                        <span className="text-slate-600 tabular-nums">
+                        <span className="text-slate-800 tabular-nums font-medium">
                           {occ.feedbackByName ? `${occ.feedbackByName} · ` : ''}
                           {occ.feedbackUpdatedAt}
                         </span>
@@ -1822,7 +1822,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         “{occ.familyFeedback}”
                       </p>
                     ) : (
-                      <p className="text-xs text-amber-950">
+                      <p className="text-xs text-amber-950 font-medium">
                         Solicitação enviada pela turma PEB I · Pendente de contato com a família.
                       </p>
                     )}
@@ -1838,9 +1838,9 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   activeModalData.activeOcc.selectedDates
                 );
                 return (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  <div className="p-3 rounded-xl bg-[#f4f7fb] flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs text-slate-600 block">
+                      <span className="text-xs text-slate-700 font-medium block">
                         {contactData.guardian1.shortRoleLabel || 'Responsável Legal'}
                       </span>
                       <span className="text-sm font-bold text-slate-950 break-words">
@@ -1853,7 +1853,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         href={contactData.waLinks[0].waUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center gap-1.5 shrink-0 transition-colors tabular-nums"
+                        className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center gap-1.5 shrink-0 transition-all duration-200 active:scale-[0.97] tabular-nums"
                       >
                         <MessageCircle className="w-3.5 h-3.5 shrink-0" />
                         <span>{contactData.waLinks[0].display}</span>
@@ -1868,15 +1868,15 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 const occ = activeModalData.activeOcc;
                 const draft = getOrInitAdminDraft(occ);
                 return (
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-300 space-y-2.5 animate-gentle-fade">
+                  <div className="p-3.5 rounded-xl bg-[#f4f7fb] space-y-2.5 animate-fade-in">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-slate-900">
+                      <span className="text-xs font-bold text-slate-950">
                         Registrar Contato &amp; Feedback
                       </span>
                       <button
                         type="button"
                         onClick={() => setIsEditingModalFeedback(false)}
-                        className="text-xs font-semibold text-slate-600 hover:text-slate-950 cursor-pointer"
+                        className="text-xs font-semibold text-slate-700 hover:text-slate-950 cursor-pointer"
                       >
                         Cancelar
                       </button>
@@ -1888,10 +1888,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           key={ch.id}
                           type="button"
                           onClick={() => updateAdminDraft(occ, { channel: ch.id })}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                             draft.channel === ch.id
-                              ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
-                              : 'bg-white border-slate-200 text-slate-700'
+                              ? 'bg-[#0b3b8c] text-white'
+                              : 'bg-white text-slate-800 hover:bg-[#edf2f7]'
                           }`}
                         >
                           {ch.label}
@@ -1905,10 +1905,10 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           key={st.id}
                           type="button"
                           onClick={() => updateAdminDraft(occ, { status: st.id })}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                             draft.status === st.id
-                              ? 'bg-slate-900 border-slate-900 text-white'
-                              : 'bg-white border-slate-200 text-slate-700'
+                              ? 'bg-slate-950 text-white'
+                              : 'bg-white text-slate-800 hover:bg-[#edf2f7]'
                           }`}
                         >
                           {st.label}
@@ -1922,7 +1922,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           key={chip}
                           type="button"
                           onClick={() => updateAdminDraft(occ, { text: chip })}
-                          className="px-2 py-1 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium cursor-pointer text-left"
+                          className="px-2 py-1 rounded-md bg-white hover:bg-[#edf2f7] text-slate-800 text-xs font-medium cursor-pointer text-left"
                         >
                           + {chip}
                         </button>
@@ -1934,7 +1934,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       value={draft.text}
                       onChange={(e) => updateAdminDraft(occ, { text: e.target.value })}
                       placeholder="Retorno dado pela família..."
-                      className="w-full p-2.5 rounded-lg bg-white border border-slate-300 text-slate-950 text-xs sm:text-sm focus:border-[#0b3b8c] focus:outline-none resize-none"
+                      className="w-full p-2.5 rounded-lg bg-white text-slate-950 placeholder:text-slate-600 text-xs sm:text-sm resize-none"
                     />
                     <button
                       type="button"
@@ -1947,7 +1947,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         );
                         setIsEditingModalFeedback(false);
                       }}
-                      className="w-full min-h-[38px] rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs sm:text-sm cursor-pointer"
+                      className="w-full min-h-[38px] rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs sm:text-sm cursor-pointer transition-all duration-200 active:scale-[0.98]"
                     >
                       Salvar Feedback e Notificar PEB I
                     </button>
@@ -1956,12 +1956,12 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               })()}
             </div>
 
-            <div className="px-4 py-3 bg-slate-100 flex items-center justify-between gap-2 shrink-0">
+            <div className="px-4 py-3 bg-[#f4f7fb] flex items-center justify-between gap-2 shrink-0">
               {canManageFamilyFeedback && !isEditingModalFeedback ? (
                 <button
                   type="button"
                   onClick={() => setIsEditingModalFeedback(true)}
-                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-blue-50 text-[#0b3b8c] font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer border border-slate-200"
+                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-[#dce7fb] text-[#0b3b8c] font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>
@@ -1982,13 +1982,13 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       activeModalData.activeOcc.id
                     )
                   }
-                  className="min-h-[38px] px-3.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer"
+                  className="min-h-[38px] px-3.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Confirmar leitura</span>
                 </button>
               ) : (
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-semibold text-slate-700">
                   Busca Ativa Escolar
                 </span>
               )}
@@ -1996,7 +1996,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               <button
                 type="button"
                 onClick={() => setReadingOccurrenceModal(null)}
-                className="min-h-[38px] px-5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-xs sm:text-sm cursor-pointer"
+                className="min-h-[38px] px-5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-xs sm:text-sm cursor-pointer transition-all duration-200 active:scale-[0.97]"
               >
                 Fechar
               </button>

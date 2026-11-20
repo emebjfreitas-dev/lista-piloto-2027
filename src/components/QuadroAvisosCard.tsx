@@ -1,6 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { NoticePriority, SchoolNotice, UserRole } from '../types';
 import { toast } from 'sonner';
+import {
+  BadgeCheck,
+  CheckCheck,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Megaphone,
+  MessageSquarePlus,
+} from 'lucide-react';
 
 interface QuadroAvisosCardProps {
   notices: SchoolNotice[];
@@ -189,24 +198,24 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
       return {
         dotColor: 'bg-rose-700',
         textColor: 'text-rose-950 font-bold',
-        bgTint: 'bg-rose-50 border border-rose-300',
+        bgTint: 'bg-rose-100/80',
         icon: 'campaign',
         label: 'Urgente',
       };
     }
     if (p === 'importante') {
       return {
-        dotColor: 'bg-amber-600',
+        dotColor: 'bg-amber-700',
         textColor: 'text-amber-950 font-bold',
-        bgTint: 'bg-amber-50 border border-amber-300',
+        bgTint: 'bg-amber-100/80',
         icon: 'notifications_active',
         label: 'Importante',
       };
     }
     return {
-      dotColor: 'bg-blue-700',
-      textColor: 'text-blue-950 font-bold',
-      bgTint: 'bg-blue-50 border border-blue-200',
+      dotColor: 'bg-[#0b3b8c]',
+      textColor: 'text-[#0b3b8c] font-bold',
+      bgTint: 'bg-[#dce7fb]/70',
       icon: 'info',
       label: 'Informativo',
     };
@@ -225,7 +234,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
     }
   };
 
-  // MODO 1: Exibição Compacta e Elegante na Tela de Login (Aparece para todos os educadores ao entrar)
+  // MODO 1: Exibição Compacta e Elegante na Tela de Login
   if (variant === 'login') {
     if (visibleNotices.length === 0) return null;
     return (
@@ -234,13 +243,11 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
         className="w-full text-left space-y-2 pt-1"
       >
         <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-[#1d1d1f] tracking-tight">
-            <span className="material-symbols-outlined text-[16px] text-[#0071e3]">
-              campaign
-            </span>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-950 tracking-tight">
+            <Megaphone className="w-4 h-4 text-[#0052cc] shrink-0" strokeWidth={2} />
             <span>Quadro de Avisos da Gestão</span>
           </div>
-          <span className="text-xs text-[#86868b] tabular-nums">
+          <span className="text-xs text-slate-700 font-medium tabular-nums">
             {visibleNotices.length}{' '}
             {visibleNotices.length === 1 ? 'comunicado' : 'comunicados'}
           </span>
@@ -252,26 +259,26 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             return (
               <article
                 key={notice.id}
-                className={`p-3.5 rounded-2xl ${vis.bgTint} transition-colors duration-100 space-y-1 min-w-0`}
+                className={`p-3.5 rounded-2xl ${vis.bgTint} transition-colors duration-200 space-y-1 min-w-0`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#6e6e73]">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-800">
                   <div className="flex items-center gap-1.5 font-semibold">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${vis.dotColor}`} />
                     <span className={vis.textColor}>{vis.label}</span>
                     {notice.pinned && (
                       <>
                         <span aria-hidden="true">·</span>
-                        <span className="text-[#1d1d1f]">Fixado</span>
+                        <span className="text-slate-950">Fixado</span>
                       </>
                     )}
                   </div>
-                  <span className="tabular-nums shrink-0">{formatNoticeDate(notice.createdAtISO)}</span>
+                  <span className="tabular-nums shrink-0 font-medium">{formatNoticeDate(notice.createdAtISO)}</span>
                 </div>
 
-                <h3 className="text-sm font-bold text-[#1d1d1f] leading-snug break-words">
+                <h3 className="text-sm font-bold text-slate-950 leading-snug break-words">
                   {notice.title}
                 </h3>
-                <p className="text-xs text-[#6e6e73] leading-relaxed break-words">
+                <p className="text-xs text-slate-800 leading-relaxed break-words">
                   {notice.content}
                 </p>
               </article>
@@ -295,24 +302,24 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
       {/* Barra Superior do Quadro de Avisos */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-2xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[20px]">campaign</span>
+          <div className="w-9 h-9 rounded-2xl bg-[#dce7fb] text-[#0052cc] flex items-center justify-center shrink-0">
+            <Megaphone className="w-5 h-5" strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#6e6e73]">
-              <span className="font-semibold text-[#0066cc]">Comunicados Oficiais</span>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-700">
+              <span className="font-semibold text-[#0b3b8c]">Comunicados Oficiais</span>
               <span aria-hidden="true">·</span>
               <span>Visível no Login e Painel Inicial</span>
               {unreadCount > 0 && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span className="font-semibold text-[#ff3b30] tabular-nums">
+                  <span className="font-semibold text-[#9f1239] tabular-nums">
                     {unreadCount} novo(s)
                   </span>
                 </>
               )}
             </div>
-            <h2 className="text-base sm:text-lg font-bold text-[#1d1d1f] tracking-tight leading-tight">
+            <h2 className="text-base sm:text-lg font-bold text-slate-950 tracking-tight leading-tight">
               Quadro de Avisos da Gestão
             </h2>
           </div>
@@ -323,11 +330,9 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="min-h-[40px] px-3.5 py-1.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
+              className="min-h-[40px] px-3.5 py-1.5 rounded-full bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#1d8338] shrink-0">
-                done_all
-              </span>
+              <CheckCheck className="w-4 h-4 text-[#065f46] shrink-0" strokeWidth={2} />
               <span>Marcar como ciente</span>
             </button>
           )}
@@ -336,9 +341,9 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={handleOpenNewNotice}
-              className="min-h-[40px] px-4 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors duration-100 shadow-2xs whitespace-normal text-center"
+              className="min-h-[40px] px-4 py-1.5 rounded-full bg-[#0052cc] hover:bg-[#0b3b8c] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] shadow-xs whitespace-normal text-center"
             >
-              <span className="material-symbols-outlined text-[16px] shrink-0">add_comment</span>
+              <MessageSquarePlus className="w-4 h-4 shrink-0" strokeWidth={2} />
               <span>Publicar Aviso</span>
             </button>
           )}
@@ -347,25 +352,27 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="min-h-[40px] px-3 py-1.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#6e6e73] hover:text-[#1d1d1f] text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
+              className="min-h-[40px] px-3 py-1.5 rounded-full bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-800 hover:text-slate-950 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors whitespace-normal text-center"
             >
               <span>{isCollapsed ? `Expandir (${visibleNotices.length})` : 'Recolher'}</span>
-              <span className="material-symbols-outlined text-[17px] shrink-0">
-                {isCollapsed ? 'expand_more' : 'expand_less'}
-              </span>
+              {isCollapsed ? (
+                <ChevronDown className="w-[17px] h-[17px] shrink-0" strokeWidth={2} />
+              ) : (
+                <ChevronUp className="w-[17px] h-[17px] shrink-0" strokeWidth={2} />
+              )}
             </button>
           )}
         </div>
       </div>
 
-      {/* Editor iOS 18 para a Gestão Publicar / Editar Comunicados */}
+      {/* Editor para a Gestão Publicar / Editar Comunicados */}
       {isAdmin && isComposerOpen && (
         <form
           onSubmit={handlePublishOrUpdate}
-          className="p-4 rounded-2xl bg-[#f5f5f7] space-y-3 animate-gentle-fade"
+          className="p-4 rounded-2xl bg-[#f4f7fb] space-y-3 animate-fade-in"
         >
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-[#1d1d1f]">
+            <h3 className="text-sm font-bold text-slate-950">
               {editingNoticeId
                 ? 'Editar Comunicado Institucional'
                 : 'Novo Comunicado para Todos os Educadores'}
@@ -373,7 +380,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={() => setIsComposerOpen(false)}
-              className="text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] cursor-pointer"
+              className="text-xs font-semibold text-slate-700 hover:text-slate-950 cursor-pointer"
             >
               Cancelar
             </button>
@@ -381,7 +388,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-[#6e6e73] mb-1">
+              <label className="block text-xs font-semibold text-slate-800 mb-1">
                 Título do Comunicado
               </label>
               <input
@@ -390,18 +397,18 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ex.: Reunião Pedagógica / Fechamento de Frequência Outubro"
-                className="w-full h-10 px-3 rounded-xl bg-white text-[#1d1d1f] text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30"
+                className="w-full h-10 px-3 rounded-xl bg-white text-slate-950 placeholder:text-slate-600 text-sm font-semibold transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#6e6e73] mb-1">
+              <label className="block text-xs font-semibold text-slate-800 mb-1">
                 Nível de Destaque
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as NoticePriority)}
-                className="w-full h-10 px-3 rounded-xl bg-white text-[#1d1d1f] text-sm font-semibold focus:outline-none"
+                className="w-full h-10 px-3 rounded-xl bg-white text-slate-950 text-sm font-semibold"
               >
                 <option value="importante">Importante (Âmbar)</option>
                 <option value="urgente">Urgente (Vermelho)</option>
@@ -411,7 +418,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#6e6e73] mb-1">
+            <label className="block text-xs font-semibold text-slate-800 mb-1">
               Mensagem Detalhada (Exibida no Login e na Tela Inicial)
             </label>
             <textarea
@@ -420,18 +427,18 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Escreva a orientação para as professoras regentes (PEB I) e especialistas (PEB II)..."
-              className="w-full p-3 rounded-xl bg-white text-[#1d1d1f] text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0071e3]/30"
+              className="w-full p-3 rounded-xl bg-white text-slate-950 placeholder:text-slate-600 text-sm leading-relaxed transition-all"
             />
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
             <div className="flex flex-wrap items-center gap-3">
-              <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1d1d1f] cursor-pointer">
+              <label className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-950 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={pinned}
                   onChange={(e) => setPinned(e.target.checked)}
-                  className="rounded text-[#0071e3]"
+                  className="rounded accent-[#0052cc]"
                 />
                 <span>Fixar no topo da tela de Login</span>
               </label>
@@ -441,7 +448,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                 onChange={(e) =>
                   setTargetAudience(e.target.value as 'all' | 'peb1' | 'peb2')
                 }
-                className="min-h-[40px] px-3 rounded-xl bg-white text-[#1d1d1f] text-xs font-medium"
+                className="min-h-[40px] px-3 rounded-xl bg-white text-slate-950 text-xs font-medium"
               >
                 <option value="all">Público: Todos os Educadores</option>
                 <option value="peb1">Apenas Regentes PEB I</option>
@@ -451,7 +458,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
 
             <button
               type="submit"
-              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-full bg-[#1d1d1f] hover:bg-black text-white text-xs sm:text-sm font-semibold cursor-pointer transition-colors duration-100 whitespace-normal text-center"
+              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-full bg-slate-950 hover:bg-black text-white text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
             >
               {editingNoticeId ? 'Salvar Alterações' : 'Publicar Agora'}
             </button>
@@ -469,10 +476,10 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             return (
               <article
                 key={notice.id}
-                className={`p-4 rounded-2xl ${vis.bgTint} flex flex-col justify-between gap-2.5 transition-colors duration-100 min-w-0`}
+                className={`p-4 rounded-2xl ${vis.bgTint} flex flex-col justify-between gap-2.5 transition-all duration-200 min-w-0`}
               >
                 <div className="space-y-1.5 min-w-0">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 font-semibold">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-800 font-semibold">
                     <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                       <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${vis.dotColor}`} />
                       <span className={vis.textColor}>{vis.label}</span>
@@ -485,16 +492,16 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                       {notice.targetAudience && notice.targetAudience !== 'all' && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span className="font-semibold text-slate-800">
+                          <span className="font-semibold text-slate-900">
                             {notice.targetAudience === 'peb1' ? 'PEB I' : 'PEB II'}
                           </span>
                         </>
                       )}
                       <span aria-hidden="true">·</span>
-                      <span className="text-slate-800 break-words">{notice.authorName}</span>
+                      <span className="text-slate-900 break-words">{notice.authorName}</span>
                     </div>
 
-                    <span className="tabular-nums font-bold text-slate-800 shrink-0">
+                    <span className="tabular-nums font-bold text-slate-900 shrink-0">
                       {formatNoticeDate(notice.createdAtISO)}
                     </span>
                   </div>
@@ -508,23 +515,19 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between gap-2">
+                <div className="pt-2 flex items-center justify-between gap-2">
                   {!isRead ? (
                     <button
                       type="button"
                       onClick={() => handleMarkRead(notice.id)}
-                      className="text-xs font-bold text-blue-900 hover:text-black hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                      className="text-xs font-bold text-[#0b3b8c] hover:text-black hover:underline flex items-center gap-1 cursor-pointer transition-colors"
                     >
-                      <span className="material-symbols-outlined text-[16px] text-blue-800">
-                        check_circle
-                      </span>
+                      <CheckCircle2 className="w-4 h-4 text-[#0b3b8c] shrink-0" strokeWidth={2} />
                       <span>Confirmar leitura</span>
                     </button>
                   ) : (
-                    <span className="text-xs text-emerald-950 font-bold flex items-center gap-1 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                      <span className="material-symbols-outlined text-[15px] text-emerald-800">
-                        verified
-                      </span>
+                    <span className="text-xs text-emerald-950 font-bold flex items-center gap-1 bg-white/80 px-2.5 py-0.5 rounded-full">
+                      <BadgeCheck className="w-[15px] h-[15px] text-emerald-800 shrink-0" strokeWidth={2} />
                       <span>Ciente</span>
                     </span>
                   )}
@@ -534,27 +537,27 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                       <button
                         type="button"
                         onClick={() => handleTogglePin(notice.id)}
-                        className="text-xs font-medium text-[#6e6e73] hover:text-[#1d1d1f] cursor-pointer"
+                        className="text-xs font-medium text-slate-800 hover:text-slate-950 cursor-pointer"
                       >
                         {notice.pinned ? 'Desafixar' : 'Fixar'}
                       </button>
-                      <span aria-hidden="true" className="text-[#d2d2d7]">
+                      <span aria-hidden="true" className="text-slate-600">
                         ·
                       </span>
                       <button
                         type="button"
                         onClick={() => handleStartEdit(notice)}
-                        className="text-xs font-medium text-[#0066cc] hover:underline cursor-pointer"
+                        className="text-xs font-medium text-[#0b3b8c] hover:underline cursor-pointer"
                       >
                         Editar
                       </button>
-                      <span aria-hidden="true" className="text-[#d2d2d7]">
+                      <span aria-hidden="true" className="text-slate-600">
                         ·
                       </span>
                       <button
                         type="button"
                         onClick={() => handleDeleteNotice(notice.id)}
-                        className="text-xs font-medium text-[#ff3b30] hover:underline cursor-pointer"
+                        className="text-xs font-medium text-[#9f1239] hover:underline cursor-pointer"
                       >
                         Remover
                       </button>

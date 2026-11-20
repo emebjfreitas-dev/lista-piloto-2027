@@ -4,31 +4,33 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --default-transition-duration: 90ms;
-  --default-transition-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --default-transition-duration: 180ms;
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
   :root {
-    /* Paleta Institucional Profunda (Menos Azulada) + Superfícies Elevadas de Alto Contraste */
+    /* Paleta Institucional Profunda + Superfícies Elevadas de Alto Contraste Sem Bordas */
     --canvas-bg: #050f1f;
     --canvas-gradient: linear-gradient(168deg, #001229 0%, #050f1f 48%, #040b16 100%);
     --surface-bg: #ffffff;
-    --surface-subtle: #e2e8f0;
+    --surface-subtle: #dbe4f0;
+    --surface-secondary: #edf2f7;
+    --surface-muted: #f4f7fb;
+    --surface-hover: #e2e8f0;
     --surface-elevated: #ffffff;
-    --border-hairline: transparent;
-    --text-primary: #0f172a;        /* Contraste > 15:1 */
-    --text-secondary: #1e293b;      /* Contraste > 12:1 */
-    --text-muted: #475569;          /* Contraste > 7:1 */
-    --accent-navy: #0b3b8c;
-    --accent-blue: #0052cc;         /* Azul Institucional Alto Contraste */
-    --accent-emerald: #047857;
+    --text-primary: #090f1d;        /* Contraste > 17:1 */
+    --text-secondary: #1e293b;      /* Contraste > 13:1 */
+    --text-muted: #334155;          /* Contraste > 9.5:1 */
+    --accent-navy: #092e70;
+    --accent-blue: #0047b3;         /* Azul Institucional Alto Contraste */
+    --accent-emerald: #046c4e;
 
-    /* Curvas de Animação Instantâneas e Fluidas */
-    --ease-apple: cubic-bezier(0.2, 0.9, 0.3, 1);
-    --ease-apple-spring: cubic-bezier(0.2, 0.9, 0.3, 1);
-    --duration-fast: 90ms;
-    --duration-normal: 150ms;
+    /* Curvas de Animação Fluidas e Responsivas */
+    --ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-apple-spring: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-fast: 170ms;
+    --duration-normal: 240ms;
 
     /* Tipografia Nativa Apple SF Pro + SF Mono com Numerais Tabulares */
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
@@ -50,14 +52,14 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Zero contornos, zero bordas visíveis e zero anéis em qualquer tela ou botão */
-  *,
-  *::before,
-  *::after {
-    outline: none !important;
-    border-color: transparent !important;
-    --tw-ring-color: transparent !important;
-    --tw-ring-shadow: 0 0 #0000 !important;
+  /* Zero Contornos: separação puramente tonal e por elevação */
+  button,
+  input,
+  select,
+  textarea,
+  fieldset,
+  iframe {
+    border: 0;
   }
 
   /* Padronização SF Pro com Proporção & Nitidez em Todos os Dispositivos */
@@ -136,16 +138,16 @@
     touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
-    transition: transform var(--duration-fast) var(--ease-apple),
+    transition: transform var(--duration-fast) var(--ease-apple-spring),
                 background-color var(--duration-fast) ease,
-                border-color var(--duration-fast) ease,
-                box-shadow var(--duration-fast) ease,
+                color var(--duration-fast) ease,
+                box-shadow var(--duration-fast) var(--ease-apple),
                 opacity var(--duration-fast) ease;
   }
 
   button:not(:disabled):active,
   [role="button"]:not([aria-disabled="true"]):active {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 
   button:not(:disabled) {
@@ -169,11 +171,11 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.3);
+    background: rgba(148, 163, 184, 0.35);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.5);
+    background: rgba(148, 163, 184, 0.55);
   }
 
   /* Scroll Lock & Modais Suaves */
@@ -185,7 +187,7 @@
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-y !important;
     scrollbar-width: thin;
-    scrollbar-color: rgba(51, 65, 85, 0.35) transparent;
+    scrollbar-color: rgba(51, 65, 85, 0.4) transparent;
   }
 
   body.modal-open {
@@ -193,12 +195,18 @@
     touch-action: none;
   }
 
-  /* Zero anel/contorno de foco em botões, links e campos */
+  /* Foco Acessível via Halo Difuso (Zero Contorno Rígido) */
   button:focus,
-  button:focus-visible,
   a:focus,
-  a:focus-visible {
-    outline: none !important;
+  [role="button"]:focus {
+    outline: none;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.28), 0 6px 18px rgba(11, 59, 140, 0.16);
   }
 
   input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -207,48 +215,48 @@
   select:focus-visible,
   textarea:focus,
   textarea:focus-visible {
-    outline: none !important;
-    box-shadow: 0 2px 10px rgba(11, 59, 140, 0.12) !important;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(11, 59, 140, 0.22), 0 8px 22px rgba(11, 59, 140, 0.14);
   }
 
-  /* Campos com Contraste Limpo e Legível */
+  /* Campos com Contraste Limpo e Elevação Tonal */
   input:not([type="checkbox"]):not([type="radio"]),
   select,
   textarea {
-    transition: background-color var(--duration-fast) ease, border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+    transition: background-color var(--duration-fast) ease, box-shadow var(--duration-fast) var(--ease-apple), color var(--duration-fast) ease;
     -webkit-appearance: none;
     appearance: none;
   }
 
-  /* Padronização Nítida de Listas Suspensas Nativas (Fallback) */
+  /* Padronização Nítida de Listas Suspensas Nativas Sem Bordas */
   select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     background-size: 15px 15px;
     padding-right: 2.35rem !important;
     cursor: pointer;
-    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.11), 0 1px 2px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   select:not(:disabled):hover {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230b3b8c' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    box-shadow: inset 0 0 0 1px rgba(11, 59, 140, 0.28), 0 2px 6px rgba(15, 23, 42, 0.06);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230b3b8c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    box-shadow: 0 4px 12px rgba(11, 59, 140, 0.14);
   }
 
   select:focus,
   select:focus-visible {
-    box-shadow: inset 0 0 0 1.5px rgba(11, 59, 140, 0.72), 0 0 0 3px rgba(11, 59, 140, 0.14) !important;
+    box-shadow: 0 0 0 3px rgba(11, 59, 140, 0.24), 0 8px 22px rgba(11, 59, 140, 0.14) !important;
   }
 
   select:disabled {
-    opacity: 0.55;
+    opacity: 0.58;
     cursor: not-allowed;
   }
 
   select option {
     background-color: #ffffff;
-    color: #0f172a;
+    color: #090f1d;
     font-weight: 500;
   }
 
@@ -292,7 +300,7 @@
 }
 
 svg.lucide {
-  stroke-width: 1.55px;
+  stroke-width: 1.65px;
   stroke-linecap: round;
   stroke-linejoin: round;
   display: inline-block;
@@ -301,19 +309,55 @@ svg.lucide {
   shape-rendering: geometricPrecision;
 }
 
-/* Superfícies Institucionais Sem Contornos: Branco Puro + Elevação Nítida sobre Fundo Escuro */
+/* Superfícies Institucionais Sem Contornos: Branco Puro + Elevação Multicamada */
 .card-welcoming,
 .card-modern {
   border-radius: 1.25rem;
   background-color: #ffffff;
   border: none;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.12);
-  transition: box-shadow var(--duration-fast) ease, background-color var(--duration-fast) ease;
+  box-shadow: 0 12px 34px -8px rgba(2, 6, 23, 0.34), 0 3px 10px rgba(2, 6, 23, 0.14);
+  transition: transform var(--duration-normal) var(--ease-apple-spring),
+              box-shadow var(--duration-normal) var(--ease-apple),
+              background-color var(--duration-fast) ease;
 }
 
 .card-welcoming:hover,
 .card-modern:hover {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), 0 4px 10px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 18px 42px -8px rgba(2, 6, 23, 0.42), 0 6px 16px rgba(2, 6, 23, 0.18);
+}
+
+.card-interactive {
+  transition: transform var(--duration-normal) var(--ease-apple-spring),
+              box-shadow var(--duration-normal) var(--ease-apple),
+              background-color var(--duration-fast) ease;
+}
+
+.card-interactive:hover {
+  transform: translate3d(0, -2px, 0);
+  box-shadow: 0 14px 32px -6px rgba(11, 59, 140, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.card-interactive:active {
+  transform: scale(0.985);
+}
+
+/* Tokens padronizados de superfícies secundárias para modais e painéis */
+.surface-secondary {
+  background-color: var(--surface-secondary);
+}
+
+.surface-muted {
+  background-color: var(--surface-muted);
+}
+
+.modal-shell {
+  background-color: var(--surface-elevated);
+  border-radius: 1.5rem;
+  box-shadow: 0 28px 68px -12px rgba(2, 6, 23, 0.45), 0 8px 24px rgba(2, 6, 23, 0.22);
+}
+
+.modal-header-surface {
+  background-color: var(--surface-secondary);
 }
 
 /* Segmented Control de Alto Contraste Sem Contorno */
@@ -336,11 +380,11 @@ svg.lucide {
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.25;
-  transition: transform var(--duration-fast) var(--ease-apple),
+  transition: transform var(--duration-fast) var(--ease-apple-spring),
               background-color var(--duration-fast) ease,
               color var(--duration-fast) ease,
               box-shadow var(--duration-fast) ease;
-  color: #334155;
+  color: #1e293b;
   cursor: pointer;
   white-space: normal;
   text-align: center;
@@ -348,14 +392,15 @@ svg.lucide {
 }
 
 .ios-segmented-item:hover {
-  color: #0f172a;
+  color: #090f1d;
+  background-color: rgba(255, 255, 255, 0.55);
 }
 
 .ios-segmented-item-active {
   background: #ffffff;
-  color: #0b3b8c !important;
+  color: #092e70 !important;
   font-weight: 700;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16);
 }
 
 /* Expansão Fluida via CSS Grid-Rows */
@@ -363,8 +408,8 @@ svg.lucide {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
-  transition: grid-template-rows 170ms cubic-bezier(0.2, 0.9, 0.3, 1),
-              opacity 140ms ease;
+  transition: grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 180ms ease;
 }
 
 .expand-panel-grid[data-open="true"] {
@@ -377,11 +422,20 @@ svg.lucide {
   min-height: 0;
 }
 
-/* Animações Instantâneas e Aceleradas por Hardware (<=100ms) */
+/* Animações Suaves e Aceleradas por GPU */
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes appleFadeIn {
   from {
-    opacity: 0.45;
-    transform: translate3d(0, 2px, 0);
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
@@ -391,19 +445,19 @@ svg.lucide {
 
 @keyframes appleScaleIn {
   from {
-    opacity: 0.5;
-    transform: scale3d(0.985, 0.985, 1);
+    opacity: 0;
+    transform: scale3d(0.955, 0.955, 1) translate3d(0, 6px, 0);
   }
   to {
     opacity: 1;
-    transform: scale3d(1, 1, 1);
+    transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
   }
 }
 
 @keyframes appleSheetUp {
   from {
-    opacity: 0.5;
-    transform: translate3d(0, 12px, 0);
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
   }
   to {
     opacity: 1;
@@ -411,20 +465,25 @@ svg.lucide {
   }
 }
 
+.animate-backdrop-in {
+  animation: backdropFadeIn 200ms ease-out both;
+  will-change: opacity;
+}
+
 .animate-gentle-fade,
 .animate-fade-in {
-  animation: appleFadeIn 90ms var(--ease-apple) both;
+  animation: appleFadeIn 220ms var(--ease-apple-spring) both;
   will-change: opacity, transform;
 }
 
 .animate-apple-pop,
 .animate-scale-up {
-  animation: appleScaleIn 95ms var(--ease-apple) both;
+  animation: appleScaleIn 240ms var(--ease-apple-spring) both;
   will-change: opacity, transform;
 }
 
 .animate-ios-sheet {
-  animation: appleSheetUp 100ms var(--ease-apple) both;
+  animation: appleSheetUp 260ms var(--ease-apple-spring) both;
   will-change: opacity, transform;
 }
 
@@ -445,8 +504,8 @@ svg.lucide {
 }
 
 .animate-in {
-  animation-duration: 90ms !important;
-  animation-timing-function: var(--ease-apple) !important;
+  animation-duration: 200ms !important;
+  animation-timing-function: var(--ease-apple-spring) !important;
 }
 
 /* Transições suaves e feedback tátil para Toasts Sonner */

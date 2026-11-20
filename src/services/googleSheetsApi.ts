@@ -827,7 +827,7 @@ const buildSedSheetValues = (
         s.emailGoogle || '',
         s.emailMicrosoft || '',
         s.emailMunicipal || '',
-        s.rotaOnibus || '',
+        '',
         s.sucessaoEscolar || '',
         // Columns AW..BL (Attendance, Photo & PDF Links, Manual Flags & Sync Timestamp)
         m.diasLetivosMes,
@@ -4047,7 +4047,6 @@ export const parseSedTsvIntoClasses = (
     const emailGoogle = (cols[43] || '').trim();
     const emailMicrosoft = (cols[44] || '').trim();
     const emailMunicipal = (cols[45] || '').trim();
-    const rotaOnibus = (cols[46] || '').trim();
     const sucessaoEscolar = (cols[47] || '').trim();
 
     const parts = estudante.split(' ').filter(Boolean);
@@ -4129,7 +4128,6 @@ export const parseSedTsvIntoClasses = (
       emailGoogle,
       emailMicrosoft,
       emailMunicipal,
-      rotaOnibus,
       sucessaoEscolar,
     };
 
@@ -4513,7 +4511,6 @@ export const readClassesFromGoogleSheet = async (
     const emailGoogle = String(cols[43] || '').trim();
     const emailMicrosoft = String(cols[44] || '').trim();
     const emailMunicipal = String(cols[45] || '').trim();
-    const rotaOnibus = String(cols[46] || '').trim();
     const sucessaoEscolar = String(cols[47] || '').trim();
 
     // Attendance & Photo/PDF columns (48..63 / AW..BL)
@@ -4659,7 +4656,6 @@ export const readClassesFromGoogleSheet = async (
       emailGoogle,
       emailMicrosoft,
       emailMunicipal,
-      rotaOnibus,
       sucessaoEscolar,
     };
 

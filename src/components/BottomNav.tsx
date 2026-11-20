@@ -215,7 +215,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   }`}
                 />
                 {syncSnapshot.pendingCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-600 border-2 border-white" />
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-600 shadow-[0_0_0_2px_#ffffff]" />
                 )}
               </div>
               <span
@@ -251,19 +251,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {showMoreMenu && isAdmin && (
         <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
           <div
-            className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm animate-backdrop-in"
             onClick={() => setShowMoreMenu(false)}
           />
-          <div className="relative bg-white rounded-t-3xl border-t border-slate-200 shadow-2xl p-5 pb-8 space-y-3.5 max-h-[84vh] overflow-y-auto animate-ios-sheet min-w-0">
+          <div className="relative bg-white rounded-t-3xl shadow-[0_-20px_56px_rgba(2,6,23,0.4)] p-5 pb-8 space-y-3.5 max-h-[84vh] overflow-y-auto animate-ios-sheet min-w-0">
             <div className="flex items-center justify-between gap-3 pb-1 min-w-0">
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-bold text-slate-950 break-words">Ferramentas de Gestão</h3>
-                <p className="text-xs sm:text-sm text-slate-600 break-words">Acesso direto aos módulos administrativos e nuvem</p>
+                <p className="text-xs sm:text-sm text-slate-700 break-words">Acesso direto aos módulos administrativos e nuvem</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowMoreMenu(false)}
-                className="w-11 h-11 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-900 cursor-pointer transition-colors shrink-0"
+                className="w-11 h-11 rounded-full bg-[#edf2f7] hover:bg-[#dfe6f0] flex items-center justify-center text-slate-950 cursor-pointer transition-colors shrink-0"
                 aria-label="Fechar menu de gestão"
               >
                 <X className="w-5 h-5" />
@@ -272,10 +272,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
             {/* Controle de Sincronização em Nuvem dentro de Gestão */}
             <div
-              className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 min-w-0 ${
+              className={`p-3.5 rounded-2xl flex items-center justify-between gap-3 min-w-0 ${
                 syncSnapshot.pendingCount > 0
-                  ? 'bg-amber-50 border-amber-300 text-amber-950'
-                  : 'bg-slate-50 border-slate-200 text-slate-950'
+                  ? 'bg-amber-100/90 text-amber-950'
+                  : 'bg-[#edf2f7] text-slate-950'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -331,10 +331,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                       setShowMoreMenu(false);
                       onChangeScreen(item.id);
                     }}
-                    className={`w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3.5 text-left transition-colors cursor-pointer min-w-0 ${
+                    className={`w-full p-3.5 rounded-2xl flex items-center justify-between gap-3.5 text-left transition-all duration-200 cursor-pointer min-w-0 ${
                       isActive
-                        ? 'bg-[#0b3b8c] border-[#0b3b8c] text-white'
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-950'
+                        ? 'bg-[#0b3b8c] text-white shadow-[0_8px_20px_rgba(11,59,140,0.28)]'
+                        : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950'
                     }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -351,7 +351,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                         </span>
                         <span
                           className={`text-xs block break-words leading-snug mt-0.5 ${
-                            isActive ? 'text-blue-100' : 'text-slate-600'
+                            isActive ? 'text-blue-100' : 'text-slate-700'
                           }`}
                         >
                           {item.description}
@@ -360,7 +360,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                     </div>
                     <ChevronRight
                       className={`w-5 h-5 shrink-0 ${
-                        isActive ? 'text-blue-100' : 'text-slate-500'
+                        isActive ? 'text-blue-100' : 'text-slate-600'
                       }`}
                     />
                   </button>
@@ -376,7 +376,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                     setShowMoreMenu(false);
                     onLogout();
                   }}
-                  className="w-full min-h-[48px] py-3 px-4 rounded-2xl border border-rose-200 text-[#9f1239] bg-rose-50 hover:bg-rose-100 font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full min-h-[48px] py-3 px-4 rounded-2xl text-rose-950 bg-rose-100 hover:bg-rose-200 font-bold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Encerrar Sessão</span>

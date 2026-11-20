@@ -1118,6 +1118,7 @@ export const compressAndCachePhotoBatch = async (
     maxBatchFiles?: number;
     persistToIndexedDb?: boolean;
     signal?: AbortSignal;
+    waitIfPaused?: () => Promise<void>;
     onProgress?: (progress: BatchCanvasPhotoProgress) => void;
   } = {}
 ): Promise<BatchCanvasPhotoSummary> => {
@@ -1162,6 +1163,10 @@ export const compressAndCachePhotoBatch = async (
   const runWorker = async () => {
     while (nextIndex < total) {
       if (options.signal?.aborted) break;
+      if (options.waitIfPaused) {
+        await options.waitIfPaused();
+        if (options.signal?.aborted) break;
+      }
       const idx = nextIndex++;
       const item = inputs[idx];
 

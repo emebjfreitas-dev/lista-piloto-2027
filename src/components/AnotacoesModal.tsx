@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ClassGroup } from '../types';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { CheckCircle2, FileEdit, Save, X } from 'lucide-react';
 
 interface AnotacoesModalProps {
   isOpen: boolean;
@@ -32,28 +33,29 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-100">
-      <div className="bg-white w-full max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))]">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
+      <div className="modal-shell w-full max-w-lg rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] animate-apple-pop">
         {/* Header */}
-        <div className="flex items-start sm:items-center justify-between gap-3 p-5 pb-3 border-b border-slate-100 shrink-0">
-          <div className="flex items-start sm:items-center gap-2 text-slate-900 min-w-0 flex-1">
-            <span className="material-symbols-outlined text-[22px] text-blue-600 shrink-0 mt-0.5 sm:mt-0">rate_review</span>
-            <h3 className="text-base font-semibold break-words leading-snug">
+        <div className="modal-header-surface flex items-start sm:items-center justify-between gap-3 p-5 pb-4 shrink-0">
+          <div className="flex items-start sm:items-center gap-2 text-slate-950 min-w-0 flex-1">
+            <FileEdit className="w-[22px] h-[22px] text-[#092e70] shrink-0 mt-0.5 sm:mt-0" strokeWidth={2} />
+            <h3 className="text-base font-bold break-words leading-snug">
               Anotações da Turma — {classGroup.name}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors duration-100 shrink-0"
+            className="w-9 h-9 rounded-full bg-white hover:bg-[#dce7fb] text-slate-800 hover:text-slate-950 flex items-center justify-center cursor-pointer transition-colors duration-150 shrink-0 shadow-xs"
+            aria-label="Fechar modal"
           >
-            <span className="material-symbols-outlined text-[20px] shrink-0">close</span>
+            <X className="w-5 h-5 shrink-0" strokeWidth={2} />
           </button>
         </div>
 
         {/* Content */}
         <div className="modal-scroll-body flex-1 p-5 py-4 space-y-3">
-          <p className="text-xs text-slate-500 font-medium">
+          <p className="text-xs text-slate-700 font-medium leading-relaxed">
             Registre ocorrências da turma, recados da coordenação ou observações para as reuniões pedagógicas:
           </p>
 
@@ -62,32 +64,32 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Digite os comentários e recados sobre a turma aqui..."
-            className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400/20 resize-none leading-relaxed transition-colors"
+            className="w-full p-3.5 bg-[#f4f7fb] rounded-xl text-slate-950 text-xs sm:text-sm focus:bg-white resize-none leading-relaxed transition-colors shadow-[inset_0_1px_2px_rgba(9,15,29,0.06)]"
           />
 
           {savedSuccess && (
-            <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-emerald-700">check_circle</span>
+            <div className="p-3 bg-emerald-100/90 text-emerald-950 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-2 animate-fade-in">
+              <CheckCircle2 className="w-[18px] h-[18px] text-[#046c4e] shrink-0" strokeWidth={2} />
               <span>Anotações salvas com sucesso no diário!</span>
             </div>
           )}
         </div>
 
         {/* Actions Sticky */}
-        <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/90 p-4 flex gap-3 shrink-0 z-10">
+        <div className="sticky bottom-0 bg-[#f4f7fb]/95 backdrop-blur-sm p-4 flex gap-3 shrink-0 z-10">
           <button
             onClick={onClose}
             type="button"
-            className="flex-1 min-h-[46px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-colors cursor-pointer"
+            className="flex-1 min-h-[46px] bg-white hover:bg-[#edf2f7] text-slate-900 font-bold text-sm rounded-xl transition-colors cursor-pointer shadow-xs"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             type="button"
-            className="flex-1 min-h-[46px] bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+            className="flex-1 min-h-[46px] bg-[#092e70] hover:bg-[#051d47] text-white font-bold text-sm rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-[18px]">save</span>
+            <Save className="w-[18px] h-[18px]" strokeWidth={2} />
             <span>Salvar Anotações</span>
           </button>
         </div>

@@ -6,6 +6,16 @@ import {
   Student,
   UserRole,
 } from '../types';
+import {
+  AlertTriangle,
+  CalendarX2,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  ExternalLink,
+  MessageCircle,
+  X,
+} from 'lucide-react';
 import { StudentAvatar } from './StudentAvatar';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
 
@@ -171,30 +181,30 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
   return (
     <>
-      <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-black/[0.06] space-y-4">
+      <section className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-[0_8px_28px_-10px_rgba(9,15,29,0.08)] space-y-4">
         {/* Cabeçalho do Resumo de Faltas Críticas */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-black/[0.06]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-2">
           <div className="space-y-0.5">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#ff3b30]">
-              <span className="material-symbols-outlined text-[18px]">warning</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#9f1239]">
+              <AlertTriangle className="w-[18px] h-[18px] shrink-0" />
               <span>Busca Ativa Escolar · Monitoramento de Faltas Consecutivas</span>
-              <span aria-hidden="true" className="text-[#d2d2d7]">·</span>
-              <span className="text-[#6e6e73] font-mono tabular-nums">
+              <span aria-hidden="true" className="text-slate-600">·</span>
+              <span className="text-slate-700 font-mono tabular-nums">
                 Limiar: {threshold}+ dias seguidos
               </span>
             </div>
-            <h2 className="text-lg sm:text-lg font-bold text-[#1d1d1f] tracking-tight">
+            <h2 className="text-lg font-bold text-slate-950 tracking-tight">
               Resumo de Faltas Críticas ({criticalItems.length})
             </h2>
-            <p className="text-sm text-[#6e6e73]">
+            <p className="text-sm text-slate-700">
               Alerta visual para cada estudante que atingiu o limiar de faltas seguidas. Clique sobre o estudante para inspecionar os dias faltosos, histórico anual e retorno da família.
             </p>
           </div>
 
           {/* Controles: Seletor de Limiar Configurado (3+, 5+, 10+ dias) & Filtros Rápidos */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <div className="flex flex-wrap items-center gap-1 bg-[#f5f5f7] p-1 rounded-xl">
-              <span className="text-xs font-semibold text-[#6e6e73] px-2">
+            <div className="flex flex-wrap items-center gap-1 bg-[#edf2f7] p-1 rounded-xl">
+              <span className="text-xs font-semibold text-slate-800 px-2">
                 Limiar:
               </span>
               {[3, 5, 10].map((val) => (
@@ -202,14 +212,14 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   key={val}
                   type="button"
                   onClick={() => handleUpdateThreshold(val)}
-                  className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold font-mono tabular-nums transition-colors duration-100 cursor-pointer whitespace-normal text-center ${
+                  className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold font-mono tabular-nums transition-all duration-200 active:scale-[0.97] cursor-pointer whitespace-normal text-center ${
                     threshold === val
                       ? val === 10
-                        ? 'bg-[#be123c] text-white shadow-2xs'
+                        ? 'bg-[#be123c] text-white shadow-sm'
                         : val === 5
-                        ? 'bg-[#ea580c] text-white shadow-2xs'
-                        : 'bg-[#f59e0b] text-white shadow-2xs'
-                      : 'text-[#6e6e73] hover:text-[#1d1d1f]'
+                        ? 'bg-[#c2410c] text-white shadow-sm'
+                        : 'bg-[#b45309] text-white shadow-sm'
+                      : 'text-slate-800 hover:text-slate-950 hover:bg-white/60'
                   }`}
                 >
                   {val}+ dias
@@ -251,11 +261,11 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
         {/* Lista de Cards de Alerta Visual por Estudante */}
         {filteredItems.length === 0 ? (
-          <div className="py-6 px-4 text-center bg-[#f5f5f7]/60 rounded-2xl space-y-1">
-            <p className="text-sm font-semibold text-[#1d1d1f]">
+          <div className="py-6 px-4 text-center bg-[#f4f7fb] rounded-2xl space-y-1">
+            <p className="text-sm font-semibold text-slate-950">
               Nenhum estudante atingiu o limiar de {threshold}+ faltas críticas neste filtro
             </p>
-            <p className="text-xs text-[#6e6e73]">
+            <p className="text-xs text-slate-700">
               Todos os estudantes monitorados estão abaixo do limite configurado ou já foram filtrados.
             </p>
           </div>
@@ -280,16 +290,16 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
               const cardTierColor =
                 consecutiveDaysCount >= 10
-                  ? 'bg-[#fff1f2]/80 hover:bg-[#ffe4e6]/80 border-[#e11d48]/30'
+                  ? 'bg-rose-100/75 hover:bg-rose-100'
                   : consecutiveDaysCount >= 5
-                  ? 'bg-[#fff7ed]/80 hover:bg-[#ffedd5]/80 border-[#ea580c]/30'
-                  : 'bg-[#fffbeb]/80 hover:bg-[#fef3c7]/80 border-[#f59e0b]/30';
+                  ? 'bg-orange-100/75 hover:bg-orange-100'
+                  : 'bg-amber-100/75 hover:bg-amber-100';
 
               const badgeTierColor =
                 consecutiveDaysCount >= 10
                   ? 'bg-[#be123c] text-white'
                   : consecutiveDaysCount >= 5
-                  ? 'bg-[#ea580c] text-white'
+                  ? 'bg-[#c2410c] text-white'
                   : 'bg-[#b45309] text-white';
 
               return (
@@ -304,17 +314,17 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       setSelectedDetailItem(item);
                     }
                   }}
-                  className={`group rounded-2xl p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 border h-full min-h-[118px] ${cardTierColor}`}
+                  className={`card-interactive group rounded-2xl p-3.5 cursor-pointer flex flex-col justify-between gap-2.5 h-full min-h-[118px] ${cardTierColor}`}
                 >
                   <div className="flex items-start justify-between gap-2.5 min-w-0">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <StudentAvatar student={student} size="md" />
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm sm:text-base font-bold text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors duration-100 break-words leading-snug">
+                        <h3 className="text-sm sm:text-base font-bold text-slate-950 group-hover:text-[#0b3b8c] transition-colors duration-200 break-words leading-snug">
                           {student.name}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#6e6e73] font-medium">
-                          <span className="font-semibold text-[#1d1d1f]">{cls.name}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-700 font-medium">
+                          <span className="font-semibold text-slate-950">{cls.name}</span>
                           <span aria-hidden="true">·</span>
                           <span className="font-mono tabular-nums">
                             Nº {student.number.toString().padStart(2, '0')}
@@ -339,37 +349,35 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                           ? `5+ DIAS (${consecutiveDaysCount}d)`
                           : `3+ DIAS (${consecutiveDaysCount}d)`}
                       </span>
-                      <span className="text-xs text-[#6e6e73] font-mono tabular-nums block mt-0.5">
+                      <span className="text-xs text-slate-700 font-mono tabular-nums block mt-0.5">
                         Ano: {totalConsecutiveDaysYear}d ({occurrences.length || 1}x)
                       </span>
                     </div>
                   </div>
 
                   {/* Linha de Datas e Status do Retorno da Família */}
-                  <div className="pt-2 border-t border-black/[0.05] flex flex-wrap items-center justify-between gap-2 text-xs min-w-0">
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-xs min-w-0">
                     <div className="min-w-0 flex-1 break-words">
-                      <span className="text-[#6e6e73]">Datas: </span>
-                      <span className="font-mono font-semibold text-[#1d1d1f] break-words">
+                      <span className="text-slate-700">Datas: </span>
+                      <span className="font-mono font-semibold text-slate-950 break-words">
                         {datesList}
                       </span>
                     </div>
 
                     <span
                       className={`font-semibold shrink-0 flex items-center gap-1 ${
-                        hasFamilyFeedback ? 'text-[#1d8338]' : 'text-[#ff3b30]'
+                        hasFamilyFeedback ? 'text-[#065f46]' : 'text-[#9f1239]'
                       }`}
                     >
                       <span>
                         {hasFamilyFeedback ? 'Feedback recebido' : 'Aguardando contato'}
                       </span>
-                      <span className="material-symbols-outlined text-[16px]">
-                        chevron_right
-                      </span>
+                      <ChevronRight className="w-4 h-4 shrink-0" />
                     </span>
                   </div>
 
                   {hasFamilyFeedback && (
-                    <p className="text-xs text-[#1d1d1f] bg-white/90 px-3 py-2 rounded-xl font-medium break-words leading-relaxed">
+                    <p className="text-xs text-slate-950 bg-white/95 px-3 py-2 rounded-xl font-medium break-words leading-relaxed">
                       “{familyFeedbackText}”
                     </p>
                   )}
@@ -385,19 +393,21 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             <button
               type="button"
               onClick={() => setShowAllStudents(!showAllStudents)}
-              className="text-sm font-semibold text-[#0066cc] hover:underline cursor-pointer flex items-center gap-1"
+              className="text-sm font-semibold text-[#0b3b8c] hover:underline cursor-pointer flex items-center gap-1"
             >
               <span>
                 {showAllStudents
                   ? 'Mostrar menos estudantes'
                   : `Ver todos os ${filteredItems.length} estudantes em alerta crítico`}
               </span>
-              <span className="material-symbols-outlined text-[17px]">
-                {showAllStudents ? 'expand_less' : 'expand_more'}
-              </span>
+              {showAllStudents ? (
+                <ChevronUp className="w-[17px] h-[17px] shrink-0" />
+              ) : (
+                <ChevronDown className="w-[17px] h-[17px] shrink-0" />
+              )}
             </button>
           ) : (
-            <span className="text-xs text-[#6e6e73]">
+            <span className="text-xs text-slate-700">
               Clique em qualquer estudante acima para abrir os detalhes completos da ocorrência.
             </span>
           )}
@@ -412,11 +422,9 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   (criticalItems[0] || { cls: classes[0], student: classes[0].students[0] }).student
                 )
               }
-              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
-              <span className="material-symbols-outlined text-[17px] text-[#ff3b30]">
-                event_busy
-              </span>
+              <CalendarX2 className="w-[17px] h-[17px] text-[#9f1239] shrink-0" />
               <span>
                 {isStrictAdmin
                   ? 'Atender Contatos & Feedbacks'
@@ -432,25 +440,25 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
       {/* Modal Minimalista de Detalhes da Falta Crítica (Ao Clicar no Estudante) */}
       {selectedDetailItem && (
         <div
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-gentle-fade"
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop-in"
           onClick={() => setSelectedDetailItem(null)}
         >
           <div
-            className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+            className="modal-shell rounded-3xl max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-apple-pop"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Cabeçalho do Modal */}
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-black/[0.06]">
+            <div className="flex items-start justify-between gap-3 pb-2">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <StudentAvatar student={selectedDetailItem.student} size="lg" />
                 <div className="min-w-0 flex-1">
-                  <span className="text-xs font-semibold text-[#ff3b30] block break-words">
+                  <span className="text-xs font-semibold text-[#9f1239] block break-words">
                     Alerta de Faltas Críticas · Turma {selectedDetailItem.cls.name}
                   </span>
-                  <h3 className="text-lg font-bold text-[#1d1d1f] break-words leading-snug">
+                  <h3 className="text-lg font-bold text-slate-950 break-words leading-snug">
                     {selectedDetailItem.student.name}
                   </h3>
-                  <p className="text-xs text-[#6e6e73] font-mono tabular-nums break-words">
+                  <p className="text-xs text-slate-700 font-mono tabular-nums break-words">
                     Nº {selectedDetailItem.student.number.toString().padStart(2, '0')} · RA{' '}
                     {selectedDetailItem.student.ra || '—'} · Regente:{' '}
                     {selectedDetailItem.cls.teacherName || 'PEB I'}
@@ -462,37 +470,37 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 type="button"
                 onClick={() => setSelectedDetailItem(null)}
                 aria-label="Fechar detalhes"
-                className="w-10 h-10 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center shrink-0 cursor-pointer"
+                className="w-10 h-10 rounded-full bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
               >
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Resumo Numérico do Estudante */}
             <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2.5 text-center">
-              <div className="bg-[#fff8f7] rounded-2xl p-3.5 border border-[#ff3b30]/20 min-w-0">
-                <span className="text-xs font-semibold text-[#6e6e73] block">
+              <div className="bg-rose-100/80 rounded-2xl p-3.5 min-w-0">
+                <span className="text-xs font-semibold text-rose-950 block">
                   Sequência Atual
                 </span>
-                <span className="text-xl font-bold text-[#ff3b30] font-mono tabular-nums">
+                <span className="text-xl font-bold text-[#9f1239] font-mono tabular-nums">
                   {selectedDetailItem.consecutiveDaysCount} dias
                 </span>
               </div>
 
-              <div className="bg-[#f5f5f7] rounded-2xl p-3.5 min-w-0">
-                <span className="text-xs font-semibold text-[#6e6e73] block">
+              <div className="bg-[#f4f7fb] rounded-2xl p-3.5 min-w-0">
+                <span className="text-xs font-semibold text-slate-700 block">
                   Ocorrências no Ano
                 </span>
-                <span className="text-lg font-bold text-[#1d1d1f] font-mono tabular-nums">
+                <span className="text-lg font-bold text-slate-950 font-mono tabular-nums">
                   {selectedDetailItem.occurrences.length || 1}x ({selectedDetailItem.totalConsecutiveDaysYear} dias)
                 </span>
               </div>
 
-              <div className="bg-[#f5f5f7] rounded-2xl p-3.5 min-w-0">
-                <span className="text-xs font-semibold text-[#6e6e73] block">
+              <div className="bg-[#f4f7fb] rounded-2xl p-3.5 min-w-0">
+                <span className="text-xs font-semibold text-slate-700 block">
                   Faltas no Mês
                 </span>
-                <span className="text-lg font-bold text-[#1d1d1f] font-mono tabular-nums">
+                <span className="text-lg font-bold text-slate-950 font-mono tabular-nums">
                   {selectedDetailItem.student.totalAbsencesMonth || 0} faltas ·{' '}
                   {selectedDetailItem.student.justifiedAbsences || 0} atest.
                 </span>
@@ -500,12 +508,12 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             </div>
 
             {/* Contato Rápido com a Família (WhatsApp Direto) */}
-            <div className="bg-[#f5f5f7] rounded-2xl p-3.5 space-y-1.5">
-              <span className="text-xs font-semibold text-[#6e6e73] block">
+            <div className="bg-[#f4f7fb] rounded-2xl p-3.5 space-y-1.5">
+              <span className="text-xs font-semibold text-slate-700 block">
                 Responsável Familiar &amp; Contato Direto
               </span>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-bold text-[#1d1d1f]">
+                <span className="text-sm font-bold text-slate-950">
                   {selectedDetailItem.student.filiacao1 ||
                     selectedDetailItem.student.guardianName ||
                     'Familiar Responsável'}
@@ -519,7 +527,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   const digits = firstPhone.replace(/\D/g, '');
                   if (!digits) {
                     return (
-                      <span className="text-xs text-[#6e6e73]">
+                      <span className="text-xs text-slate-700">
                         Telefone não informado
                       </span>
                     );
@@ -533,9 +541,9 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       href={waHref}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm font-mono font-bold text-[#128C7E] hover:underline"
+                      className="inline-flex items-center gap-1.5 text-sm font-mono font-bold text-[#065f46] hover:underline"
                     >
-                      <span className="material-symbols-outlined text-[16px]">chat</span>
+                      <MessageCircle className="w-4 h-4 shrink-0" />
                       <span>{firstPhone} (WhatsApp)</span>
                     </a>
                   );
@@ -545,16 +553,16 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
             {/* Histórico Acumulado de Sequências de Faltas Seguidas e Feedbacks da Família */}
             <div className="space-y-2">
-              <h4 className="text-sm font-bold text-[#1d1d1f]">
+              <h4 className="text-sm font-bold text-slate-950">
                 Histórico de Sequências e Devolutivas da Família no Ano
               </h4>
 
               {selectedDetailItem.occurrences.length === 0 ? (
-                <div className="rounded-2xl bg-[#fff8f7] p-3.5 border border-[#ff3b30]/20 space-y-1">
-                  <p className="text-sm font-semibold text-[#1d1d1f]">
+                <div className="rounded-2xl bg-rose-100/75 p-3.5 space-y-1">
+                  <p className="text-sm font-semibold text-slate-950">
                     {selectedDetailItem.monthlyUnjustifiedAbsences} faltas não justificadas registradas no mês
                   </p>
-                  <p className="text-xs text-[#6e6e73]">
+                  <p className="text-xs text-slate-800">
                     {isStrictAdmin
                       ? 'Aguardando o(a) docente PEB I solicitar contato na aba Busca Ativa caso identifique 3 ou mais faltas seguidas.'
                       : isPeb1
@@ -570,26 +578,26 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     return (
                       <div
                         key={occ.id || `occ-${idx}`}
-                        className="rounded-2xl bg-[#f5f5f7] p-3.5 space-y-1.5"
+                        className="rounded-2xl bg-[#f4f7fb] p-3.5 space-y-1.5"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-[#1d1d1f]">
+                          <span className="text-xs font-bold text-slate-950">
                             {seq}ª Solicitação · {occ.selectedDates.join(', ')} (
                             {occ.selectedDates.length} dias)
                           </span>
-                          <span className="text-xs text-[#6e6e73] font-mono tabular-nums">
+                          <span className="text-xs text-slate-700 font-mono tabular-nums">
                             {occ.reportedAt || 'Registrado'}
                           </span>
                         </div>
                         {fb ? (
-                          <div className="bg-white rounded-xl p-2.5 text-sm text-[#1d1d1f]">
-                            <span className="font-semibold text-[#1d8338] block text-xs">
+                          <div className="bg-white rounded-xl p-2.5 text-sm text-slate-950">
+                            <span className="font-semibold text-[#065f46] block text-xs">
                               Devolutiva da Família ({occ.feedbackByName || 'Secretaria'} · {occ.feedbackUpdatedAt || 'Recente'}):
                             </span>
                             <p className="mt-0.5 leading-relaxed">{fb}</p>
                           </div>
                         ) : (
-                          <p className="text-xs text-[#ff3b30] font-medium">
+                          <p className="text-xs text-[#9f1239] font-medium">
                             {isStrictAdmin
                               ? 'Pendente de contato com a família e preenchimento do feedback.'
                               : 'Aguardando contato e devolutiva da secretaria com a família.'}
@@ -603,7 +611,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             </div>
 
             {/* Ações Diretas no Rodapé do Modal */}
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-black/[0.06]">
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-3">
               {onOpenStudentGrid && (
                 <button
                   type="button"
@@ -617,7 +625,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       item.cls.classesHeld || 20
                     );
                   }}
-                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold text-sm cursor-pointer transition-colors duration-100 whitespace-normal text-center"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-sm cursor-pointer transition-colors whitespace-normal text-center"
                 >
                   Ficha Completa (48 Dados)
                 </button>
@@ -631,7 +639,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     setSelectedDetailItem(null);
                     onOpenStudentPdf(item.student, item.cls.name);
                   }}
-                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 font-bold text-sm cursor-pointer transition-colors duration-100 whitespace-normal text-center"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-bold text-sm cursor-pointer transition-colors whitespace-normal text-center"
                 >
                   Ficha Informativa do Estudante
                 </button>
@@ -645,11 +653,9 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     setSelectedDetailItem(null);
                     onSelectStudentForConsecutiveScreen(item.cls, item.student);
                   }}
-                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 whitespace-normal text-center"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
                 >
-                  <span className="material-symbols-outlined text-[18px] shrink-0">
-                    open_in_new
-                  </span>
+                  <ExternalLink className="w-[18px] h-[18px] shrink-0" />
                   <span>
                     {isStrictAdmin
                       ? 'Contatar e Registrar Feedback'

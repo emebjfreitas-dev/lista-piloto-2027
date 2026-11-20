@@ -266,13 +266,13 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   const variantClass =
     variant === 'inline'
-      ? 'bg-transparent hover:bg-white/75 text-slate-950 font-bold rounded-lg shadow-none'
-      : 'bg-[#f1f5f9] hover:bg-[#e7ecf3] text-[#0f172a] font-semibold rounded-xl shadow-[inset_0_0_0_1px_rgba(15,23,42,0.11),0_1px_2px_rgba(15,23,42,0.04)] hover:shadow-[inset_0_0_0_1px_rgba(11,59,140,0.28),0_2px_6px_rgba(15,23,42,0.06)]';
+      ? 'bg-transparent hover:bg-white/80 text-slate-950 font-bold rounded-lg shadow-none'
+      : 'bg-[#f4f7fb] hover:bg-[#edf2f7] text-slate-950 font-semibold rounded-xl shadow-[0_2px_6px_-2px_rgba(9,15,29,0.06)] hover:shadow-[0_4px_12px_-4px_rgba(9,46,112,0.12)]';
 
   const activeRingClass = isOpen
     ? variant === 'inline'
-      ? 'bg-white shadow-[0_2px_8px_rgba(15,23,42,0.1)]'
-      : 'bg-white shadow-[inset_0_0_0_1.5px_rgba(11,59,140,0.7),0_0_0_3px_rgba(11,59,140,0.12)]'
+      ? 'bg-white shadow-[0_4px_12px_rgba(9,15,29,0.12)]'
+      : 'bg-white shadow-[0_6px_18px_-4px_rgba(9,46,112,0.18)]'
     : '';
 
   return (
@@ -295,14 +295,14 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       >
         <span
           className={`truncate min-w-0 flex-1 ${
-            !selectedOption ? 'text-slate-500 font-medium' : ''
+            !selectedOption ? 'text-slate-600 font-medium' : ''
           }`}
         >
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
           className={`w-4 h-4 shrink-0 transition-transform duration-150 ${
-            isOpen ? 'rotate-180 text-[#0b3b8c]' : 'text-slate-500'
+            isOpen ? 'rotate-180 text-[#092e70]' : 'text-slate-700'
           }`}
         />
       </button>
@@ -325,12 +325,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
               width: menuStyle.width,
               zIndex: 9999,
             }}
-            className={`bg-white/98 backdrop-blur-2xl rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.22),0_0_0_1px_rgba(15,23,42,0.08)] overflow-hidden flex flex-col animate-apple-pop ${menuClassName}`}
+            className={`bg-white/98 backdrop-blur-2xl rounded-2xl shadow-[0_20px_50px_rgba(9,15,29,0.22)] overflow-hidden flex flex-col animate-apple-pop ${menuClassName}`}
           >
             {isSearchable && (
-              <div className="p-2 bg-slate-50/90 shrink-0">
+              <div className="p-2 bg-[#f4f7fb] shrink-0">
                 <div className="relative flex items-center">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+                  <Search className="w-3.5 h-3.5 text-slate-600 absolute left-2.5 pointer-events-none" />
                   <input
                     ref={searchInputRef}
                     type="text"
@@ -340,7 +340,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                       setHighlightedIndex(0);
                     }}
                     placeholder={searchPlaceholder}
-                    className="w-full min-h-[34px] pl-8 pr-7 rounded-xl bg-white text-xs font-medium text-slate-900 placeholder:text-slate-400 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.1)] focus:outline-none"
+                    className="w-full min-h-[34px] pl-8 pr-7 rounded-xl bg-white text-xs font-medium text-slate-950 placeholder:text-slate-600 shadow-[0_1px_3px_rgba(9,15,29,0.06)]"
                   />
                   {searchQuery && (
                     <button
@@ -349,7 +349,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                         setSearchQuery('');
                         searchInputRef.current?.focus();
                       }}
-                      className="absolute right-1.5 p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+                      className="absolute right-1.5 p-1 text-slate-600 hover:text-slate-950 cursor-pointer"
                       aria-label="Limpar filtro"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -364,7 +364,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
               className="overflow-y-auto overscroll-contain p-1.5 space-y-0.5 modal-scroll-body"
             >
               {filteredOptions.length === 0 ? (
-                <div className="px-3 py-5 text-center text-xs text-slate-500 font-medium">
+                <div className="px-3 py-5 text-center text-xs text-slate-700 font-medium">
                   Nenhuma opção encontrada
                 </div>
               ) : (
@@ -381,12 +381,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                       disabled={opt.disabled}
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       onClick={() => handleSelectOption(opt)}
-                      className={`w-full min-h-[38px] px-3 py-2 rounded-xl text-left flex items-center justify-between gap-2.5 transition-colors duration-75 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${
+                      className={`w-full min-h-[38px] px-3 py-2 rounded-xl text-left flex items-center justify-between gap-2.5 transition-colors duration-100 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${
                         isSelected
-                          ? 'bg-[#0b3b8c]/[0.09] text-[#0b3b8c] font-semibold'
+                          ? 'bg-[#dce7fb] text-[#092e70] font-semibold'
                           : isHighlighted
-                          ? 'bg-slate-100 text-slate-950 font-medium'
-                          : 'text-slate-800 hover:bg-slate-100 font-medium'
+                          ? 'bg-[#edf2f7] text-slate-950 font-medium'
+                          : 'text-slate-900 hover:bg-[#f4f7fb] font-medium'
                       }`}
                     >
                       <div className="min-w-0 flex-1">
@@ -394,13 +394,13 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                           {opt.label}
                         </span>
                         {opt.description && (
-                          <span className="text-[11px] text-slate-500 block leading-snug mt-0.5 break-words font-normal">
+                          <span className="text-[11px] text-slate-700 block leading-snug mt-0.5 break-words font-normal">
                             {opt.description}
                           </span>
                         )}
                       </div>
                       {isSelected && (
-                        <Check className="w-4 h-4 text-[#0b3b8c] shrink-0 stroke-[2]" />
+                        <Check className="w-4 h-4 text-[#092e70] shrink-0 stroke-[2]" />
                       )}
                     </button>
                   );

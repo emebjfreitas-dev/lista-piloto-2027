@@ -566,14 +566,14 @@ export const PwaIconsHealthScanner: React.FC = () => {
                 )}
               </span>
             </div>
-            <p className="text-xs text-[#6e6e73] max-w-2xl">
-              Escaneia em tempo real os arquivos essenciais em <code className="font-mono text-[#1d1d1f]">/public</code> (<code className="font-mono">apple-touch-icon.png</code>, <code className="font-mono">favicon.*</code>, <code className="font-mono">pwa-*.png</code> e <code className="font-mono">manifest.json</code>) validando existência, dimensões e fundo opaco obrigatório para iPhone/iPad (iOS).
+            <p className="text-xs text-slate-700 max-w-2xl">
+              Escaneia em tempo real os arquivos essenciais em <code className="font-mono text-slate-950">/public</code> (<code className="font-mono">apple-touch-icon.png</code>, <code className="font-mono">favicon.*</code>, <code className="font-mono">pwa-*.png</code> e <code className="font-mono">manifest.json</code>) validando existência, dimensões e fundo opaco obrigatório para iPhone/iPad (iOS).
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {lastScanAt && (
-              <span className="text-xs text-[#6e6e73] tabular-nums px-2.5 py-1.5 rounded-xl bg-[#f5f5f7]">
+              <span className="text-xs text-slate-700 font-medium tabular-nums px-2.5 py-1.5 rounded-xl bg-[#edf2f7]">
                 Último scan: {lastScanAt}
               </span>
             )}
@@ -602,10 +602,10 @@ export const PwaIconsHealthScanner: React.FC = () => {
                     className="w-full h-full object-contain rounded-[12px]"
                   />
                 ) : (
-                  <Smartphone className="w-7 h-7 text-[#6e6e73]" />
+                  <Smartphone className="w-7 h-7 text-slate-700" />
                 )}
               </div>
-              <span className="text-[11px] font-medium text-[#1d1d1f]">
+              <span className="text-[11px] font-medium text-slate-950">
                 {manifestSummary?.shortName || 'Lista Piloto'}
               </span>
             </div>
@@ -613,10 +613,10 @@ export const PwaIconsHealthScanner: React.FC = () => {
               <span className="text-xs font-semibold text-[#0b3b8c] uppercase tracking-wider block">
                 Prévia Tela Inicial iOS
               </span>
-              <p className="text-xs font-semibold text-[#1d1d1f]">
+              <p className="text-xs font-semibold text-slate-950">
                 apple-touch-icon.png ({iosIconItem?.dimensions || '180×180px'})
               </p>
-              <p className="text-xs text-[#48484a] leading-relaxed">
+              <p className="text-xs text-slate-700 leading-relaxed">
                 {iosIconItem?.iosOpaqueVerified
                   ? 'Fundo branco opaco verificado: no iPhone/iPad o brasão aparece nítido, sem bordas pretas.'
                   : 'Verificando opacidade do ícone para iOS Safari.'}
@@ -625,33 +625,33 @@ export const PwaIconsHealthScanner: React.FC = () => {
           </div>
 
           {/* Card 2: Manifesto PWA & Service Worker */}
-          <div className="p-4 rounded-2xl bg-[#f5f5f7] space-y-2">
+          <div className="p-4 rounded-2xl bg-[#f4f7fb] space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[#1d1d1f] inline-flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-950 inline-flex items-center gap-1.5">
                 <FileJson className="w-4 h-4 text-[#0b3b8c]" />
                 <span>Identidade do Manifesto PWA</span>
               </span>
               <span
                 className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                   swStatus === 'ativo'
-                    ? 'bg-[#eaf6ef] text-[#005035]'
-                    : 'bg-[#e8f0fe] text-[#1a4fa3]'
+                    ? 'bg-emerald-100 text-emerald-950'
+                    : 'bg-[#dce7fb] text-[#092e70]'
                 }`}
               >
                 SW: {swStatus === 'ativo' ? 'Ativo' : swStatus === 'registrando' ? 'Pronto' : 'Local'}
               </span>
             </div>
             {manifestSummary ? (
-              <div className="space-y-1 text-xs text-[#374151]">
+              <div className="space-y-1 text-xs text-slate-800">
                 <p className="truncate">
-                  <span className="text-[#6e6e73]">Nome curto:</span>{' '}
-                  <strong className="text-[#1d1d1f]">{manifestSummary.shortName}</strong>
+                  <span className="text-slate-700">Nome curto:</span>{' '}
+                  <strong className="text-slate-950">{manifestSummary.shortName}</strong>
                 </p>
                 <p>
-                  <span className="text-[#6e6e73]">Modo:</span>{' '}
-                  <strong className="text-[#1d1d1f]">{manifestSummary.display}</strong> ·{' '}
-                  <span className="text-[#6e6e73]">Tema:</span>{' '}
-                  <span className="inline-flex items-center gap-1 font-mono text-[#1d1d1f]">
+                  <span className="text-slate-700">Modo:</span>{' '}
+                  <strong className="text-slate-950">{manifestSummary.display}</strong> ·{' '}
+                  <span className="text-slate-700">Tema:</span>{' '}
+                  <span className="inline-flex items-center gap-1 font-mono text-slate-950">
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block"
                       style={{ backgroundColor: manifestSummary.themeColor || '#002b5c' }}
@@ -659,29 +659,29 @@ export const PwaIconsHealthScanner: React.FC = () => {
                     {manifestSummary.themeColor}
                   </span>
                 </p>
-                <p className="tabular-nums text-[#48484a]">
+                <p className="tabular-nums text-slate-700">
                   {manifestSummary.iconsCount} ícones declarados · {manifestSummary.shortcutsCount} atalhos de tela inicial
                 </p>
               </div>
             ) : (
-              <p className="text-xs text-[#6e6e73]">Lendo informações do manifest.json...</p>
+              <p className="text-xs text-slate-700">Lendo informações do manifest.json...</p>
             )}
           </div>
 
           {/* Card 3: Meta Tags <head> */}
-          <div className="p-4 rounded-2xl bg-[#f5f5f7] space-y-2">
-            <span className="text-xs font-semibold text-[#1d1d1f] block">
+          <div className="p-4 rounded-2xl bg-[#f4f7fb] space-y-2">
+            <span className="text-xs font-semibold text-slate-950 block">
               Meta Tags & Links no HTML (&lt;head&gt;)
             </span>
             <div className="space-y-1">
               {headChecks.map((tag) => (
                 <div key={tag.label} className="flex items-center justify-between gap-2 text-[11px]">
-                  <span className="font-mono text-[#374151] truncate">{tag.label}</span>
+                  <span className="font-mono text-slate-800 truncate">{tag.label}</span>
                   <span
                     className={`px-1.5 py-0.5 rounded font-semibold shrink-0 ${
                       tag.present
-                        ? 'bg-[#eaf6ef] text-[#005035]'
-                        : 'bg-[#fee2e2] text-[#991b1b]'
+                        ? 'bg-emerald-100 text-emerald-950'
+                        : 'bg-rose-100 text-rose-950'
                     }`}
                   >
                     {tag.present ? 'OK' : 'Ausente'}
@@ -694,12 +694,12 @@ export const PwaIconsHealthScanner: React.FC = () => {
       </section>
 
       {/* Grid Visual de Escaneamento Arquivo a Arquivo */}
-      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-3">
+      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm sm:text-base font-semibold text-[#1d1d1f]">
+          <h3 className="text-sm sm:text-base font-semibold text-slate-950">
             Status Individual dos Arquivos na Pasta Pública
           </h3>
-          <span className="text-xs text-[#6e6e73] tabular-nums">
+          <span className="text-xs text-slate-700 font-medium tabular-nums">
             {items.length} arquivos monitorados
           </span>
         </div>
@@ -713,7 +713,7 @@ export const PwaIconsHealthScanner: React.FC = () => {
             return (
               <div
                 key={item.filename}
-                className="p-3.5 rounded-2xl bg-[#f5f5f7] flex items-start gap-3 min-w-0"
+                className="p-3.5 rounded-2xl bg-[#f4f7fb] card-interactive flex items-start gap-3 min-w-0"
               >
                 {/* Miniatura Visual */}
                 <div className="w-12 h-12 rounded-xl bg-white shadow-xs shrink-0 flex items-center justify-center overflow-hidden p-1">
@@ -726,7 +726,7 @@ export const PwaIconsHealthScanner: React.FC = () => {
                   ) : item.filename === 'manifest.json' ? (
                     <FileJson className="w-6 h-6 text-[#0b3b8c]" />
                   ) : (
-                    <ImageIcon className="w-6 h-6 text-[#9ca3af]" />
+                    <ImageIcon className="w-6 h-6 text-slate-600" />
                   )}
                 </div>
 
@@ -734,21 +734,21 @@ export const PwaIconsHealthScanner: React.FC = () => {
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-[#1d1d1f] truncate">
+                      <p className="text-xs font-semibold text-slate-950 truncate">
                         {item.filename}
                       </p>
-                      <p className="text-[11px] text-[#6e6e73] truncate">{item.label}</p>
+                      <p className="text-[11px] text-slate-700 truncate">{item.label}</p>
                     </div>
 
                     <span
                       className={`px-2 py-0.5 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 shrink-0 ${
                         item.status === 'checking'
-                          ? 'bg-[#e8f0fe] text-[#1a4fa3]'
+                          ? 'bg-[#dce7fb] text-[#092e70]'
                           : isOk
-                          ? 'bg-[#eaf6ef] text-[#005035]'
+                          ? 'bg-emerald-100 text-emerald-950'
                           : isWarn
-                          ? 'bg-[#fef3c7] text-[#92400e]'
-                          : 'bg-[#fee2e2] text-[#991b1b]'
+                          ? 'bg-amber-100 text-amber-950'
+                          : 'bg-rose-100 text-rose-950'
                       }`}
                     >
                       {item.status === 'checking' ? (
@@ -772,8 +772,8 @@ export const PwaIconsHealthScanner: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#48484a] tabular-nums">
-                    <span className="px-1.5 py-0.5 rounded bg-white text-[#1d1d1f] font-medium">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-700 tabular-nums">
+                    <span className="px-1.5 py-0.5 rounded bg-white text-slate-950 font-medium">
                       {item.platform}
                     </span>
                     {item.dimensions && <span>{item.dimensions}</span>}
@@ -784,7 +784,7 @@ export const PwaIconsHealthScanner: React.FC = () => {
 
                   <p
                     className={`text-[11px] leading-snug break-words ${
-                      isErr ? 'text-[#991b1b] font-medium' : 'text-[#48484a]'
+                      isErr ? 'text-rose-950 font-semibold' : 'text-slate-700'
                     }`}
                   >
                     {item.message}

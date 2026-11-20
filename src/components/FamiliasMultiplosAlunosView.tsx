@@ -244,14 +244,14 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
   return (
     <div className="space-y-4 min-w-0">
       {/* Cabeçalho e Resumo Numérico Limpo */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-2xs space-y-4">
+      <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_8px_28px_-10px_rgba(9,15,29,0.08)] space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <h2 className="text-base sm:text-lg font-bold text-slate-950 tracking-tight flex items-center gap-2">
               <Users className="w-5 h-5 text-[#0b3b8c] shrink-0" />
               <span>Famílias com Múltiplos Estudantes na Escola</span>
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
               Cruzamento automático de dados cadastrais por nome da mãe, pai ou responsável em todas as turmas para agilizar contatos da Busca Ativa.
             </p>
           </div>
@@ -260,7 +260,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
             <button
               type="button"
               onClick={handleExportCsv}
-              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors shrink-0"
+              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors shrink-0"
             >
               <Download className="w-4 h-4" />
               <span>Exportar Relação (.csv)</span>
@@ -268,39 +268,39 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
           )}
         </div>
 
-        {/* Métricas Consolidadas (Texto limpo + numerais tabulares) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 border-t border-slate-100 tabular-nums">
-          <div className="pt-2">
-            <span className="text-xs font-medium text-slate-500 block">
+        {/* Métricas Consolidadas */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 tabular-nums">
+          <div className="bg-[#f4f7fb] rounded-xl p-3">
+            <span className="text-xs font-medium text-slate-700 block">
               Famílias Identificadas
             </span>
             <span className="text-xl sm:text-2xl font-bold text-slate-950">
               {stats.totalFamilies}
             </span>
           </div>
-          <div className="pt-2">
-            <span className="text-xs font-medium text-slate-500 block">
+          <div className="bg-[#f4f7fb] rounded-xl p-3">
+            <span className="text-xs font-medium text-slate-700 block">
               Estudantes Vinculados
             </span>
             <span className="text-xl sm:text-2xl font-bold text-[#0b3b8c]">
               {stats.totalLinkedStudents}
             </span>
           </div>
-          <div className="pt-2">
-            <span className="text-xs font-medium text-slate-500 block">
+          <div className="bg-[#f4f7fb] rounded-xl p-3">
+            <span className="text-xs font-medium text-slate-700 block">
               Em Turmas Diferentes
             </span>
-            <span className="text-xl sm:text-2xl font-bold text-emerald-800">
+            <span className="text-xl sm:text-2xl font-bold text-[#065f46]">
               {stats.multiClassFamilies}
             </span>
           </div>
-          <div className="pt-2">
-            <span className="text-xs font-medium text-slate-500 block">
+          <div className="bg-[#f4f7fb] rounded-xl p-3">
+            <span className="text-xs font-medium text-slate-700 block">
               Com Alerta de Frequência
             </span>
             <span
               className={`text-xl sm:text-2xl font-bold ${
-                stats.familiesWithAlerts > 0 ? 'text-rose-700' : 'text-slate-950'
+                stats.familiesWithAlerts > 0 ? 'text-[#9f1239]' : 'text-slate-950'
               }`}
             >
               {stats.familiesWithAlerts}
@@ -310,14 +310,14 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
 
         {/* Filtros e Busca */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pt-2">
-          <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100">
+          <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-[#edf2f7]">
             <button
               type="button"
               onClick={() => setFilterMode('all')}
-              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
                 filterMode === 'all'
-                  ? 'bg-white text-slate-950 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-950'
+                  ? 'bg-white text-slate-950 shadow-xs'
+                  : 'text-slate-700 hover:text-slate-950'
               }`}
             >
               Todas ({stats.totalFamilies})
@@ -325,10 +325,10 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
             <button
               type="button"
               onClick={() => setFilterMode('multi_class')}
-              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
                 filterMode === 'multi_class'
-                  ? 'bg-white text-slate-950 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-950'
+                  ? 'bg-white text-slate-950 shadow-xs'
+                  : 'text-slate-700 hover:text-slate-950'
               }`}
             >
               Outras Turmas ({stats.multiClassFamilies})
@@ -336,10 +336,10 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
             <button
               type="button"
               onClick={() => setFilterMode('with_alerts')}
-              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
                 filterMode === 'with_alerts'
-                  ? 'bg-rose-700 text-white shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-950'
+                  ? 'bg-rose-700 text-white shadow-xs'
+                  : 'text-slate-700 hover:text-slate-950'
               }`}
             >
               Com Alertas ({stats.familiesWithAlerts})
@@ -348,10 +348,10 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
               <button
                 type="button"
                 onClick={() => setFilterMode('three_plus')}
-                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
                   filterMode === 'three_plus'
-                    ? 'bg-white text-slate-950 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-950'
+                    ? 'bg-white text-slate-950 shadow-xs'
+                    : 'text-slate-700 hover:text-slate-950'
                 }`}
               >
                 3+ Filhos ({stats.threePlusFamilies})
@@ -360,20 +360,20 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
           </div>
 
           <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar mãe, pai, aluno ou turma..."
-              className="w-full min-h-[40px] pl-9 pr-8 bg-slate-100 focus:bg-white border border-transparent focus:border-slate-300 rounded-xl text-xs sm:text-sm text-slate-950 placeholder-slate-500 focus:outline-none transition-colors"
+              className="w-full min-h-[40px] pl-9 pr-8 bg-[#edf2f7] focus:bg-white rounded-xl text-xs sm:text-sm text-slate-950 placeholder:text-slate-600 transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
                 aria-label="Limpar busca"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 p-1 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-950 p-1 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -384,14 +384,14 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
 
       {/* Lista de Núcleos Familiares */}
       {filteredFamilies.length === 0 ? (
-        <div className="bg-white rounded-3xl p-8 border border-slate-200/80 text-center space-y-2">
-          <Users className="w-10 h-10 text-slate-400 mx-auto" />
+        <div className="bg-white rounded-3xl p-8 text-center space-y-2 shadow-[0_8px_28px_-10px_rgba(9,15,29,0.08)]">
+          <Users className="w-10 h-10 text-slate-600 mx-auto" />
           <h3 className="text-sm sm:text-base font-bold text-slate-950">
             {stats.totalFamilies === 0
               ? 'Nenhuma família com múltiplos alunos identificada ainda'
               : 'Nenhuma família encontrada para este filtro'}
           </h3>
-          <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-700 max-w-md mx-auto leading-relaxed">
             {stats.totalFamilies === 0
               ? 'Quando a base escolar possuir estudantes cadastrados com o mesmo nome de mãe, pai ou responsável, eles serão agrupados automaticamente aqui.'
               : 'Tente alterar os filtros acima ou limpar o termo de busca.'}
@@ -418,10 +418,10 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
             return (
               <article
                 key={fam.id}
-                className={`bg-white rounded-2xl border p-4 sm:p-5 flex flex-col justify-between space-y-3 shadow-2xs min-w-0 ${
+                className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] min-w-0 transition-all duration-200 ${
                   fam.hasAlert
-                    ? 'border-rose-200 bg-rose-50/15'
-                    : 'border-slate-200/90'
+                    ? 'bg-rose-50/70'
+                    : 'bg-white'
                 }`}
               >
                 {/* Cabeçalho da Família */}
@@ -455,7 +455,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                             key={`${fam.id}-g-${gIdx}`}
                             className="text-sm font-bold text-slate-950 leading-snug break-words"
                           >
-                            <span className="text-xs font-semibold text-slate-500 mr-1.5">
+                            <span className="text-xs font-semibold text-slate-700 mr-1.5">
                               {g.roleLabel}:
                             </span>
                             {g.name}
@@ -464,9 +464,9 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                       </div>
 
                       {(fam.rawPhonesJoined || fam.addressSummary) && (
-                        <p className="text-xs text-slate-600 break-words pt-0.5">
+                        <p className="text-xs text-slate-700 break-words pt-0.5">
                           {fam.rawPhonesJoined && (
-                            <span className="tabular-nums font-medium text-slate-800">
+                            <span className="tabular-nums font-medium text-slate-900">
                               Tel: {fam.rawPhonesJoined}
                             </span>
                           )}
@@ -487,7 +487,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                           href={primaryWa.waUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                          className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-all duration-200 active:scale-[0.97] cursor-pointer"
                           title={`Enviar WhatsApp para ${primaryWa.display}`}
                         >
                           <MessageCircle className="w-3.5 h-3.5" />
@@ -496,7 +496,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                         {cleanTel.length >= 8 && (
                           <a
                             href={`tel:${cleanTel}`}
-                            className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer"
+                            className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer"
                             title={`Ligar para ${fam.phones[0]}`}
                           >
                             <Phone className="w-3.5 h-3.5" />
@@ -507,7 +507,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                   </div>
 
                   {fam.hasAlert && (
-                    <p className="text-xs font-semibold text-rose-800">
+                    <p className="text-xs font-semibold text-[#9f1239]">
                       Atenção: {fam.alertCount}{' '}
                       {fam.alertCount === 1
                         ? 'estudante deste núcleo familiar apresenta alerta de frequência ou faltas consecutivas.'
@@ -516,14 +516,16 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                   )}
                 </div>
 
-                {/* Lista de Estudantes (Divisores sutis, sem caixas aninhadas pesadas) */}
-                <div className="divide-y divide-slate-100 border-t border-slate-100 pt-1">
-                  {fam.memberMetrics.map((m) => {
+                {/* Lista de Estudantes (Linhas alternadas tonais, zero bordas) */}
+                <div className="space-y-1.5 pt-1">
+                  {fam.memberMetrics.map((m, mIdx) => {
                     const hasConsec = m.consecutiveTier !== 'none';
                     return (
                       <div
                         key={m.student.id}
-                        className="py-2.5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 min-w-0"
+                        className={`py-2 px-2.5 rounded-xl flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 min-w-0 ${
+                          mIdx % 2 === 0 ? 'bg-[#f4f7fb]' : 'bg-white/90'
+                        }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <StudentAvatar
@@ -536,7 +538,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                                 {m.student.name}
                               </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-600 tabular-nums">
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-700 tabular-nums">
                               {onSelectClass ? (
                                 <button
                                   type="button"
@@ -546,7 +548,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                                   Turma {m.cls.name}
                                 </button>
                               ) : (
-                                <span className="font-semibold text-slate-800">
+                                <span className="font-semibold text-slate-900">
                                   Turma {m.cls.name}
                                 </span>
                               )}
@@ -555,7 +557,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                               <span aria-hidden="true">·</span>
                               <span
                                 className={`font-semibold ${
-                                  m.isBelowLegal ? 'text-rose-700' : 'text-emerald-800'
+                                  m.isBelowLegal ? 'text-[#9f1239]' : 'text-[#065f46]'
                                 }`}
                               >
                                 {m.frequenciaPercent}% freq.
@@ -563,7 +565,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                               {hasConsec && (
                                 <>
                                   <span aria-hidden="true">·</span>
-                                  <span className="font-semibold text-rose-700">
+                                  <span className="font-semibold text-[#9f1239]">
                                     {m.alertLabel || `${m.consecutiveDays}d seguidas`}
                                   </span>
                                 </>
@@ -576,7 +578,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                           <button
                             type="button"
                             onClick={() => onOpenStudentGrid(m.student, m.cls)}
-                            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#edf2f7] text-slate-950 font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 shadow-xs"
                           >
                             <span>Ficha</span>
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -613,15 +615,15 @@ export const FamiliasMultiplosAlunosModal: React.FC<
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-5 bg-slate-950/60 backdrop-blur-xs animate-gentle-fade"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-5 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#f8fafc] w-full max-w-5xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))]"
+        className="bg-[#f4f7fb] w-full max-w-5xl rounded-2xl sm:rounded-3xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.4)] overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] animate-apple-pop"
       >
-        <div className="bg-white px-4 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
+        <div className="bg-white px-4 sm:px-6 py-4 flex items-center justify-between gap-3 shrink-0">
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-[#be123c] block">
+            <span className="text-xs font-semibold text-[#9f1239] block">
               Busca Ativa · Inteligência Familiar
             </span>
             <h2 className="text-base sm:text-lg font-bold text-slate-950 truncate">
@@ -632,7 +634,7 @@ export const FamiliasMultiplosAlunosModal: React.FC<
             type="button"
             onClick={onClose}
             aria-label="Fechar janela de famílias"
-            className="min-h-[40px] min-w-[40px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="min-h-[40px] min-w-[40px] rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -661,11 +663,11 @@ export const FamiliasMultiplosAlunosModal: React.FC<
           />
         </div>
 
-        <div className="bg-white px-4 sm:px-6 py-3 border-t border-slate-200 flex justify-end shrink-0">
+        <div className="bg-white px-4 sm:px-6 py-3 shadow-[0_-6px_20px_-8px_rgba(9,15,29,0.08)] flex justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[40px] px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold cursor-pointer transition-colors"
+            className="min-h-[40px] px-5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97]"
           >
             Fechar
           </button>

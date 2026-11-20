@@ -2,13 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from '
 import { List, useDynamicRowHeight, useVirtualizer, RowComponentProps } from 'react-window';
 import { ClassGroup, Student, UserRole, SchoolNotice } from '../types';
 import {
-  CLASS_EXPORT_COLUMNS,
-  CLASS_EXPORT_PRESETS,
   DEFAULT_CLASS_EXPORT_COLUMN_IDS,
-  ClassExportCategory,
   ClassExportSortOrder,
   ClassExportStatusFilter,
-  buildCustomClassExportPreview,
   downloadClassCustomXLS,
 } from '../services/db';
 import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
@@ -23,9 +19,34 @@ import {
 } from '../utils/genderDictionary';
 import { StudentAvatar } from './StudentAvatar';
 import { StudentDataExpansionPanel } from './StudentDataExpansionPanel';
+import { DetalhesExportModal } from './DetalhesExportModal';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
-import { FileWarning, Copy, Check } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BadgeCheck,
+  BellRing,
+  Camera,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  ClipboardCheck,
+  Copy,
+  Download,
+  FileText,
+  FileWarning,
+  FilterX,
+  LayoutGrid,
+  List as ListIcon,
+  MessageCircle,
+  Rows3,
+  Search,
+  ShieldAlert,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 type ViewMode = 'grid' | 'compact' | 'table';
@@ -134,11 +155,11 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
               student={student}
               size={isExpanded ? 'xl' : 'lg'}
               onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-              className="border-0 bg-[#f1f5f9]"
+              className="bg-[#edf2f7]"
             />
 
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-semibold tracking-[-0.006em] text-slate-700 tabular-nums">
                 <span>{student.number.toString().padStart(2, '0')}</span>
                 <span aria-hidden="true">·</span>
                 <span
@@ -153,7 +174,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
                 {isNonActive && (
                   <>
                     <span aria-hidden="true">·</span>
-                    <span className="font-semibold text-[#64748b]">
+                    <span className="font-semibold text-slate-700">
                       {isTransferred
                         ? studentGenderInfo.transferidoTerm
                         : isRemanejado
@@ -186,7 +207,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
 
               <h3
                 className={`mt-1 text-[18px] font-semibold tracking-[-0.024em] leading-[1.22] break-words ${
-                  isNonActive ? 'text-[#64748b]' : 'text-[#0f172a]'
+                  isNonActive ? 'text-slate-700' : 'text-slate-950'
                 }`}
               >
                 {student.name}
@@ -194,14 +215,12 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
             </div>
           </div>
 
-          <span
-            className={`material-symbols-outlined text-[20px] text-[#94a3b8] shrink-0 mt-0.5 transition-transform duration-150 ${
-              isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
+          <ChevronDown
+            className={`w-5 h-5 text-slate-600 shrink-0 mt-0.5 transition-transform duration-200 ${
+              isExpanded ? 'rotate-180 text-[#092e70]' : ''
             }`}
             aria-hidden="true"
-          >
-            expand_more
-          </span>
+          />
         </div>
 
         {(guardian1Info.cleanName || waList.length > 0) && (
@@ -219,7 +238,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#047857] hover:underline tabular-nums shrink-0"
               >
-                <span className="material-symbols-outlined text-[14px]">chat</span>
+                <MessageCircle className="w-3.5 h-3.5 shrink-0" />
                 <span>{waList[0].display}</span>
               </a>
             )}
@@ -240,9 +259,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
               onClick={() => onOpenPhotoModal(student)}
               className="min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
-                photo_camera
-              </span>
+              <Camera className="w-4 h-4 text-[#475569] shrink-0" />
               <span>Foto</span>
             </button>
           )}
@@ -257,13 +274,11 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
               }}
               className={`min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                 hasStudentPdf
-                  ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
-                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+                  ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
+                  : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] shrink-0">
-                picture_as_pdf
-              </span>
+              <FileText className="w-4 h-4 shrink-0" />
               <span>PDF</span>
             </button>
           )}
@@ -278,9 +293,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
               }}
               className="min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
-                grid_view
-              </span>
+              <LayoutGrid className="w-4 h-4 text-[#475569] shrink-0" />
               <span>Ficha</span>
             </button>
           )}
@@ -360,11 +373,11 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
             student={student}
             size="lg"
             onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-            className="border-0 bg-[#f1f5f9]"
+            className="bg-[#edf2f7]"
           />
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-1.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
+            <div className="flex flex-wrap items-center gap-x-1.5 text-[12px] font-semibold tracking-[-0.006em] text-slate-700 tabular-nums">
               <span>{student.number.toString().padStart(2, '0')}</span>
               <span aria-hidden="true">·</span>
               <span className={m.isBelowLegalThreshold && !isNonActive ? 'text-[#b42318] font-semibold' : undefined}>
@@ -385,7 +398,7 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
             </div>
             <span
               className={`block font-semibold text-[17px] tracking-[-0.022em] leading-[1.24] break-words mt-0.5 ${
-                isNonActive ? 'text-[#64748b]' : 'text-[#0f172a]'
+                isNonActive ? 'text-slate-700' : 'text-slate-950'
               }`}
             >
               {student.name}
@@ -416,9 +429,7 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
               onClick={() => onOpenPhotoModal(student)}
               className="flex-1 sm:flex-initial min-h-[44px] sm:min-h-[40px] px-3.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
-                photo_camera
-              </span>
+              <Camera className="w-4 h-4 text-[#475569] shrink-0" />
               <span>Foto</span>
             </button>
           )}
@@ -433,13 +444,11 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
               }}
               className={`flex-1 sm:flex-initial min-h-[44px] sm:min-h-[40px] px-3.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                 hasPdf
-                  ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
-                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+                  ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
+                  : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] shrink-0">
-                picture_as_pdf
-              </span>
+              <FileText className="w-4 h-4 shrink-0" />
               <span>PDF</span>
             </button>
           )}
@@ -454,9 +463,7 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
               }}
               className="flex-1 sm:flex-initial min-h-[44px] sm:min-h-[40px] px-3.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
-                grid_view
-              </span>
+              <LayoutGrid className="w-4 h-4 text-[#475569] shrink-0" />
               <span>Ficha</span>
             </button>
           )}
@@ -467,13 +474,11 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
             aria-label={isExpanded ? 'Recolher detalhes' : 'Expandir detalhes'}
             className="w-11 h-11 sm:w-10 sm:h-10 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#475569] flex items-center justify-center cursor-pointer transition-colors shrink-0"
           >
-            <span
-              className={`material-symbols-outlined text-[19px] transition-transform duration-150 ${
+            <ChevronDown
+              className={`w-[19px] h-[19px] transition-transform duration-150 ${
                 isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
               }`}
-            >
-              expand_more
-            </span>
+            />
           </button>
         </div>
       </div>
@@ -580,13 +585,11 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
               title={isExpanded ? 'Recolher detalhes' : 'Expandir dados completos'}
               className="p-1 rounded-lg hover:bg-black/5 text-[#0f172a] cursor-pointer"
             >
-              <span
-                className={`material-symbols-outlined text-[16px] transition-transform ${
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
                   isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
                 }`}
-              >
-                expand_more
-              </span>
+              />
             </button>
             <span className="font-semibold text-[#475569] text-[12px] tabular-nums">
               {student.number.toString().padStart(2, '0')}
@@ -600,7 +603,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                 student={student}
                 size="md"
                 onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-                className="border-0 bg-[#f1f5f9]"
+                className="bg-[#edf2f7]"
               />
               <div className="min-w-0">
                 <span className="font-semibold text-[15px] text-[#0f172a] tracking-[-0.018em] break-words block leading-snug">
@@ -616,9 +619,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                   title={`Foto (${student.name})`}
                   className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[12px] tracking-[-0.008em] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[15px] text-[#475569]">
-                    photo_camera
-                  </span>
+                  <Camera className="w-[15px] h-[15px] text-[#475569]" />
                   <span>Foto</span>
                 </button>
               )}
@@ -633,13 +634,11 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                   title={`PDF (${student.name})`}
                   className={`min-h-[34px] px-2.5 py-1 rounded-xl font-semibold text-[12px] tracking-[-0.008em] flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
                     hasPdf
-                      ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
-                      : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+                      ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
+                      : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[15px]">
-                    picture_as_pdf
-                  </span>
+                  <FileText className="w-[15px] h-[15px]" />
                   <span>PDF</span>
                 </button>
               )}
@@ -654,9 +653,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                   title={`Ficha (${student.name})`}
                   className="min-h-[34px] px-2.5 py-1 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[12px] tracking-[-0.008em] flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[15px] text-[#475569]">
-                    grid_view
-                  </span>
+                  <LayoutGrid className="w-[15px] h-[15px] text-[#475569]" />
                   <span>Ficha</span>
                 </button>
               )}
@@ -669,9 +666,13 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-semibold text-xs uppercase tabular-nums ${consecInfo.badgeBgClass} ${consecInfo.badgeTextClass}`}
               >
-                <span className="material-symbols-outlined text-[14px]">
-                  {consecInfo.icon}
-                </span>
+                {consecInfo.tier === '10d' ? (
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                ) : consecInfo.tier === '5d' ? (
+                  <BellRing className="w-3.5 h-3.5 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                )}
                 <span>{consecInfo.shortBadge}</span>
               </span>
               <span className="text-[11px] font-semibold text-[#475569] mt-0.5">
@@ -875,11 +876,11 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
             student={student}
             size={isExpanded ? 'xl' : 'lg'}
             onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-            className="border-0 bg-[#f1f5f9]"
+            className="bg-[#edf2f7]"
           />
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] font-semibold tracking-[-0.006em] text-slate-700 tabular-nums">
               <span>{student.number.toString().padStart(2, '0')}</span>
               <span aria-hidden="true">·</span>
               <span
@@ -894,7 +895,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
               {isNonActive && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span className="font-semibold text-[#64748b]">
+                  <span className="font-semibold text-slate-700">
                     {isTransferred
                       ? studentGenderInfo.transferidoTerm
                       : isRemanejado
@@ -921,7 +922,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
 
             <h2
               className={`mt-1 text-[18px] sm:text-[19px] font-semibold tracking-[-0.024em] leading-[1.22] break-words ${
-                isNonActive ? 'text-[#64748b]' : 'text-[#0f172a]'
+                isNonActive ? 'text-slate-700' : 'text-slate-950'
               }`}
             >
               {student.name}
@@ -929,14 +930,12 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
           </div>
         </div>
 
-        <span
-          className={`material-symbols-outlined text-[20px] text-[#94a3b8] shrink-0 mt-0.5 transition-transform duration-150 ${
-            isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
+        <ChevronDown
+          className={`w-5 h-5 text-slate-600 shrink-0 mt-0.5 transition-transform duration-150 ${
+            isExpanded ? 'rotate-180 text-[#092e70]' : ''
           }`}
           aria-hidden="true"
-        >
-          expand_more
-        </span>
+        />
       </div>
 
       {(onOpenPhotoModal || onOpenStudentPdf || onOpenStudentGrid) && (
@@ -950,9 +949,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
               onClick={() => onOpenPhotoModal(student)}
               className="min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
-                photo_camera
-              </span>
+              <Camera className="w-4 h-4 text-[#475569] shrink-0" />
               <span>Foto</span>
             </button>
           )}
@@ -963,13 +960,11 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
               onClick={() => onOpenStudentPdf(student)}
               className={`min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                 hasStudentPdf
-                  ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
-                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+                  ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
+                  : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
               }`}
             >
-              <span className="material-symbols-outlined text-[16px] shrink-0">
-                picture_as_pdf
-              </span>
+              <FileText className="w-4 h-4 shrink-0" />
               <span>PDF</span>
             </button>
           )}
@@ -980,9 +975,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
               onClick={() => onOpenStudentGrid(student)}
               className="min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
-                grid_view
-              </span>
+              <LayoutGrid className="w-4 h-4 text-[#475569] shrink-0" />
               <span>Ficha</span>
             </button>
           )}
@@ -1272,9 +1265,6 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     useState<ClassExportStatusFilter>('all');
   const [includeSummarySheet, setIncludeSummarySheet] = useState<boolean>(true);
   const [exportFileFormat, setExportFileFormat] = useState<'xls' | 'xlsx'>('xls');
-  const [columnSearchTerm, setColumnSearchTerm] = useState('');
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
-  const [draggedColIndex, setDraggedColIndex] = useState<number | null>(null);
   const [exportSuccessToast, setExportSuccessToast] = useState<string | null>(null);
 
   const saveSelectedColumns = (nextCols: string[]) => {
@@ -1286,34 +1276,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     }
   };
 
-  const handleToggleColumn = (colId: string) => {
-    if (selectedColumnIds.includes(colId)) {
-      if (selectedColumnIds.length <= 1) return; // Keep at least 1 column
-      saveSelectedColumns(selectedColumnIds.filter((id) => id !== colId));
-    } else {
-      saveSelectedColumns([...selectedColumnIds, colId]);
-    }
-  };
-
-  const handleMoveColumn = (index: number, direction: 'up' | 'down' | 'top' | 'bottom') => {
-    const next = [...selectedColumnIds];
-    const [removed] = next.splice(index, 1);
-    if (direction === 'up' && index > 0) {
-      next.splice(index - 1, 0, removed);
-    } else if (direction === 'down' && index < selectedColumnIds.length - 1) {
-      next.splice(index + 1, 0, removed);
-    } else if (direction === 'top') {
-      next.unshift(removed);
-    } else if (direction === 'bottom') {
-      next.push(removed);
-    } else {
-      return;
-    }
-    saveSelectedColumns(next);
-  };
-
-  const handleExecuteDownloadXLS = () => {
-    downloadClassCustomXLS(classGroup, {
+  const handleExecuteDownloadXLS = async () => {
+    await downloadClassCustomXLS(classGroup, {
       columnIds: selectedColumnIds,
       sortBy: exportSortBy,
       statusFilter: exportStatusFilter,
@@ -1665,25 +1629,23 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
 
           <div className="relative min-w-0">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[20px]">
-              search
-            </span>
+            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-700" />
             <input
               type="text"
               value={searchStudent}
               onChange={(e) => setSearchStudent(e.target.value)}
               placeholder="Buscar estudante por nome ou número..."
               aria-label="Buscar estudante"
-              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#f8fafc] shadow-lg transition-colors"
+              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-medium tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 focus:bg-[#f4f7fb] shadow-lg transition-colors"
             />
             {searchStudent && (
               <button
                 type="button"
                 onClick={() => setSearchStudent('')}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center text-[#64748b] hover:text-[#0f172a] cursor-pointer"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 hover:text-slate-950 cursor-pointer"
                 aria-label="Limpar busca"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <X className="w-[18px] h-[18px]" />
               </button>
             )}
           </div>
@@ -1799,7 +1761,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           onClick={onBackToClasses}
           className="text-slate-200 hover:text-white font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
         >
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+          <ArrowLeft className="w-4 h-4" />
           <span>Turmas</span>
         </button>
         <span className="text-slate-300 font-medium tabular-nums shrink-0">
@@ -1822,12 +1784,12 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 </span>
               )}
               {classGroup.classeSedCode && (
-                <span className="text-[12px] font-medium tracking-[-0.006em] text-[#64748b] tabular-nums">
+                <span className="text-[12px] font-medium tracking-[-0.006em] text-slate-700 tabular-nums">
                   SED {classGroup.classeSedCode}
                 </span>
               )}
             </div>
-            <p className="text-[13px] tracking-[-0.008em] text-[#64748b] font-normal break-words leading-relaxed">
+            <p className="text-[13px] tracking-[-0.008em] text-slate-700 font-normal break-words leading-relaxed">
               <span className="font-semibold text-[#334155]">Regente:</span> {classGroup.teacherName || 'Docente Regente'}
               {classGroup.artTeacher && (
                 <> · <span className="font-semibold text-[#334155]">Arte:</span> {classGroup.artTeacher}</>
@@ -1848,7 +1810,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 onClick={onGoToMonthlyAttendance}
                 className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
               >
-                <span className="material-symbols-outlined text-[17px] text-emerald-300 shrink-0">checklist</span>
+                <ClipboardCheck className="w-[17px] h-[17px] text-emerald-300 shrink-0" />
                 <span>Informar Faltas</span>
               </button>
             )}
@@ -1859,7 +1821,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 onClick={() => setIsExportXlsModalOpen(true)}
                 className="w-full sm:w-auto min-h-[40px] py-2 px-3.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
               >
-                <span className="material-symbols-outlined text-[17px] text-[#475569] shrink-0">download</span>
+                <Download className="w-[17px] h-[17px] text-[#475569] shrink-0" />
                 <span>Exportar .XLS</span>
               </button>
             )}
@@ -1923,7 +1885,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             </button>
           ) : (
             <div className="min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold bg-[#ecfdf5] text-[#047857] flex items-center gap-1">
-              <span className="material-symbols-outlined text-[15px]">verified</span>
+              <BadgeCheck className="w-[15px] h-[15px]" />
               <span>100% PDFs</span>
             </div>
           )}
@@ -1962,25 +1924,23 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         {/* Linha 3: Busca + Controles */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-0.5 min-w-0">
           <div className="relative flex-1 min-w-0">
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[19px]">
-              search
-            </span>
+            <Search className="w-[19px] h-[19px] absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-700" />
             <input
               type="text"
               value={searchStudent}
               onChange={(e) => setSearchStudent(e.target.value)}
               placeholder="Buscar por Nº, nome, RA ou responsável..."
               aria-label="Buscar estudante"
-              className="w-full min-h-[44px] pl-10 pr-9 rounded-2xl bg-[#f1f5f9] text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:bg-[#e2e8f0]/70 transition-colors"
+              className="w-full min-h-[44px] pl-10 pr-9 rounded-2xl bg-[#f4f7fb] text-[15px] font-medium tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 focus:bg-[#edf2f7] transition-colors"
             />
             {searchStudent && (
               <button
                 type="button"
                 onClick={() => setSearchStudent('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a] cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 hover:text-slate-950 cursor-pointer"
                 aria-label="Limpar busca"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <X className="w-[18px] h-[18px]" />
               </button>
             )}
           </div>
@@ -1992,7 +1952,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 onClick={() => setStatusFilter('all')}
                 className="min-h-[40px] px-3 rounded-2xl bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#0f172a] font-semibold text-[12.5px] tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors"
               >
-                <span className="material-symbols-outlined text-[15px]">filter_alt_off</span>
+                <FilterX className="w-[15px] h-[15px]" />
                 <span>Limpar</span>
               </button>
             )}
@@ -2005,9 +1965,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               title="Expandir ou recolher resumo de todos"
               className="min-h-[40px] px-3.5 rounded-2xl text-[12.5px] tracking-[-0.01em] font-semibold text-[#0f172a] bg-[#f1f5f9] hover:bg-[#e2e8f0] flex items-center gap-1 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[17px]">
-                {expandedStudentId === '__ALL__' ? 'unfold_less' : 'unfold_more'}
-              </span>
+              {expandedStudentId === '__ALL__' ? (
+                <ChevronsDownUp className="w-[17px] h-[17px]" />
+              ) : (
+                <ChevronsUpDown className="w-[17px] h-[17px]" />
+              )}
               <span>{expandedStudentId === '__ALL__' ? 'Recolher' : 'Expandir'}</span>
             </button>
 
@@ -2018,11 +1980,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 title="Cartões"
                 className={`min-h-[34px] px-2.5 sm:px-3 rounded-xl text-[12.5px] tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors ${
                   viewMode === 'grid'
-                    ? 'bg-white text-[#0f172a] font-semibold shadow-2xs'
-                    : 'text-[#64748b] hover:text-[#0f172a] font-medium'
+                    ? 'bg-white text-slate-950 font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:text-slate-950 font-medium'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">grid_view</span>
+                <LayoutGrid className="w-4 h-4" />
                 <span className="hidden sm:inline">Cards</span>
               </button>
               <button
@@ -2031,11 +1993,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 title="Lista"
                 className={`min-h-[34px] px-2.5 sm:px-3 rounded-xl text-[12.5px] tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors ${
                   viewMode === 'compact'
-                    ? 'bg-white text-[#0f172a] font-semibold shadow-2xs'
-                    : 'text-[#64748b] hover:text-[#0f172a] font-medium'
+                    ? 'bg-white text-slate-950 font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:text-slate-950 font-medium'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">view_agenda</span>
+                <ListIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">Lista</span>
               </button>
               <button
@@ -2044,11 +2006,11 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 title="Tabela"
                 className={`min-h-[34px] px-2.5 sm:px-3 rounded-xl text-[12.5px] tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors ${
                   viewMode === 'table'
-                    ? 'bg-white text-[#0f172a] font-semibold shadow-2xs'
-                    : 'text-[#64748b] hover:text-[#0f172a] font-medium'
+                    ? 'bg-white text-slate-950 font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:text-slate-950 font-medium'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">table_rows</span>
+                <Rows3 className="w-4 h-4" />
                 <span className="hidden sm:inline">Tabela</span>
               </button>
             </div>
@@ -2158,9 +2120,9 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
                   <table
                     ref={setTableElement}
-                    className="w-full text-left text-[13px] tracking-[-0.008em] border-collapse min-w-[1160px]"
+                    className="w-full text-left text-[13px] tracking-[-0.008em] min-w-[1160px]"
                   >
-                    <thead className="bg-[#f8fafc] text-[#475569] font-semibold uppercase tracking-[0.03em] text-[11px]">
+                    <thead className="bg-[#edf2f7] text-slate-800 font-bold uppercase tracking-[0.03em] text-[11px]">
                       <tr>
                         <th className="py-3 px-3 text-center">Nº</th>
                         <th className="py-3 px-3">Estudante</th>
@@ -2177,7 +2139,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     {topSpacerPx > 0 && (
                       <tbody aria-hidden="true">
                         <tr>
-                          <td colSpan={10} className="p-0 border-0" style={{ height: topSpacerPx }} />
+                          <td colSpan={10} className="p-0" style={{ height: topSpacerPx }} />
                         </tr>
                       </tbody>
                     )}
@@ -2206,7 +2168,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     {bottomSpacerPx > 0 && (
                       <tbody aria-hidden="true">
                         <tr>
-                          <td colSpan={10} className="p-0 border-0" style={{ height: bottomSpacerPx }} />
+                          <td colSpan={10} className="p-0" style={{ height: bottomSpacerPx }} />
                         </tr>
                       </tbody>
                     )}
@@ -2222,520 +2184,32 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       {exportSuccessToast && (
         <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-100">
           <div className="bg-[#0f172a] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
-            <span className="material-symbols-outlined text-[22px] text-emerald-400">
-              download_done
-            </span>
+            <CheckCircle2 className="w-[22px] h-[22px] text-emerald-400 shrink-0" />
             <p className="text-[13.5px] font-semibold tracking-[-0.01em] leading-snug">{exportSuccessToast}</p>
           </div>
         </div>
       )}
 
-      {/* MODAL iOS DE DOWNLOAD .XLS DA TURMA (SELECIONAR COLUNAS, CAMPOS E ORDEM) */}
-      {isExportXlsModalOpen && (() => {
-        const categories: ClassExportCategory[] = [
-          'Identificação & Matrícula',
-          'Filiação (Mãe e Pai) & Contatos',
-          'Frequência, Presença & Faltas',
-          'Documentos, Saúde & AEE',
-          'Endereço',
-          'Outros Campos SED',
-        ];
-
-        const qCol = columnSearchTerm.toLowerCase().trim();
-        const availableColumnsFiltered = CLASS_EXPORT_COLUMNS.filter((col) => {
-          const matchesCat =
-            activeCategoryFilter === 'all' || col.category === activeCategoryFilter;
-          const matchesText =
-            qCol === '' ||
-            col.label.toLowerCase().includes(qCol) ||
-            col.shortLabel.toLowerCase().includes(qCol) ||
-            col.category.toLowerCase().includes(qCol);
-          return matchesCat && matchesText;
-        });
-
-        const selectedColDefs = selectedColumnIds
-          .map((id) => CLASS_EXPORT_COLUMNS.find((c) => c.id === id))
-          .filter((c): c is NonNullable<typeof c> => Boolean(c));
-
-        const previewData = buildCustomClassExportPreview(
-          classGroup,
-          {
-            columnIds: selectedColumnIds,
-            sortBy: exportSortBy,
-            statusFilter: exportStatusFilter,
-            includeSummarySheet,
-            fileFormat: exportFileFormat,
-          },
-          OFFICIAL_OCTOBER_DAYS
-        );
-
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-gentle-fade"
-            onClick={() => setIsExportXlsModalOpen(false)}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="bg-[#f1f5f9] w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-apple-pop"
-            >
-              {/* Cabeçalho do Modal de Exportação .XLS */}
-              <div className="bg-white px-5 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#f1f5f9] text-[#0f172a] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[22px]">table_view</span>
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 text-[12px] tracking-[-0.006em] text-[#64748b] tabular-nums">
-                      <span className="font-semibold uppercase tracking-[0.03em]">
-                        .{exportFileFormat}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>
-                        {selectedColDefs.length} colunas · {previewData.rows.length} estudantes
-                      </span>
-                    </div>
-                    <h2 className="text-[18px] sm:text-[20px] font-semibold text-[#0f172a] tracking-[-0.022em] leading-tight mt-0.5 break-words">
-                      Exportação · {classGroup.name}
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleExecuteDownloadXLS}
-                    className="min-h-[40px] px-4 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">download</span>
-                    <span>Baixar .{exportFileFormat.toUpperCase()}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsExportXlsModalOpen(false)}
-                    className="w-10 h-10 rounded-2xl bg-[#f1f5f9] text-[#475569] hover:text-[#0f172a] hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer transition-colors"
-                    aria-label="Fechar"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">close</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Corpo Principal Rolável */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-                {/* 1. Modelos Rápidos */}
-                <div className="bg-white rounded-2xl p-4 space-y-2.5 shadow-2xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.03em] text-[#334155]">
-                      Modelos de Colunas
-                    </span>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          saveSelectedColumns(CLASS_EXPORT_COLUMNS.map((c) => c.id))
-                        }
-                        className="px-2.5 py-1 rounded-xl bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#047857] font-semibold text-[12px] cursor-pointer"
-                      >
-                        Todas ({CLASS_EXPORT_COLUMNS.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => saveSelectedColumns(DEFAULT_CLASS_EXPORT_COLUMN_IDS)}
-                        className="px-2.5 py-1 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[12px] cursor-pointer"
-                      >
-                        Padrão
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => saveSelectedColumns(['numeroChamada', 'estudante'])}
-                        className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold text-[12px] cursor-pointer"
-                      >
-                        Mínimo
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                    {CLASS_EXPORT_PRESETS.map((preset) => {
-                      const isCurrentPreset =
-                        preset.columnIds.length === selectedColumnIds.length &&
-                        preset.columnIds.every((id, idx) => selectedColumnIds[idx] === id);
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => saveSelectedColumns(preset.columnIds)}
-                          className={`p-3 rounded-2xl text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
-                            isCurrentPreset
-                              ? 'bg-[#eef4ff] text-[#0b3b8c]'
-                              : 'bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#0f172a]'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-[13px] tracking-[-0.01em]">
-                              {preset.label}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-lg bg-white/80 text-[#334155] font-semibold text-[11px] tabular-nums">
-                              {preset.columnIds.length}
-                            </span>
-                          </div>
-                          <p className="text-[12px] text-[#64748b] break-words leading-snug">
-                            {preset.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. Ordenação, Filtro e Formato */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="bg-white rounded-2xl p-3.5 space-y-1 shadow-2xs">
-                    <label className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
-                      Ordenação
-                    </label>
-                    <select
-                      value={exportSortBy}
-                      onChange={(e) => setExportSortBy(e.target.value as ClassExportSortOrder)}
-                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f1f5f9] text-[13px] font-semibold text-[#0f172a]"
-                    >
-                      <option value="number_asc">Nº da Chamada (01, 02...)</option>
-                      <option value="name_asc">Alfabética (A → Z)</option>
-                      <option value="name_desc">Alfabética (Z → A)</option>
-                      <option value="absences_desc">Maior Falta primeiro</option>
-                      <option value="presence_asc">Menor % Presença</option>
-                    </select>
-                  </div>
-
-                  <div className="bg-white rounded-2xl p-3.5 space-y-1 shadow-2xs">
-                    <label className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
-                      Estudantes
-                    </label>
-                    <select
-                      value={exportStatusFilter}
-                      onChange={(e) =>
-                        setExportStatusFilter(e.target.value as ClassExportStatusFilter)
-                      }
-                      className="w-full min-h-[38px] px-2.5 rounded-xl bg-[#f1f5f9] text-[13px] font-semibold text-[#0f172a]"
-                    >
-                      <option value="all">
-                        Todos ({classGroup.students.length})
-                      </option>
-                      <option value="ativos">
-                        Ativos ({classSummary.ativos})
-                      </option>
-                      <option value="movimentados">
-                        Movimentados ({classSummary.transferidos + classSummary.remanejados})
-                      </option>
-                      <option value="alerta">
-                        Em Alerta &lt;{minLegalPresence}% ({classSummary.alertaLegalCount})
-                      </option>
-                    </select>
-                  </div>
-
-                  <div className="bg-white rounded-2xl p-3.5 space-y-1 shadow-2xs">
-                    <label className="text-[11px] font-semibold uppercase tracking-[0.03em] text-[#64748b] block">
-                      Formato
-                    </label>
-                    <div className="ios-segmented w-full flex">
-                      <button
-                        type="button"
-                        onClick={() => setExportFileFormat('xls')}
-                        className={`flex-1 ios-segmented-item text-center ${
-                          exportFileFormat === 'xls' ? 'ios-segmented-item-active' : ''
-                        }`}
-                      >
-                        .XLS
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setExportFileFormat('xlsx')}
-                        className={`flex-1 ios-segmented-item text-center ${
-                          exportFileFormat === 'xlsx' ? 'ios-segmented-item-active' : ''
-                        }`}
-                      >
-                        .XLSX
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-2xs">
-                    <div>
-                      <span className="text-[13px] font-semibold text-[#0f172a] block">
-                        Aba Resumo
-                      </span>
-                      <span className="text-[12px] text-[#64748b] block">
-                        Totais e presença da turma
-                      </span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={includeSummarySheet}
-                      onChange={(e) => setIncludeSummarySheet(e.target.checked)}
-                      className="w-5 h-5 accent-[#0b3b8c] rounded cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                {/* 3. Grade Dupla: Campos e Ordem */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                  <div className="lg:col-span-7 bg-white rounded-2xl p-4 space-y-3 shadow-2xs">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <h3 className="text-[14px] font-semibold text-[#0f172a] tracking-[-0.015em]">
-                        Campos disponíveis ({CLASS_EXPORT_COLUMNS.length})
-                      </h3>
-
-                      <div className="relative w-full sm:w-56">
-                        <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[16px]">
-                          search
-                        </span>
-                        <input
-                          type="text"
-                          value={columnSearchTerm}
-                          onChange={(e) => setColumnSearchTerm(e.target.value)}
-                          placeholder="Buscar campo..."
-                          className="w-full min-h-[38px] pl-8 pr-2.5 rounded-xl bg-[#f1f5f9] text-[13px] font-normal text-[#0f172a] focus:outline-none focus:bg-[#e2e8f0]/70"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                      <button
-                        type="button"
-                        onClick={() => setActiveCategoryFilter('all')}
-                        className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] font-semibold whitespace-nowrap cursor-pointer ${
-                          activeCategoryFilter === 'all'
-                            ? 'bg-[#0b3b8c] text-white'
-                            : 'bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0]'
-                        }`}
-                      >
-                        Todas
-                      </button>
-                      {categories.map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => setActiveCategoryFilter(cat)}
-                          className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] font-semibold whitespace-nowrap cursor-pointer ${
-                            activeCategoryFilter === cat
-                              ? 'bg-[#0b3b8c] text-white'
-                              : 'bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0]'
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[310px] overflow-y-auto pr-1">
-                      {availableColumnsFiltered.map((col) => {
-                        const isChecked = selectedColumnIds.includes(col.id);
-                        const orderPos = selectedColumnIds.indexOf(col.id);
-                        return (
-                          <label
-                            key={col.id}
-                            className={`p-2.5 rounded-xl flex items-center justify-between gap-2 cursor-pointer select-none transition-colors min-w-0 ${
-                              isChecked
-                                ? 'bg-[#eef4ff] text-[#0b3b8c]'
-                                : 'bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#475569]'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => handleToggleColumn(col.id)}
-                                className="w-4 h-4 accent-[#0b3b8c] rounded cursor-pointer shrink-0"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <span className="font-semibold text-[12.5px] block break-words leading-snug text-[#0f172a]">
-                                  {col.shortLabel}
-                                </span>
-                                <span className="text-[11px] text-[#64748b] block break-words leading-snug">
-                                  {col.label}
-                                </span>
-                              </div>
-                            </div>
-
-                            {isChecked && (
-                              <span className="px-2 py-0.5 rounded-lg bg-[#0b3b8c] text-white font-semibold text-[11px] tabular-nums shrink-0">
-                                {orderPos + 1}ª
-                              </span>
-                            )}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-5 bg-white rounded-2xl p-4 space-y-3 shadow-2xs">
-                    <div>
-                      <h3 className="text-[14px] font-semibold text-[#0f172a] tracking-[-0.015em]">
-                        Ordem ({selectedColDefs.length})
-                      </h3>
-                      <p className="text-[12px] text-[#64748b]">
-                        Arraste ou use as setas para reordenar
-                      </p>
-                    </div>
-
-                    <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
-                      {selectedColDefs.map((col, idx) => (
-                        <div
-                          key={col.id}
-                          draggable
-                          onDragStart={() => setDraggedColIndex(idx)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={() => {
-                            if (draggedColIndex === null || draggedColIndex === idx) return;
-                            const next = [...selectedColumnIds];
-                            const [moved] = next.splice(draggedColIndex, 1);
-                            next.splice(idx, 0, moved);
-                            saveSelectedColumns(next);
-                            setDraggedColIndex(null);
-                          }}
-                          className="p-2.5 rounded-xl bg-[#f8fafc] hover:bg-[#f1f5f9] flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing min-w-0"
-                        >
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="w-7 h-7 rounded-lg bg-[#0b3b8c] text-white font-semibold text-[12px] tabular-nums flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <span className="font-semibold text-[12.5px] text-[#0f172a] block break-words leading-snug">
-                                {col.shortLabel}
-                              </span>
-                              <span className="text-[11px] text-[#64748b] block break-words leading-snug">
-                                {col.label}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              disabled={idx === 0}
-                              onClick={() => handleMoveColumn(idx, 'top')}
-                              title="Mover para 1ª"
-                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-[16px]">
-                                keyboard_double_arrow_up
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={idx === 0}
-                              onClick={() => handleMoveColumn(idx, 'up')}
-                              title="Subir"
-                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-[16px]">
-                                arrow_upward
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={idx === selectedColDefs.length - 1}
-                              onClick={() => handleMoveColumn(idx, 'down')}
-                              title="Descer"
-                              className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-[16px]">
-                                arrow_downward
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={selectedColDefs.length <= 1}
-                              onClick={() => handleToggleColumn(col.id)}
-                              title="Remover"
-                              className="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 flex items-center justify-center disabled:opacity-30 cursor-pointer"
-                            >
-                              <span className="material-symbols-outlined text-[16px]">close</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Pré-visualização */}
-                <div className="bg-white rounded-2xl p-4 space-y-2.5 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.03em] text-[#334155]">
-                      Prévia (.{exportFileFormat.toUpperCase()})
-                    </span>
-                    <span className="text-[12px] font-medium text-[#64748b] tabular-nums">
-                      {previewData.rows.length} linhas × {previewData.headers.length} colunas
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl overflow-x-auto bg-[#f8fafc]">
-                    <table className="w-full text-left text-[12px] border-collapse">
-                      <thead className="bg-[#0f172a] text-white font-semibold uppercase whitespace-nowrap">
-                        <tr>
-                          {previewData.headers.map((h, i) => (
-                            <th key={`${h}-${i}`} className="py-2 px-2.5">
-                              <span className="text-sky-300 mr-1 tabular-nums">{i + 1}.</span>
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="whitespace-nowrap">
-                        {previewData.rows.slice(0, 4).map((row, rIdx) => (
-                          <tr
-                            key={rIdx}
-                            className={rIdx % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'}
-                          >
-                            {previewData.headers.map((h, cIdx) => (
-                              <td
-                                key={`${rIdx}-${cIdx}`}
-                                className="py-1.5 px-2.5 text-[#0f172a] font-medium max-w-[220px] truncate"
-                              >
-                                {String(row[h] ?? '—')}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rodapé do Modal */}
-              <div className="bg-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
-                <div className="text-[12px] text-[#64748b] font-medium tabular-nums">
-                  Relatorio_{classGroup.name.replace(/\s+/g, '_')}_2027.{exportFileFormat}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsExportXlsModalOpen(false)}
-                    className="min-h-[40px] px-4 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExecuteDownloadXLS}
-                    className="min-h-[40px] px-5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] flex items-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">download</span>
-                    <span>
-                      Baixar .{exportFileFormat.toUpperCase()} ({selectedColDefs.length})
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      <DetalhesExportModal
+        isOpen={isExportXlsModalOpen}
+        classGroup={classGroup}
+        totalAtivos={classSummary.ativos}
+        totalMovimentados={classSummary.transferidos + classSummary.remanejados}
+        totalAlertaLegal={classSummary.alertaLegalCount}
+        minLegalPresence={minLegalPresence}
+        selectedColumnIds={selectedColumnIds}
+        exportSortBy={exportSortBy}
+        exportStatusFilter={exportStatusFilter}
+        includeSummarySheet={includeSummarySheet}
+        exportFileFormat={exportFileFormat}
+        onSaveSelectedColumns={saveSelectedColumns}
+        onChangeSortBy={setExportSortBy}
+        onChangeStatusFilter={setExportStatusFilter}
+        onChangeIncludeSummarySheet={setIncludeSummarySheet}
+        onChangeFileFormat={setExportFileFormat}
+        onExecuteDownload={handleExecuteDownloadXLS}
+        onClose={() => setIsExportXlsModalOpen(false)}
+      />
     </div>
   );
 };

@@ -62,18 +62,18 @@ const PRIORITY_META: Record<
 > = {
   urgente: {
     label: 'Urgente',
-    textClass: 'text-[#b91c1c]',
-    surfaceClass: 'bg-rose-50/75 border-rose-200',
+    textClass: 'text-rose-950',
+    surfaceClass: 'bg-rose-100/80',
   },
   importante: {
     label: 'Importante',
-    textClass: 'text-[#b45309]',
-    surfaceClass: 'bg-amber-50/75 border-amber-200',
+    textClass: 'text-amber-950',
+    surfaceClass: 'bg-amber-100/80',
   },
   informativo: {
     label: 'Informativo',
     textClass: 'text-[#0b3b8c]',
-    surfaceClass: 'bg-slate-50 border-slate-200',
+    surfaceClass: 'bg-[#f4f7fb]',
   },
 };
 
@@ -339,29 +339,29 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
     <section
       id="quadro-avisos-direcao"
       aria-label="Quadro de Avisos da Direção"
-      className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4 min-w-0"
+      className="bg-white rounded-3xl p-5 sm:p-6 shadow-[0_8px_28px_-10px_rgba(9,15,29,0.08)] space-y-4 min-w-0"
     >
       {/* Cabeçalho do Quadro */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
         <div className="flex items-start sm:items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#0071e3]/10 text-[#0071e3] flex items-center justify-center shrink-0">
-            <Megaphone className="w-5 h-5 stroke-[1.5]" />
+          <div className="w-10 h-10 rounded-xl bg-[#dce7fb] text-[#0b3b8c] flex items-center justify-center shrink-0">
+            <Megaphone className="w-5 h-5 stroke-[1.75]" />
           </div>
           <div className="min-w-0">
             <h2 className="text-lg sm:text-xl font-bold text-slate-950 tracking-tight text-balance break-words">
               Quadro de Avisos da Direção
             </h2>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs sm:text-[13px] text-slate-600 mt-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs sm:text-[13px] text-slate-700 mt-0.5">
               <span>Visível para toda a equipe escolar</span>
               <span aria-hidden="true">·</span>
-              <span className="tabular-nums font-medium text-slate-800">
+              <span className="tabular-nums font-medium text-slate-900">
                 {visibleNotices.length}{' '}
                 {visibleNotices.length === 1 ? 'aviso ativo' : 'avisos ativos'}
               </span>
               {unreadNotices.length > 0 && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span className="font-bold text-[#be123c] tabular-nums">
+                  <span className="font-bold text-[#9f1239] tabular-nums">
                     {unreadNotices.length}{' '}
                     {unreadNotices.length === 1 ? 'pendente de ciência' : 'pendentes de ciência'}
                   </span>
@@ -376,9 +376,9 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors duration-100"
+              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
-              <CheckCheck className="w-4 h-4 text-[#047857] stroke-[1.6] shrink-0" />
+              <CheckCheck className="w-4 h-4 text-[#065f46] stroke-[1.8] shrink-0" />
               <span>Dar ciência em tudo</span>
             </button>
           )}
@@ -387,7 +387,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <button
               type="button"
               onClick={handleOpenNew}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs sm:text-[13px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors duration-100"
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs sm:text-[13px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <Plus className="w-4 h-4 stroke-[1.8] shrink-0" />
               <span>Postar Aviso</span>
@@ -400,7 +400,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
       {isAdminEditor && isComposerOpen && (
         <form
           onSubmit={handleSubmit}
-          className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-gentle-fade"
+          className="p-4 rounded-2xl bg-[#f4f7fb] space-y-3 animate-fade-in"
         >
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-bold text-slate-950">
@@ -411,7 +411,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <button
               type="button"
               onClick={resetComposer}
-              className="min-h-[36px] px-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-950 hover:bg-slate-200/70 inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer transition-colors"
+              className="min-h-[36px] px-2.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-slate-950 hover:bg-[#e2e8f0] inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer transition-colors"
             >
               <X className="w-4 h-4" />
               <span>Cancelar</span>
@@ -422,7 +422,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <div className="sm:col-span-2">
               <label
                 htmlFor="direcao-notice-title"
-                className="block text-xs font-semibold text-slate-700 mb-1"
+                className="block text-xs font-semibold text-slate-800 mb-1"
               >
                 Assunto (opcional)
               </label>
@@ -433,18 +433,18 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ex.: Conselho de Classe / Fechamento de Chamada"
-                className="w-full min-h-[42px] px-3.5 rounded-xl bg-white border border-slate-200 text-slate-950 text-sm font-medium focus:outline-none focus:border-[#0b3b8c] transition-colors"
+                className="w-full min-h-[42px] px-3.5 rounded-xl bg-white text-slate-950 placeholder:text-slate-600 text-sm font-medium transition-colors"
               />
             </div>
 
             <div>
-              <span className="block text-xs font-semibold text-slate-700 mb-1">
+              <span className="block text-xs font-semibold text-slate-800 mb-1">
                 Prioridade
               </span>
               <div
                 role="group"
                 aria-label="Prioridade do aviso"
-                className="grid grid-cols-3 gap-1 p-1 bg-white border border-slate-200 rounded-xl"
+                className="grid grid-cols-3 gap-1 p-1 bg-white rounded-xl shadow-xs"
               >
                 {(['informativo', 'importante', 'urgente'] as NoticePriority[]).map(
                   (level) => (
@@ -453,14 +453,14 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                       type="button"
                       onClick={() => setPriority(level)}
                       aria-pressed={priority === level}
-                      className={`min-h-[34px] px-2 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
+                      className={`min-h-[34px] px-2 rounded-lg text-xs font-bold whitespace-nowrap cursor-pointer transition-all duration-200 ${
                         priority === level
                           ? level === 'urgente'
                             ? 'bg-[#b91c1c] text-white'
                             : level === 'importante'
                             ? 'bg-[#b45309] text-white'
                             : 'bg-[#0b3b8c] text-white'
-                          : 'text-slate-700 hover:bg-slate-100'
+                          : 'text-slate-800 hover:bg-[#edf2f7]'
                       }`}
                     >
                       {PRIORITY_META[level].label}
@@ -475,13 +475,13 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <div className="flex items-center justify-between gap-2 mb-1">
               <label
                 htmlFor="direcao-notice-content"
-                className="text-xs font-semibold text-slate-700"
+                className="text-xs font-semibold text-slate-800"
               >
                 Mensagem curta para a equipe escolar
               </label>
               <span
                 className={`text-xs font-medium tabular-nums ${
-                  remainingChars < 30 ? 'text-[#b45309] font-bold' : 'text-slate-500'
+                  remainingChars < 30 ? 'text-[#92400e] font-bold' : 'text-slate-700'
                 }`}
               >
                 {content.length}/{MAX_SHORT_MESSAGE_LENGTH}
@@ -495,12 +495,12 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Escreva um recado direto para docentes e funcionários..."
-              className="w-full p-3 rounded-xl bg-white border border-slate-200 text-slate-950 text-sm leading-relaxed focus:outline-none focus:border-[#0b3b8c] transition-colors resize-none"
+              className="w-full p-3 rounded-xl bg-white text-slate-950 placeholder:text-slate-600 text-sm leading-relaxed transition-colors resize-none"
             />
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-            <label className="inline-flex items-center gap-2 text-xs sm:text-[13px] font-semibold text-slate-800 cursor-pointer select-none">
+            <label className="inline-flex items-center gap-2 text-xs sm:text-[13px] font-semibold text-slate-900 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={pinned}
@@ -513,7 +513,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <button
               type="submit"
               disabled={!content.trim()}
-              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] disabled:opacity-50 text-white text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer transition-colors duration-100"
+              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] disabled:opacity-50 text-white text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <Send className="w-4 h-4 shrink-0" />
               <span>{editingNoticeId ? 'Salvar alterações' : 'Publicar para equipe'}</span>
@@ -524,15 +524,15 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
 
       {/* Lista de Mensagens / Estado Vazio */}
       {visibleNotices.length === 0 ? (
-        <div className="py-6 px-4 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-2.5">
-          <p className="text-sm font-medium text-slate-700">
+        <div className="py-6 px-4 rounded-2xl bg-[#f4f7fb] text-center space-y-2.5">
+          <p className="text-sm font-medium text-slate-800">
             Nenhum aviso publicado pela Direção no momento.
           </p>
           {isAdminEditor && !isComposerOpen && (
             <button
               type="button"
               onClick={handleOpenNew}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <Plus className="w-4 h-4" />
               <span>Publicar primeiro aviso</span>
@@ -559,10 +559,10 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             return (
               <article
                 key={notice.id}
-                className={`p-4 rounded-2xl border ${meta.surfaceClass} transition-colors duration-100 space-y-2.5 min-w-0`}
+                className={`p-4 rounded-2xl ${meta.surfaceClass} transition-all duration-200 space-y-2.5 min-w-0`}
               >
-                {/* Linha superior de metadados limpos (sem pílulas) */}
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-slate-600">
+                {/* Linha superior de metadados limpos */}
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-slate-700">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
                     <span className={`font-bold ${meta.textClass}`}>
                       {meta.label}
@@ -570,18 +570,18 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                     {notice.pinned && (
                       <>
                         <span aria-hidden="true">·</span>
-                        <span className="font-semibold text-slate-900">Fixado</span>
+                        <span className="font-semibold text-slate-950">Fixado</span>
                       </>
                     )}
                     <span aria-hidden="true">·</span>
-                    <span className="font-medium text-slate-800 break-words">
+                    <span className="font-medium text-slate-900 break-words">
                       {notice.authorName || 'Direção Escolar'}
                     </span>
                   </div>
 
                   <time
                     dateTime={notice.createdAtISO}
-                    className="tabular-nums font-medium text-slate-600 shrink-0"
+                    className="tabular-nums font-medium text-slate-700 shrink-0"
                   >
                     {formatNoticeDate(notice.createdAtISO)}
                   </time>
@@ -594,26 +594,26 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                       {notice.title}
                     </h3>
                   )}
-                  <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-line break-words">
+                  <p className="text-sm text-slate-900 leading-relaxed whitespace-pre-line break-words">
                     {notice.content}
                   </p>
                 </div>
 
                 {/* Rodapé de Leitura e Gestão */}
-                <div className="pt-2.5 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5 text-xs">
                   <div className="flex flex-wrap items-center gap-2.5">
                     {!isRead ? (
                       <button
                         type="button"
                         onClick={() => handleMarkRead(notice.id)}
-                        className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors duration-100"
+                        className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-200 active:scale-[0.97]"
                       >
                         <Check className="w-3.5 h-3.5 stroke-[1.8] shrink-0" />
                         <span>Dar ciência</span>
                       </button>
                     ) : (
-                      <span className="min-h-[32px] font-bold text-[#047857] inline-flex items-center gap-1.5">
-                        <CheckCheck className="w-4 h-4 stroke-[1.6] shrink-0" />
+                      <span className="min-h-[32px] font-bold text-[#065f46] inline-flex items-center gap-1.5">
+                        <CheckCheck className="w-4 h-4 stroke-[1.8] shrink-0" />
                         <span>Ciência confirmada</span>
                       </span>
                     )}
@@ -623,10 +623,10 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                         type="button"
                         onClick={() => toggleReadersPanel(notice.id)}
                         aria-expanded={isReadersExpanded}
-                        className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors duration-100 ${
+                        className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-200 ${
                           isReadersExpanded
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-white hover:bg-slate-100 border border-slate-200 text-slate-800'
+                            ? 'bg-slate-950 text-white shadow-xs'
+                            : 'bg-white hover:bg-[#edf2f7] text-slate-950 shadow-xs'
                         }`}
                       >
                         <Users className="w-3.5 h-3.5 shrink-0" />
@@ -647,7 +647,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                       <button
                         type="button"
                         onClick={() => handleTogglePin(notice.id)}
-                        className="font-semibold text-slate-600 hover:text-slate-950 inline-flex items-center gap-1 whitespace-nowrap cursor-pointer transition-colors"
+                        className="font-semibold text-slate-800 hover:text-slate-950 inline-flex items-center gap-1 whitespace-nowrap cursor-pointer transition-colors"
                       >
                         {notice.pinned ? (
                           <>
@@ -674,7 +674,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDelete(notice.id)}
-                        className="font-semibold text-[#be123c] hover:underline inline-flex items-center gap-1 whitespace-nowrap cursor-pointer transition-colors"
+                        className="font-semibold text-[#9f1239] hover:underline inline-flex items-center gap-1 whitespace-nowrap cursor-pointer transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Excluir</span>
@@ -685,40 +685,42 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
 
                 {/* Lista de Confirmações de Leitura da Equipe (Visível para Administrador) */}
                 {isAdminEditor && isReadersExpanded && (
-                  <div className="pt-2.5 border-t border-slate-200/70 space-y-2 animate-gentle-fade">
+                  <div className="pt-2.5 space-y-2 animate-fade-in">
                     <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="font-bold text-slate-900">
+                      <span className="font-bold text-slate-950">
                         Equipe que confirmou a leitura
                       </span>
-                      <span className="tabular-nums font-medium text-slate-600">
+                      <span className="tabular-nums font-medium text-slate-700">
                         {readersList.length}{' '}
                         {readersList.length === 1 ? 'confirmação' : 'confirmações'}
                       </span>
                     </div>
 
                     {readersList.length === 0 ? (
-                      <p className="text-xs text-slate-600 py-1">
+                      <p className="text-xs text-slate-700 py-1">
                         Nenhum membro da equipe clicou em &ldquo;Marcar como lido&rdquo; neste comunicado ainda.
                       </p>
                     ) : (
-                      <ul className="divide-y divide-slate-200/70 bg-white/80 rounded-xl border border-slate-200/80 px-3">
-                        {readersList.map((reader) => (
+                      <ul className="space-y-1 bg-white/95 rounded-xl p-2">
+                        {readersList.map((reader, idx) => (
                           <li
                             key={reader.userEmail}
-                            className="py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs min-w-0"
+                            className={`py-2 px-2.5 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs min-w-0 ${
+                              idx % 2 === 1 ? 'bg-[#f4f7fb]' : 'bg-white'
+                            }`}
                           >
                             <div className="min-w-0">
-                              <span className="font-bold text-slate-900 block break-words">
+                              <span className="font-bold text-slate-950 block break-words">
                                 {reader.userName}
                               </span>
-                              <span className="text-slate-600 break-all">
+                              <span className="text-slate-700 break-all">
                                 {reader.userRole ? `${reader.userRole} · ` : ''}
                                 {reader.userEmail}
                               </span>
                             </div>
                             <time
                               dateTime={reader.readAtISO}
-                              className="tabular-nums font-semibold text-slate-700 shrink-0"
+                              className="tabular-nums font-semibold text-slate-800 shrink-0"
                             >
                               {formatReadDateTime(reader.readAtISO)}
                             </time>
@@ -740,7 +742,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
           <button
             type="button"
             onClick={() => setShowAllNotices((prev) => !prev)}
-            className="min-h-[38px] px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+            className="min-h-[38px] px-4 py-1.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
           >
             {showAllNotices ? (
               <>

@@ -71,6 +71,7 @@ interface HomeScreenProps {
   ) => void;
   onNavigateToAcessos?: () => void;
   onOpenClassPendingFichas?: (cls: ClassGroup) => void;
+  onOpenSpotlightSearch?: () => void;
 }
 
 interface QuickActionItem {
@@ -103,6 +104,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onMarkNoticeRead,
   onNavigateToAcessos,
   onOpenClassPendingFichas,
+  onOpenSpotlightSearch,
 }) => {
   const isStrictAdmin =
     userRole === 'admin' && teacherRoleType !== 'apoio' && teacherRoleType !== 'aee';
@@ -502,14 +504,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
+        {onOpenSpotlightSearch && (
+          <button
+            type="button"
+            onClick={onOpenSpotlightSearch}
+            className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[#edf2f7] hover:bg-[#e2e8f0] flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:shadow-[0_4px_14px_rgba(11,59,140,0.12)] group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <Search className="w-4 h-4 text-[#0b3b8c] shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-slate-700 group-hover:text-slate-950 truncate">
+                Buscar estudante por nome, RA ou turma em toda a escola...
+              </span>
+            </div>
+            <kbd className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white text-[11px] font-mono font-bold text-slate-700 shrink-0 shadow-[0_1px_3px_rgba(15,23,42,0.12)]">
+              Ctrl + K
+            </kbd>
+          </button>
+        )}
+
         {/* Faixa Unificada de KPIs Alinhados */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 min-w-0 items-stretch">
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] min-w-0 flex flex-col justify-between h-full">
-            <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Estudantes Ativos</span>
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#edf2f7] min-w-0 flex flex-col justify-between h-full">
+            <span className="text-xs sm:text-[13px] font-bold text-slate-700 block">Estudantes Ativos</span>
             <span className="text-2xl sm:text-[28px] font-bold text-slate-950 tabular-nums block my-1 leading-tight">
               {schoolStats.activeStudents}
             </span>
-            <span className="text-xs text-slate-600 font-medium tabular-nums block">
+            <span className="text-xs text-slate-700 font-semibold tabular-nums block">
               {schoolStats.aeeCount} em AEE
             </span>
           </div>
@@ -518,56 +538,56 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={() => onNavigateToScreen('detalhes')}
-              className="text-left p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] hover:bg-slate-200/70 cursor-pointer transition-colors duration-100 min-w-0 flex flex-col justify-between h-full"
+              className="text-left p-4 sm:p-5 rounded-2xl bg-[#edf2f7] hover:bg-[#e2e8f0] card-interactive cursor-pointer min-w-0 flex flex-col justify-between h-full"
             >
-              <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Minha Turma</span>
+              <span className="text-xs sm:text-[13px] font-bold text-slate-700 block">Minha Turma</span>
               <span className="text-xl sm:text-2xl font-bold text-slate-950 block my-1 leading-tight truncate">
                 {primaryTeacherClass.name}
               </span>
-              <span className="text-xs text-slate-600 font-medium block truncate">
+              <span className="text-xs text-slate-700 font-semibold block truncate">
                 {primaryTeacherClass.shift.replace('Turno ', '')} · {primaryTeacherClass.room || 'Sala'}
               </span>
             </button>
           ) : (
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] min-w-0 flex flex-col justify-between h-full">
-              <span className="text-xs sm:text-[13px] font-semibold text-slate-600 block">Turmas</span>
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#edf2f7] min-w-0 flex flex-col justify-between h-full">
+              <span className="text-xs sm:text-[13px] font-bold text-slate-700 block">Turmas</span>
               <span className="text-2xl sm:text-[28px] font-bold text-slate-950 tabular-nums block my-1 leading-tight">
                 {schoolStats.totalClasses}
               </span>
-              <span className="text-xs text-slate-600 font-medium tabular-nums block">
+              <span className="text-xs text-slate-700 font-semibold tabular-nums block">
                 {schoolStats.morningCount} manhã · {schoolStats.afternoonCount} tarde
               </span>
             </div>
           )}
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 min-w-0 flex flex-col justify-between h-full">
-            <span className="text-xs sm:text-[13px] font-semibold text-[#047857] block">Presença Média</span>
-            <span className="text-2xl sm:text-[28px] font-bold text-[#047857] tabular-nums block my-1 leading-tight">
+          <div className="p-4 sm:p-5 rounded-2xl bg-emerald-100/80 min-w-0 flex flex-col justify-between h-full">
+            <span className="text-xs sm:text-[13px] font-bold text-emerald-950 block">Presença Média</span>
+            <span className="text-2xl sm:text-[28px] font-bold text-[#065f46] tabular-nums block my-1 leading-tight">
               {schoolStats.avgPresence}%
             </span>
-            <span className="text-xs text-emerald-900/80 font-medium block">Meta MEC ≥ 75%</span>
+            <span className="text-xs text-emerald-950 font-semibold block">Meta MEC ≥ 75%</span>
           </div>
 
           <button
             type="button"
             onClick={() => onNavigateToScreen('faltas_consecutivas')}
-            className="text-left p-4 sm:p-5 rounded-2xl bg-rose-50 hover:bg-rose-100 cursor-pointer transition-colors duration-100 min-w-0 flex flex-col justify-between h-full"
+            className="text-left p-4 sm:p-5 rounded-2xl bg-rose-100/80 hover:bg-rose-200/80 card-interactive cursor-pointer min-w-0 flex flex-col justify-between h-full"
           >
-            <span className="text-xs sm:text-[13px] font-semibold text-[#be123c] block">Busca Ativa (ECA)</span>
-            <span className="text-2xl sm:text-[28px] font-bold text-[#be123c] tabular-nums block my-1 leading-tight">
+            <span className="text-xs sm:text-[13px] font-bold text-rose-950 block">Busca Ativa (ECA)</span>
+            <span className="text-2xl sm:text-[28px] font-bold text-[#9f1239] tabular-nums block my-1 leading-tight">
               {schoolStats.criticalConsecutiveCount}
             </span>
-            <span className="text-xs text-rose-900 font-medium block">Casos em atenção</span>
+            <span className="text-xs text-rose-950 font-semibold block">Casos em atenção</span>
           </button>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#e8f0fe] col-span-2 sm:col-span-1 min-w-0 flex flex-col justify-between h-full">
-            <span className="text-xs sm:text-[13px] font-semibold text-[#0b3b8c] block">Referência</span>
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#dce7fb] col-span-2 sm:col-span-1 min-w-0 flex flex-col justify-between h-full">
+            <span className="text-xs sm:text-[13px] font-bold text-[#092e70] block">Referência</span>
             <span className="text-lg sm:text-xl font-bold text-slate-950 block my-1 leading-tight whitespace-nowrap">
               {referencePeriod.monthName}/{referencePeriod.year}
             </span>
             <span
               className={`text-xs font-bold block ${
-                windowEval.isAllowedToLaunch ? 'text-[#047857]' : 'text-slate-600'
+                windowEval.isAllowedToLaunch ? 'text-[#065f46]' : 'text-slate-700'
               }`}
             >
               {windowEval.isAllowedToLaunch ? 'Janela aberta' : 'Consulta disponível'}
@@ -741,7 +761,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <h2 className="text-xl sm:text-2xl font-semibold text-white">
               Acesso Rápido
             </h2>
-            <p className="text-xs sm:text-sm text-slate-300">
+            <p className="text-xs sm:text-sm text-slate-200 font-medium">
               Ferramentas principais para {isStrictAdmin ? 'gestão escolar' : 'rotina docente'}
             </p>
           </div>
@@ -753,11 +773,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               key={item.id}
               type="button"
               onClick={item.onClick}
-              className="w-full h-full min-w-0 min-h-[82px] text-left bg-white hover:bg-slate-50 active:scale-[0.99] rounded-2xl p-4 sm:p-5 shadow-xs transition-all duration-100 cursor-pointer flex items-center justify-between gap-3.5 group"
+              className="w-full h-full min-w-0 min-h-[82px] text-left bg-white hover:bg-[#f8fafc] card-interactive rounded-2xl p-4 sm:p-5 shadow-[0_8px_24px_rgba(2,6,23,0.18)] cursor-pointer flex items-center justify-between gap-3.5 group"
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
                 <div
-                  className={`w-10 h-10 rounded-xl ${item.accentBg} ${item.accentText} flex items-center justify-center shrink-0`}
+                  className={`w-10 h-10 rounded-xl ${item.accentBg} ${item.accentText} flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105`}
                 >
                   {item.icon}
                 </div>
@@ -765,11 +785,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <h3 className="text-[15px] sm:text-base font-bold text-slate-950 break-words leading-snug">
                     {item.title}
                   </h3>
-                  <p className="text-xs sm:text-[13px] text-slate-600 break-words leading-snug mt-0.5">{item.subtitle}</p>
+                  <p className="text-xs sm:text-[13px] text-slate-700 break-words leading-snug mt-0.5">{item.subtitle}</p>
                 </div>
               </div>
 
-              <ChevronRight className="w-[18px] h-[18px] stroke-[1.5] text-slate-400 group-hover:text-[#0b3b8c] group-hover:translate-x-0.5 transition-all shrink-0" />
+              <ChevronRight className="w-[18px] h-[18px] stroke-[1.7] text-slate-600 group-hover:text-[#0b3b8c] group-hover:translate-x-1 transition-all duration-200 shrink-0" />
             </button>
           ))}
         </div>
@@ -777,26 +797,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 3. SELETOR DIRETO DE TURMAS (Apenas para quem gerencia múltiplas turmas) */}
       {userRole !== 'usuario' && (
-      <section className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-5 min-w-0">
+      <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-5 min-w-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 min-w-0">
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-950 break-words">
               Turmas da Escola ({filteredClasses.length})
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-0.5 break-words">
+            <p className="text-xs sm:text-sm text-slate-700 mt-0.5 break-words">
               Toque em uma turma para abrir a lista nominal, chamadas e Fichas Informativas
             </p>
           </div>
 
           {visibleBaseClasses.length > 1 && (
-            <div className="flex flex-wrap sm:inline-flex w-full sm:w-auto max-w-full min-w-0 p-1.5 bg-slate-100 border border-slate-200 rounded-2xl gap-1">
+            <div className="flex flex-wrap sm:inline-flex w-full sm:w-auto max-w-full min-w-0 p-1.5 bg-[#e2e8f0] rounded-2xl gap-1">
               <button
                 type="button"
                 onClick={() => setSelectedShiftFilter('TODOS')}
-                className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-[13px] font-bold inline-flex items-center justify-center text-center whitespace-normal transition-colors duration-100 cursor-pointer ${
+                className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-[13px] font-bold inline-flex items-center justify-center text-center whitespace-normal transition-all duration-200 cursor-pointer ${
                   selectedShiftFilter === 'TODOS'
-                    ? 'bg-[#0b3b8c] text-white shadow-xs'
-                    : 'text-slate-700 hover:bg-slate-200/70'
+                    ? 'bg-[#0b3b8c] text-white shadow-[0_4px_12px_rgba(11,59,140,0.28)]'
+                    : 'text-slate-800 hover:bg-white/60'
                 }`}
               >
                 Todas ({schoolStats.totalClasses})
@@ -831,13 +851,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {visibleBaseClasses.length > 3 && (
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-700 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={turmaSearchInput}
               onChange={(e) => setTurmaSearchInput(e.target.value)}
               placeholder="Buscar turma ou professora (ex: G4 A, 1º B, 5º A)..."
-              className="w-full min-h-[46px] pl-11 pr-4 rounded-xl bg-slate-100 focus:bg-slate-200/70 text-sm sm:text-[15px] text-slate-950 placeholder:text-slate-600 focus:outline-none transition-colors duration-100"
+              className="w-full min-h-[46px] pl-11 pr-4 rounded-xl bg-slate-100 focus:bg-[#dce7fb]/60 text-sm sm:text-[15px] text-slate-950 placeholder:text-slate-600 transition-colors duration-150"
             />
           </div>
         )}
@@ -856,14 +876,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     ? onSelectClassForDetails(cls)
                     : onNavigateToScreen('detalhes')
                 }
-                className="w-full min-w-0 min-h-[120px] text-left bg-slate-50 hover:bg-blue-50/40 border border-slate-200 hover:border-blue-300 active:scale-[0.99] rounded-2xl p-4 sm:p-5 transition-all duration-100 flex flex-col justify-between gap-2.5 cursor-pointer group"
+                className="w-full min-w-0 min-h-[120px] text-left bg-[#edf2f7] hover:bg-[#dce7fb] card-interactive rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-2.5 cursor-pointer group"
               >
                 <div className="flex items-start justify-between gap-2 w-full min-w-0">
                   <div className="min-w-0 flex-1">
                     <h3 className="text-base sm:text-[17px] font-bold text-slate-950 leading-snug break-words">
                       {cls.name}
                     </h3>
-                    <p className="text-xs sm:text-[13px] text-slate-600 break-words leading-snug mt-0.5">
+                    <p className="text-xs sm:text-[13px] text-slate-700 break-words leading-snug mt-0.5">
                       {isMorning ? 'Manhã' : 'Tarde'} · {cls.room || '—'}
                     </p>
                   </div>
@@ -871,20 +891,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <div className="flex items-center gap-1 shrink-0 pt-0.5">
                     <span
                       className={`font-mono text-xs sm:text-[13px] font-bold tabular-nums ${
-                        cls.students.length === 0 ? 'text-slate-400' : 'text-[#047857]'
+                        cls.students.length === 0 ? 'text-slate-600' : 'text-[#065f46]'
                       }`}
                     >
                       {cls.students.length === 0 ? '—' : `${cls.presenceRate}%`}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[#0b3b8c] group-hover:translate-x-0.5 transition-all" />
+                    <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-[#0b3b8c] group-hover:translate-x-1 transition-all duration-200" />
                   </div>
                 </div>
 
                 <div className="w-full space-y-0.5 pt-0.5 min-w-0">
-                  <p className="text-xs sm:text-[13px] text-slate-800 font-semibold break-words leading-snug">
+                  <p className="text-xs sm:text-[13px] text-slate-900 font-semibold break-words leading-snug">
                     {cls.teacherName || 'Professor(a) atribuído'}
                   </p>
-                  <p className="text-xs text-slate-600 font-medium tabular-nums">
+                  <p className="text-xs text-slate-700 font-semibold tabular-nums">
                     {cls.students.length} estudantes
                   </p>
                 </div>
@@ -908,11 +928,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
 
         {filteredClasses.length === 0 && (
-          <div className="p-8 text-center bg-[#f2f2f7] rounded-2xl space-y-1">
-            <p className="text-sm font-semibold text-[#111827]">
+          <div className="p-8 text-center bg-[#edf2f7] rounded-2xl space-y-1">
+            <p className="text-sm font-semibold text-slate-950">
               Nenhuma turma encontrada com esse termo.
             </p>
-            <p className="text-xs text-[#48484a]">
+            <p className="text-xs text-slate-700">
               Tente buscar por &ldquo;G4&rdquo;, &ldquo;1º&rdquo;, &ldquo;Manhã&rdquo; ou limpe a busca.
             </p>
           </div>
@@ -927,10 +947,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 min-w-0">
           <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl font-semibold text-[#111827] break-words">
+            <h2 className="text-xl sm:text-2xl font-semibold text-slate-950 break-words">
               Prazos e Busca Ativa
             </h2>
-            <p className="text-xs sm:text-sm text-[#48484a] mt-0.5 break-words">
+            <p className="text-xs sm:text-sm text-slate-700 mt-0.5 break-words">
               Calendário de chamada mensal e casos prioritários de busca ativa
             </p>
           </div>
@@ -998,14 +1018,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 5. GRÁFICO COMPARATIVO POR TURMA (Exibido apenas para múltiplas turmas) */}
       {userRole !== 'usuario' && visibleBaseClasses.length > 1 && (
-      <section className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-xs space-y-5 min-w-0">
+      <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-5 min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-950 flex items-center gap-2.5 min-w-0">
               <BarChart3 className="w-5 h-5 text-[#0b3b8c] shrink-0" />
               <span>Frequência das Turmas — Meta LDB</span>
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-0.5 break-words">
+            <p className="text-xs sm:text-sm text-slate-700 mt-0.5 break-words">
               Comparativo por turma com referência mínima de 75% · Clique em uma barra para abrir a turma
             </p>
           </div>
@@ -1014,10 +1034,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={() => setChartSortMode((prev) => (prev === 'default' ? 'asc' : 'default'))}
-              className={`min-h-[40px] px-3.5 py-2 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+              className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                 chartSortMode === 'asc'
-                  ? 'bg-slate-900 border-slate-900 text-white'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  ? 'bg-slate-950 text-white shadow-[0_6px_16px_rgba(2,6,23,0.24)]'
+                  : 'bg-[#edf2f7] text-slate-800 hover:bg-[#e2e8f0]'
               }`}
               title="Alternar entre ordem das turmas e menor frequência primeiro"
             >
@@ -1025,14 +1045,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <span>{chartSortMode === 'asc' ? 'Menor % primeiro' : 'Ordem das turmas'}</span>
             </button>
 
-            <div className="inline-flex p-1 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold gap-1 shrink-0">
+            <div className="inline-flex p-1 bg-[#e2e8f0] rounded-xl text-xs font-bold gap-1 shrink-0">
               <button
                 type="button"
                 onClick={() => setChartFilterShift('all')}
-                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-colors duration-100 cursor-pointer ${
+                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   chartFilterShift === 'all'
-                    ? 'bg-[#0b3b8c] text-white shadow-2xs'
-                    : 'text-slate-700 hover:bg-slate-200/70'
+                    ? 'bg-[#0b3b8c] text-white shadow-sm'
+                    : 'text-slate-800 hover:bg-white/60'
                 }`}
               >
                 Todas ({schoolStats.totalClasses})
@@ -1040,10 +1060,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setChartFilterShift('MANHÃ')}
-                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-colors duration-100 cursor-pointer ${
+                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   chartFilterShift === 'MANHÃ'
-                    ? 'bg-[#0b3b8c] text-white shadow-2xs'
-                    : 'text-slate-700 hover:bg-slate-200/70'
+                    ? 'bg-[#0b3b8c] text-white shadow-sm'
+                    : 'text-slate-800 hover:bg-white/60'
                 }`}
               >
                 Manhã ({schoolStats.morningCount})
@@ -1051,10 +1071,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setChartFilterShift('TARDE')}
-                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-colors duration-100 cursor-pointer ${
+                className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   chartFilterShift === 'TARDE'
-                    ? 'bg-[#0b3b8c] text-white shadow-2xs'
-                    : 'text-slate-700 hover:bg-slate-200/70'
+                    ? 'bg-[#0b3b8c] text-white shadow-sm'
+                    : 'text-slate-800 hover:bg-white/60'
                 }`}
               >
                 Tarde ({schoolStats.afternoonCount})
@@ -1063,29 +1083,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {/* Faixa de Indicadores Quantitativos (Tipografia Tabular Sem Poluição) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-3 border-y border-slate-100 text-xs sm:text-[13px]">
+        {/* Faixa de Indicadores Quantitativos (Separação Tonal Sem Linhas) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-[#f4f7fb] text-xs sm:text-[13px]">
           <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
-            <span className="text-slate-500 font-medium">Média do recorte</span>
+            <span className="text-slate-700 font-semibold">Média do recorte</span>
             <span className="font-mono font-bold text-slate-950 text-sm sm:text-base tabular-nums">
               {chartBandSummary.avg}%
             </span>
           </div>
           <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
-            <span className="text-slate-500 font-medium">Regular (≥ 85%)</span>
-            <span className="font-mono font-bold text-[#047857] text-sm sm:text-base tabular-nums">
+            <span className="text-slate-700 font-semibold">Regular (≥ 85%)</span>
+            <span className="font-mono font-bold text-[#065f46] text-sm sm:text-base tabular-nums">
               {chartBandSummary.regular}
             </span>
           </div>
           <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
-            <span className="text-slate-500 font-medium">Atenção (75–84%)</span>
-            <span className="font-mono font-bold text-[#b45309] text-sm sm:text-base tabular-nums">
+            <span className="text-slate-700 font-semibold">Atenção (75–84%)</span>
+            <span className="font-mono font-bold text-[#92400e] text-sm sm:text-base tabular-nums">
               {chartBandSummary.attention}
             </span>
           </div>
           <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
-            <span className="text-slate-500 font-medium">Abaixo de 75%</span>
-            <span className="font-mono font-bold text-[#b91c1c] text-sm sm:text-base tabular-nums">
+            <span className="text-slate-700 font-semibold">Abaixo de 75%</span>
+            <span className="font-mono font-bold text-[#991b1b] text-sm sm:text-base tabular-nums">
               {chartBandSummary.below}
             </span>
           </div>
@@ -1163,21 +1183,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                           ? 'text-amber-300'
                           : 'text-emerald-300';
                       return (
-                        <div className="bg-slate-950 text-white px-4 py-3 rounded-2xl text-xs sm:text-[13px] shadow-xl border border-slate-800 space-y-1 min-w-[200px]">
+                        <div className="bg-slate-950 text-white px-4 py-3 rounded-2xl text-xs sm:text-[13px] shadow-[0_18px_40px_rgba(2,6,23,0.45)] space-y-1.5 min-w-[200px]">
                           <div className="flex items-center justify-between gap-3">
                             <span className="font-bold text-white">{data.name}</span>
                             <span className={`font-mono font-bold tabular-nums ${statusColor}`}>
                               {data.presence}%
                             </span>
                           </div>
-                          <div className="text-slate-300 text-xs">
+                          <div className="text-slate-200 text-xs">
                             {data.shift} · {data.teacherName}
                           </div>
-                          <div className="pt-1 border-t border-slate-800 flex items-center justify-between gap-3 text-[11px]">
+                          <div className="pt-1.5 bg-white/10 -mx-2 px-2 py-1 rounded-xl flex items-center justify-between gap-3 text-[11px]">
                             <span className={`font-semibold ${statusColor}`}>
                               {statusText}
                             </span>
-                            <span className="text-slate-400 tabular-nums">
+                            <span className="text-slate-200 tabular-nums">
                               {data.studentsCount} estudantes
                             </span>
                           </div>

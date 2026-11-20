@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useRef } from 'react';
-import * as XLSX from 'xlsx';
 import { ClassGroup, Student, UserRole } from '../types';
 import {
   BimesterId2027,
@@ -7,6 +6,27 @@ import {
   OFFICIAL_BIMESTERS_2027,
   StudentBimesterReportRow,
 } from '../utils/attendanceRules';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  Camera,
+  CheckCircle2,
+  Download,
+  FileText,
+  Folder,
+  LayoutDashboard,
+  LayoutGrid,
+  List,
+  Lock,
+  MessageCircle,
+  PanelsTopLeft,
+  Printer,
+  Search,
+  Users,
+  X,
+} from 'lucide-react';
 import { StudentAvatar } from './StudentAvatar';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 
@@ -292,7 +312,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
     });
   }, [classes, filteredRows]);
 
-  const handleExportXLS = () => {
+  const handleExportXLS = async () => {
     if (groupedByClass.length === 0) {
       showToast('Nenhum estudante listado no filtro atual para exportar.');
       return;
@@ -334,6 +354,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       };
     });
 
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(exportObjects);
     const safeSheetName = `Bolsa_${currentBimester.id.toUpperCase()}`.slice(0, 31);
@@ -346,13 +367,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   if (userRole !== 'admin') {
     return (
       <div className="max-w-lg mx-auto my-12 p-8 bg-white rounded-3xl text-center space-y-3 shadow-2xs">
-        <span className="material-symbols-outlined text-[36px] text-[#ff3b30]">
-          lock
-        </span>
+        <Lock className="w-9 h-9 text-[#ff3b30] mx-auto" />
         <h2 className="text-lg font-semibold text-[#111827] tracking-tight">
           Acesso Restrito à Gestão / Secretaria
         </h2>
-        <p className="text-sm text-[#6e6e73] leading-relaxed">
+        <p className="text-sm text-slate-700 leading-relaxed">
           O acompanhamento nominal do Bolsa Família e condicionalidades LDB é exclusivo da Gestão Escolar.
         </p>
       </div>
@@ -371,9 +390,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       {toastMsg && (
         <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-100">
           <div className="bg-[#1d1d1f] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 min-w-0">
-            <span className="material-symbols-outlined text-[19px] text-[#28cd41] shrink-0">
-              check_circle
-            </span>
+            <CheckCircle2 className="w-[19px] h-[19px] text-[#28cd41] shrink-0" />
             <p className="text-sm font-medium leading-snug break-words min-w-0">{toastMsg}</p>
           </div>
         </div>
@@ -390,7 +407,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 aria-label="Voltar"
                 className="w-10 h-10 rounded-full bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] flex items-center justify-center cursor-pointer transition-colors shrink-0"
               >
-                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                <ArrowLeft className="w-5 h-5" />
               </button>
             )}
             <div className="min-w-0">
@@ -402,7 +419,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                   MEC / LDB 2027
                 </span>
               </div>
-              <p className="mt-0.5 text-xs sm:text-[13px] font-medium text-[#64748b] tabular-nums tracking-[-0.008em]">
+              <p className="mt-0.5 text-xs sm:text-[13px] font-medium text-slate-700 tabular-nums tracking-[-0.008em]">
                 {currentBimester.label} · Meta MEC: ≥60% Infantil / ≥75% Fundamental · {filteredRows.length}{' '}
                 {filteredRows.length === 1 ? 'estudante' : 'estudantes'} listados
               </p>
@@ -418,11 +435,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 className={`min-h-[34px] px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                   viewMode === 'grid'
                     ? 'bg-white text-[#0b3b8c] shadow-2xs'
-                    : 'text-[#64748b] hover:text-[#0f172a]'
+                    : 'text-slate-700 hover:text-slate-950'
                 }`}
                 title="Exibir grade de cartões"
               >
-                <span className="material-symbols-outlined text-[16px]">grid_view</span>
+                <LayoutGrid className="w-4 h-4" />
                 <span className="hidden sm:inline">Grade</span>
               </button>
               <button
@@ -431,11 +448,11 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 className={`min-h-[34px] px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                   viewMode === 'compact'
                     ? 'bg-white text-[#0b3b8c] shadow-2xs'
-                    : 'text-[#64748b] hover:text-[#0f172a]'
+                    : 'text-slate-700 hover:text-slate-950'
                 }`}
                 title="Exibir lista compacta"
               >
-                <span className="material-symbols-outlined text-[16px]">view_list</span>
+                <List className="w-4 h-4" />
                 <span className="hidden sm:inline">Lista</span>
               </button>
             </div>
@@ -445,7 +462,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               onClick={handleExportXLS}
               className="min-h-[40px] px-3.5 rounded-2xl bg-[#0b3b8c] hover:bg-[#0052cc] text-white font-semibold text-xs sm:text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
             >
-              <span className="material-symbols-outlined text-[18px]">download</span>
+              <Download className="w-[18px] h-[18px]" />
               <span>Excel</span>
             </button>
             <button
@@ -453,7 +470,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               onClick={() => window.print()}
               className="min-h-[40px] px-3.5 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span className="material-symbols-outlined text-[18px]">print</span>
+              <Printer className="w-[18px] h-[18px]" />
               <span className="hidden min-[400px]:inline">Imprimir</span>
             </button>
           </div>
@@ -461,25 +478,23 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
         {/* BARRA DE BUSCA RÁPIDA (NOME, RA, NIS BOLSA FAMÍLIA, RESPONSÁVEL) */}
         <div className="relative min-w-0">
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] text-[20px]">
-            search
-          </span>
+          <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por nome, RA, NIS (Bolsa Família) ou responsável..."
             aria-label="Buscar estudante nas listas nominais do Bolsa Família"
-            className="w-full min-h-[48px] pl-11 pr-11 rounded-2xl bg-[#f1f5f9] focus:bg-[#e2e8f0]/60 text-sm sm:text-[15px] font-normal tracking-[-0.012em] text-[#0f172a] placeholder:text-[#64748b] focus:outline-none transition-colors"
+            className="w-full min-h-[48px] pl-11 pr-11 rounded-2xl bg-[#f1f5f9] focus:bg-[#e2e8f0]/60 text-sm sm:text-[15px] font-normal tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 transition-colors"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl flex items-center justify-center text-[#64748b] hover:text-[#0f172a] cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 hover:text-slate-950 cursor-pointer"
               aria-label="Limpar busca"
             >
-              <span className="material-symbols-outlined text-[18px]">close</span>
+              <X className="w-[18px] h-[18px]" />
             </button>
           )}
         </div>
@@ -490,7 +505,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             value={selectedBimesterId}
             onChange={(e) => setSelectedBimesterId(e.target.value as BimesterId2027)}
             aria-label="Bimestre de referência"
-            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
+            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs sm:text-[13px] cursor-pointer transition-colors"
           >
             {OFFICIAL_BIMESTERS_2027.map((bim) => (
               <option key={bim.id} value={bim.id}>
@@ -505,7 +520,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             className={`min-h-[38px] px-3.5 rounded-2xl text-xs sm:text-[13px] font-semibold cursor-pointer transition-colors tabular-nums ${
               onlyBelowTarget
                 ? 'bg-[#fee2e2] text-[#991b1b]'
-                : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
+                : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-slate-950'
             }`}
           >
             {onlyBelowTarget
@@ -521,7 +536,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               )
             }
             aria-label="Filtrar por atestado médico"
-            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs sm:text-[13px] cursor-pointer focus:outline-none transition-colors"
+            className="min-h-[38px] px-3 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs sm:text-[13px] cursor-pointer transition-colors"
           >
             <option value="all">Atestado Médico: Todos</option>
             <option value="com_atestado">Com Atestado Registrado</option>
@@ -538,7 +553,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 setOnlyBelowTarget(true);
                 setSearchQuery('');
               }}
-              className="min-h-[38px] px-3 rounded-2xl text-xs font-semibold text-[#64748b] hover:text-[#0f172a] cursor-pointer transition-colors"
+              className="min-h-[38px] px-3 rounded-2xl text-xs font-semibold text-slate-700 hover:text-slate-950 cursor-pointer transition-colors"
             >
               Limpar filtros
             </button>
@@ -553,12 +568,12 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         {/* Nível 1: Seletor Segmentado de Grupo Escolar */}
         <div className="space-y-2 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[17px] text-[#0b3b8c]">folder_shared</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+              <Folder className="w-[17px] h-[17px] text-[#0b3b8c]" />
               <span>Grupos Escolares</span>
             </span>
-            <span className="text-xs font-medium text-[#64748b] tabular-nums">
-              {visibleTabClasses.length} turmas disponíveis · <strong className="text-rose-700">{totalBelowInVisibleGroup}</strong> em alerta no grupo
+            <span className="text-xs font-medium text-slate-700 tabular-nums">
+              {visibleTabClasses.length} turmas disponíveis · <strong className="text-rose-800">{totalBelowInVisibleGroup}</strong> em alerta no grupo
             </span>
           </div>
 
@@ -598,7 +613,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         <div className="space-y-2 min-w-0">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <span className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[17px] text-[#0b3b8c]">tab</span>
+              <PanelsTopLeft className="w-[17px] h-[17px] text-[#0b3b8c]" />
               <span>Abas de Turmas</span>
             </span>
             {selectedClassFilter !== 'all' && (
@@ -607,7 +622,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 onClick={() => setSelectedClassFilter('all')}
                 className="text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer flex items-center gap-1"
               >
-                <span className="material-symbols-outlined text-[15px]">apps</span>
+                <LayoutGrid className="w-[15px] h-[15px]" />
                 <span>Ver Todas as Turmas Juntas</span>
               </button>
             )}
@@ -625,7 +640,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                <LayoutDashboard className="w-[18px] h-[18px]" />
                 <span>Todas ({visibleTabClasses.length})</span>
                 {totalBelowInVisibleGroup > 0 && (
                   <span
@@ -660,8 +675,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                   >
                     <span>{cls.turmaAbrev || cls.name}</span>
                     <span
-                      className={`text-[11px] font-medium opacity-80 ${
-                        isSelected ? 'text-blue-100' : 'text-slate-500'
+                      className={`text-[11px] font-medium ${
+                        isSelected ? 'text-blue-100' : 'text-slate-700'
                       }`}
                     >
                       {shiftAbbr}
@@ -674,7 +689,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                             : 'bg-white/20 text-white'
                           : hasAlert
                           ? 'bg-[#fee2e2] text-[#991b1b]'
-                          : 'bg-slate-200/70 text-slate-600'
+                          : 'bg-slate-200 text-slate-700'
                       }`}
                       title={
                         hasAlert
@@ -692,33 +707,33 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
           {/* Navegação Rápida Anterior / Próxima Turma */}
           {activeSelectedClass && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={handlePrevClass}
-                  className="min-h-[38px] px-3 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="min-h-[38px] px-3 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  <ArrowLeft className="w-4 h-4" />
                   <span>Turma Anterior</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleNextClass}
-                  className="min-h-[38px] px-3 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className="min-h-[38px] px-3 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
                   <span>Próxima Turma</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-medium text-[#64748b]">
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
                 <span>
-                  Turma <strong className="text-[#0f172a]">{currentClassIndex + 1}</strong> de{' '}
-                  <strong className="text-[#0f172a]">{visibleTabClasses.length}</strong>
+                  Turma <strong className="text-slate-950">{currentClassIndex + 1}</strong> de{' '}
+                  <strong className="text-slate-950">{visibleTabClasses.length}</strong>
                 </span>
                 <span>·</span>
-                <span className="text-[#0f172a] font-semibold">{activeSelectedClass.name}</span>
+                <span className="text-slate-950 font-semibold">{activeSelectedClass.name}</span>
                 <span>({activeSelectedClass.shift.replace('Turno ', '')})</span>
               </div>
             </div>
@@ -732,14 +747,14 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 text-xs font-bold uppercase">
+                <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/25 text-blue-100 text-xs font-bold uppercase">
                   {activeSelectedClass.shift.replace('Turno ', '').toUpperCase()}
                 </span>
                 {activeSelectedClass.room && (
-                  <span className="text-xs text-slate-300">Sala {activeSelectedClass.room}</span>
+                  <span className="text-xs text-slate-200">Sala {activeSelectedClass.room}</span>
                 )}
-                <span className="text-slate-500">·</span>
-                <span className="text-xs text-slate-300">
+                <span className="text-slate-300">·</span>
+                <span className="text-xs text-slate-200">
                   {activeSelectedClass.name.toUpperCase().startsWith('GRUPO') ||
                   activeSelectedClass.grade.toUpperCase().includes('INFANTIL')
                     ? 'Meta LDB Educação Infantil: ≥ 60%'
@@ -766,7 +781,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     : 'bg-white/10 hover:bg-white/20 text-slate-200'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">warning</span>
+                <AlertTriangle className="w-4 h-4" />
                 <span>Apenas em Alerta ({classStatsMap.get(activeSelectedClass.id)?.belowTarget || 0})</span>
               </button>
 
@@ -779,7 +794,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     : 'bg-white/10 hover:bg-white/20 text-slate-200'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">groups</span>
+                <Users className="w-4 h-4" />
                 <span>Todos da Turma ({classStatsMap.get(activeSelectedClass.id)?.total || 0})</span>
               </button>
             </div>
@@ -791,14 +806,14 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       {groupedByClass.length === 0 ? (
         <div className="bg-white rounded-3xl p-10 text-center space-y-3 shadow-2xs">
           <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#047857] flex items-center justify-center mx-auto">
-            <span className="material-symbols-outlined text-[32px]">verified</span>
+            <BadgeCheck className="w-8 h-8" />
           </div>
           <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
             {activeSelectedClass
               ? `A turma ${activeSelectedClass.name} está 100% regular!`
               : 'Nenhum estudante encontrado para os filtros selecionados'}
           </h3>
-          <p className="text-xs sm:text-sm text-[#64748b] max-w-md mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-700 max-w-md mx-auto leading-relaxed">
             {activeSelectedClass
               ? `Todos os ${classStatsMap.get(activeSelectedClass.id)?.total || 0} estudantes desta turma cumpriram a meta de presença no ${currentBimester.label}.`
               : 'Ajuste os filtros de busca ou alterne para visualizar todos os estudantes ativos.'}
@@ -828,15 +843,15 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 {selectedClassFilter === 'all' && (
                   <div className="flex items-baseline justify-between gap-2 px-1">
                     <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
-                      <h2 className="text-lg sm:text-xl font-bold text-[#0f172a] tracking-[-0.024em]">
+                      <h2 className="text-lg sm:text-xl font-bold text-white tracking-[-0.024em]">
                         {group.cls.name}
                       </h2>
-                      <span className="text-xs font-medium text-[#64748b] tracking-[-0.006em]">
+                      <span className="text-xs font-medium text-slate-200 tracking-[-0.006em]">
                         {group.cls.shift.replace('Turno ', '')} ·{' '}
                         {isInfantil ? 'Meta legal 60%' : 'Meta legal 75%'}
                       </span>
                     </div>
-                    <span className="text-xs font-semibold text-[#64748b] tabular-nums shrink-0">
+                    <span className="text-xs font-semibold text-slate-200 tabular-nums shrink-0">
                       {group.rows.length}{' '}
                       {group.rows.length === 1 ? 'estudante' : 'estudantes'}
                     </span>
@@ -861,10 +876,10 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                       return (
                         <article
                           key={`${cls.id}-${student.id}`}
-                          className={`rounded-3xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 min-w-0 transition-colors shadow-2xs ${
+                          className={`rounded-3xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 min-w-0 card-interactive shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] ${
                             isBelowTarget
-                              ? 'bg-[#fff8f8] hover:bg-[#fff2f2]'
-                              : 'bg-white hover:bg-[#fafbfd]'
+                              ? 'bg-[#fff5f5] hover:bg-[#ffecec]'
+                              : 'bg-white hover:bg-[#f8fbff]'
                           }`}
                         >
                           <div className="space-y-2.5 min-w-0">
@@ -874,16 +889,16 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                 student={student}
                                 size="lg"
                                 onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
-                                className="border-0 bg-[#f1f5f9]"
+                                className="bg-[#edf2f7]"
                               />
 
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-1.5 min-w-0">
-                                  <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#64748b] tabular-nums tracking-[-0.006em] truncate">
+                                  <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-700 tabular-nums tracking-[-0.006em] truncate">
                                     <span>Nº {student.number.toString().padStart(2, '0')}</span>
                                     {student.ra && (
                                       <>
-                                        <span aria-hidden="true" className="text-slate-300">·</span>
+                                        <span aria-hidden="true" className="text-slate-600">·</span>
                                         <span>RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}</span>
                                       </>
                                     )}
@@ -897,38 +912,38 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                   </span>
                                 </div>
 
-                                <h3 className="mt-0.5 text-[17px] font-semibold text-[#0f172a] tracking-[-0.024em] leading-[1.22] break-words">
+                                <h3 className="mt-0.5 text-[17px] font-semibold text-slate-950 tracking-[-0.024em] leading-[1.22] break-words">
                                   {student.name}
                                 </h3>
                               </div>
                             </div>
 
                             {/* Metadados SF Pro */}
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-[#475569] tracking-[-0.008em] tabular-nums">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-medium text-slate-700 tracking-[-0.008em] tabular-nums">
                               <span
                                 className={
                                   rep.totalFaltasBimestre > 0
                                     ? isBelowTarget
                                       ? 'text-[#b42318] font-semibold'
-                                      : 'text-[#0f172a] font-semibold'
+                                      : 'text-slate-950 font-semibold'
                                     : ''
                                 }
                               >
                                 {rep.totalFaltasBimestre} {rep.totalFaltasBimestre === 1 ? 'falta' : 'faltas'}
                               </span>
-                              <span aria-hidden="true" className="text-slate-300">·</span>
+                              <span aria-hidden="true" className="text-slate-600">·</span>
                               <span>{hasAtestado ? `${rep.totalAtestadosBimestre} atest.` : 'Sem atestado'}</span>
                               {student.nis && (
                                 <>
-                                  <span aria-hidden="true" className="text-slate-300">·</span>
-                                  <span className="text-[#92400e] font-semibold">NIS {student.nis}</span>
+                                  <span aria-hidden="true" className="text-slate-600">·</span>
+                                  <span className="text-amber-950 font-semibold">NIS {student.nis}</span>
                                 </>
                               )}
                             </div>
 
                             {/* Responsável e Contato com Link WhatsApp */}
                             {(guardianClean || waList.length > 0) && (
-                              <div className="flex items-center justify-between gap-2 text-[12px] text-[#64748b] min-w-0 tracking-[-0.008em]">
+                              <div className="flex items-center justify-between gap-2 text-[12px] text-slate-700 min-w-0 tracking-[-0.008em]">
                                 <span className="truncate min-w-0">
                                   {guardianClean || 'Responsável'}
                                 </span>
@@ -939,7 +954,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#047857] hover:underline tabular-nums shrink-0"
                                   >
-                                    <span className="material-symbols-outlined text-[13px]">chat</span>
+                                    <MessageCircle className="w-3.5 h-3.5 shrink-0" />
                                     <span>{waList[0].display}</span>
                                   </a>
                                 )}
@@ -975,9 +990,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                               className="min-h-[40px] px-2 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                               title="Abrir ficha do estudante"
                             >
-                              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
-                                grid_view
-                              </span>
+                              <LayoutGrid className="w-4 h-4 text-[#475569] shrink-0" />
                               <span>Ficha</span>
                             </button>
 
@@ -987,134 +1000,126 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                               className="min-h-[40px] px-2 rounded-2xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                               title="Atualizar foto"
                             >
-                              <span className="material-symbols-outlined text-[16px] text-[#475569] shrink-0">
-                                photo_camera
-                              </span>
+                              <Camera className="w-4 h-4 text-[#475569] shrink-0" />
                               <span>Foto</span>
                             </button>
 
                             <button
                               type="button"
                               onClick={() => onOpenStudentPdf(student, cls.name)}
-                              className={`min-h-[40px] px-2 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
-                                hasPdf
-                                  ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
-                                  : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
-                              }`}
-                              title="Abrir PDF nominal"
-                            >
-                              <span className="material-symbols-outlined text-[16px] shrink-0">
-                                picture_as_pdf
-                              </span>
-                              <span>PDF</span>
-                            </button>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  /* MODO 2: LISTA COMPACTA SEM CONTORNOS */
-                  <div className="bg-white rounded-3xl overflow-hidden shadow-2xs divide-y divide-slate-100">
-                    {group.rows.map((row, idx) => {
-                      const { student, cls, rep, hasAtestado, isBelowTarget } = row;
-                      const hasPdf = Boolean(
-                        (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
-                          (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
-                      );
-
-                      return (
-                        <div
-                          key={`${cls.id}-${student.id}`}
-                          className={`w-full min-w-0 px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
-                            idx % 2 === 1 ? 'bg-[#fafbfd]' : 'bg-white'
-                          } hover:bg-[#f1f5f9]/70`}
-                        >
-                          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                            <span className="text-xs font-semibold text-[#94a3b8] tabular-nums w-6 text-center shrink-0">
-                              {(idx + 1).toString().padStart(2, '0')}
-                            </span>
-
-                            <StudentAvatar
-                              student={student}
-                              size="md"
-                              onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
-                              className="border-0 bg-[#f1f5f9]"
-                            />
-
-                            <div className="min-w-0 flex-1">
-                              <span className="block text-[15px] sm:text-[16px] font-semibold text-[#0f172a] leading-snug break-words tracking-[-0.02em]">
-                                {student.name}
-                              </span>
-
-                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[#64748b] tabular-nums tracking-[-0.006em]">
-                                <span>Nº {student.number.toString().padStart(2, '0')}</span>
-                                {student.ra && (
-                                  <>
-                                    <span aria-hidden="true" className="text-slate-300">·</span>
-                                    <span>RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}</span>
-                                  </>
-                                )}
-                                {student.nis && (
-                                  <>
-                                    <span aria-hidden="true" className="text-slate-300">·</span>
-                                    <span className="text-[#92400e] font-semibold">NIS {student.nis}</span>
-                                  </>
-                                )}
-                                <span aria-hidden="true" className="text-slate-300">·</span>
-                                <span className={rep.totalFaltasBimestre > 0 ? 'font-semibold text-[#0f172a]' : ''}>
-                                  {rep.totalFaltasBimestre} faltas
-                                </span>
-                                <span aria-hidden="true" className="text-slate-300">·</span>
-                                <span>{hasAtestado ? `${rep.totalAtestadosBimestre} atest.` : 'sem atestado'}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0">
-                            <span
-                              className={`text-base font-bold tabular-nums ${
-                                isBelowTarget ? 'text-[#b42318]' : 'text-[#047857]'
-                              }`}
-                            >
-                              {rep.frequenciaBimestrePercent}%
-                            </span>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
-                                }
-                                className="min-h-[36px] px-3 rounded-xl bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a] font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors"
-                              >
-                                <span className="material-symbols-outlined text-[15px] text-[#475569]">
-                                  grid_view
-                                </span>
-                                <span>Ficha</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => onOpenStudentPdf(student, cls.name)}
-                                className={`min-h-[36px] px-3 rounded-xl font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 transition-colors cursor-pointer ${
+                                className={`min-h-[40px] px-2 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                                   hasPdf
-                                    ? 'bg-[#eef4ff] hover:bg-[#e0ebff] text-[#0b3b8c]'
-                                    : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#64748b]'
+                                    ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
+                                    : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
                                 }`}
+                                title="Abrir PDF nominal"
                               >
-                                <span className="material-symbols-outlined text-[15px]">
-                                  picture_as_pdf
-                                </span>
+                                <FileText className="w-4 h-4 shrink-0" />
                                 <span>PDF</span>
                               </button>
                             </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* MODO 2: LISTA COMPACTA SEM CONTORNOS */
+                    <div className="bg-white rounded-3xl overflow-hidden shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)]">
+                      {group.rows.map((row, idx) => {
+                        const { student, cls, rep, hasAtestado, isBelowTarget } = row;
+                        const hasPdf = Boolean(
+                          (student.fichaPdfDriveUrl && student.fichaPdfDriveUrl.trim().length > 0) ||
+                            (student.fichaPdfDriveId && student.fichaPdfDriveId.trim().length > 0)
+                        );
+
+                        return (
+                          <div
+                            key={`${cls.id}-${student.id}`}
+                            className={`w-full min-w-0 px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
+                              idx % 2 === 1 ? 'bg-[#f4f7fb]' : 'bg-white'
+                            } hover:bg-[#e8eff9]`}
+                          >
+                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                              <span className="text-xs font-semibold text-slate-700 tabular-nums w-6 text-center shrink-0">
+                                {(idx + 1).toString().padStart(2, '0')}
+                              </span>
+
+                              <StudentAvatar
+                                student={student}
+                                size="md"
+                                onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
+                                className="bg-[#edf2f7]"
+                              />
+
+                              <div className="min-w-0 flex-1">
+                                <span className="block text-[15px] sm:text-[16px] font-semibold text-slate-950 leading-snug break-words tracking-[-0.02em]">
+                                  {student.name}
+                                </span>
+
+                                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-700 tabular-nums tracking-[-0.006em]">
+                                  <span>Nº {student.number.toString().padStart(2, '0')}</span>
+                                  {student.ra && (
+                                    <>
+                                      <span aria-hidden="true" className="text-slate-600">·</span>
+                                      <span>RA {student.ra}{student.digRa ? `-${student.digRa}` : ''}</span>
+                                    </>
+                                  )}
+                                  {student.nis && (
+                                    <>
+                                      <span aria-hidden="true" className="text-slate-600">·</span>
+                                      <span className="text-amber-950 font-semibold">NIS {student.nis}</span>
+                                    </>
+                                  )}
+                                  <span aria-hidden="true" className="text-slate-600">·</span>
+                                  <span className={rep.totalFaltasBimestre > 0 ? 'font-semibold text-slate-950' : ''}>
+                                    {rep.totalFaltasBimestre} faltas
+                                  </span>
+                                  <span aria-hidden="true" className="text-slate-600">·</span>
+                                  <span>{hasAtestado ? `${rep.totalAtestadosBimestre} atest.` : 'sem atestado'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0">
+                              <span
+                                className={`text-base font-bold tabular-nums ${
+                                  isBelowTarget ? 'text-[#b42318]' : 'text-[#047857]'
+                                }`}
+                              >
+                                {rep.frequenciaBimestrePercent}%
+                              </span>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
+                                  }
+                                  className="min-h-[36px] px-3 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors"
+                                >
+                                  <LayoutGrid className="w-[15px] h-[15px] text-slate-700" />
+                                  <span>Ficha</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenStudentPdf(student, cls.name)}
+                                  className={`min-h-[36px] px-3 rounded-xl font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 transition-colors cursor-pointer ${
+                                    hasPdf
+                                      ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
+                                      : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
+                                  }`}
+                                >
+                                  <FileText className="w-[15px] h-[15px]" />
+                                  <span>PDF</span>
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        );
+                      })}
+                    </div>
+                  )}
               </section>
             );
           })}

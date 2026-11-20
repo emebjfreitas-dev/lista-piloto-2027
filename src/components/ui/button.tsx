@@ -20,15 +20,15 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-semibold tracking-tight rounded-2xl transition-all duration-100 focus-visible:outline-none disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] cursor-pointer select-none';
+      'inline-flex items-center justify-center font-semibold tracking-tight rounded-2xl transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.97] cursor-pointer select-none';
 
     const variants = {
-      default: 'bg-[#1d1d1f] hover:bg-black text-white shadow-xs',
-      secondary: 'bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] shadow-2xs',
-      outline: 'bg-[#e9e9ef] hover:bg-[#dcdce4] text-[#111827] shadow-2xs',
-      ghost: 'hover:bg-black/[0.06] text-[#111827]',
-      destructive: 'bg-[#d92d20] hover:bg-[#b42318] text-white shadow-xs',
-      success: 'bg-[#005035] hover:bg-[#003824] text-white shadow-xs',
+      default: 'bg-[#090f1d] hover:bg-black text-white shadow-[0_4px_12px_rgba(9,15,29,0.22)] hover:shadow-[0_6px_18px_rgba(9,15,29,0.3)] hover:-translate-y-px',
+      secondary: 'bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-950 shadow-none',
+      outline: 'bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-950 shadow-none',
+      ghost: 'hover:bg-slate-900/[0.07] text-slate-950',
+      destructive: 'bg-[#c81e1e] hover:bg-[#9b1c1c] text-white shadow-[0_4px_12px_rgba(200,30,30,0.22)] hover:shadow-[0_6px_18px_rgba(200,30,30,0.3)] hover:-translate-y-px',
+      success: 'bg-[#046c4e] hover:bg-[#03543f] text-white shadow-[0_4px_12px_rgba(4,108,78,0.22)] hover:shadow-[0_6px_18px_rgba(4,108,78,0.3)] hover:-translate-y-px',
     };
 
     const sizes = {

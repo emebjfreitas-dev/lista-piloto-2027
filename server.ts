@@ -7,6 +7,31 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
+import {
+  ensureSafePayloadObject,
+  validateAuthSessionRequest,
+  validateDriveTokenPayload,
+  validatePhotoUploadBinaryHeaders,
+  validatePhotoUploadPayload,
+  validatePhotoBatchPayload,
+  validatePdfUploadPayload,
+  validatePdfBatchPayload,
+  validateSchoolStateClassesPayload,
+  validateSchoolStateLinksPayload,
+  validateSchoolStateUsersPayload,
+  validateSchoolStateResetPayload,
+  validateSchoolStateImportJsonPayload,
+  validateSchoolStateLogsPayload,
+  validateAttendanceWindowPayload,
+  validateSchoolNoticesPayload,
+  validateCalendarConfigPayload,
+  validateHolidayActionPayload,
+  validateSecurityLogPayload,
+  validateFcmRegisterTokenPayload,
+  validateFcmUnregisterTokenPayload,
+  validateFcmConfigPayload,
+  validateFcmSendWindowAlertPayload,
+} from './src/utils/serverValidation';
 const MONTH_NAMES_PT = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
@@ -1062,14 +1087,12 @@ async function startServer() {
   app.post('/api/auth/session', async (req, res) => {
     try {
       const authHeader = String(req.headers.authorization || '').trim();
-      const rawToken = authHeader.toLowerCase().startsWith('bearer ')
-        ? authHeader.slice(7).trim()
-        : String(req.body?.idToken || '').trim();
-
-      if (!rawToken) {
-        res.status(400).json({ error: 'Token Firebase ID obrigatório.', code: 'MISSING_ID_TOKEN' });
+      const validation = validateAuthSessionRequest(req.body, authHeader);
+      if (!validation.ok) {
+        res.status(400).json({ error: validation.error, code: 'MISSING_OR_INVALID_ID_TOKEN' });
         return;
       }
+      const rawToken = validation.data.idToken;
 
       const verified = await verifyFirebaseIdToken(rawToken);
       if (!verified) {
@@ -1160,13 +1183,15 @@ async function startServer() {
 
   // API: Registrar token de leitura da pasta oficial do Drive (autenticado institucionalmente)
   app.post('/api/school-state/drive-token', requireInstitutionalAuth, (req, res) => {
-    const { accessToken } = req.body || {};
-    if (typeof accessToken === 'string' && accessToken.trim().length > 10) {
-      writeSharedState({
-        adminDriveToken: accessToken.trim(),
-        adminDriveTokenUpdatedAtMs: Date.now(),
-      });
+    const validation = validateDriveTokenPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
+      return;
     }
+    writeSharedState({
+      adminDriveToken: validation.data.accessToken,
+      adminDriveTokenUpdatedAtMs: Date.now(),
+    });
     res.json({ ok: true });
   });
 
@@ -1442,18 +1467,23 @@ async function startServer() {
     requireInstitutionalAuth,
     express.raw({ type: 'application/octet-stream', limit: '10mb' }),
     (req, res) => {
-      const studentId = String(req.headers['x-student-id'] || '').trim();
-      const buffer = req.body as Buffer;
-      if (!studentId || !Buffer.isBuffer(buffer) || buffer.length === 0) {
-        res.status(400).json({ error: 'x-student-id e corpo binário são obrigatórios.' });
+      const validation = validatePhotoUploadBinaryHeaders(
+        req.headers['x-student-id'],
+        req.headers['x-file-sha256'],
+        req.body
+      );
+      if (!validation.ok) {
+        res.status(400).json({ error: validation.error });
         return;
       }
+      const { studentId, sha256 } = validation.data;
+      const buffer = req.body as Buffer;
       try {
         const result = applyPhotoBatchToState([
           {
             studentId,
             buffer,
-            sha256: req.headers['x-file-sha256'] ? String(req.headers['x-file-sha256']) : undefined,
+            sha256,
           },
         ]);
         const item = result.results[0];
@@ -1482,11 +1512,12 @@ async function startServer() {
 
   // API: Upload individual de foto pelo PEB I ou Admin (JSON DataURL retrocompatível)
   app.post('/api/photos/upload', requireInstitutionalAuth, (req, res) => {
-    const { studentId, photoDataUrl } = req.body || {};
-    if (!studentId || !photoDataUrl) {
-      res.status(400).json({ error: 'studentId e photoDataUrl são obrigatórios' });
+    const validation = validatePhotoUploadPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { studentId, photoDataUrl } = validation.data;
     try {
       const saved = savePhotoDataUrlToFile(studentId, photoDataUrl);
       const current = readSharedState();
@@ -1545,26 +1576,25 @@ async function startServer() {
 
   // API: Upload em lote de fotos nomeadas pelo Admin (JSON retrocompatível com deduplicação SHA-256)
   app.post('/api/photos/batch', requireAdminAuth, (req, res) => {
-    const { photos } = req.body || {};
-    if (!Array.isArray(photos) || photos.length === 0) {
-      res.status(400).json({ error: 'Nenhuma foto fornecida' });
+    const validation = validatePhotoBatchPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { photos } = validation.data;
     try {
-      const items = photos
-        .filter((item: any) => item?.studentId && item?.photoDataUrl)
-        .map((item: any) => {
-          const matches = String(item.photoDataUrl).match(/^data:([A-Za-z0-9\-+\/]+);base64,(.+)$/);
-          const buffer =
-            matches && matches.length === 3
-              ? Buffer.from(matches[2], 'base64')
-              : Buffer.from(String(item.photoDataUrl));
-          return {
-            studentId: String(item.studentId),
-            buffer,
-            sha256: item.sha256 ? String(item.sha256) : undefined,
-          };
-        });
+      const items = photos.map((item) => {
+        const matches = item.photoDataUrl.match(/^data:([A-Za-z0-9\-+\/]+);base64,(.+)$/);
+        const buffer =
+          matches && matches.length === 3
+            ? Buffer.from(matches[2], 'base64')
+            : Buffer.from(item.photoDataUrl);
+        return {
+          studentId: item.studentId,
+          buffer,
+          sha256: item.sha256,
+        };
+      });
       const result = applyPhotoBatchToState(items);
       res.json({ ok: true, ...result });
     } catch (err: any) {
@@ -1574,6 +1604,11 @@ async function startServer() {
 
   // API: Limpar todas as fotos de todos os estudantes (Reset)
   app.post('/api/photos/clear-all', requireAdminAuth, (req, res) => {
+    const safetyCheck = ensureSafePayloadObject(req.body ?? {});
+    if (!safetyCheck.ok) {
+      res.status(400).json({ error: safetyCheck.error });
+      return;
+    }
     try {
       if (fs.existsSync(PHOTOS_DIR)) {
         const files = fs.readdirSync(PHOTOS_DIR);
@@ -1774,14 +1809,15 @@ async function startServer() {
 
   // API: Upload individual de PDF de estudante
   app.post('/api/pdfs/upload', requireInstitutionalAuth, (req, res) => {
-    const { studentId, pdfDataUrl } = req.body || {};
-    if (!studentId || !pdfDataUrl) {
-      res.status(400).json({ error: 'studentId e pdfDataUrl são obrigatórios' });
+    const validation = validatePdfUploadPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { studentId, pdfDataUrl } = validation.data;
     try {
-      const buffer = decodePdfBufferFromDataUrl(String(pdfDataUrl));
-      const result = applyPdfBatchToState([{ studentId: String(studentId), buffer }]);
+      const buffer = decodePdfBufferFromDataUrl(pdfDataUrl);
+      const result = applyPdfBatchToState([{ studentId, buffer }]);
       const entry = result.results[0];
       res.json({
         ok: true,
@@ -1816,19 +1852,18 @@ async function startServer() {
 
   // API: Upload em lote de PDFs nomeados pelo Admin (JSON retrocompatível)
   app.post('/api/pdfs/batch', requireAdminAuth, (req, res) => {
-    const { pdfs } = req.body || {};
-    if (!Array.isArray(pdfs) || pdfs.length === 0) {
-      res.status(400).json({ error: 'Nenhum PDF fornecido' });
+    const validation = validatePdfBatchPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { pdfs } = validation.data;
     try {
-      const items = pdfs
-        .filter((item: any) => item?.studentId && item?.pdfDataUrl)
-        .map((item: any) => ({
-          studentId: String(item.studentId),
-          buffer: decodePdfBufferFromDataUrl(String(item.pdfDataUrl)),
-          sha256: item.sha256 ? String(item.sha256) : undefined,
-        }));
+      const items = pdfs.map((item) => ({
+        studentId: item.studentId,
+        buffer: decodePdfBufferFromDataUrl(item.pdfDataUrl),
+        sha256: item.sha256,
+      }));
       const result = applyPdfBatchToState(items);
       res.json({ ok: true, ...result });
     } catch (err: any) {
@@ -1838,6 +1873,11 @@ async function startServer() {
 
   // API: Limpar todas as fichas PDF de todos os estudantes (Reset de PDFs)
   app.post('/api/pdfs/clear-all', requireAdminAuth, (req, res) => {
+    const safetyCheck = ensureSafePayloadObject(req.body ?? {});
+    if (!safetyCheck.ok) {
+      res.status(400).json({ error: safetyCheck.error });
+      return;
+    }
     try {
       if (fs.existsSync(PDFS_DIR)) {
         const files = fs.readdirSync(PDFS_DIR);
@@ -1982,8 +2022,13 @@ async function startServer() {
     res.status(404).end();
   });
 
-  // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS, Ônibus Fretado e Links de PDFs Escaneados em tempo real com controle de concorrência por turma/estudante
+  // API: Sincronizar Turmas, Faltas, Atestados, Fotos, NIS e Links de PDFs Escaneados em tempo real com controle de concorrência por turma/estudante
   app.post('/api/school-state/classes', requireInstitutionalAuth, requireCurrentCleanEpoch, (req, res) => {
+    const validation = validateSchoolStateClassesPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
+      return;
+    }
     const {
       classes,
       classesUpdatedAtMs,
@@ -1991,11 +2036,7 @@ async function startServer() {
       discoveredDrivePhotos,
       cloudLinks,
       opId,
-    } = req.body || {};
-    if (!Array.isArray(classes) || classes.length === 0 || classes.length > 80) {
-      res.status(400).json({ error: 'Lista de turmas inválida' });
-      return;
-    }
+    } = validation.data;
     const user = extractRequestUser(req);
     const current = readSharedState();
     const incTime = classesUpdatedAtMs || Date.now();
@@ -2127,7 +2168,12 @@ async function startServer() {
 
   // API: Sincronizar Links de Pastas (Fotos / Fichas Informativas PDF) e Planilha Oficial Google Sheets (Admin Only)
   app.post('/api/school-state/links', requireAdminAuth, requireCurrentCleanEpoch, (req, res) => {
-    const { cloudLinks, discoveredNominalPdfs, discoveredDrivePhotos } = req.body || {};
+    const validation = validateSchoolStateLinksPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
+      return;
+    }
+    const { cloudLinks, discoveredNominalPdfs, discoveredDrivePhotos } = validation.data;
     const current = readSharedState();
     const patch: Partial<SharedSchoolState> = {};
 
@@ -2156,11 +2202,12 @@ async function startServer() {
 
   // API: Atualizar Usuários Autorizados (vínculo de turmas PEB I / PEB II / Admin) (Admin Only)
   app.post('/api/school-state/users', requireAdminAuth, (req, res) => {
-    const { authorizedUsers } = req.body || {};
-    if (!Array.isArray(authorizedUsers)) {
-      res.status(400).json({ error: 'Lista de authorizedUsers inválida' });
+    const validation = validateSchoolStateUsersPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { authorizedUsers } = validation.data;
     const current = readSharedState();
     // Merge preserving higher access counts/durations while respecting newer updatedAtMs for role/class assignments
     const currentByEmail = new Map<string, any>();
@@ -2227,7 +2274,12 @@ async function startServer() {
 
   // API: Limpar Apenas os Dados do Banco Escolar (Manter turmas, usuários autorizados e calendário intactos) (Admin Only)
   app.post('/api/school-state/reset', requireAdminAuth, (req, res) => {
-    const { freshClasses } = req.body || {};
+    const validation = validateSchoolStateResetPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
+      return;
+    }
+    const { freshClasses } = validation.data;
     const user = extractRequestUser(req);
     const nowMs = Date.now();
 
@@ -2297,11 +2349,12 @@ async function startServer() {
 
   // API: Importar e Atualizar Base Escolar via Arquivo JSON (Admin Only, Validação Estrita & Auditoria)
   app.post('/api/school-state/import-json', requireAdminAuth, requireCurrentCleanEpoch, (req, res) => {
-    const { payload, fileName, fileSize } = req.body || {};
-    if (!payload) {
-      res.status(400).json({ error: 'Conteúdo JSON não fornecido ou vazio.' });
+    const validation = validateSchoolStateImportJsonPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { payload, fileName, fileSize } = validation.data;
 
     let rawClasses: any[] | null = null;
     if (Array.isArray(payload)) {
@@ -2360,7 +2413,12 @@ async function startServer() {
 
   // API: Atualizar Logs de Sessão e Tempo Conectado (autenticado institucionalmente)
   app.post('/api/school-state/logs', requireInstitutionalAuth, requireCurrentCleanEpoch, (req, res) => {
-    const { accessSessionLogs, authorizedUsers } = req.body || {};
+    const validation = validateSchoolStateLogsPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
+      return;
+    }
+    const { accessSessionLogs, authorizedUsers } = validation.data;
     const current = readSharedState();
 
     // Merge session logs by ID
@@ -2436,11 +2494,12 @@ async function startServer() {
 
   // API: Atualizar Configuração de Janela de Lançamento Excepcional (Admin Only)
   app.post('/api/school-state/window', requireAdminAuth, (req, res) => {
-    const { attendanceWindowConfig } = req.body || {};
-    if (!attendanceWindowConfig) {
-      res.status(400).json({ error: 'Configuração inválida' });
+    const validation = validateAttendanceWindowPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { attendanceWindowConfig } = validation.data;
     const saved = writeSharedState({ attendanceWindowConfig });
     recordSecurityAuditLog(
       'ATTENDANCE_WINDOW_MODIFIED',
@@ -2453,11 +2512,12 @@ async function startServer() {
 
   // API: Publicar / Atualizar Comunicados do Quadro de Avisos Institucional
   app.post('/api/school-state/notices', requireInstitutionalAuth, requireCurrentCleanEpoch, (req, res) => {
-    const { schoolNotices } = req.body || {};
-    if (!Array.isArray(schoolNotices)) {
-      res.status(400).json({ error: 'Lista de avisos inválida' });
+    const validation = validateSchoolNoticesPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { schoolNotices } = validation.data;
     const saved = writeSharedState({ schoolNotices: schoolNotices.slice(0, 60) });
     recordSecurityAuditLog(
       'SCHOOL_NOTICES_UPDATED',
@@ -2481,8 +2541,12 @@ async function startServer() {
 
   // API: Homologação e Configuração Única dos 200 Dias Letivos (Proteção Estrita de Administrador)
   app.post('/api/calendar-config', requireAdminAuth, (req, res) => {
-
-    const { rawDatesText, schoolDays, adminEmail, adminName, year = 2027 } = req.body || {};
+    const payloadCheck = validateCalendarConfigPayload(req.body);
+    if (!payloadCheck.ok) {
+      res.status(400).json({ error: payloadCheck.error });
+      return;
+    }
+    const { rawDatesText, schoolDays, adminEmail, adminName, year } = payloadCheck.data;
     const current = readSharedState();
     const currentHolidays = current.holidays || OFFICIAL_DEFAULT_HOLIDAYS_2027;
 
@@ -2571,8 +2635,12 @@ async function startServer() {
 
   // API: Gerenciamento Centralizado de Feriados e Recessos Escolares (Admin Only)
   app.post('/api/holidays', requireAdminAuth, (req, res) => {
-
-    const { action, holiday, holidayId, adminEmail, adminName } = req.body || {};
+    const validation = validateHolidayActionPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
+      return;
+    }
+    const { action, holiday, holidayId, adminEmail, adminName } = validation.data;
     const current = readSharedState();
     let holidaysList = Array.isArray(current.holidays) ? [...current.holidays] : [...OFFICIAL_DEFAULT_HOLIDAYS_2027];
 
@@ -2664,10 +2732,11 @@ async function startServer() {
 
   // API: Registrar Evento de Segurança / Auditoria LGPD (Exige autenticação institucional verificada)
   app.post('/api/security-logs', requireInstitutionalAuth, (req, res) => {
-    const entry = req.body;
-    if (!entry || !entry.eventType) {
-      return res.status(400).json({ error: 'Dados do evento de segurança inválidos.' });
+    const validation = validateSecurityLogPayload(req.body);
+    if (!validation.ok) {
+      return res.status(400).json({ error: validation.error });
     }
+    const entry = validation.data;
 
     const verifiedUser = extractRequestUser(req);
     const state = readSharedState();
@@ -3080,11 +3149,12 @@ async function startServer() {
 
   // API: Registrar Token FCM / Web Push Subscription do dispositivo do professor
   app.post('/api/fcm/register-token', requireInstitutionalAuth, (req, res) => {
-    const sub = req.body;
-    if (!sub || !sub.id || !sub.userEmail) {
-      res.status(400).json({ error: 'Dados de inscrição Push inválidos.' });
+    const validation = validateFcmRegisterTokenPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const sub = validation.data;
 
     const reqUser = extractRequestUser(req);
     const incomingEmail = String(sub.userEmail).trim().toLowerCase();
@@ -3146,7 +3216,12 @@ async function startServer() {
 
   // API: Desativar Token FCM / Web Push do dispositivo
   app.post('/api/fcm/unregister-token', requireInstitutionalAuth, (req, res) => {
-    const { id, userEmail } = req.body || {};
+    const validation = validateFcmUnregisterTokenPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
+      return;
+    }
+    const { id, userEmail } = validation.data;
     const reqUser = extractRequestUser(req);
     const targetEmail = String(userEmail || reqUser.email).trim().toLowerCase();
     if (!reqUser.isAdmin && targetEmail !== reqUser.email) {
@@ -3238,11 +3313,12 @@ async function startServer() {
 
   // API: Configurar parâmetros do sistema FCM (Admin Only)
   app.post('/api/fcm/config', requireAdminAuth, (req, res) => {
-    const { fcmConfig } = req.body || {};
-    if (!fcmConfig || typeof fcmConfig !== 'object') {
-      res.status(400).json({ error: 'Configuração FCM inválida.' });
+    const validation = validateFcmConfigPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { fcmConfig } = validation.data;
     const reqUser = extractRequestUser(req);
     const cleanConfig = {
       vapidPublicKey: String(fcmConfig.vapidPublicKey || '').trim().slice(0, 256),
@@ -3265,11 +3341,12 @@ async function startServer() {
 
   // API: Disparar Alerta Push sobre Fechamento da Janela de Lançamento (Admin Only)
   app.post('/api/fcm/send-window-alert', requireAdminAuth, async (req, res) => {
-    const { alert } = req.body || {};
-    if (!alert || !alert.title || !alert.body) {
-      res.status(400).json({ error: 'Payload do alerta Push inválido.' });
+    const validation = validateFcmSendWindowAlertPayload(req.body);
+    if (!validation.ok) {
+      res.status(400).json({ error: validation.error });
       return;
     }
+    const { alert } = validation.data;
 
     const reqUser = extractRequestUser(req);
     const nowMs = Date.now();

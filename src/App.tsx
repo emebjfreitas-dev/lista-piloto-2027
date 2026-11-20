@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
+import { BadgeCheck, Loader2, ShieldCheck } from 'lucide-react';
 import {
   ScreenType,
   ClassGroup,
@@ -80,25 +81,60 @@ import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { LoginScreen } from './components/LoginScreen';
 import { HomeScreen } from './components/HomeScreen';
-import { MinhasTurmasScreen } from './components/MinhasTurmasScreen';
-import { DetalhesTurmaScreen } from './components/DetalhesTurmaScreen';
-import { RegistroFrequenciaMensalScreen } from './components/RegistroFrequenciaMensalScreen';
-import { FaltasConsecutivasScreen } from './components/FaltasConsecutivasScreen';
-import { ResumoMensalScreen } from './components/ResumoMensalScreen';
-import { PlanilhaGoogleScreen } from './components/PlanilhaGoogleScreen';
-import { UsuariosAcessoScreen } from './components/UsuariosAcessoScreen';
-import { ListasNominaisScreen } from './components/ListasNominaisScreen';
-import { AlunosModal } from './components/AlunosModal';
-import { RelatorioImpressaoModal } from './components/RelatorioImpressaoModal';
-import { AnotacoesModal } from './components/AnotacoesModal';
-import { UploadFotoModal } from './components/UploadFotoModal';
-import { GradeDadosCriancaModal } from './components/GradeDadosCriancaModal';
-import { VisualizarPdfNominalModal } from './components/VisualizarPdfNominalModal';
-import { SpotlightCommandModal } from './components/SpotlightCommandModal';
-import { AdminArrastePdfsModal } from './components/AdminArrastePdfsModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { Toaster, toast } from 'sonner';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+
+const MinhasTurmasScreen = React.lazy(() =>
+  import('./components/MinhasTurmasScreen').then((m) => ({ default: m.MinhasTurmasScreen }))
+);
+const DetalhesTurmaScreen = React.lazy(() =>
+  import('./components/DetalhesTurmaScreen').then((m) => ({ default: m.DetalhesTurmaScreen }))
+);
+const RegistroFrequenciaMensalScreen = React.lazy(() =>
+  import('./components/RegistroFrequenciaMensalScreen').then((m) => ({
+    default: m.RegistroFrequenciaMensalScreen,
+  }))
+);
+const FaltasConsecutivasScreen = React.lazy(() =>
+  import('./components/FaltasConsecutivasScreen').then((m) => ({
+    default: m.FaltasConsecutivasScreen,
+  }))
+);
+const UsuariosAcessoScreen = React.lazy(() =>
+  import('./components/UsuariosAcessoScreen').then((m) => ({ default: m.UsuariosAcessoScreen }))
+);
+const ListasNominaisScreen = React.lazy(() =>
+  import('./components/ListasNominaisScreen').then((m) => ({ default: m.ListasNominaisScreen }))
+);
+const AlunosModal = React.lazy(() =>
+  import('./components/AlunosModal').then((m) => ({ default: m.AlunosModal }))
+);
+const RelatorioImpressaoModal = React.lazy(() =>
+  import('./components/RelatorioImpressaoModal').then((m) => ({
+    default: m.RelatorioImpressaoModal,
+  }))
+);
+const AnotacoesModal = React.lazy(() =>
+  import('./components/AnotacoesModal').then((m) => ({ default: m.AnotacoesModal }))
+);
+const UploadFotoModal = React.lazy(() =>
+  import('./components/UploadFotoModal').then((m) => ({ default: m.UploadFotoModal }))
+);
+const GradeDadosCriancaModal = React.lazy(() =>
+  import('./components/GradeDadosCriancaModal').then((m) => ({ default: m.GradeDadosCriancaModal }))
+);
+const VisualizarPdfNominalModal = React.lazy(() =>
+  import('./components/VisualizarPdfNominalModal').then((m) => ({
+    default: m.VisualizarPdfNominalModal,
+  }))
+);
+const SpotlightCommandModal = React.lazy(() =>
+  import('./components/SpotlightCommandModal').then((m) => ({ default: m.SpotlightCommandModal }))
+);
+const AdminArrastePdfsModal = React.lazy(() =>
+  import('./components/AdminArrastePdfsModal').then((m) => ({ default: m.AdminArrastePdfsModal }))
+);
 
 const screenSlideVariants = {
   enter: (direction: 1 | -1) => ({
@@ -1909,8 +1945,8 @@ export default function App() {
   if (isAuthChecking) {
     return (
       <div className="min-h-[100dvh] w-full bg-[linear-gradient(168deg,#001229_0%,#050f1f_50%,#040b16_100%)] flex flex-col items-center justify-center p-6 text-white font-sans">
-        <div className="w-10 h-10 border-4 border-white/25 border-t-white rounded-full animate-spin mb-4" />
-        <p className="text-sm font-semibold tracking-wide text-white/90">
+        <Loader2 className="w-10 h-10 text-white animate-spin mb-4" aria-hidden="true" />
+        <p className="text-sm font-semibold tracking-wide text-white">
           Verificando sessão institucional...
         </p>
       </div>
@@ -2030,9 +2066,7 @@ export default function App() {
         {securityBlockNotice && (
           <div className="mb-5 w-full min-w-0 p-4 sm:p-5 rounded-2xl bg-amber-50 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 shadow-sm animate-gentle-fade">
             <div className="flex items-start gap-3 min-w-0 flex-1 w-full">
-              <span className="material-symbols-outlined text-amber-700 text-[24px] shrink-0 mt-0.5">
-                security
-              </span>
+              <ShieldCheck className="w-6 h-6 text-amber-700 shrink-0 mt-0.5" />
               <div className="space-y-1 min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2 min-w-0">
                   <span className="font-bold text-xs sm:text-[13px] uppercase tracking-wide text-amber-900 break-words">
@@ -2078,6 +2112,14 @@ export default function App() {
               exit="exit"
               className="w-full min-w-0"
             >
+        <Suspense
+          fallback={
+            <div className="w-full py-16 flex flex-col items-center justify-center gap-3 text-white">
+              <Loader2 className="w-7 h-7 text-white animate-spin" aria-hidden="true" />
+              <span className="text-xs font-semibold tracking-wide">Carregando módulo...</span>
+            </div>
+          }
+        >
         {currentScreen === 'home' && (
           <HomeScreen
             userRole={userRole}
@@ -2091,6 +2133,7 @@ export default function App() {
             schoolNotices={schoolNotices}
             onSaveSchoolNotices={handleSaveSchoolNotices}
             onMarkNoticeRead={handleMarkNoticeRead}
+            onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
             onNavigateToScreen={(targetScreen) => {
               if (targetScreen === 'turmas' && userRole === 'usuario') {
                 const targetCls = classes.find((c) => c.id === assignedClassId) || classes[0];
@@ -2426,6 +2469,7 @@ export default function App() {
             schoolNotices={schoolNotices}
             onSaveSchoolNotices={handleSaveSchoolNotices}
             onMarkNoticeRead={handleMarkNoticeRead}
+            onOpenSpotlightSearch={() => setIsSpotlightOpen(true)}
             onNavigateToScreen={(targetScreen) => {
               if (targetScreen === 'turmas' && userRole === 'usuario') {
                 const targetCls = classes.find((c) => c.id === assignedClassId) || classes[0];
@@ -2462,7 +2506,7 @@ export default function App() {
         {currentScreen === 'planilha' && isStrictAdmin && (
           <div className="w-full min-w-0 break-words max-w-xl mx-auto my-6 p-8 bg-white rounded-3xl shadow-lg text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto shadow-xs shrink-0">
-              <span className="material-symbols-outlined text-[34px]">verified</span>
+              <BadgeCheck className="w-8 h-8" />
             </div>
             <h2 className="text-xl font-bold text-slate-950 break-words">Base Oficial SED 100% Integrada</h2>
             <p className="text-sm text-slate-600 leading-relaxed break-words">
@@ -2477,6 +2521,7 @@ export default function App() {
             </button>
           </div>
         )}
+        </Suspense>
             </motion.div>
           </AnimatePresence>
         </MotionConfig>
@@ -2506,162 +2551,218 @@ export default function App() {
       />
 
       {/* Modals */}
-      <AlunosModal
-        isOpen={isStudentListModalOpen}
-        onClose={() => setIsStudentListModalOpen(false)}
-        className={selectedClass.name}
-        students={selectedClass.students}
-        onOpenPhotoModal={(student) => setPhotoModalStudent(student)}
-        onOpenStudentPdf={(student) =>
-          setPdfModalData({ student, className: selectedClass.name })
-        }
-        onOpenStudentGrid={(student) =>
-          setGridModalData({
-            student,
-            classId: selectedClass.id,
-            className: selectedClass.name,
-            diasLetivosMes: selectedClass.classesHeld || 20,
-          })
-        }
-      />
+      {isStudentListModalOpen && (
+        <Suspense fallback={null}>
+          <AlunosModal
+            isOpen={isStudentListModalOpen}
+            onClose={() => setIsStudentListModalOpen(false)}
+            className={selectedClass.name}
+            students={selectedClass.students}
+            onOpenPhotoModal={(student) => setPhotoModalStudent(student)}
+            onOpenStudentPdf={(student) =>
+              setPdfModalData({ student, className: selectedClass.name })
+            }
+            onOpenStudentGrid={(student) =>
+              setGridModalData({
+                student,
+                classId: selectedClass.id,
+                className: selectedClass.name,
+                diasLetivosMes: selectedClass.classesHeld || 20,
+              })
+            }
+          />
+        </Suspense>
+      )}
 
-      <RelatorioImpressaoModal
-        isOpen={isReportPrintModalOpen}
-        onClose={() => setIsReportPrintModalOpen(false)}
-        classGroup={selectedClass}
-      />
+      {isReportPrintModalOpen && (
+        <Suspense fallback={null}>
+          <RelatorioImpressaoModal
+            isOpen={isReportPrintModalOpen}
+            onClose={() => setIsReportPrintModalOpen(false)}
+            classGroup={selectedClass}
+          />
+        </Suspense>
+      )}
 
-      <AnotacoesModal
-        isOpen={isNotesModalOpen}
-        onClose={() => setIsNotesModalOpen(false)}
-        classGroup={selectedClass}
-        onSaveNotes={handleSaveNotes}
-      />
+      {isNotesModalOpen && (
+        <Suspense fallback={null}>
+          <AnotacoesModal
+            isOpen={isNotesModalOpen}
+            onClose={() => setIsNotesModalOpen(false)}
+            classGroup={selectedClass}
+            onSaveNotes={handleSaveNotes}
+          />
+        </Suspense>
+      )}
 
       {photoModalStudent && (
-        <UploadFotoModal
-          isOpen={photoModalStudent !== null}
-          onClose={() => setPhotoModalStudent(null)}
-          student={photoModalStudent}
-          className={selectedClass.name}
-          classStudents={selectedClass.students}
-          onSelectStudent={(st) => setPhotoModalStudent(st)}
-          onSavePhoto={handleSaveStudentPhoto}
-          onSyncDrivePhotos={async () => {
-            const photoSync = await syncPhotosFromDriveFolder(getStoredClasses());
-            if (photoSync.matchedPhotosCount > 0) {
-              setClasses(photoSync.updatedClasses);
-              saveStoredClasses(photoSync.updatedClasses);
-            }
-          }}
-        />
+        <Suspense fallback={null}>
+          <UploadFotoModal
+            isOpen={photoModalStudent !== null}
+            onClose={() => setPhotoModalStudent(null)}
+            student={photoModalStudent}
+            className={selectedClass.name}
+            classStudents={selectedClass.students}
+            onSelectStudent={(st) => setPhotoModalStudent(st)}
+            onSavePhoto={handleSaveStudentPhoto}
+            onSyncDrivePhotos={async () => {
+              const photoSync = await syncPhotosFromDriveFolder(getStoredClasses());
+              if (photoSync.matchedPhotosCount > 0) {
+                setClasses(photoSync.updatedClasses);
+                saveStoredClasses(photoSync.updatedClasses);
+              }
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Grade de Dados Interativa de Cada Criança (Com Navegação Anterior / Próximo) */}
-      <GradeDadosCriancaModal
-        isOpen={gridModalData !== null}
-        onClose={() => setGridModalData(null)}
-        student={gridModalData?.student || null}
-        classStudents={
-          gridModalData
-            ? classes.find((c) => c.id === gridModalData.classId)?.students ||
-              selectedClass.students
-            : selectedClass.students
-        }
-        onSelectStudent={(nextStudent) => {
-          if (gridModalData) {
-            setGridModalData({
-              ...gridModalData,
-              student: nextStudent,
-            });
-          }
-        }}
-        className={gridModalData?.className || selectedClass.name}
-        diasLetivosMes={gridModalData?.diasLetivosMes || 20}
-        userRole={userRole}
-        canEdit={gridModalData ? canEditClass(gridModalData.classId) : false}
-        onSaveStudent={(updatedStudent) => {
-          if (gridModalData) {
-            handleSaveSingleStudent(gridModalData.classId, updatedStudent);
-          }
-        }}
-        onOpenPhotoModal={(student) => {
-          setGridModalData(null);
-          setPhotoModalStudent(student);
-        }}
-        onOpenStudentPdf={(student) => {
-          const clsName = gridModalData?.className || selectedClass.name;
-          setPdfModalData({ student, className: clsName });
-        }}
-        onNavigateToConsecutiveAbsences={() => {
-          setGridModalData(null);
-          navigateToScreen('faltas_consecutivas');
-        }}
-      />
+      {gridModalData !== null && (
+        <Suspense fallback={null}>
+          <GradeDadosCriancaModal
+            isOpen={gridModalData !== null}
+            onClose={() => setGridModalData(null)}
+            student={gridModalData?.student || null}
+            classStudents={
+              gridModalData
+                ? classes.find((c) => c.id === gridModalData.classId)?.students ||
+                  selectedClass.students
+                : selectedClass.students
+            }
+            onSelectStudent={(nextStudent) => {
+              if (gridModalData) {
+                setGridModalData({
+                  ...gridModalData,
+                  student: nextStudent,
+                });
+              }
+            }}
+            className={gridModalData?.className || selectedClass.name}
+            diasLetivosMes={gridModalData?.diasLetivosMes || 20}
+            userRole={userRole}
+            canEdit={gridModalData ? canEditClass(gridModalData.classId) : false}
+            onSaveStudent={(updatedStudent) => {
+              if (gridModalData) {
+                handleSaveSingleStudent(gridModalData.classId, updatedStudent);
+              }
+            }}
+            onOpenPhotoModal={(student) => {
+              setGridModalData(null);
+              setPhotoModalStudent(student);
+            }}
+            onOpenStudentPdf={(student) => {
+              const clsName = gridModalData?.className || selectedClass.name;
+              setPdfModalData({ student, className: clsName });
+            }}
+            onNavigateToConsecutiveAbsences={() => {
+              setGridModalData(null);
+              navigateToScreen('faltas_consecutivas');
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Busca Global Instantânea (Spotlight Command Bar · Ctrl+K / ⌘K) */}
-      <SpotlightCommandModal
-        isOpen={isSpotlightOpen}
-        onClose={() => setIsSpotlightOpen(false)}
-        classes={userRole === 'usuario' ? visibleClasses : classes}
-        userRole={userRole}
-        onSelectClass={(cls) => {
-          setAssignedClassId(cls.id);
-          setSelectedClass(cls);
-          navigateToScreen('detalhes');
-        }}
-        onOpenStudentGrid={(student, classId, className, diasLetivosMes) => {
-          const foundCls = classes.find((c) => c.id === classId);
-          if (foundCls) setSelectedClass(foundCls);
-          setGridModalData({
-            student,
-            classId,
-            className,
-            diasLetivosMes,
-          });
-        }}
-        onOpenStudentPdf={(student, className) => {
-          setPdfModalData({ student, className });
-        }}
-        onNavigateToScreen={(screen) => {
-          navigateToScreen(screen);
-        }}
-      />
+      {isSpotlightOpen && (
+        <Suspense fallback={null}>
+          <SpotlightCommandModal
+            isOpen={isSpotlightOpen}
+            onClose={() => setIsSpotlightOpen(false)}
+            classes={userRole === 'usuario' ? visibleClasses : classes}
+            userRole={userRole}
+            onSelectClass={(cls) => {
+              setAssignedClassId(cls.id);
+              setSelectedClass(cls);
+              navigateToScreen('detalhes');
+            }}
+            onOpenStudentGrid={(student, classId, className, diasLetivosMes) => {
+              const foundCls = classes.find((c) => c.id === classId);
+              if (foundCls) setSelectedClass(foundCls);
+              setGridModalData({
+                student,
+                classId,
+                className,
+                diasLetivosMes,
+              });
+            }}
+            onOpenStudentPdf={(student, className) => {
+              setPdfModalData({ student, className });
+            }}
+            onNavigateToScreen={(screen) => {
+              navigateToScreen(screen);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Visualizador no App dos Documentos PDF Nominais */}
-      <VisualizarPdfNominalModal
-        isOpen={pdfModalData !== null}
-        onClose={() => setPdfModalData(null)}
-        student={pdfModalData?.student || null}
-        className={pdfModalData?.className || selectedClass.name}
-        userRole={userRole}
-        allClasses={classes}
-        onOpenAdminPdfsModal={() => setIsAdminPdfsModalOpen(true)}
-        onUpdateAllClasses={(updated) => {
-          setClasses(updated);
-          saveStoredClasses(updated);
-          const found = updated.find((c) => c.id === selectedClass.id);
-          if (found) setSelectedClass(found);
-          setPdfModalData((prev) => {
-            if (!prev) return null;
-            for (const c of updated) {
-              const st = c.students.find((s) => s.id === prev.student.id);
-              if (st) return { ...prev, student: st };
-            }
-            return prev;
-          });
-        }}
-        onSaveStudentPdfLink={(studentId, pdfId, pdfUrl, subfolder, isManualLink = true) => {
-          const nowMs = Date.now();
-          setClasses((prevClasses) => {
-            let updatedCls: ClassGroup | null = null;
-            const next = prevClasses.map((cls) => {
-              const hasStudent = cls.students.some((s) => s.id === studentId);
-              if (!hasStudent) return cls;
-              const nextCls: ClassGroup = {
-                ...cls,
+      {pdfModalData !== null && (
+        <Suspense fallback={null}>
+          <VisualizarPdfNominalModal
+            isOpen={pdfModalData !== null}
+            onClose={() => setPdfModalData(null)}
+            student={pdfModalData?.student || null}
+            className={pdfModalData?.className || selectedClass.name}
+            userRole={userRole}
+            allClasses={classes}
+            onOpenAdminPdfsModal={() => setIsAdminPdfsModalOpen(true)}
+            onUpdateAllClasses={(updated) => {
+              setClasses(updated);
+              saveStoredClasses(updated);
+              const found = updated.find((c) => c.id === selectedClass.id);
+              if (found) setSelectedClass(found);
+              setPdfModalData((prev) => {
+                if (!prev) return null;
+                for (const c of updated) {
+                  const st = c.students.find((s) => s.id === prev.student.id);
+                  if (st) return { ...prev, student: st };
+                }
+                return prev;
+              });
+            }}
+            onSaveStudentPdfLink={(studentId, pdfId, pdfUrl, subfolder, isManualLink = true) => {
+              const nowMs = Date.now();
+              setClasses((prevClasses) => {
+                let updatedCls: ClassGroup | null = null;
+                const next = prevClasses.map((cls) => {
+                  const hasStudent = cls.students.some((s) => s.id === studentId);
+                  if (!hasStudent) return cls;
+                  const nextCls: ClassGroup = {
+                    ...cls,
+                    updatedAtMs: nowMs,
+                    students: cls.students.map((s) =>
+                      s.id === studentId
+                        ? {
+                            ...s,
+                            updatedAtMs: nowMs,
+                            fichaPdfDriveId: pdfId,
+                            fichaPdfDriveUrl: pdfUrl,
+                            fichaPdfSubfolder: subfolder,
+                            fichaPdfManualLink: isManualLink,
+                          }
+                        : s
+                    ),
+                  };
+                  updatedCls = nextCls;
+                  return nextCls;
+                });
+                skipNextClassesSaveRef.current = true;
+                saveStoredClasses(next, 'local_with_timestamp');
+                if (updatedCls) {
+                  triggerDebouncedSheetWrite(
+                    updatedCls,
+                    next,
+                    'pdf',
+                    studentId,
+                    `Ficha Informativa do Estudante (${studentId})`
+                  );
+                }
+                return next;
+              });
+              setSelectedClass((prev) => ({
+                ...prev,
                 updatedAtMs: nowMs,
-                students: cls.students.map((s) =>
+                students: prev.students.map((s) =>
                   s.id === studentId
                     ? {
                         ...s,
@@ -2673,70 +2774,44 @@ export default function App() {
                       }
                     : s
                 ),
-              };
-              updatedCls = nextCls;
-              return nextCls;
-            });
-            skipNextClassesSaveRef.current = true;
-            saveStoredClasses(next, 'local_with_timestamp');
-            if (updatedCls) {
-              triggerDebouncedSheetWrite(
-                updatedCls,
-                next,
-                'pdf',
-                studentId,
-                `Ficha Informativa do Estudante (${studentId})`
+              }));
+              setPdfModalData((prev) =>
+                prev && prev.student.id === studentId
+                  ? {
+                      ...prev,
+                      student: {
+                        ...prev.student,
+                        updatedAtMs: nowMs,
+                        fichaPdfDriveId: pdfId,
+                        fichaPdfDriveUrl: pdfUrl,
+                        fichaPdfSubfolder: subfolder,
+                        fichaPdfManualLink: isManualLink,
+                      },
+                    }
+                  : prev
               );
-            }
-            return next;
-          });
-          setSelectedClass((prev) => ({
-            ...prev,
-            updatedAtMs: nowMs,
-            students: prev.students.map((s) =>
-              s.id === studentId
-                ? {
-                    ...s,
-                    updatedAtMs: nowMs,
-                    fichaPdfDriveId: pdfId,
-                    fichaPdfDriveUrl: pdfUrl,
-                    fichaPdfSubfolder: subfolder,
-                    fichaPdfManualLink: isManualLink,
-                  }
-                : s
-            ),
-          }));
-          setPdfModalData((prev) =>
-            prev && prev.student.id === studentId
-              ? {
-                  ...prev,
-                  student: {
-                    ...prev.student,
-                    updatedAtMs: nowMs,
-                    fichaPdfDriveId: pdfId,
-                    fichaPdfDriveUrl: pdfUrl,
-                    fichaPdfSubfolder: subfolder,
-                    fichaPdfManualLink: isManualLink,
-                  },
-                }
-              : prev
-          );
-        }}
-      />
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Modal Admin de Arraste & Solte em Lote de Fichas PDF dos Alunos (Acesso contextual do visualizador) */}
-      <AdminArrastePdfsModal
-        isOpen={isAdminPdfsModalOpen}
-        onClose={() => setIsAdminPdfsModalOpen(false)}
-        classes={classes}
-        onBatchPdfsSaved={(updatedClasses) => {
-          setClasses(updatedClasses);
-          saveStoredClasses(updatedClasses);
-          const found = updatedClasses.find((c) => c.id === selectedClass.id);
-          if (found) setSelectedClass(found);
-          else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
-        }}
-      />
+      {isAdminPdfsModalOpen && (
+        <Suspense fallback={null}>
+          <AdminArrastePdfsModal
+            isOpen={isAdminPdfsModalOpen}
+            onClose={() => setIsAdminPdfsModalOpen(false)}
+            classes={classes}
+            onBatchPdfsSaved={(updatedClasses) => {
+              setClasses(updatedClasses);
+              saveStoredClasses(updatedClasses);
+              const found = updatedClasses.find((c) => c.id === selectedClass.id);
+              if (found) setSelectedClass(found);
+              else if (updatedClasses.length > 0) setSelectedClass(updatedClasses[0]);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Offline Connectivity Indicator */}
       <OfflineIndicator />

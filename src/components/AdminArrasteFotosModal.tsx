@@ -17,6 +17,21 @@ import {
   UploadedPhotoCacheEntry,
 } from '../services/photoIndexedDbCache';
 import { IndexedDbPhotoStorageModal } from './IndexedDbPhotoStorageModal';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Download,
+  FolderUp,
+  HardDrive,
+  Image as ImageIcon,
+  ImagePlus,
+  Pause,
+  Play,
+  RefreshCw,
+  Trash2,
+  UploadCloud,
+  X,
+} from 'lucide-react';
 
 interface AdminArrasteFotosModalProps {
   isOpen: boolean;
@@ -59,6 +74,15 @@ const formatBytesCompact = (bytes: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
 
+const formatEtaRemaining = (seconds: number): string => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  const rounded = Math.ceil(seconds);
+  if (rounded < 60) return `~${rounded}s restantes`;
+  const mins = Math.floor(rounded / 60);
+  const secs = rounded % 60;
+  return `~${mins}m ${secs.toString().padStart(2, '0')}s restantes`;
+};
+
 const LazyPhotoThumbnail: React.FC<{ file: File; filename: string }> = ({ file, filename }) => {
   const [thumbUrl, setThumbUrl] = useState<string>('');
   const [imgError, setImgError] = useState(false);
@@ -79,8 +103,8 @@ const LazyPhotoThumbnail: React.FC<{ file: File; filename: string }> = ({ file, 
 
   if (!thumbUrl || imgError) {
     return (
-      <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 flex flex-col items-center justify-center shrink-0">
-        <span className="material-symbols-outlined text-[18px]">image</span>
+      <div className="w-12 h-12 rounded-xl bg-[#edf2f7] text-slate-700 flex flex-col items-center justify-center shrink-0">
+        <ImageIcon className="w-[18px] h-[18px]" strokeWidth={2} />
         <span className="text-[9px] font-bold uppercase tracking-tight">
           {(filename.split('.').pop() || 'IMG').slice(0, 4)}
         </span>
@@ -94,7 +118,7 @@ const LazyPhotoThumbnail: React.FC<{ file: File; filename: string }> = ({ file, 
       alt={filename}
       loading="lazy"
       onError={() => setImgError(true)}
-      className="w-12 h-12 rounded-xl object-cover bg-slate-200 shrink-0 border border-black/10 shadow-2xs"
+      className="w-12 h-12 rounded-xl object-cover bg-slate-200 shrink-0 shadow-xs"
     />
   );
 };
@@ -124,10 +148,46 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
   const [pipelinePhase, setPipelinePhase] = useState<'idle' | 'optimizing' | 'uploading' | 'done'>('idle');
   const [optimizeProgress, setOptimizeProgress] = useState({ done: 0, total: 0, savedBytes: 0, skippedIdentical: 0, failed: 0 });
   const [uploadProgress, setUploadProgress] = useState<BatchUploadProgress | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isPausedRef = useRef(false);
+  const pauseWaitersRef = useRef<Array<() => void>>([]);
+  const batchStartMsRef = useRef<number>(0);
+  const pausedAccumMsRef = useRef<number>(0);
+  const pauseStartedMsRef = useRef<number | null>(null);
+
+  const resumePausedWorkers = () => {
+    if (pauseStartedMsRef.current !== null) {
+      pausedAccumMsRef.current += Date.now() - pauseStartedMsRef.current;
+      pauseStartedMsRef.current = null;
+    }
+    isPausedRef.current = false;
+    setIsPaused(false);
+    const waiters = pauseWaitersRef.current.splice(0, pauseWaitersRef.current.length);
+    waiters.forEach((resolve) => resolve());
+  };
+
+  const waitIfPaused = () => {
+    if (!isPausedRef.current || abortControllerRef.current?.signal.aborted) {
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      pauseWaitersRef.current.push(resolve);
+    });
+  };
+
+  const handleTogglePause = () => {
+    if (isPausedRef.current) {
+      resumePausedWorkers();
+    } else {
+      isPausedRef.current = true;
+      pauseStartedMsRef.current = Date.now();
+      setIsPaused(true);
+    }
+  };
 
   useEffect(() => {
     if (folderInputRef.current) {
@@ -135,6 +195,13 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
       folderInputRef.current.setAttribute('directory', '');
     }
   }, [isOpen, embedded]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+      resumePausedWorkers();
+    };
+  }, []);
 
   const allStudentsWithClass = useMemo(() => {
     const list: { student: Student; classGroup: ClassGroup; normName: string; raDigits: string; clsAbrev: string }[] = [];
@@ -457,6 +524,11 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    batchStartMsRef.current = Date.now();
+    pausedAccumMsRef.current = 0;
+    pauseStartedMsRef.current = null;
+    isPausedRef.current = false;
+    setIsPaused(false);
 
     setIsSaving(true);
     setPipelinePhase('optimizing');
@@ -517,6 +589,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
         concurrency: WORKER_CONCURRENCY,
         persistToIndexedDb: false,
         signal: controller.signal,
+        waitIfPaused,
         onProgress: (p) => {
           setOptimizeProgress({
             done: p.processed + preOptimizedMap.size,
@@ -627,12 +700,16 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
 
       // Fase 2: Upload binário em chunks
       setPipelinePhase('uploading');
+      batchStartMsRef.current = Date.now();
+      pausedAccumMsRef.current = 0;
+      pauseStartedMsRef.current = isPausedRef.current ? Date.now() : null;
       setStatusMessage(
         `Enviando ${readyPayloads.length} foto(s) otimizada(s) em pacotes binários... (Economia local: ${formatBytesCompact(savedBytes)})`
       );
 
       const res = await uploadBatchStudentPhotosViaApi(readyPayloads, {
         signal: controller.signal,
+        waitIfPaused,
         onProgress: (p) => setUploadProgress(p),
       });
 
@@ -728,12 +805,14 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
       setPipelinePhase('idle');
     } finally {
       abortControllerRef.current = null;
+      resumePausedWorkers();
       setIsSaving(false);
     }
   };
 
   const handleCancelSync = () => {
     abortControllerRef.current?.abort();
+    resumePausedWorkers();
   };
 
   const handleClearAllPhotos = async () => {
@@ -775,30 +854,65 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
       ? Math.round((uploadProgress.processedItems / uploadProgress.totalItems) * 100)
       : 0;
 
+  const activeElapsedMs =
+    batchStartMsRef.current > 0
+      ? Math.max(
+          0,
+          Date.now() -
+            batchStartMsRef.current -
+            pausedAccumMsRef.current -
+            (pauseStartedMsRef.current ? Date.now() - pauseStartedMsRef.current : 0)
+        )
+      : 0;
+
+  let etaLabel = '';
+  if (isPaused && isSaving) {
+    etaLabel = 'Pausado';
+  } else if (
+    pipelinePhase === 'optimizing' &&
+    optimizeProgress.done >= 2 &&
+    optimizeProgress.done < optimizeProgress.total &&
+    activeElapsedMs > 0
+  ) {
+    const ratePerMs = optimizeProgress.done / activeElapsedMs;
+    const remainingSec = (optimizeProgress.total - optimizeProgress.done) / ratePerMs / 1000;
+    etaLabel = formatEtaRemaining(remainingSec);
+  } else if (
+    pipelinePhase === 'uploading' &&
+    uploadProgress &&
+    uploadProgress.processedItems >= 1 &&
+    uploadProgress.processedItems < uploadProgress.totalItems &&
+    activeElapsedMs > 0
+  ) {
+    const ratePerMs = uploadProgress.processedItems / activeElapsedMs;
+    const remainingSec = (uploadProgress.totalItems - uploadProgress.processedItems) / ratePerMs / 1000;
+    etaLabel = formatEtaRemaining(remainingSec);
+  }
+
   const contentNode = (
     <div
       onClick={embedded ? undefined : (e) => e.stopPropagation()}
       className={
         embedded
           ? 'bg-white w-full rounded-3xl shadow-[0_1px_2px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col min-w-0'
-          : 'bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]'
+          : 'modal-shell w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh]'
       }
     >
       {/* Cabeçalho */}
       <div
         className={`flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 shrink-0 ${
-          embedded ? 'border-b border-slate-100' : 'bg-slate-50/50 border-b border-slate-200'
+          embedded ? 'bg-[#f4f7fb]' : 'modal-header-surface'
         }`}
       >
         <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-          <div className="w-10 h-10 rounded-2xl bg-[#e8f0fe] text-[#1a4fa3] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px] shrink-0">drive_folder_upload</span>
+          <div className="w-10 h-10 rounded-2xl bg-[#dce7fb] text-[#092e70] flex items-center justify-center shrink-0">
+            <FolderUp className="w-[22px] h-[22px] shrink-0" strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base sm:text-lg font-semibold text-[#1d1d1f] break-words leading-snug">
+            <h3 className="text-base sm:text-lg font-bold text-slate-950 break-words leading-snug">
               Importar Fotos dos Estudantes em Lote (2.000+)
             </h3>
-            <p className="text-xs text-[#6e6e73] break-words leading-relaxed font-normal mt-0.5">
+            <p className="text-xs text-slate-700 break-words leading-relaxed font-medium mt-0.5">
               Aceita pastas e todos os formatos (JPG, PNG, WebP, HEIC/iPhone, AVIF, BMP, GIF, SVG, TIFF) com WebP lossless e deduplicação SHA-256
             </p>
           </div>
@@ -815,7 +929,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
             }}
             className="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0b3b8c] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
-            <span className="material-symbols-outlined text-[16px] shrink-0">hard_drive</span>
+            <HardDrive className="w-4 h-4 shrink-0" strokeWidth={2} />
             <span>Cache IndexedDB</span>
           </button>
 
@@ -824,8 +938,9 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               type="button"
               onClick={onClose}
               className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-black flex items-center justify-center cursor-pointer transition-colors duration-100 shrink-0"
+              aria-label="Fechar modal"
             >
-              <span className="material-symbols-outlined text-[20px] shrink-0">close</span>
+              <X className="w-5 h-5 shrink-0" strokeWidth={2} />
             </button>
           )}
         </div>
@@ -857,34 +972,64 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
 
         {/* Progresso em tempo real (Otimização + Envio Binário) */}
         {(isSaving || pipelinePhase === 'done') && optimizeProgress.total > 0 && (
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-900">
+          <div className="p-4 rounded-2xl bg-[#edf2f7] space-y-2.5 animate-fade-in">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-950">
               <span>
                 {pipelinePhase === 'optimizing'
-                  ? `Fase 1/2 · Otimizando Lossless (${optimizeProgress.done}/${optimizeProgress.total})`
+                  ? `Fase 1/2 · Otimizando Lossless (${optimizeProgress.done}/${optimizeProgress.total}) · ${pctOptimize}%`
                   : pipelinePhase === 'uploading'
-                  ? `Fase 2/2 · Enviando Pacotes Binários (${uploadProgress?.completedChunks || 0}/${uploadProgress?.totalChunks || 1})`
+                  ? `Fase 2/2 · Enviando Pacotes Binários (${uploadProgress?.completedChunks || 0}/${uploadProgress?.totalChunks || 1}) · ${pctUpload}%`
                   : 'Processamento Concluído'}
               </span>
-              <span className="tabular-nums text-emerald-700">
-                Economia: {formatBytesCompact(optimizeProgress.savedBytes)}
-              </span>
+              <div className="flex items-center gap-3">
+                {etaLabel && (
+                  <span className={`tabular-nums font-bold ${isPaused ? 'text-amber-800' : 'text-[#0b3b8c]'}`}>
+                    {etaLabel}
+                  </span>
+                )}
+                <span className="tabular-nums font-bold text-[#065f46]">
+                  Economia: {formatBytesCompact(optimizeProgress.savedBytes)}
+                </span>
+                {isSaving && (
+                  <button
+                    type="button"
+                    onClick={handleTogglePause}
+                    className={`min-h-[28px] px-2.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                      isPaused
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                        : 'bg-amber-200 hover:bg-amber-300 text-amber-950'
+                    }`}
+                  >
+                    {isPaused ? (
+                      <>
+                        <Play className="w-3 h-3" strokeWidth={2.5} />
+                        <span>Retomar</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-3 h-3" strokeWidth={2.5} />
+                        <span>Pausar</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+            <div className="w-full h-2.5 bg-[#dbe4f0] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#0b3b8c] transition-all duration-200 rounded-full"
+                className={`h-full transition-all duration-200 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-[#0b3b8c]'}`}
                 style={{
                   width: `${pipelinePhase === 'optimizing' ? pctOptimize : pipelinePhase === 'uploading' ? pctUpload : 100}%`,
                 }}
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-600">
+            <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-700">
               <span>Idênticas ignoradas: {optimizeProgress.skippedIdentical + (uploadProgress?.skippedCount || 0)}</span>
               {uploadProgress && <span>Gravadas no servidor: {uploadProgress.updatedCount}</span>}
               {(optimizeProgress.failed > 0 || (uploadProgress?.failedCount || 0) > 0) && (
-                <span className="text-rose-700 font-bold">
+                <span className="text-rose-800 font-bold">
                   Erros: {optimizeProgress.failed + (uploadProgress?.failedCount || 0)}
                 </span>
               )}
@@ -892,14 +1037,16 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
           </div>
         )}
 
-        {/* Dropzone */}
+        {/* Dropzone Sem Borda Tracejada */}
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all shadow-2xs ${
-            isDragging ? 'bg-blue-100/80 scale-[0.995]' : 'bg-slate-100/70 hover:bg-slate-100'
+          className={`rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
+            isDragging
+              ? 'bg-[#dce7fb] scale-[0.99] shadow-[0_14px_34px_rgba(11,59,140,0.2)]'
+              : 'bg-[#edf2f7] hover:bg-[#e2e8f0]'
           }`}
         >
           <input
@@ -918,18 +1065,20 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
             className="hidden"
           />
           <div className="flex flex-col items-center justify-center gap-2">
-            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center text-blue-600">
-              <span className="material-symbols-outlined text-[32px]">
-                {isDragging ? 'downloading' : 'add_photo_alternate'}
-              </span>
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center text-[#0b3b8c]">
+              {isDragging ? (
+                <Download className="w-8 h-8 animate-bounce" strokeWidth={2} />
+              ) : (
+                <ImagePlus className="w-8 h-8" strokeWidth={2} />
+              )}
             </div>
-            <h4 className="text-sm sm:text-base font-bold text-slate-900 mt-1">
+            <h4 className="text-sm sm:text-base font-bold text-slate-950 mt-1">
               Arraste arquivos ou pastas inteiras com fotos dos alunos e solte aqui
             </h4>
-            <p className="text-xs text-slate-500 max-w-lg font-medium leading-relaxed break-words">
+            <p className="text-xs text-slate-700 max-w-lg font-medium leading-relaxed break-words">
               Suporta lotes de <strong>2.000+ fotos</strong> sem travar o navegador. Identifica automaticamente pelo{' '}
               <strong>RA</strong>, <strong>Nome</strong>, <strong>Turma_Nº</strong> ou nome da subpasta (ex:{' '}
-              <code className="bg-slate-200 px-1.5 py-0.5 rounded text-xs">1F/01.heic</code>).
+              <code className="bg-white px-1.5 py-0.5 rounded text-xs font-bold text-slate-900">1F/01.heic</code>).
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
               <button
@@ -938,9 +1087,9 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   e.stopPropagation();
                   fileInputRef.current?.click();
                 }}
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-black text-white text-xs font-bold cursor-pointer shadow-xs transition-colors flex items-center gap-2"
+                className="min-h-[40px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-black text-white text-xs font-bold cursor-pointer shadow-[0_4px_12px_rgba(9,15,29,0.22)] transition-all flex items-center gap-2"
               >
-                <span className="material-symbols-outlined text-[18px] shrink-0">photo_library</span>
+                <ImageIcon className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                 <span>Selecionar Fotos</span>
               </button>
               <button
@@ -949,9 +1098,9 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   e.stopPropagation();
                   folderInputRef.current?.click();
                 }}
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold cursor-pointer shadow-xs transition-colors flex items-center gap-2"
+                className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-[#f4f7fb] text-slate-950 text-xs font-bold cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.08)] transition-all flex items-center gap-2"
               >
-                <span className="material-symbols-outlined text-[18px] shrink-0">drive_folder_upload</span>
+                <FolderUp className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                 <span>Selecionar Pasta Completa</span>
               </button>
             </div>
@@ -962,7 +1111,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
         {items.length > 0 && (
           <div className="space-y-3 pt-2">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pb-1">
-              <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
+              <div className="flex flex-wrap items-center gap-1 bg-[#e2e8f0] p-1 rounded-xl text-xs">
                 <button
                   type="button"
                   onClick={() => {
@@ -970,7 +1119,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                     setCurrentPage(1);
                   }}
                   className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
-                    filterMode === 'all' ? 'bg-white text-slate-950 shadow-2xs' : 'text-slate-600'
+                    filterMode === 'all' ? 'bg-white text-slate-950 shadow-xs' : 'text-slate-800'
                   }`}
                 >
                   Todas ({totalCount})
@@ -982,7 +1131,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                     setCurrentPage(1);
                   }}
                   className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
-                    filterMode === 'matched' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-emerald-800'
+                    filterMode === 'matched' ? 'bg-emerald-700 text-white shadow-xs' : 'text-emerald-950'
                   }`}
                 >
                   Identificados ({matchedCount})
@@ -995,7 +1144,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                       setCurrentPage(1);
                     }}
                     className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
-                      filterMode === 'unmatched' ? 'bg-amber-600 text-white shadow-2xs' : 'text-amber-800'
+                      filterMode === 'unmatched' ? 'bg-amber-700 text-white shadow-xs' : 'text-amber-950'
                     }`}
                   >
                     Pendentes ({unmatchedCount})
@@ -1009,7 +1158,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                       setCurrentPage(1);
                     }}
                     className={`min-h-[34px] px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
-                      filterMode === 'errors' ? 'bg-rose-600 text-white shadow-2xs' : 'text-rose-800'
+                      filterMode === 'errors' ? 'bg-rose-700 text-white shadow-xs' : 'text-rose-950'
                     }`}
                   >
                     Erros ({errorCount})
@@ -1026,7 +1175,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                     setCurrentPage(1);
                   }}
                   placeholder="Filtrar por nome, arquivo ou RA..."
-                  className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 w-full sm:w-56 focus:outline-none focus:border-slate-950"
+                  className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#edf2f7] focus:bg-white text-xs text-slate-950 w-full sm:w-56"
                 />
                 <button
                   type="button"
@@ -1035,7 +1184,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                     setPipelinePhase('idle');
                   }}
                   disabled={isSaving}
-                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer disabled:opacity-40"
+                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 font-bold text-xs cursor-pointer disabled:opacity-40"
                 >
                   Limpar Lista
                 </button>
@@ -1049,24 +1198,24 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                 return (
                   <div
                     key={item.id}
-                    className={`p-3 rounded-2xl border flex items-start sm:items-center justify-between gap-3 ${
+                    className={`p-3 rounded-2xl flex items-start sm:items-center justify-between gap-3 transition-colors ${
                       item.status === 'error'
-                        ? 'bg-rose-50/70 border-rose-200'
+                        ? 'bg-rose-100/80'
                         : item.status === 'uploaded' || item.status === 'skipped_identical'
-                        ? 'bg-emerald-50/80 border-emerald-300'
+                        ? 'bg-emerald-100/80'
                         : isMatched
-                        ? 'bg-emerald-50/50 border-emerald-200'
-                        : 'bg-amber-50/60 border-amber-200'
+                        ? 'bg-emerald-100/55'
+                        : 'bg-amber-100/75'
                     }`}
                   >
                     <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                       <LazyPhotoThumbnail file={item.file} filename={item.filename} />
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-xs font-bold text-slate-900 break-all leading-snug">
+                          <p className="text-xs font-bold text-slate-950 break-all leading-snug">
                             {item.relativePath !== item.filename ? item.relativePath : item.filename}
                           </p>
-                          <span className="text-[11px] font-mono text-slate-500">
+                          <span className="text-[11px] font-mono text-slate-700">
                             {formatBytesCompact(item.fileSizeBytes)}
                           </span>
                         </div>
@@ -1086,13 +1235,13 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                             <span className="font-bold text-emerald-950 break-words">
                               ✓ {item.matchedStudent?.name}
                             </span>
-                            <span className="text-slate-300">·</span>
+                            <span className="text-slate-600">·</span>
                             <span className="text-emerald-800 font-semibold">
                               {item.matchedClass?.turmaAbrev || item.matchedClass?.name} (Nº{' '}
                               {item.matchedStudent?.number.toString().padStart(2, '0')})
                             </span>
                             {item.matchReason && (
-                              <span className="text-xs text-slate-500 font-medium">· {item.matchReason}</span>
+                              <span className="text-xs text-slate-700 font-medium">· {item.matchReason}</span>
                             )}
                             <button
                               type="button"
@@ -1116,7 +1265,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                                 setPickerItemId(item.id);
                                 setPickerSearch('');
                               }}
-                              className="min-h-[32px] px-3 py-1 rounded-lg bg-white border border-slate-300 hover:border-slate-950 text-xs font-bold text-slate-900 cursor-pointer"
+                              className="min-h-[32px] px-3 py-1 rounded-lg bg-white hover:bg-[#edf2f7] shadow-xs text-xs font-bold text-slate-950 cursor-pointer"
                             >
                               Escolher estudante...
                             </button>
@@ -1129,10 +1278,10 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                       type="button"
                       onClick={() => handleRemoveItem(item.id)}
                       disabled={isSaving}
-                      className="w-9 h-9 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
+                      className="w-9 h-9 rounded-lg text-slate-600 hover:text-rose-800 hover:bg-rose-100 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
                       title="Remover da lista"
                     >
-                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                      <Trash2 className="w-[18px] h-[18px]" strokeWidth={2} />
                     </button>
                   </div>
                 );
@@ -1173,10 +1322,10 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
         )}
 
         {/* Reset Total das Fotos Atuais */}
-        <div className="pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-4 rounded-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#f4f7fb] p-4 rounded-2xl">
           <div className="min-w-0 flex-1">
-            <h5 className="text-xs font-bold text-slate-900">Limpeza Total de Fotos Atuais</h5>
-            <p className="text-xs text-slate-500 font-medium break-words leading-relaxed mt-0.5">
+            <h5 className="text-xs font-bold text-slate-950">Limpeza Total de Fotos Atuais</h5>
+            <p className="text-xs text-slate-700 font-medium break-words leading-relaxed mt-0.5">
               Remove todas as fotos armazenadas de todas as turmas da escola para recomeçar do zero.
             </p>
           </div>
@@ -1193,7 +1342,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               <button
                 type="button"
                 onClick={() => setConfirmClearAll(false)}
-                className="min-h-[38px] px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-bold cursor-pointer"
+                className="min-h-[38px] px-3 py-2 rounded-xl bg-white text-slate-900 text-xs font-bold cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1203,9 +1352,9 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               type="button"
               onClick={() => setConfirmClearAll(true)}
               disabled={isClearingAll || isSaving}
-              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1.5"
+              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-950 text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-[16px] text-rose-700 shrink-0">cleaning_services</span>
+              <Trash2 className="w-4 h-4 text-rose-800 shrink-0" strokeWidth={2} />
               <span>Limpar Todas as Fotos Atuais</span>
             </button>
           )}
@@ -1213,8 +1362,8 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
       </div>
 
       {/* Rodapé */}
-      <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="text-xs text-slate-600 font-medium">
+      <div className="p-4 sm:p-5 bg-[#f4f7fb] flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="text-xs text-slate-700 font-semibold">
           {matchedCount > 0 ? (
             <span>
               <strong>{matchedCount} foto(s)</strong> identificadas para otimização e envio econômico.
@@ -1230,20 +1379,39 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="h-10 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold text-xs cursor-pointer"
+              className="h-10 px-4 rounded-xl bg-white hover:bg-[#e2e8f0] text-slate-950 font-bold text-xs cursor-pointer"
             >
               Fechar
             </button>
           )}
 
           {isSaving && (
-            <button
-              type="button"
-              onClick={handleCancelSync}
-              className="h-10 px-4 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold text-xs cursor-pointer"
-            >
-              Cancelar Envio
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleTogglePause}
+                className="h-10 px-4 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs cursor-pointer inline-flex items-center gap-1.5"
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="w-4 h-4" strokeWidth={2.2} />
+                    <span>Retomar</span>
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-4 h-4" strokeWidth={2.2} />
+                    <span>Pausar</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelSync}
+                className="h-10 px-4 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold text-xs cursor-pointer"
+              >
+                Cancelar Envio
+              </button>
+            </>
           )}
 
           {errorCount > 0 && !isSaving && (
@@ -1252,7 +1420,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               onClick={() => void handleConfirmBatch(true)}
               className="h-10 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-[17px]">refresh</span>
+              <RefreshCw className="w-[17px] h-[17px]" strokeWidth={2} />
               <span>Reenviar Falhas ({errorCount})</span>
             </button>
           )}
@@ -1265,8 +1433,18 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               matchedCount > 0 && !isSaving ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-slate-400 cursor-not-allowed'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">{isSaving ? 'sync' : 'cloud_upload'}</span>
-            <span>{isSaving ? 'Sincronizando...' : `Otimizar e Sincronizar Fotos (${matchedCount})`}</span>
+            {isSaving ? (
+              <RefreshCw className="w-[18px] h-[18px] animate-spin" strokeWidth={2} />
+            ) : (
+              <UploadCloud className="w-[18px] h-[18px]" strokeWidth={2} />
+            )}
+            <span>
+              {isSaving
+                ? isPaused
+                  ? 'Envio Pausado...'
+                  : 'Sincronizando...'
+                : `Otimizar e Sincronizar Fotos (${matchedCount})`}
+            </span>
           </button>
         </div>
       </div>
@@ -1275,52 +1453,53 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
       {pickerItemId && (
         <div
           onClick={() => setPickerItemId(null)}
-          className="fixed inset-0 z-[90] bg-slate-950/50 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-[90] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[80vh]"
+            className="modal-shell w-full max-w-md rounded-3xl overflow-hidden flex flex-col max-h-[80vh] animate-apple-pop"
           >
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div className="p-4 modal-header-surface flex items-center justify-between gap-2">
               <h4 className="text-sm font-bold text-slate-950">Vincular Estudante Manualmente</h4>
               <button
                 type="button"
                 onClick={() => setPickerItemId(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer"
+                aria-label="Fechar seleção"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <X className="w-[18px] h-[18px]" strokeWidth={2} />
               </button>
             </div>
-            <div className="p-3 border-b border-slate-100">
+            <div className="p-3 bg-[#f4f7fb]">
               <input
                 type="search"
                 autoFocus
                 value={pickerSearch}
                 onChange={(e) => setPickerSearch(e.target.value)}
                 placeholder="Buscar por nome, turma ou RA..."
-                className="w-full min-h-[40px] px-3 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-none focus:border-slate-950"
+                className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs text-slate-950"
               />
             </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {pickerResults.map(({ student, classGroup }) => (
                 <button
                   key={student.id}
                   type="button"
                   onClick={() => handleManualStudentChange(pickerItemId, student.id)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors cursor-pointer flex items-center justify-between gap-2"
+                  className="w-full text-left px-3.5 py-2.5 rounded-xl even:bg-[#f4f7fb] hover:bg-[#dce7fb] transition-colors cursor-pointer flex items-center justify-between gap-2"
                 >
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">{student.name}</p>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs font-bold text-slate-950 truncate">{student.name}</p>
+                    <p className="text-[11px] font-medium text-slate-700">
                       {classGroup.turmaAbrev || classGroup.name} · Nº {student.number.toString().padStart(2, '0')} · RA{' '}
                       {student.ra || '—'}
                     </p>
                   </div>
-                  <span className="material-symbols-outlined text-[18px] text-slate-400 shrink-0">arrow_forward</span>
+                  <ArrowRight className="w-[18px] h-[18px] text-slate-600 shrink-0" strokeWidth={2} />
                 </button>
               ))}
               {pickerResults.length === 0 && (
-                <p className="p-6 text-center text-xs text-slate-500">Nenhum estudante encontrado.</p>
+                <p className="p-6 text-center text-xs font-medium text-slate-700">Nenhum estudante encontrado.</p>
               )}
             </div>
           </div>
@@ -1334,7 +1513,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-100"
+      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
     >
       {contentNode}
     </div>

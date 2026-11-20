@@ -11,6 +11,20 @@ import {
   getClassAttendanceMetrics,
   getDefaultReferencePeriod,
 } from '../utils/attendanceRules';
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Cloud,
+  History,
+  LayoutGrid,
+  List,
+  RefreshCw,
+  Search,
+  X,
+} from 'lucide-react';
 import { StudentAvatar } from './StudentAvatar';
 
 const CURRENT_ACTIVE_MONTH_NUMBER = 10;
@@ -126,7 +140,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               key={info.savedAt}
               className="sonner-tactile-pop w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs"
             >
-              <span className="material-symbols-outlined text-[14px]">check</span>
+              <Check className="w-3.5 h-3.5" />
             </span>
           ),
         });
@@ -553,15 +567,15 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             onClick={onBack}
             className="text-slate-200 hover:text-white font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+            <ArrowLeft className="w-[15px] h-[15px]" />
             <span>Turma {classGroup.name}</span>
           </button>
-          <span className="text-slate-500">/</span>
+          <span className="text-slate-300">/</span>
           <span className="font-semibold text-white break-words">Informar Faltas do Mês</span>
-          <span className="text-slate-400">·</span>
-          <span>{selectedMonthName}/2027</span>
+          <span className="text-slate-300">·</span>
+          <span className="text-slate-100">{selectedMonthName}/2027</span>
         </div>
-        <span className="hidden sm:inline text-slate-300 text-xs font-semibold shrink-0">
+        <span className="hidden sm:inline text-slate-200 text-xs font-semibold shrink-0">
           {diasLetivosMes} dias letivos no mês
         </span>
       </div>
@@ -598,12 +612,10 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             {/* Badge Dinâmico com Animação Flash e Alteração de Cor */}
             {saveFlashState === 'saving' ? (
               <div
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-950 font-bold text-xs shadow-xs animate-pulse transition-all duration-200"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-950 font-bold text-xs shadow-xs transition-all duration-200"
                 title="Gravando no banco de dados local e nuvem..."
               >
-                <span className="material-symbols-outlined text-[16px] animate-spin text-amber-800">
-                  sync
-                </span>
+                <RefreshCw className="w-4 h-4 animate-spin text-amber-800" />
                 <span>Salvando no banco...</span>
               </div>
             ) : saveFlashState === 'saved' ? (
@@ -611,9 +623,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 className="sonner-tactile-pop inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-md transition-all duration-300"
                 title="Dados persistidos com sucesso no banco de dados e nuvem!"
               >
-                <span className="material-symbols-outlined text-[17px] text-white">
-                  check_circle
-                </span>
+                <CheckCircle2 className="w-[17px] h-[17px] text-white" />
                 <span>Salvo com sucesso!</span>
               </div>
             ) : (
@@ -621,9 +631,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-900 font-semibold text-xs"
                 title="Dados sincronizados e seguros"
               >
-                <span className="material-symbols-outlined text-[15px] text-emerald-700">
-                  cloud_done
-                </span>
+                <Cloud className="w-[15px] h-[15px] text-emerald-700" />
                 <span>{instantSyncStatus === 'syncing' ? 'Sincronizando...' : '✓ Sincronizado'}</span>
               </div>
             )}
@@ -637,14 +645,14 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   className="min-h-[34px] px-2 rounded-lg bg-white hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center cursor-pointer transition-colors shadow-2xs"
                   title={`Mês anterior: ${previousPeriodName}`}
                 >
-                  <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
               )}
 
               <select
                 value={selectedMonthName}
                 onChange={(e) => handleMonthChange(e.target.value)}
-                className="bg-transparent text-slate-950 font-bold text-xs sm:text-sm focus:outline-none cursor-pointer px-2 py-1"
+                className="bg-transparent text-slate-950 font-bold text-xs sm:text-sm cursor-pointer px-2 py-1"
               >
                 {MONTHLY_SCHOOL_DAYS_2027.map((m) => {
                   const daysForClass = getClassSchoolDaysForMonth(classGroup, m.month);
@@ -663,7 +671,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                   className="min-h-[34px] px-2 rounded-lg bg-white hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center cursor-pointer transition-colors shadow-2xs"
                   title={`Próximo mês: ${nextPeriodName}`}
                 >
-                  <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -674,7 +682,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               className="min-h-[36px] px-3.5 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
               title="Salvo automaticamente. Concluir e voltar à turma"
             >
-              <span className="material-symbols-outlined text-[16px] text-emerald-400">check</span>
+              <Check className="w-4 h-4 text-emerald-400" />
               <span>Concluir</span>
             </button>
           </div>
@@ -714,24 +722,22 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         {/* Linha 3: Busca Rápida + Filtros + Alternador de Visualização */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 min-w-0">
           <div className="relative flex-1 min-w-0">
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[19px]">
-              search
-            </span>
+            <Search className="w-[19px] h-[19px] absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-700" />
             <input
               type="text"
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
               placeholder="Buscar por Nº da chamada ou nome do estudante..."
-              className="w-full min-h-[44px] pl-10 pr-9 bg-slate-100 text-slate-950 text-xs sm:text-sm rounded-xl font-semibold placeholder:text-slate-500 focus:outline-none focus:bg-slate-200/70 transition-colors"
+              className="w-full min-h-[44px] pl-10 pr-9 bg-[#f4f7fb] text-slate-950 text-xs sm:text-sm rounded-xl font-semibold placeholder:text-slate-600 focus:bg-[#edf2f7] transition-colors"
             />
             {searchName && (
               <button
                 type="button"
                 onClick={() => setSearchName('')}
                 aria-label="Limpar busca"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-950 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-700 hover:text-slate-950 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <X className="w-[18px] h-[18px]" />
               </button>
             )}
           </div>
@@ -783,7 +789,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     : 'text-slate-600 hover:text-slate-900 font-medium'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">view_list</span>
+                <List className="w-4 h-4" />
                 <span>Lista</span>
               </button>
               <button
@@ -795,7 +801,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     : 'text-slate-600 hover:text-slate-900 font-medium'
                 }`}
               >
-                <span className="material-symbols-outlined text-[16px]">grid_view</span>
+                <LayoutGrid className="w-4 h-4" />
                 <span>Cartões</span>
               </button>
             </div>
@@ -827,20 +833,20 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             return (
               <div
                 key={student.id}
-                className={`p-4 sm:px-6 rounded-2xl shadow-sm hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-300 min-w-0 ${
+                className={`p-4 sm:px-6 rounded-2xl shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-200 min-w-0 ${
                   isJustSaved
-                    ? 'bg-emerald-50 ring-2 ring-emerald-500 shadow-md text-emerald-950 scale-[1.01]'
+                    ? 'bg-emerald-100/90 shadow-[0_12px_28px_-6px_rgba(4,120,87,0.28)] text-emerald-950 scale-[1.01]'
                     : isSavingThis
-                    ? 'bg-amber-50 ring-2 ring-amber-400 text-amber-950 opacity-90'
+                    ? 'bg-amber-100/90 shadow-[0_10px_24px_-6px_rgba(180,83,9,0.22)] text-amber-950 opacity-95'
                     : isTransferred
                     ? 'bg-amber-100/90 text-amber-950'
                     : isRemanejado
                     ? 'bg-purple-100/90 text-purple-950'
                     : isOtherNonActive
-                    ? 'bg-slate-200 text-slate-900'
+                    ? 'bg-slate-200 text-slate-950'
                     : m.isBelowLegalThreshold
-                    ? 'bg-rose-100/70 text-slate-950'
-                    : 'bg-white hover:bg-slate-50 text-slate-950'
+                    ? 'bg-rose-100/80 text-slate-950'
+                    : 'bg-white hover:bg-[#f4f7fb] text-slate-950'
                 }`}
               >
                 {/* Identificação Enxuta do Estudante + Indicativo Visual */}
@@ -876,13 +882,13 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                       </span>
                       {isJustSaved && (
                         <span className="sonner-tactile-pop px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[13px]">check</span>
+                          <Check className="w-3.5 h-3.5" />
                           <span>Salvo!</span>
                         </span>
                       )}
                       {isSavingThis && (
-                        <span className="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 text-xs font-bold flex items-center gap-1 animate-pulse">
-                          <span className="material-symbols-outlined text-[13px] animate-spin">sync</span>
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 text-xs font-bold flex items-center gap-1">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                           <span>Salvando...</span>
                         </span>
                       )}
@@ -964,7 +970,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onChange={(e) => handleDirectSetAbsence(student.id, e.target.value)}
                         aria-label={`Digitar faltas de ${student.name}`}
                         title="Toque para digitar o número de faltas diretamente"
-                        className={`w-11 sm:w-14 h-10 sm:h-12 rounded-xl text-center font-mono font-bold text-lg sm:text-2xl tabular-nums bg-white shadow-xs focus:ring-2 focus:ring-rose-600 focus:outline-none transition-all ${
+                        className={`w-11 sm:w-14 h-10 sm:h-12 rounded-xl text-center font-mono font-bold text-lg sm:text-2xl tabular-nums bg-white shadow-xs transition-all ${
                           m.faltas > 0 ? 'text-rose-950 font-bold' : 'text-slate-950 font-bold'
                         }`}
                       />
@@ -1018,7 +1024,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onChange={(e) => handleDirectSetAtestado(student.id, e.target.value)}
                         aria-label={`Digitar atestados de ${student.name}`}
                         title="Toque para digitar o número de atestados diretamente"
-                        className={`w-11 sm:w-14 h-10 sm:h-12 rounded-xl text-center font-mono font-bold text-lg sm:text-2xl tabular-nums bg-white shadow-xs focus:ring-2 focus:ring-sky-600 focus:outline-none transition-all ${
+                        className={`w-11 sm:w-14 h-10 sm:h-12 rounded-xl text-center font-mono font-bold text-lg sm:text-2xl tabular-nums bg-white shadow-xs transition-all ${
                           m.atestados > 0 ? 'text-sky-950 font-bold' : 'text-slate-950 font-bold'
                         }`}
                       />
@@ -1065,20 +1071,20 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             return (
               <div
                 key={student.id}
-                className={`rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md space-y-3.5 transition-all duration-300 min-w-0 ${
+                className={`rounded-2xl p-4 sm:p-5 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] space-y-3.5 transition-all duration-200 min-w-0 ${
                   isJustSaved
-                    ? 'bg-emerald-50 ring-2 ring-emerald-500 shadow-md text-emerald-950 scale-[1.01]'
+                    ? 'bg-emerald-100/90 shadow-[0_12px_28px_-6px_rgba(4,120,87,0.28)] text-emerald-950 scale-[1.01]'
                     : isSavingThis
-                    ? 'bg-amber-50 ring-2 ring-amber-400 text-amber-950 opacity-90'
+                    ? 'bg-amber-100/90 shadow-[0_10px_24px_-6px_rgba(180,83,9,0.22)] text-amber-950 opacity-95'
                     : isTransferred
                     ? 'bg-amber-100/90 text-amber-950'
                     : isRemanejado
                     ? 'bg-purple-100/90 text-purple-950'
                     : isOtherNonActive
-                    ? 'bg-slate-200 text-slate-900'
+                    ? 'bg-slate-200 text-slate-950'
                     : m.isBelowLegalThreshold
-                    ? 'bg-rose-100/70 text-slate-950'
-                    : 'bg-white hover:bg-slate-50 text-slate-950'
+                    ? 'bg-rose-100/80 text-slate-950'
+                    : 'bg-white hover:bg-[#f4f7fb] text-slate-950'
                 }`}
               >
                 {/* Topo do Card: Clique abre o perfil da criança + Nome + Indicativo de % */}
@@ -1100,13 +1106,13 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         </span>
                         {isJustSaved && (
                           <span className="sonner-tactile-pop px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[13px]">check</span>
+                            <Check className="w-3.5 h-3.5" />
                             <span>Salvo!</span>
                           </span>
                         )}
                         {isSavingThis && (
-                          <span className="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 text-xs font-bold flex items-center gap-1 animate-pulse">
-                            <span className="material-symbols-outlined text-[13px] animate-spin">sync</span>
+                          <span className="px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 text-xs font-bold flex items-center gap-1">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                             <span>Salvando...</span>
                           </span>
                         )}
@@ -1192,7 +1198,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => handleDirectSetAbsence(student.id, e.target.value)}
                         aria-label={`Digitar faltas de ${student.name}`}
-                        className={`w-12 sm:w-14 h-10 sm:h-12 rounded-xl text-center font-mono text-lg sm:text-2xl font-bold tabular-nums bg-white shadow-xs focus:ring-2 focus:ring-rose-600 focus:outline-none ${
+                        className={`w-12 sm:w-14 h-10 sm:h-12 rounded-xl text-center font-mono text-lg sm:text-2xl font-bold tabular-nums bg-white shadow-xs ${
                           m.faltas > 0 ? 'text-rose-950' : 'text-slate-950'
                         }`}
                       />
@@ -1245,7 +1251,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => handleDirectSetAtestado(student.id, e.target.value)}
                         aria-label={`Digitar atestados de ${student.name}`}
-                        className={`w-12 sm:w-14 h-10 sm:h-12 rounded-xl text-center font-mono text-lg sm:text-2xl font-bold tabular-nums bg-white shadow-xs focus:ring-2 focus:ring-sky-600 focus:outline-none ${
+                        className={`w-12 sm:w-14 h-10 sm:h-12 rounded-xl text-center font-mono text-lg sm:text-2xl font-bold tabular-nums bg-white shadow-xs ${
                           m.atestados > 0 ? 'text-sky-950' : 'text-slate-950'
                         }`}
                       />
@@ -1269,12 +1275,12 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       )}
 
       {/* Resumo e Conclusão de Faltas do Mês */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 min-w-0">
+      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 min-w-0">
         <div className="min-w-0 flex-1">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 break-words">
+          <h3 className="text-base sm:text-lg font-bold text-slate-950 break-words">
             Faltas do Mês de {selectedMonthName}
           </h3>
-          <p className="text-xs sm:text-sm text-slate-500 font-normal mt-0.5 break-words">
+          <p className="text-xs sm:text-sm text-slate-700 font-medium mt-0.5 break-words">
             Total de {liveClassMetrics.totalFaltasTurma} falta(s) registradas · {liveClassMetrics.presenceRate}% de presença global · Salvo automaticamente
           </p>
         </div>
@@ -1284,10 +1290,10 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             <button
               type="button"
               onClick={() => handleMonthChange(previousPeriodName)}
-              className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
+              className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-xl bg-[#edf2f7] hover:bg-[#dbe4f0] text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
               title={`Voltar ao período anterior: ${previousPeriodName}`}
             >
-              <span className="material-symbols-outlined text-[18px] text-slate-500 shrink-0">history</span>
+              <History className="w-[18px] h-[18px] text-slate-700 shrink-0" />
               <span>Período Anterior ({previousPeriodName})</span>
             </button>
           )}
@@ -1297,7 +1303,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             onClick={onBack}
             className="w-full sm:w-auto min-h-[44px] py-2 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
           >
-            <span className="material-symbols-outlined text-[18px] text-emerald-400 shrink-0">check</span>
+            <Check className="w-[18px] h-[18px] text-emerald-400 shrink-0" />
             <span>Concluir e Voltar</span>
           </button>
         </div>
