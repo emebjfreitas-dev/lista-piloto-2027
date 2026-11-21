@@ -10,21 +10,21 @@
 
 @layer base {
   :root {
-    /* Paleta Institucional Profunda + Superfícies Elevadas de Alto Contraste Sem Bordas */
-    --canvas-bg: #050f1f;
-    --canvas-gradient: linear-gradient(168deg, #001229 0%, #050f1f 48%, #040b16 100%);
+    /* Paleta Institucional Coesa: Canvas Slate Suave + Cobalt Real + Superfícies Elevadas Sem Bordas */
+    --canvas-bg: #e7edf6;
+    --canvas-gradient: linear-gradient(168deg, #f0f4fa 0%, #e7edf6 52%, #dce5f2 100%);
     --surface-bg: #ffffff;
-    --surface-subtle: #dbe4f0;
-    --surface-secondary: #edf2f7;
-    --surface-muted: #f4f7fb;
-    --surface-hover: #e2e8f0;
+    --surface-subtle: #dbe5f3;
+    --surface-secondary: #eef3f9;
+    --surface-muted: #f5f8fc;
+    --surface-hover: #e2e9f4;
     --surface-elevated: #ffffff;
-    --text-primary: #090f1d;        /* Contraste > 17:1 */
-    --text-secondary: #1e293b;      /* Contraste > 13:1 */
-    --text-muted: #334155;          /* Contraste > 9.5:1 */
-    --accent-navy: #092e70;
-    --accent-blue: #0047b3;         /* Azul Institucional Alto Contraste */
-    --accent-emerald: #046c4e;
+    --text-primary: #0f172a;        /* Contraste > 15:1 */
+    --text-secondary: #1e293b;      /* Contraste > 12:1 */
+    --text-muted: #475569;          /* Contraste > 7:1 */
+    --accent-navy: #0b3b8c;
+    --accent-blue: #1d4ed8;         /* Azul Cobalt Institucional Unificado */
+    --accent-emerald: #047857;
 
     /* Curvas de Animação Fluidas e Responsivas */
     --ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
@@ -86,7 +86,7 @@
     background-image: var(--canvas-gradient);
     background-attachment: fixed;
     color: var(--text-primary);
-    overflow-x: hidden;
+    overflow-x: clip;
     font-kerning: normal;
     -webkit-font-smoothing: antialiased !important;
     -moz-osx-font-smoothing: grayscale !important;
@@ -309,13 +309,13 @@ svg.lucide {
   shape-rendering: geometricPrecision;
 }
 
-/* Superfícies Institucionais Sem Contornos: Branco Puro + Elevação Multicamada */
+/* Superfícies Institucionais Sem Contornos: Branco Puro + Elevação Suave Multicapa */
 .card-welcoming,
 .card-modern {
   border-radius: 1.25rem;
   background-color: #ffffff;
   border: none;
-  box-shadow: 0 12px 34px -8px rgba(2, 6, 23, 0.34), 0 3px 10px rgba(2, 6, 23, 0.14);
+  box-shadow: 0 10px 28px -10px rgba(15, 23, 42, 0.10), 0 2px 8px rgba(15, 23, 42, 0.04);
   transition: transform var(--duration-normal) var(--ease-apple-spring),
               box-shadow var(--duration-normal) var(--ease-apple),
               background-color var(--duration-fast) ease;
@@ -323,7 +323,7 @@ svg.lucide {
 
 .card-welcoming:hover,
 .card-modern:hover {
-  box-shadow: 0 18px 42px -8px rgba(2, 6, 23, 0.42), 0 6px 16px rgba(2, 6, 23, 0.18);
+  box-shadow: 0 16px 36px -10px rgba(11, 59, 140, 0.14), 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 
 .card-interactive {
@@ -432,14 +432,29 @@ svg.lucide {
   }
 }
 
+/* Dissolução esmaecida contínua para galeria de fotos do login */
+@keyframes loginPhotoDissolve {
+  0% {
+    opacity: 0;
+    transform: scale3d(1.035, 1.035, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+.animate-login-photo-dissolve {
+  animation: loginPhotoDissolve 2400ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+  will-change: opacity, transform;
+}
+
 @keyframes appleFadeIn {
   from {
     opacity: 0;
-    transform: translate3d(0, 8px, 0);
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -466,14 +481,12 @@ svg.lucide {
 }
 
 .animate-backdrop-in {
-  animation: backdropFadeIn 200ms ease-out both;
-  will-change: opacity;
+  animation: backdropFadeIn 180ms ease-out both;
 }
 
 .animate-gentle-fade,
 .animate-fade-in {
-  animation: appleFadeIn 220ms var(--ease-apple-spring) both;
-  will-change: opacity, transform;
+  animation: appleFadeIn 200ms ease-out both;
 }
 
 .animate-apple-pop,

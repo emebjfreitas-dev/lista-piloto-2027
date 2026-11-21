@@ -20,8 +20,11 @@ import {
 import { StudentAvatar } from './StudentAvatar';
 import { StudentDataExpansionPanel } from './StudentDataExpansionPanel';
 import { DetalhesExportModal } from './DetalhesExportModal';
+import { ModalPortal } from './ui/ModalPortal';
+import { PaginationBar } from './ui/PaginationBar';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
+import { findStudentSiblings } from '../utils/siblingDetection';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -46,6 +49,7 @@ import {
   Search,
   ShieldAlert,
   X,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -115,6 +119,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
   const isRemanejado = sit.includes('REMAN') || sit.includes('RM');
   const isOtherNonActive = !isTransferred && !isRemanejado && sit !== 'ATIVO' && sit !== '';
   const isNonActive = isTransferred || isRemanejado || isOtherNonActive;
+  const detectedSiblings = useMemo(() => findStudentSiblings(student), [student]);
 
   const cardSurfaceClasses = isExpanded
     ? 'bg-white shadow-sm'
@@ -200,6 +205,18 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
                       }
                     >
                       {consecDaysCount} faltas seguidas
+                    </span>
+                  </>
+                )}
+                {detectedSiblings.length > 0 && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-950 font-bold text-[11px] shadow-2xs"
+                      title={detectedSiblings.map(s => `${s.student.name} (Turma ${s.className})`).join(', ')}
+                    >
+                      <Users className="w-3 h-3 text-emerald-800" />
+                      <span>Irmão(ã) {detectedSiblings.length > 1 ? `(${detectedSiblings.length})` : ''}</span>
                     </span>
                   </>
                 )}
@@ -741,7 +758,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
       {isExpanded && (
         <tr className="bg-slate-50/70 animate-gentle-fade">
           <td colSpan={10} className="p-3 sm:p-4">
-            <div className="sticky left-0 w-[calc(100vw-2.5rem)] max-w-full lg:w-full">
+            <div className="w-full max-w-[calc(100vw-3.5rem)] lg:max-w-full min-w-0">
               {renderStudentDetailedExpansion(student)}
             </div>
           </td>
@@ -1190,16 +1207,27 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatusFilter);
   const [copiedFichaAlert, setCopiedFichaAlert] = useState(false);
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAllStudentsInView, setShowAllStudentsInView] = useState(false);
   const [tableElement, setTableElement] = useState<HTMLTableElement | null>(null);
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
   const [viewportSize, setViewportSize] = useState<{ width: number; height: number }>(() => ({
     width: typeof window !== 'undefined' ? window.innerWidth : 1024,
     height: typeof window !== 'undefined' ? window.innerHeight : 800,
   }));
 
+  const PAGE_SIZE = 16;
+
   useEffect(() => {
     setExpandedStudentId(null);
     setStatusFilter(initialStatusFilter);
+    setCurrentPage(1);
+    setShowAllStudentsInView(false);
   }, [classGroup.id, initialStatusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchStudent, statusFilter, viewMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1464,14 +1492,31 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     ]
   );
 
+  const totalStudentPages = Math.max(1, Math.ceil(filteredStudents.length / PAGE_SIZE));
+  const safeStudentPage = Math.min(currentPage, totalStudentPages);
+  const paginatedStudents = useMemo(() => {
+    if (showAllStudentsInView) return filteredStudents;
+    const start = (safeStudentPage - 1) * PAGE_SIZE;
+    return filteredStudents.slice(start, start + PAGE_SIZE);
+  }, [filteredStudents, safeStudentPage, showAllStudentsInView]);
+
+  const handleStudentPageChange = useCallback((nextPage: number) => {
+    setCurrentPage(nextPage);
+    if (listContainerRef.current) {
+      listContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
   const peb1Rows = useMemo(
-    () => buildVirtualCardRows(filteredStudents, peb1ColumnCount, expandedStudentId),
-    [filteredStudents, peb1ColumnCount, expandedStudentId]
+    () => buildVirtualCardRows(paginatedStudents, peb1ColumnCount, expandedStudentId),
+    [paginatedStudents, peb1ColumnCount, expandedStudentId]
   );
 
   const adminGridRows = useMemo(
-    () => buildVirtualCardRows(filteredStudents, adminGridColumnCount, expandedStudentId),
-    [filteredStudents, adminGridColumnCount, expandedStudentId]
+    () => buildVirtualCardRows(paginatedStudents, adminGridColumnCount, expandedStudentId),
+    [paginatedStudents, adminGridColumnCount, expandedStudentId]
   );
 
   const peb1LayoutKey =
@@ -1617,10 +1662,10 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
       <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
         <header className="space-y-3.5 min-w-0">
           <div className="flex items-baseline justify-between gap-3 flex-wrap min-w-0 px-0.5">
-            <h1 className="text-[26px] sm:text-[30px] font-bold text-white tracking-[-0.028em] leading-[1.15] break-words">
+            <h1 className="text-[26px] sm:text-[30px] font-bold text-[#0f172a] tracking-[-0.028em] leading-[1.15] break-words">
               {classGroup.name}
             </h1>
-            <span className="text-[13px] font-medium tracking-[-0.008em] text-slate-300 tabular-nums">
+            <span className="text-[13px] font-semibold tracking-[-0.008em] text-slate-700 tabular-nums">
               {searchStudent.trim()
                 ? `${filteredStudents.length} de ${orderedStudents.length} estudantes`
                 : `${orderedStudents.length} estudantes`}
@@ -1629,14 +1674,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
           </div>
 
           <div className="relative min-w-0">
-            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-700" />
+            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
             <input
               type="text"
               value={searchStudent}
               onChange={(e) => setSearchStudent(e.target.value)}
               placeholder="Buscar estudante por nome ou número..."
               aria-label="Buscar estudante"
-              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-medium tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 focus:bg-[#f4f7fb] shadow-lg transition-colors"
+              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-medium tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 focus:bg-[#f4f7fb] shadow-[0_8px_22px_-8px_rgba(15,23,42,0.12)] transition-colors"
             />
             {searchStudent && (
               <button
@@ -1725,7 +1770,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             )}
           </div>
         ) : (
-          <section aria-label="Estudantes da turma" className="min-w-0 space-y-3.5">
+          <section ref={listContainerRef} aria-label="Estudantes da turma" className="min-w-0 space-y-3.5 scroll-mt-24">
             {peb1Rows.map((row, index) => (
               <div key={row.key || index} className="pb-1">
                 <div className={`grid ${row.isExpandedRow || peb1ColumnCount <= 1 ? 'grid-cols-1' : peb1ColumnCount === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-3.5 items-start`}>
@@ -1745,6 +1790,25 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 </div>
               </div>
             ))}
+
+            {filteredStudents.length > PAGE_SIZE && (
+              <PaginationBar
+                currentPage={showAllStudentsInView ? 1 : safeStudentPage}
+                totalItems={filteredStudents.length}
+                pageSize={showAllStudentsInView ? filteredStudents.length : PAGE_SIZE}
+                onPageChange={handleStudentPageChange}
+                itemLabel="estudantes"
+                extraAction={
+                  <button
+                    type="button"
+                    onClick={() => setShowAllStudentsInView((prev) => !prev)}
+                    className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    {showAllStudentsInView ? `Paginar (${PAGE_SIZE}/pág)` : `Ver todos (${filteredStudents.length})`}
+                  </button>
+                }
+              />
+            )}
           </section>
         )}
       </div>
@@ -1755,16 +1819,16 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
     <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
 
       {/* Contexto da Turma e Navegação */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] tracking-[-0.008em] text-slate-300 py-0.5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] tracking-[-0.008em] text-slate-600 py-0.5 min-w-0">
         <button
           type="button"
           onClick={onBackToClasses}
-          className="text-slate-200 hover:text-white font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+          className="text-slate-700 hover:text-[#0b3b8c] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Turmas</span>
         </button>
-        <span className="text-slate-300 font-medium tabular-nums shrink-0">
+        <span className="text-slate-700 font-medium tabular-nums shrink-0">
           {classGroup.shift.replace('Turno ', '')} · {classGroup.room} · {diasLetivosMes} dias letivos
         </span>
       </div>
@@ -2040,10 +2104,20 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         <>
           {/* MODO 1: CARDS EM ORDEM NUMÉRICA DA TURMA */}
           {viewMode === 'grid' && (
-            <div className="min-w-0 space-y-3.5">
+            <div ref={listContainerRef} className="min-w-0 space-y-3.5 scroll-mt-24">
               {adminGridRows.map((row, index) => (
                 <div key={row.key || index} className="pb-1">
-                  <div className={`grid ${row.isExpandedRow || adminGridColumnCount <= 1 ? 'grid-cols-1' : adminGridColumnCount === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-3.5 items-start`}>
+                  <div
+                    className={`grid ${
+                      row.isExpandedRow || adminGridColumnCount <= 1
+                        ? 'grid-cols-1'
+                        : adminGridColumnCount === 2
+                        ? 'grid-cols-2'
+                        : adminGridColumnCount === 3
+                        ? 'grid-cols-3'
+                        : 'grid-cols-4'
+                    } gap-3.5 items-start`}
+                  >
                     {row.students.map((student) => (
                       <EstudanteCard
                         key={student.id}
@@ -2063,13 +2137,32 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   </div>
                 </div>
               ))}
+
+              {filteredStudents.length > PAGE_SIZE && (
+                <PaginationBar
+                  currentPage={showAllStudentsInView ? 1 : safeStudentPage}
+                  totalItems={filteredStudents.length}
+                  pageSize={showAllStudentsInView ? filteredStudents.length : PAGE_SIZE}
+                  onPageChange={handleStudentPageChange}
+                  itemLabel="estudantes"
+                  extraAction={
+                    <button
+                      type="button"
+                      onClick={() => setShowAllStudentsInView((prev) => !prev)}
+                      className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+                    >
+                      {showAllStudentsInView ? `Paginar (${PAGE_SIZE}/pág)` : `Ver todos (${filteredStudents.length})`}
+                    </button>
+                  }
+                />
+              )}
             </div>
           )}
 
           {/* MODO 2: LISTA COMPACTA (Ordem Numérica + Expansão Fluida Inline) */}
           {viewMode === 'compact' && (
-            <div className="min-w-0 space-y-3.5">
-              {filteredStudents.map((student) => (
+            <div ref={listContainerRef} className="min-w-0 space-y-3.5 scroll-mt-24">
+              {paginatedStudents.map((student) => (
                 <LinhaEstudante
                   key={student.id}
                   student={student}
@@ -2085,6 +2178,25 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   renderStudentDetailedExpansion={renderStudentDetailedExpansion}
                 />
               ))}
+
+              {filteredStudents.length > PAGE_SIZE && (
+                <PaginationBar
+                  currentPage={showAllStudentsInView ? 1 : safeStudentPage}
+                  totalItems={filteredStudents.length}
+                  pageSize={showAllStudentsInView ? filteredStudents.length : PAGE_SIZE}
+                  onPageChange={handleStudentPageChange}
+                  itemLabel="estudantes"
+                  extraAction={
+                    <button
+                      type="button"
+                      onClick={() => setShowAllStudentsInView((prev) => !prev)}
+                      className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+                    >
+                      {showAllStudentsInView ? `Paginar (${PAGE_SIZE}/pág)` : `Ver todos (${filteredStudents.length})`}
+                    </button>
+                  }
+                />
+              )}
             </div>
           )}
 
@@ -2182,12 +2294,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
       {/* Toast de Confirmação de Download .XLS */}
       {exportSuccessToast && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-100">
-          <div className="bg-[#0f172a] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
-            <CheckCircle2 className="w-[22px] h-[22px] text-emerald-400 shrink-0" />
-            <p className="text-[13.5px] font-semibold tracking-[-0.01em] leading-snug">{exportSuccessToast}</p>
+        <ModalPortal>
+          <div className="fixed bottom-20 lg:bottom-6 left-4 right-4 z-[125] max-w-md mx-auto animate-in fade-in duration-100 pointer-events-none">
+            <div className="bg-[#0f172a] text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3">
+              <CheckCircle2 className="w-[22px] h-[22px] text-emerald-400 shrink-0" />
+              <p className="text-[13.5px] font-semibold tracking-[-0.01em] leading-snug">{exportSuccessToast}</p>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       <DetalhesExportModal

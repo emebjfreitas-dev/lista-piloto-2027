@@ -137,24 +137,19 @@ const AdminArrastePdfsModal = React.lazy(() =>
 );
 
 const screenSlideVariants = {
-  enter: (direction: 1 | -1) => ({
+  enter: () => ({
     opacity: 0,
-    x: direction >= 0 ? 22 : -22,
   }),
   center: {
     opacity: 1,
-    x: 0,
     transition: {
-      x: { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const },
-      opacity: { duration: 0.18, ease: 'easeOut' as const },
+      opacity: { duration: 0.16, ease: 'easeOut' as const },
     },
   },
-  exit: (direction: 1 | -1) => ({
+  exit: () => ({
     opacity: 0,
-    x: direction >= 0 ? -14 : 14,
     transition: {
-      x: { duration: 0.13, ease: [0.4, 0, 1, 1] as const },
-      opacity: { duration: 0.11, ease: 'easeIn' as const },
+      opacity: { duration: 0.1, ease: 'easeIn' as const },
     },
   }),
 };
@@ -1655,11 +1650,11 @@ export default function App() {
       faltas_consecutivas: 'Faltas Consecutivas',
       bolsa_familia: 'Bolsa Família',
       planilha: '3. Nuvem, Drive & Fotos',
-      dias_letivos: '4. 200 Dias',
-      usuarios_acesso: 'Central Admin',
+      dias_letivos: 'Central Administrativa · Ano Letivo & 200 Dias',
+      usuarios_acesso: 'Central Administrativa',
       resumo: 'Resumo Mensal',
-      diagnostico_bd: 'Central Admin · Diagnóstico BD',
-      importar_deficiencias_htm: 'Central Admin · Upload .HTM',
+      diagnostico_bd: 'Central Administrativa · Diagnóstico BD',
+      importar_deficiencias_htm: 'Central Administrativa · Upload .HTM',
     };
 
     const currentLog = accessSessionLogsRef.current.find(
@@ -1944,9 +1939,9 @@ export default function App() {
 
   if (isAuthChecking) {
     return (
-      <div className="min-h-[100dvh] w-full bg-[linear-gradient(168deg,#001229_0%,#050f1f_50%,#040b16_100%)] flex flex-col items-center justify-center p-6 text-white font-sans">
-        <Loader2 className="w-10 h-10 text-white animate-spin mb-4" aria-hidden="true" />
-        <p className="text-sm font-semibold tracking-wide text-white">
+      <div className="min-h-[100dvh] w-full bg-[linear-gradient(168deg,#f0f4fa_0%,#e7edf6_52%,#dce5f2_100%)] flex flex-col items-center justify-center p-6 text-[#0f172a] font-sans">
+        <Loader2 className="w-10 h-10 text-[#0b3b8c] animate-spin mb-4" aria-hidden="true" />
+        <p className="text-sm font-semibold tracking-wide text-[#0f172a]">
           Verificando sessão institucional...
         </p>
       </div>
@@ -1955,7 +1950,7 @@ export default function App() {
 
   if (!isAuthVerified || currentScreen === 'login') {
     return (
-      <div className="min-h-screen w-full overflow-x-hidden bg-[#050f1f] font-sans">
+      <div className="min-h-screen w-full overflow-x-clip bg-[#0a1529] font-sans">
         <LoginScreen
           authorizedUsers={authorizedUsers}
           schoolNotices={schoolNotices}
@@ -1979,7 +1974,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[linear-gradient(168deg,#001229_0%,#050f1f_48%,#040b16_100%)] bg-fixed text-[#1d1f1d] flex flex-col font-sans selection:bg-[#0071e3]/20 selection:text-[#0066cc]">
+    <div className="min-h-screen w-full overflow-x-clip bg-[linear-gradient(168deg,#f0f4fa_0%,#e7edf6_52%,#dce5f2_100%)] bg-fixed text-[#0f172a] flex flex-col font-sans selection:bg-[#0b3b8c]/18 selection:text-[#0b3b8c]">
       {/* Top Minimalist Header */}
       <Header
         currentScreen={currentScreen}
@@ -1991,17 +1986,17 @@ export default function App() {
             : currentScreen === 'bolsa_familia'
             ? 'Relatório Nominal • Bolsa Família'
             : currentScreen === 'dias_letivos'
-            ? 'Central Admin · Calendário 200 Dias'
+            ? 'Central Administrativa · Ano Letivo & 200 Dias'
             : currentScreen === 'resumo'
             ? 'Fechamento'
             : currentScreen === 'planilha'
             ? 'Nuvem & Drive'
             : currentScreen === 'usuarios_acesso'
-            ? 'Central Admin'
+            ? 'Central Administrativa'
             : currentScreen === 'diagnostico_bd'
-            ? 'Central Admin · Diagnóstico BD'
+            ? 'Central Administrativa · Diagnóstico BD'
             : currentScreen === 'importar_deficiencias_htm'
-            ? 'Central Admin · Upload .HTM'
+            ? 'Central Administrativa · Upload .HTM'
             : undefined
         }
         subtitle={
@@ -2114,9 +2109,9 @@ export default function App() {
             >
         <Suspense
           fallback={
-            <div className="w-full py-16 flex flex-col items-center justify-center gap-3 text-white">
-              <Loader2 className="w-7 h-7 text-white animate-spin" aria-hidden="true" />
-              <span className="text-xs font-semibold tracking-wide">Carregando módulo...</span>
+            <div className="w-full py-16 flex flex-col items-center justify-center gap-3 text-[#0f172a]">
+              <Loader2 className="w-7 h-7 text-[#0b3b8c] animate-spin" aria-hidden="true" />
+              <span className="text-xs font-semibold tracking-wide text-slate-700">Carregando módulo...</span>
             </div>
           }
         >

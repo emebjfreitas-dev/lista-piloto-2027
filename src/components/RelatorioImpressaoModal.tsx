@@ -10,6 +10,7 @@ import {
 } from '../utils/attendanceRules';
 import { FileText, Printer, X } from 'lucide-react';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
 
 interface RelatorioImpressaoModalProps {
   isOpen: boolean;
@@ -50,8 +51,9 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
-      <div className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] animate-apple-pop">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[110] overflow-hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
+        <div className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop">
         {/* Modal Controls */}
         <div className="modal-header-surface p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print shrink-0">
           <div className="flex items-center gap-2">
@@ -126,7 +128,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
         </div>
 
         {/* Printable Document Sheet */}
-        <div className="modal-scroll-body flex-1 py-6 px-4 sm:px-6 bg-white text-[#090f1d] space-y-5 print:p-0">
+        <div className="modal-scroll-body flex-1 min-h-0 py-6 px-4 sm:px-6 bg-white text-[#090f1d] space-y-5 print:p-0">
           {/* Official Letterhead */}
           <div>
             <div className="pb-4 flex items-center justify-between">
@@ -145,7 +147,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                   <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide block">
                     {CITY_NAME} • {SECRETARY_NAME}
                   </span>
-                  <h1 className="text-lg font-semibold text-[#003440] uppercase tracking-wide">
+                  <h1 className="text-lg font-semibold text-[#0b3b8c] uppercase tracking-wide">
                     LISTA PILOTO 2027 • {SCHOOL_NAME}
                   </h1>
                   <p className="text-sm text-[#065f46] font-bold">
@@ -157,7 +159,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               </div>
               <div className="text-right">
                 <span className="text-xs font-bold text-slate-700 block">ANO LETIVO 2027</span>
-                <span className="text-base font-semibold text-[#003440]">
+                <span className="text-base font-semibold text-[#0b3b8c]">
                   {reportMode === 'bimestral' ? currentBimester.periodLabel.toUpperCase() : defaultRefPeriod.label.toUpperCase()}
                 </span>
                 <span className="text-xs text-[#065f46] font-bold block">
@@ -165,14 +167,14 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                 </span>
               </div>
             </div>
-            <div className="h-[2px] bg-[#003440]" />
+            <div className="h-[2px] bg-[#0b3b8c]" />
           </div>
 
           {/* Class Identifiers */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#f4f7fb] p-3.5 rounded-xl text-sm">
             <div>
               <span className="text-slate-700 font-bold block text-xs">TURMA / ANO</span>
-              <span className="font-semibold text-[#003440] text-base">{classGroup.name}</span>
+              <span className="font-semibold text-[#0b3b8c] text-base">{classGroup.name}</span>
             </div>
             <div>
               <span className="text-slate-700 font-bold block text-xs">ETAPA / EXIGÊNCIA MEC</span>
@@ -196,7 +198,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <div className="rounded-xl overflow-x-auto shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)]">
               <table className="w-full text-left text-sm min-w-[680px]">
                 <thead>
-                  <tr className="bg-[#003440] text-white font-bold">
+                  <tr className="bg-[#0b3b8c] text-white font-bold">
                     <th className="py-2.5 px-2.5 w-10 text-center">Nº</th>
                     <th className="py-2.5 px-3">Estudante (RA / NIS Bolsa Família)</th>
                     {currentBimester.months.map((mObj) => (
@@ -252,7 +254,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                       <td className="py-2.5 px-2 text-center font-semibold text-[#065f46] tabular-nums">
                         {r.totalAtestadosBimestre}
                       </td>
-                      <td className="py-2.5 px-2 text-center font-semibold text-[#003440] tabular-nums">
+                      <td className="py-2.5 px-2 text-center font-semibold text-[#0b3b8c] tabular-nums">
                         {r.frequenciaBimestrePercent}%
                       </td>
                       <td className="py-2.5 px-2.5 text-center">
@@ -276,7 +278,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <div className="rounded-xl overflow-x-auto shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)]">
               <table className="w-full text-left text-sm min-w-[600px]">
                 <thead>
-                  <tr className="bg-[#edf2f7] text-[#003440] font-bold">
+                  <tr className="bg-[#edf2f7] text-[#0b3b8c] font-bold">
                     <th className="py-2.5 px-3 w-12 text-center">Nº</th>
                     <th className="py-2.5 px-3">Nome do Estudante</th>
                     <th className="py-2.5 px-2 text-center">Dias (Recorte)</th>
@@ -319,7 +321,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                         <td className="py-2.5 px-2 text-center font-bold text-[#065f46] tabular-nums">
                           {m.atestados}
                         </td>
-                        <td className="py-2.5 px-2 text-center font-semibold text-[#003440] tabular-nums">
+                        <td className="py-2.5 px-2 text-center font-semibold text-[#0b3b8c] tabular-nums">
                           {m.frequenciaPercent}%
                         </td>
                         <td className="py-2.5 px-3 text-center">
@@ -397,6 +399,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

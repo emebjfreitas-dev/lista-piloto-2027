@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   ClassGroup,
   Student,
@@ -12,11 +12,13 @@ import {
   LayoutGrid,
   Table as TableIcon,
   Users,
-  CalendarDays,
+  ShieldCheck,
   ChevronRight,
   Sun,
   Sunset,
 } from 'lucide-react';
+import { getStoredOfficialCalendarConfig } from '../services/db';
+import { PaginationBar } from './ui/PaginationBar';
 
 interface MinhasTurmasScreenProps {
   classes: ClassGroup[];
@@ -54,10 +56,23 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
   onChangeRole,
   onSelectClassForDetails,
   onOpenConfigDaysModal,
+  onNavigateToAcessos,
 }) => {
   const [selectedShift, setSelectedShift] = useState<'Todos' | 'Turno Manhã' | 'Turno Tarde'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [turmasViewMode, setTurmasViewMode] = useState<'grid' | 'table'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAllClasses, setShowAllClasses] = useState(false);
+  const classesTopRef = useRef<HTMLDivElement | null>(null);
+  const PAGE_SIZE = 16;
+  const activeSchoolYear = useMemo(
+    () => getStoredOfficialCalendarConfig().year || 2027,
+    []
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedShift, searchTerm, turmasViewMode]);
 
 
   const manhaCount = useMemo(
@@ -179,7 +194,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               {userRole === 'usuario' ? 'Minha Turma' : 'Turmas'}
             </h1>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-slate-700 break-words">
-              <span className="font-semibold text-slate-900">Ano Letivo 2027</span>
+              <span className="font-semibold text-slate-900">Ano Letivo {activeSchoolYear}</span>
               {userRole === 'usuario' && primaryTeacherClass ? (
                 <>
                   <span aria-hidden="true">·</span>
@@ -249,14 +264,14 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   </button>
                 </div>
 
-                {onOpenConfigDaysModal && (
+                {(onNavigateToAcessos || onOpenConfigDaysModal) && (
                   <button
-                    onClick={onOpenConfigDaysModal}
+                    onClick={onNavigateToAcessos || onOpenConfigDaysModal}
                     type="button"
                     className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-2xl bg-[#edf2f7] hover:bg-[#dbe4f0] text-slate-950 font-bold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors duration-150"
                   >
-                    <CalendarDays className="w-4 h-4 text-[#092e70] shrink-0" />
-                    <span>200 Dias Letivos</span>
+                    <ShieldCheck className="w-4 h-4 text-[#092e70] shrink-0" />
+                    <span>Central Administrativa</span>
                   </button>
                 )}
               </>
@@ -408,7 +423,24 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
       )}
 
       {/* Exibição: Tabela ou Cartões Minimalistas (Oculto para PEB 1 para evitar card duplicado) */}
-      {userRole !== 'usuario' && (turmasViewMode === 'table' ? (
+      {userRole !== 'usuario' && (() => {
+        const totalClassPages = Math.max(1, Math.ceil(filteredClasses.length / PAGE_SIZE));
+        const safeClassPage = Math.min(currentPage, totalClassPages);
+        const visibleClassesSlice = showAllClasses
+          ? filteredClasses
+          : filteredClasses.slice((safeClassPage - 1) * PAGE_SIZE, safeClassPage * PAGE_SIZE);
+        const handleClassPageChange = (nextPage: number) => {
+          setCurrentPage(nextPage);
+          if (classesTopRef.current) {
+            classesTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        };
+
+        return (
+          <div ref={classesTopRef} className="space-y-4 scroll-mt-24">
+            {turmasViewMode === 'table' ? (
         <div className="bg-white rounded-3xl overflow-x-auto shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)]">
           <table className="w-full text-left text-xs sm:text-[13px] min-w-[780px]">
             <thead className="bg-[#edf2f7] text-slate-800 font-bold text-xs">
@@ -430,7 +462,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredClasses.map((cls) => {
+                visibleClassesSlice.map((cls) => {
                   const isInfantil = cls.name.startsWith('GRUPO');
                   const shortBadge =
                     cls.turmaAbrev ||
@@ -515,7 +547,7 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
               </button>
             </div>
           ) : (
-            filteredClasses.map((cls) => {
+            visibleClassesSlice.map((cls) => {
               const isInfantil = cls.name.startsWith('GRUPO');
               const shortBadge =
                 cls.turmaAbrev ||
@@ -577,7 +609,29 @@ export const MinhasTurmasScreen: React.FC<MinhasTurmasScreenProps> = ({
             })
           )}
         </div>
-      ))}
+            )}
+
+            {filteredClasses.length > PAGE_SIZE && (
+              <PaginationBar
+                currentPage={showAllClasses ? 1 : safeClassPage}
+                totalItems={filteredClasses.length}
+                pageSize={showAllClasses ? filteredClasses.length : PAGE_SIZE}
+                onPageChange={handleClassPageChange}
+                itemLabel="turmas"
+                extraAction={
+                  <button
+                    type="button"
+                    onClick={() => setShowAllClasses((prev) => !prev)}
+                    className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    {showAllClasses ? `Paginar (${PAGE_SIZE}/pág)` : `Ver todas (${filteredClasses.length})`}
+                  </button>
+                }
+              />
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };

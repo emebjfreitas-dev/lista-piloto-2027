@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ClassGroup, Student, UserRole } from '../types';
 import {
   BimesterId2027,
@@ -28,6 +28,8 @@ import {
   X,
 } from 'lucide-react';
 import { StudentAvatar } from './StudentAvatar';
+import { ModalPortal } from './ui/ModalPortal';
+import { PaginationBar } from './ui/PaginationBar';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 
 interface ListasNominaisScreenProps {
@@ -288,7 +290,25 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
     searchQuery,
   ]);
 
-  // Agrupamento automático por turma (mantendo ordem das turmas e ordem alfabética A-Z dentro de cada turma)
+  const [currentPage, setCurrentPage] = useState(1);
+  const listTopRef = useRef<HTMLDivElement | null>(null);
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    selectedBimesterId,
+    onlyBelowTarget,
+    selectedClassFilter,
+    selectedSchoolGroup,
+    selectedAtestadoFilter,
+    searchQuery,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  // Agrupamento completo para exportação XLS e agrupamento paginado para exibição sem scroll gigante
   const groupedByClass = useMemo(() => {
     const classOrderMap = new Map<string, number>();
     classes.forEach((c, idx) => classOrderMap.set(c.id, idx));
@@ -311,6 +331,35 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       return a.cls.name.localeCompare(b.cls.name, 'pt-BR', { numeric: true });
     });
   }, [classes, filteredRows]);
+
+  const orderedFilteredRows = useMemo(
+    () => groupedByClass.flatMap((g) => g.rows),
+    [groupedByClass]
+  );
+
+  const paginatedGroupedByClass = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    const pageRows = orderedFilteredRows.slice(start, start + PAGE_SIZE);
+    const groupsMap = new Map<string, { cls: ClassGroup; rows: EvaluatedRow[] }>();
+    pageRows.forEach((row) => {
+      const existing = groupsMap.get(row.cls.id);
+      if (existing) {
+        existing.rows.push(row);
+      } else {
+        groupsMap.set(row.cls.id, { cls: row.cls, rows: [row] });
+      }
+    });
+    return Array.from(groupsMap.values());
+  }, [orderedFilteredRows, safePage]);
+
+  const handlePageChange = (nextPage: number) => {
+    setCurrentPage(nextPage);
+    if (listTopRef.current) {
+      listTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const handleExportXLS = async () => {
     if (groupedByClass.length === 0) {
@@ -388,12 +437,14 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   return (
     <div className="flex flex-col w-full min-w-0 max-w-6xl mx-auto space-y-5 pb-16 animate-gentle-fade">
       {toastMsg && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto animate-in fade-in duration-100">
-          <div className="bg-[#1d1d1f] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 min-w-0">
-            <CheckCircle2 className="w-[19px] h-[19px] text-[#28cd41] shrink-0" />
-            <p className="text-sm font-medium leading-snug break-words min-w-0">{toastMsg}</p>
+        <ModalPortal>
+          <div className="fixed bottom-20 lg:bottom-6 left-4 right-4 z-[125] max-w-md mx-auto animate-in fade-in duration-100 pointer-events-none">
+            <div className="bg-[#1d1d1f] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 min-w-0">
+              <CheckCircle2 className="w-[19px] h-[19px] text-[#28cd41] shrink-0" />
+              <p className="text-sm font-medium leading-snug break-words min-w-0">{toastMsg}</p>
+            </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* CABEÇALHO DA TELA BOLSA FAMÍLIA */}
@@ -743,7 +794,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
       {/* PAINEL HERO DA TURMA ATIVA (QUANDO UMA TURMA INDIVIDUAL ESTÁ SELECIONADA) */}
       {activeSelectedClass && (
-        <section className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 animate-gentle-fade">
+        <section className="bg-gradient-to-br from-[#0b3b8c] to-[#132c5c] text-white rounded-3xl p-5 sm:p-6 shadow-[0_14px_34px_-10px_rgba(11,59,140,0.32)] space-y-4 animate-gentle-fade">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -831,8 +882,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
           )}
         </div>
       ) : (
-        <div className="space-y-8">
-          {groupedByClass.map((group) => {
+        <div ref={listTopRef} className="space-y-6 scroll-mt-24">
+          {paginatedGroupedByClass.map((group) => {
             const isInfantil =
               group.cls.name.toUpperCase().startsWith('GRUPO') ||
               group.cls.grade.toUpperCase().includes('INFANTIL');
@@ -843,15 +894,15 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 {selectedClassFilter === 'all' && (
                   <div className="flex items-baseline justify-between gap-2 px-1">
                     <div className="flex items-baseline gap-2 min-w-0 flex-wrap">
-                      <h2 className="text-lg sm:text-xl font-bold text-white tracking-[-0.024em]">
+                      <h2 className="text-lg sm:text-xl font-bold text-[#0f172a] tracking-[-0.024em]">
                         {group.cls.name}
                       </h2>
-                      <span className="text-xs font-medium text-slate-200 tracking-[-0.006em]">
+                      <span className="text-xs font-medium text-slate-700 tracking-[-0.006em]">
                         {group.cls.shift.replace('Turno ', '')} ·{' '}
                         {isInfantil ? 'Meta legal 60%' : 'Meta legal 75%'}
                       </span>
                     </div>
-                    <span className="text-xs font-semibold text-slate-200 tabular-nums shrink-0">
+                    <span className="text-xs font-semibold text-slate-700 tabular-nums shrink-0">
                       {group.rows.length}{' '}
                       {group.rows.length === 1 ? 'estudante' : 'estudantes'}
                     </span>
@@ -1123,6 +1174,14 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               </section>
             );
           })}
+
+          <PaginationBar
+            currentPage={safePage}
+            totalItems={orderedFilteredRows.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={handlePageChange}
+            itemLabel="estudantes"
+          />
         </div>
       )}
     </div>

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { Download, Smartphone, X } from 'lucide-react';
+import { ModalPortal } from './ui/ModalPortal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ variant = 'header' }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
+  useModalScrollLock(showIOSGuide);
 
   // Se já estiver rodando instalado como PWA, oculta o botão
   if (isInstalled) {
@@ -50,50 +53,52 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
           </button>
 
           {showIOSGuide && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-backdrop-in"
-              onClick={() => setShowIOSGuide(false)}
-            >
+            <ModalPortal>
               <div
-                className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-[0_28px_68px_rgba(2,6,23,0.45)] space-y-4 animate-apple-pop"
-                onClick={(e) => e.stopPropagation()}
+                className="fixed inset-0 z-[130] overflow-hidden flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-backdrop-in"
+                onClick={() => setShowIOSGuide(false)}
               >
-                <div className="flex items-center justify-between pb-1">
-                  <div className="flex items-center gap-2">
-                    <Smartphone className="w-5 h-5 text-[#0b3b8c]" />
-                    <h3 className="text-sm font-bold text-slate-950">Instalar no iPhone / iPad</h3>
+                <div
+                  className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-[0_28px_68px_rgba(2,6,23,0.45)] space-y-4 animate-apple-pop"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between pb-1">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-5 h-5 text-[#0b3b8c]" />
+                      <h3 className="text-sm font-bold text-slate-950">Instalar no iPhone / iPad</h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowIOSGuide(false)}
+                      className="p-1.5 rounded-xl bg-[#edf2f7] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
+                    <p className="flex items-start gap-2">
+                      <span className="font-bold text-[#0b3b8c] shrink-0">1.</span>
+                      <span>No navegador <strong>Safari</strong>, toque no botão <strong>Compartilhar</strong> (ícone de quadrado com seta para cima).</span>
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="font-bold text-[#0b3b8c] shrink-0">2.</span>
+                      <span>Role para baixo e selecione <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong>.</span>
+                    </p>
+                    <p className="flex items-start gap-2">
+                      <span className="font-bold text-[#0b3b8c] shrink-0">3.</span>
+                      <span>Toque em <strong>&ldquo;Adicionar&rdquo;</strong> no canto superior direito para fixar o ícone oficial.</span>
+                    </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowIOSGuide(false)}
-                    className="p-1.5 rounded-xl bg-[#edf2f7] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
+                    className="w-full py-2.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold transition-colors cursor-pointer"
                   >
-                    <X className="w-4 h-4" />
+                    Entendi
                   </button>
                 </div>
-                <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
-                  <p className="flex items-start gap-2">
-                    <span className="font-bold text-[#0b3b8c] shrink-0">1.</span>
-                    <span>No navegador <strong>Safari</strong>, toque no botão <strong>Compartilhar</strong> (ícone de quadrado com seta para cima).</span>
-                  </p>
-                  <p className="flex items-start gap-2">
-                    <span className="font-bold text-[#0b3b8c] shrink-0">2.</span>
-                    <span>Role para baixo e selecione <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong>.</span>
-                  </p>
-                  <p className="flex items-start gap-2">
-                    <span className="font-bold text-[#0b3b8c] shrink-0">3.</span>
-                    <span>Toque em <strong>&ldquo;Adicionar&rdquo;</strong> no canto superior direito para fixar o ícone oficial.</span>
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowIOSGuide(false)}
-                  className="w-full py-2.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Entendi
-                </button>
               </div>
-            </div>
+            </ModalPortal>
           )}
         </>
       );
@@ -132,50 +137,52 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
         </button>
 
         {showIOSGuide && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-backdrop-in"
-            onClick={() => setShowIOSGuide(false)}
-          >
+          <ModalPortal>
             <div
-              className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-[0_28px_68px_rgba(2,6,23,0.45)] space-y-4 text-left animate-apple-pop"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-[130] overflow-hidden flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-backdrop-in"
+              onClick={() => setShowIOSGuide(false)}
             >
-              <div className="flex items-center justify-between pb-1">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="w-5 h-5 text-[#0b3b8c]" />
-                  <h3 className="text-sm font-bold text-slate-950">Instalar no iPhone / iPad</h3>
+              <div
+                className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-[0_28px_68px_rgba(2,6,23,0.45)] space-y-4 text-left animate-apple-pop"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between pb-1">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-5 h-5 text-[#0b3b8c]" />
+                    <h3 className="text-sm font-bold text-slate-950">Instalar no iPhone / iPad</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowIOSGuide(false)}
+                    className="p-1.5 rounded-xl bg-[#edf2f7] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
+                  <p className="flex items-start gap-2">
+                    <span className="font-bold text-[#0b3b8c] shrink-0">1.</span>
+                    <span>No <strong>Safari</strong>, toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima).</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="font-bold text-[#0b3b8c] shrink-0">2.</span>
+                    <span>Role as opções e toque em <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong>.</span>
+                  </p>
+                  <p className="flex items-start gap-2">
+                    <span className="font-bold text-[#0b3b8c] shrink-0">3.</span>
+                    <span>Confirme tocando em <strong>&ldquo;Adicionar&rdquo;</strong> para abrir em tela cheia como aplicativo.</span>
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowIOSGuide(false)}
-                  className="p-1.5 rounded-xl bg-[#edf2f7] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold transition-colors cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  Entendi
                 </button>
               </div>
-              <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
-                <p className="flex items-start gap-2">
-                  <span className="font-bold text-[#0b3b8c] shrink-0">1.</span>
-                  <span>No <strong>Safari</strong>, toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima).</span>
-                </p>
-                <p className="flex items-start gap-2">
-                  <span className="font-bold text-[#0b3b8c] shrink-0">2.</span>
-                  <span>Role as opções e toque em <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong>.</span>
-                </p>
-                <p className="flex items-start gap-2">
-                  <span className="font-bold text-[#0b3b8c] shrink-0">3.</span>
-                  <span>Confirme tocando em <strong>&ldquo;Adicionar&rdquo;</strong> para abrir em tela cheia como aplicativo.</span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowIOSGuide(false)}
-                className="w-full py-2.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold transition-colors cursor-pointer"
-              >
-                Entendi
-              </button>
             </div>
-          </div>
+          </ModalPortal>
         )}
       </>
     );

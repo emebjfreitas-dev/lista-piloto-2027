@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { AuthorizedUser, ClassGroup, UserRole } from '../types';
 import {
   ParsedHtmDisabilityRow,
@@ -11,6 +11,7 @@ import {
   saveStoredClasses,
 } from '../services/db';
 import { saveClassesToFirestoreCloud } from '../services/firebaseSync';
+import { PaginationBar } from './ui/PaginationBar';
 import {
   AlertCircle,
   AlertTriangle,
@@ -210,6 +211,28 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
       );
     });
   }, [rows, previewFilter, searchTerm, allowClearWhenNoDisability]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const listSectionRef = useRef<HTMLElement | null>(null);
+  const PAGE_SIZE = 25;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [previewFilter, searchTerm, rows.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedRows = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredRows.slice(start, start + PAGE_SIZE);
+  }, [filteredRows, safePage]);
+
+  const handlePageChange = (nextPage: number) => {
+    setCurrentPage(nextPage);
+    if (listSectionRef.current) {
+      listSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const applyImpactSummary = useMemo(() => {
     const targetRows = rows.filter((r) => {
@@ -677,7 +700,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
 
           {/* Mobile Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 lg:hidden">
-            {filteredRows.map((row) => {
+            {paginatedRows.map((row) => {
               const isMatched = row.matchStatus === 'matched';
               return (
                 <article
@@ -767,7 +790,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map((row) => {
+                {paginatedRows.map((row) => {
                   const isMatched = row.matchStatus === 'matched';
                   return (
                     <tr
@@ -865,6 +888,14 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
               </tbody>
             </table>
           </div>
+
+          <PaginationBar
+            currentPage={safePage}
+            totalItems={filteredRows.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={handlePageChange}
+            itemLabel="linhas do arquivo"
+          />
         </section>
       )}
     </div>

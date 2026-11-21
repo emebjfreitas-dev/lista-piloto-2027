@@ -7,6 +7,7 @@ import {
 } from '../utils/genderDictionary';
 import { getSavedPhotosDriveFolderInfo, OFFICIAL_FOLDER_NAME } from '../services/googleSheetsApi';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
 import { findStudentSiblings } from '../utils/siblingDetection';
 import { StudentSiblingsCard } from './StudentSiblingsCard';
 import { ChevronRight, FileSpreadsheet, FileText, Search, Users, X, XCircle } from 'lucide-react';
@@ -61,14 +62,15 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
   }, [selectedStudent]);
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] animate-apple-pop"
+        onClick={onClose}
+        className="fixed inset-0 z-[105] overflow-hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
+        >
         {/* Header: Proporcional e Elegante */}
         <div className="flex items-center justify-between gap-3 pb-3 shrink-0">
           <div className="min-w-0 flex-1">
@@ -362,5 +364,6 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

@@ -841,6 +841,10 @@ const buildAuthorizedRequestUser = (
   }
 
   const isAdmin = isOfficialSchoolAdminEmail(email);
+  if (!matched && !isAdmin) {
+    return { user: null, denialReason: 'USER_NOT_PROVISIONED' };
+  }
+
   const resolvedRole = isAdmin
     ? 'admin'
     : matched?.role === 'peb2'
@@ -1061,7 +1065,7 @@ async function startServer() {
     );
     next();
   });
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '2mb' }));
 
   const setSessionCookieHeader = (req: express.Request, res: express.Response, cookieValue: string, maxAgeSec: number) => {
     const xfProto = String(req.headers['x-forwarded-proto'] || '').toLowerCase();
@@ -1182,7 +1186,7 @@ async function startServer() {
   });
 
   // API: Registrar token de leitura da pasta oficial do Drive (autenticado institucionalmente)
-  app.post('/api/school-state/drive-token', requireInstitutionalAuth, (req, res) => {
+  app.post('/api/school-state/drive-token', requireAdminAuth, (req, res) => {
     const validation = validateDriveTokenPayload(req.body);
     if (!validation.ok) {
       res.status(400).json({ error: validation.error });

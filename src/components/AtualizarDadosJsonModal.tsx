@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ClassGroup } from '../types';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
 import {
   exportSchoolDataToJsonFile,
   validateAndSanitizeJsonPayload,
@@ -567,11 +568,13 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
   }
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-backdrop-in"
-    >
-      {contentNode}
-    </div>
+    <ModalPortal>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-[110] overflow-hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-backdrop-in"
+      >
+        {contentNode}
+      </div>
+    </ModalPortal>
   );
 };

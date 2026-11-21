@@ -1140,13 +1140,13 @@ export const DiagnosticoBancoDadosScreen: React.FC<DiagnosticoBancoDadosScreenPr
         )}
       </section>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-xs text-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-xs text-slate-700 font-medium">
         <span className="inline-flex items-center gap-1.5">
-          <Database className="w-4 h-4 shrink-0" />
+          <Database className="w-4 h-4 shrink-0 text-[#0b3b8c]" />
           <span>Auditoria local + Firestore em tempo real</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Activity className="w-4 h-4 shrink-0" />
+          <Activity className="w-4 h-4 shrink-0 text-[#047857]" />
           <span>{allIssues.length} apontamento(s) totais</span>
         </span>
       </div>

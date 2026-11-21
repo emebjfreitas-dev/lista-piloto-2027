@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ClassGroup } from '../types';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
 import { CheckCircle2, FileEdit, Save, X } from 'lucide-react';
 
 interface AnotacoesModalProps {
@@ -33,8 +34,9 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
-      <div className="modal-shell w-full max-w-lg rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] animate-apple-pop">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[110] overflow-hidden flex items-center justify-center p-3 sm:p-5 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
+        <div className="modal-shell w-full max-w-lg rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop">
         {/* Header */}
         <div className="modal-header-surface flex items-start sm:items-center justify-between gap-3 p-5 pb-4 shrink-0">
           <div className="flex items-start sm:items-center gap-2 text-slate-950 min-w-0 flex-1">
@@ -54,7 +56,7 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="modal-scroll-body flex-1 p-5 py-4 space-y-3">
+        <div className="modal-scroll-body flex-1 min-h-0 p-5 py-4 space-y-3">
           <p className="text-xs text-slate-700 font-medium leading-relaxed">
             Registre ocorrências da turma, recados da coordenação ou observações para as reuniões pedagógicas:
           </p>
@@ -95,5 +97,6 @@ export const AnotacoesModal: React.FC<AnotacoesModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

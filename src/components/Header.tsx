@@ -12,8 +12,6 @@ import {
   LogOut,
   ShieldCheck,
   HeartHandshake,
-  CalendarDays,
-  BarChart3,
   UserCog,
   Loader2,
 } from 'lucide-react';
@@ -33,6 +31,8 @@ import {
   SyncStatusSnapshot,
 } from '../services/firebaseSync';
 import { flushPendingOfflineQueue } from '../services/db';
+import { ModalPortal } from './ui/ModalPortal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface HeaderProps {
   currentScreen: ScreenType;
@@ -80,6 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
+  useModalScrollLock(showLogoutSheet);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isFlushingCloud, setIsFlushingCloud] = useState(false);
   const [showAdminNavDropdown, setShowAdminNavDropdown] = useState(false);
@@ -182,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
       ? [
           {
             id: 'frequencia_mensal' as ScreenType,
-            label: 'Faltas do Mês',
+            label: 'Informar faltas do mês…',
             activeMatch: currentScreen === 'frequencia_mensal',
             icon: CalendarCheck2,
           },
@@ -211,18 +212,11 @@ export const Header: React.FC<HeaderProps> = ({
       tintClass: 'bg-amber-500/12 text-amber-700',
     },
     {
-      id: 'dias_letivos',
-      label: '200 Dias Letivos',
-      subtitle: 'Calendário oficial e feriados 2027',
-      icon: CalendarDays,
-      tintClass: 'bg-emerald-500/12 text-emerald-700',
-    },
-    {
       id: 'usuarios_acesso',
       label: 'Central Administrativa',
-      subtitle: 'Acessos, segurança, banco e uploads',
+      subtitle: 'Acessos, ano letivo (200 dias), segurança e uploads',
       icon: ShieldCheck,
-      tintClass: 'bg-[#0071e3]/12 text-[#0071e3]',
+      tintClass: 'bg-[#0b3b8c]/10 text-[#0b3b8c]',
     },
   ];
 
@@ -246,7 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.22)]">
+      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-white/92 backdrop-blur-xl shadow-[0_4px_20px_-4px_rgba(15,23,42,0.08)]">
         <div className="h-16 px-3 sm:px-5 lg:px-6 max-w-[1600px] mx-auto flex items-center justify-between gap-2 lg:gap-4 xl:gap-6 min-w-0">
           {/* Zona 1: Identidade Institucional (flexível com min-w-0 para nunca empurrar o perfil para fora da tela) */}
           <button
@@ -265,7 +259,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="w-8 h-8 object-contain shrink-0"
             />
-            <span className="text-[13.5px] sm:text-[14px] xl:text-[15.5px] font-semibold tracking-[-0.02em] text-[#0b3b8c] group-hover:text-[#0052cc] transition-colors truncate">
+            <span className="text-[13.5px] sm:text-[14px] xl:text-[15.5px] font-semibold tracking-[-0.02em] text-[#0b3b8c] group-hover:text-[#1d4ed8] transition-colors truncate">
               Lista Piloto Candelário 2027
             </span>
           </button>
@@ -348,7 +342,8 @@ export const Header: React.FC<HeaderProps> = ({
                           const active =
                             currentScreen === item.id ||
                             (item.id === 'usuarios_acesso' &&
-                              (currentScreen === 'diagnostico_bd' ||
+                              (currentScreen === 'dias_letivos' ||
+                                currentScreen === 'diagnostico_bd' ||
                                 currentScreen === 'importar_deficiencias_htm'));
                           return (
                             <button
@@ -546,7 +541,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className="w-full min-h-[42px] text-left px-3.5 py-2 rounded-2xl text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
                       >
                         <ShieldCheck className="w-4 h-4 text-slate-700 shrink-0" />
-                        <span>Central Admin</span>
+                        <span>Central Administrativa</span>
                       </button>
                     )}
 
@@ -573,62 +568,64 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Modal de Saída Segura */}
       {showLogoutSheet && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-4 animate-backdrop-in"
-          onClick={() => !isLoggingOut && setShowLogoutSheet(false)}
-        >
+        <ModalPortal>
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[400px] bg-white rounded-3xl shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden text-center p-6 space-y-4 animate-apple-pop"
+            className="fixed inset-0 z-[130] overflow-hidden bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-4 animate-backdrop-in"
+            onClick={() => !isLoggingOut && setShowLogoutSheet(false)}
           >
-            <div className="mx-auto w-14 h-14 rounded-full bg-[#f2f2f7] flex items-center justify-center">
-              <StudentAvatar
-                name={userName || userEmail || 'Educador'}
-                size="md"
-                expandableOnClick={false}
-                className="w-14 h-14 text-base"
-              />
-            </div>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[400px] bg-white rounded-3xl shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden text-center p-6 space-y-4 animate-apple-pop"
+            >
+              <div className="mx-auto w-14 h-14 rounded-full bg-[#f2f2f7] flex items-center justify-center">
+                <StudentAvatar
+                  name={userName || userEmail || 'Educador'}
+                  size="md"
+                  expandableOnClick={false}
+                  className="w-14 h-14 text-base"
+                />
+              </div>
 
-            <div className="space-y-1.5 min-w-0">
-              <h2 className="text-lg font-bold text-[#0b3b8c] break-words">
-                Encerrar Sessão Institucional?
-              </h2>
-              <p className="text-sm text-slate-600 break-words leading-snug">
-                {(() => {
-                  const displayIdentity = (userName || userEmail || '').trim();
-                  if (!displayIdentity) return SCHOOL_NAME;
-                  const norm = displayIdentity.toLowerCase();
-                  if (norm.includes('emeb') || norm.includes('candelário') || norm.includes('candelario')) {
-                    return displayIdentity;
-                  }
-                  return `${displayIdentity} · ${SCHOOL_NAME}`;
-                })()}
-              </p>
-            </div>
+              <div className="space-y-1.5 min-w-0">
+                <h2 className="text-lg font-bold text-[#0b3b8c] break-words">
+                  Encerrar Sessão Institucional?
+                </h2>
+                <p className="text-sm text-slate-600 break-words leading-snug">
+                  {(() => {
+                    const displayIdentity = (userName || userEmail || '').trim();
+                    if (!displayIdentity) return SCHOOL_NAME;
+                    const norm = displayIdentity.toLowerCase();
+                    if (norm.includes('emeb') || norm.includes('candelário') || norm.includes('candelario')) {
+                      return displayIdentity;
+                    }
+                    return `${displayIdentity} · ${SCHOOL_NAME}`;
+                  })()}
+                </p>
+              </div>
 
-            <div className="pt-2 space-y-2.5">
-              <button
-                type="button"
-                disabled={isLoggingOut}
-                onClick={handleConfirmLogoutWithFlush}
-                className="w-full min-h-[48px] text-sm font-bold rounded-2xl bg-[#dc2626] hover:bg-[#b91c1c] text-white transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                <LogOut className="w-4 h-4 shrink-0" />
-                <span>{isLoggingOut ? 'Salvando e Saindo...' : 'Sim, Encerrar Sessão'}</span>
-              </button>
+              <div className="pt-2 space-y-2.5">
+                <button
+                  type="button"
+                  disabled={isLoggingOut}
+                  onClick={handleConfirmLogoutWithFlush}
+                  className="w-full min-h-[48px] text-sm font-bold rounded-2xl bg-[#dc2626] hover:bg-[#b91c1c] text-white transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>{isLoggingOut ? 'Salvando e Saindo...' : 'Sim, Encerrar Sessão'}</span>
+                </button>
 
-              <button
-                type="button"
-                disabled={isLoggingOut}
-                onClick={() => setShowLogoutSheet(false)}
-                className="w-full min-h-[44px] text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer"
-              >
-                Continuar Conectado
-              </button>
+                <button
+                  type="button"
+                  disabled={isLoggingOut}
+                  onClick={() => setShowLogoutSheet(false)}
+                  className="w-full min-h-[44px] text-sm font-semibold rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors cursor-pointer"
+                >
+                  Continuar Conectado
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </>
   );

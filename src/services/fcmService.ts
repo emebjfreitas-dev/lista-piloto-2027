@@ -604,8 +604,13 @@ export async function unregisterDeviceFromFcm(userEmail: string): Promise<void> 
   setStoredFcmToken(null);
   setStoredPushSubscriptionActive(false);
 
-  const prefs = getStoredPushPreferences();
-  saveStoredPushPreferences({ ...prefs, enabled: false });
+  // Mantém notificações compulsórias sempre habilitadas mesmo após limpeza de sessão
+  saveStoredPushPreferences({
+    enabled: true,
+    deadlinesEnabled: true,
+    noticesEnabled: true,
+    activeSearchEnabled: true,
+  });
 
   const cleanEmail = (userEmail || '').trim().toLowerCase();
   const subId = getFcmDeviceSubscriptionId(cleanEmail);
@@ -851,13 +856,8 @@ export async function evaluateAndTriggerWindowClosingReminder(params: {
   userRole: UserRole;
   forceNotify?: boolean;
 }): Promise<PushNoticeItem | null> {
-  const prefs = getStoredPushPreferences();
-  if (!prefs.enabled || !prefs.deadlinesEnabled) return null;
-
+  // Notificações FCM compulsórias para todos os usuários
   const fcmSysCfg = getStoredFcmSystemConfig();
-  if (!fcmSysCfg.autoWindowAlertsEnabled && !params.forceNotify) {
-    return null;
-  }
 
   const win = evaluateAttendanceLaunchWindow(params.attendanceWindowConfig);
   const pendingClasses = params.visibleClasses.filter((c) => c.isPending);
@@ -917,7 +917,7 @@ export async function evaluateAndTriggerWindowClosingReminder(params: {
 
   if (win.windowPhase === 'next_month_closing' && win.urgencyLevel === 'urgent') {
     title = `ÚLTIMO DIA: Fechamento da Janela Hoje (${win.closingDateFormatted})`;
-    body = `Restam poucas horas! ${pendingClasses.length} turma(s) pendente(s) (${classPreview}). Conclua as faltas e atestados hoje para não perder o prazo.`;
+    body = `Restam poucas horas! ${pendingClasses.length} turma(s) pendente(s) (${classPreview}). Preencha as faltas e atestados hoje (salvamento automático) para não perder o prazo.`;
   } else if (win.windowPhase === 'next_month_closing') {
     title = `Janela Fecha Amanhã (${win.closingDateFormatted})`;
     body = `${pendingClasses.length} turma(s) ainda aguardam fechamento (${classPreview}). Toque para lançar a frequência mensal.`;
@@ -1092,11 +1092,7 @@ export async function evaluateAndTriggerTeacherEndOfDayReminder(params: {
   forceNotify?: boolean;
   onOpenClassAttendance?: (classId: string) => void;
 }): Promise<PushNoticeItem | null> {
-  const prefs = getStoredPushPreferences();
-  if ((!prefs.enabled || !prefs.deadlinesEnabled) && !params.forceNotify) {
-    return null;
-  }
-
+  // Notificações FCM compulsórias para todos os usuários
   const summary = evaluateTeacherEndOfDayPendingClasses({
     attendanceWindowConfig: params.attendanceWindowConfig,
     visibleClasses: params.visibleClasses,
@@ -1155,7 +1151,7 @@ export async function evaluateAndTriggerTeacherEndOfDayReminder(params: {
       ? `Fim do ${primary.evaluation.shiftLabel} (${primary.evaluation.closingTimeLabel}) • Frequência Pendente`
       : `Fim do Expediente Escolar • ${targetItems.length} Turmas Pendentes`;
 
-  const body = `Você ainda não lançou a frequência de ${classPreview} (${summary.windowEvaluation.targetMonthName}). Conclua o registro antes do encerramento às ${primary.evaluation.closingTimeLabel}.`;
+  const body = `Você ainda não lançou a frequência de ${classPreview} (${summary.windowEvaluation.targetMonthName}). Atualize os lançamentos antes do encerramento às ${primary.evaluation.closingTimeLabel} (salvamento automático).`;
 
   if (!params.forceNotify) {
     try {
@@ -1274,7 +1270,7 @@ export async function dispatchWindowClosingFcmAlert(params: {
       ? `Atenção docentes: ${pendingClasses.length} turma(s) ainda com fechamento pendente (${pendingClasses
           .slice(0, 4)
           .map((c) => c.name)
-          .join(', ')}${pendingClasses.length > 4 ? '...' : ''}). Conclua os lançamentos até ${win.closingDateFormatted}.`
+          .join(', ')}${pendingClasses.length > 4 ? '...' : ''}). Atualize os lançamentos até ${win.closingDateFormatted} (salvamento automático).`
       : `Lembrete oficial de conferência da frequência de ${win.targetMonthName}. Prazo final: ${win.closingDateFormatted}.`;
 
   const nowMs = Date.now();
@@ -1430,5 +1426,54 @@ export function getFcmCapabilitySnapshot(): {
     hasNativeFcmToken: nativeToken,
     hasVapidKey: Boolean(getEffectiveVapidKey()),
     hasViteVapidKey: viteVapid,
+  };
+}
+
+/**
+ * Força habilitação compulsória do FCM para todos os usuários:
+ * 1) Tenta registrar automaticamente ao abrir/logar;
+ * 2) Se o navegador exigir interação do usuário para `Notification.requestPermission()`,
+ *    reexecuta automaticamente no primeiro toque/clique ou tecla pressionada.
+ */
+export function setupCompulsoryFcmAutoActivation(params: {
+  userEmail: string;
+  userName: string;
+  userRole: UserRole;
+  teacherRoleType?: AuthorizedUser['teacherRoleType'];
+  assignedClassIds?: string[];
+  onResult?: (res: FcmRegistrationResult) => void;
+}): () => void {
+  let cancelled = false;
+  let inFlight = false;
+  let gestureAttached = false;
+
+  const tryRegister = async () => {
+    if (cancelled || inFlight || !params.userEmail) return;
+    inFlight = true;
+    try {
+      const res = await registerDeviceForFcm(params);
+      if (!cancelled) {
+        params.onResult?.(res);
+      }
+      if (!cancelled && res.permission === 'default' && !gestureAttached && typeof window !== 'undefined') {
+        gestureAttached = true;
+        const onFirstGesture = () => {
+          gestureAttached = false;
+          window.removeEventListener('pointerdown', onFirstGesture, true);
+          window.removeEventListener('keydown', onFirstGesture, true);
+          void tryRegister();
+        };
+        window.addEventListener('pointerdown', onFirstGesture, true);
+        window.addEventListener('keydown', onFirstGesture, true);
+      }
+    } finally {
+      inFlight = false;
+    }
+  };
+
+  void tryRegister();
+
+  return () => {
+    cancelled = true;
   };
 }

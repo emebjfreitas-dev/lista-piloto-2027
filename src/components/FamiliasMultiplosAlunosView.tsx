@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { ClassGroup, Student } from '../types';
 import {
   groupSchoolFamiliesByGuardians,
@@ -13,6 +13,8 @@ import { OFFICIAL_OCTOBER_DAYS, SCHOOL_NAME } from '../data/mockData';
 import { StudentAvatar } from './StudentAvatar';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
+import { PaginationBar } from './ui/PaginationBar';
 import {
   Download,
   ExternalLink,
@@ -189,6 +191,28 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
       });
     });
   }, [enrichedFamilies, filterMode, searchQuery]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const familiesListRef = useRef<HTMLDivElement | null>(null);
+  const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterMode, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFamilies.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedFamilies = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredFamilies.slice(start, start + PAGE_SIZE);
+  }, [filteredFamilies, safePage]);
+
+  const handlePageChange = (nextPage: number) => {
+    setCurrentPage(nextPage);
+    if (familiesListRef.current) {
+      familiesListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const handleExportCsv = () => {
     const escapeCsv = (val: string) => `"${(val || '').replace(/"/g, '""')}"`;
@@ -399,11 +423,12 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
         </div>
       ) : (
         <div
+          ref={familiesListRef}
           className={`grid grid-cols-1 ${
             compact ? '' : 'xl:grid-cols-2'
-          } gap-4`}
+          } gap-4 scroll-mt-4`}
         >
-          {filteredFamilies.map((fam) => {
+          {paginatedFamilies.map((fam) => {
             const firstStudentNames = fam.members
               .map((m) => m.student.name.split(' ')[0])
               .join(', ');
@@ -593,6 +618,16 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
           })}
         </div>
       )}
+
+      {filteredFamilies.length > PAGE_SIZE && (
+        <PaginationBar
+          currentPage={safePage}
+          totalItems={filteredFamilies.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={handlePageChange}
+          itemLabel="núcleos familiares"
+        />
+      )}
     </div>
   );
 };
@@ -613,66 +648,71 @@ export const FamiliasMultiplosAlunosModal: React.FC<
   if (!isOpen) return null;
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-5 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-[#f4f7fb] w-full max-w-5xl rounded-2xl sm:rounded-3xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.4)] overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] animate-apple-pop"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Famílias com Múltiplos Alunos na Escola"
+        className="fixed inset-0 z-[115] overflow-hidden flex items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-sm animate-backdrop-in"
       >
-        <div className="bg-white px-4 sm:px-6 py-4 flex items-center justify-between gap-3 shrink-0">
-          <div className="min-w-0">
-            <span className="text-xs font-semibold text-[#9f1239] block">
-              Busca Ativa · Inteligência Familiar
-            </span>
-            <h2 className="text-base sm:text-lg font-bold text-slate-950 truncate">
-              Famílias com Múltiplos Alunos na Escola
-            </h2>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="bg-[#f4f7fb] w-full max-w-5xl rounded-2xl sm:rounded-3xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.45)] overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
+        >
+          <div className="bg-white px-4 sm:px-6 py-4 flex items-center justify-between gap-3 shrink-0">
+            <div className="min-w-0">
+              <span className="text-xs font-semibold text-[#9f1239] block">
+                Busca Ativa · Inteligência Familiar
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-slate-950 truncate">
+                Famílias com Múltiplos Alunos na Escola
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar janela de famílias"
+              className="min-h-[40px] min-w-[40px] rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar janela de famílias"
-            className="min-h-[40px] min-w-[40px] rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer transition-colors shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5">
-          <FamiliasMultiplosAlunosView
-            allClasses={allClasses}
-            compact
-            onOpenStudentGrid={
-              onOpenStudentGrid
-                ? (st, cls) => {
-                    onClose();
-                    onOpenStudentGrid(st, cls);
-                  }
-                : undefined
-            }
-            onSelectClass={
-              onSelectClass
-                ? (cls) => {
-                    onClose();
-                    onSelectClass(cls);
-                  }
-                : undefined
-            }
-          />
-        </div>
+          <div className="flex-1 min-h-0 modal-scroll-body p-3 sm:p-5">
+            <FamiliasMultiplosAlunosView
+              allClasses={allClasses}
+              compact
+              onOpenStudentGrid={
+                onOpenStudentGrid
+                  ? (st, cls) => {
+                      onClose();
+                      onOpenStudentGrid(st, cls);
+                    }
+                  : undefined
+              }
+              onSelectClass={
+                onSelectClass
+                  ? (cls) => {
+                      onClose();
+                      onSelectClass(cls);
+                    }
+                  : undefined
+              }
+            />
+          </div>
 
-        <div className="bg-white px-4 sm:px-6 py-3 shadow-[0_-6px_20px_-8px_rgba(9,15,29,0.08)] flex justify-end shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-[40px] px-5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97]"
-          >
-            Fechar
-          </button>
+          <div className="bg-white px-4 sm:px-6 py-3 shadow-[0_-6px_20px_-8px_rgba(9,15,29,0.08)] flex justify-end shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-[40px] px-5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97]"
+            >
+              Fechar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 };

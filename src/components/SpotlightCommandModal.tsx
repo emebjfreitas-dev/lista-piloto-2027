@@ -6,6 +6,8 @@ import {
   getStudentGenderLabel,
   resolveGuardianRelationshipInfo,
 } from '../utils/genderDictionary';
+import { ModalPortal } from './ui/ModalPortal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface SpotlightCommandModalProps {
   isOpen: boolean;
@@ -36,6 +38,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  useModalScrollLock(isOpen);
 
   useEffect(() => {
     if (isOpen) {
@@ -168,14 +171,15 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[95] bg-slate-950/50 backdrop-blur-sm flex items-start justify-center pt-12 sm:pt-20 p-3 sm:p-4 animate-backdrop-in"
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="modal-shell w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col max-h-[82vh] animate-apple-pop"
+        onClick={onClose}
+        className="fixed inset-0 z-[125] overflow-hidden bg-slate-950/55 backdrop-blur-sm flex items-start justify-center pt-12 sm:pt-20 p-3 sm:p-4 animate-backdrop-in"
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="modal-shell w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col max-h-[82dvh] animate-apple-pop"
+        >
         {/* Barra Superior de Busca Instantânea */}
         <div className="px-4 sm:px-5 py-3.5 flex items-center gap-3 bg-[#edf2f7]">
           <Search className="w-5 h-5 text-[#092e70] shrink-0" />
@@ -207,7 +211,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
         </div>
 
         {/* Corpo de Resultados Instantâneos */}
-        <div className="overflow-y-auto p-3 sm:p-4 space-y-4">
+        <div className="flex-1 min-h-0 modal-scroll-body p-3 sm:p-4 space-y-4">
           {/* Atalhos Rápidos de Telas */}
           {!normalizedQuery && (
             <div className="flex flex-wrap items-center gap-1.5 px-1">
@@ -233,7 +237,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                   }}
                   className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
                 >
-                  Faltas do Mês
+                  Informar faltas do mês…
                 </button>
               )}
               <button
@@ -266,7 +270,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                     }}
                     className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
                   >
-                    Central Admin
+                    Central Administrativa
                   </button>
                 </>
               )}
@@ -436,5 +440,6 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

@@ -19,6 +19,8 @@ import {
   buildCustomClassExportPreview,
 } from '../services/db';
 import { OFFICIAL_OCTOBER_DAYS } from '../data/mockData';
+import { ModalPortal } from './ui/ModalPortal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface DetalhesExportModalProps {
   isOpen: boolean;
@@ -73,6 +75,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
   const [columnSearchTerm, setColumnSearchTerm] = useState('');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
   const [draggedColIndex, setDraggedColIndex] = useState<number | null>(null);
+  useModalScrollLock(isOpen);
 
   const availableColumnsFiltered = useMemo(() => {
     const qCol = columnSearchTerm.toLowerCase().trim();
@@ -141,14 +144,15 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/55 backdrop-blur-xs animate-backdrop-in"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="modal-shell bg-[#edf2f7] w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-apple-pop"
+        className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-5 bg-slate-950/60 backdrop-blur-xs overflow-hidden animate-backdrop-in"
+        onClick={onClose}
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="modal-shell bg-[#edf2f7] w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
+        >
         {/* Cabeçalho do Modal de Exportação .XLS */}
         <div className="modal-header-surface bg-white px-5 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -193,7 +197,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
         </div>
 
         {/* Corpo Principal Rolável */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        <div className="flex-1 min-h-0 modal-scroll-body p-4 sm:p-5 space-y-4">
           {/* 1. Modelos Rápidos */}
           <div className="bg-white rounded-2xl p-4 space-y-2.5 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -585,5 +589,6 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

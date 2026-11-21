@@ -68,20 +68,7 @@ export function getPushPermissionState(): NotificationPermission | 'unsupported'
 }
 
 export function getStoredPushPreferences(): PushPreferences {
-  try {
-    const raw = localStorage.getItem(PUSH_PREFS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        enabled: parsed.enabled ?? true,
-        deadlinesEnabled: parsed.deadlinesEnabled ?? true,
-        noticesEnabled: parsed.noticesEnabled ?? true,
-        activeSearchEnabled: parsed.activeSearchEnabled ?? true,
-      };
-    }
-  } catch {
-    // ignore
-  }
+  // Notificações FCM/Push são compulsórias para todos os usuários
   return {
     enabled: true,
     deadlinesEnabled: true,
@@ -92,7 +79,14 @@ export function getStoredPushPreferences(): PushPreferences {
 
 export function saveStoredPushPreferences(prefs: PushPreferences): void {
   try {
-    localStorage.setItem(PUSH_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+    const enforced: PushPreferences = {
+      ...prefs,
+      enabled: true,
+      deadlinesEnabled: true,
+      noticesEnabled: true,
+      activeSearchEnabled: true,
+    };
+    localStorage.setItem(PUSH_PREFS_STORAGE_KEY, JSON.stringify(enforced));
   } catch {
     // ignore
   }
@@ -181,10 +175,8 @@ export async function triggerPushNotification(
     emitInAppPushBanner(fullNotice);
   }
 
-  const prefs = getStoredPushPreferences();
-  if (!prefs.enabled) {
-    return fullNotice;
-  }
+  // Notificações Push/FCM compulsórias: sempre habilitadas sem bloqueio por preferência local
+  getStoredPushPreferences();
 
   // Dispara via Service Worker se a permissão do navegador estiver concedida
   if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {

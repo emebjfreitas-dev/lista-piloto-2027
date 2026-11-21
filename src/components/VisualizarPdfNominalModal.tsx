@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { ClassGroup, Student, UserRole } from '../types';
 import { StudentAvatar } from './StudentAvatar';
 import { getActiveUserAuthHeadersAsync } from '../services/db';
+import { ModalPortal } from './ui/ModalPortal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import {
   AlertCircle,
   Download,
@@ -99,6 +101,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
   const [pdfLoading, setPdfLoading] = useState<boolean>(false);
   const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<boolean>(false);
+  useModalScrollLock(isOpen && Boolean(student));
 
   const rawUrl = student?.fichaPdfDriveUrl || '';
   const rawId = student?.fichaPdfDriveId || '';
@@ -226,14 +229,15 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
 
   if (!hasPdf) {
     return (
-      <div
-        onClick={onClose}
-        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
-      >
+      <ModalPortal>
         <div
-          onClick={(e) => e.stopPropagation()}
-          className="modal-shell w-full max-w-lg rounded-2xl p-5 sm:p-6 space-y-4 max-h-[88dvh] overflow-y-auto animate-apple-pop"
+          onClick={onClose}
+          className="fixed inset-0 z-[120] overflow-hidden flex items-center justify-center p-3 sm:p-5 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
         >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="modal-shell w-full max-w-lg rounded-2xl p-5 sm:p-6 space-y-4 max-h-[88dvh] modal-scroll-body animate-apple-pop"
+          >
           <div className="flex items-start justify-between gap-3 pb-2">
             <div className="flex items-center gap-3.5 min-w-0">
               <div className="w-11 h-11 rounded-xl bg-rose-100 text-[#9f1239] flex items-center justify-center shrink-0">
@@ -319,18 +323,20 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
           </div>
         </div>
       </div>
+      </ModalPortal>
     );
   }
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="modal-shell w-full max-w-5xl rounded-2xl overflow-hidden flex flex-col max-h-[90dvh] animate-apple-pop"
+        onClick={onClose}
+        className="fixed inset-0 z-[120] overflow-hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="modal-shell w-full max-w-5xl rounded-2xl overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
+        >
         {/* Cabeçalho */}
         <div className="modal-header-surface px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -459,5 +465,6 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

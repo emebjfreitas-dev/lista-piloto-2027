@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   ActiveSearchOutcomeStatus,
   AuthorizedUser,
@@ -16,6 +16,9 @@ import {
 import { resolveGuardianRelationshipInfo } from '../utils/genderDictionary';
 import { SCHOOL_NAME } from '../data/mockData';
 import { buildWhatsAppLinksFromPhoneString } from './VisualizarPdfNominalModal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
+import { PaginationBar } from './ui/PaginationBar';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
@@ -253,9 +256,14 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   const [viewAllClassesMode, setViewAllClassesMode] = useState(
     !isPeb1 && availableClasses.length > 1
   );
+  const [selectedClassFilterId, setSelectedClassFilterId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedStudentKey, setExpandedStudentKey] = useState<string | null>(null);
   const [isFamiliesModalOpen, setIsFamiliesModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAllUnreadFeedbacks, setShowAllUnreadFeedbacks] = useState(false);
+  const listSectionRef = useRef<HTMLDivElement | null>(null);
+  const PAGE_SIZE = 15;
 
   const familyScopeClasses = useMemo(
     () => (availableClasses.length > 0 ? availableClasses : [classGroup]),
@@ -412,6 +420,9 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   const filteredEntries = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     const list = scopedEntries.filter(({ cls, student, occurrences }) => {
+      if (!isPeb1 && viewAllClassesMode && selectedClassFilterId !== 'all' && cls.id !== selectedClassFilterId) {
+        return false;
+      }
       if (filterMode === 'com_ocorrencia' && occurrences.length === 0) return false;
       if (
         filterMode === 'com_feedback' &&
@@ -446,7 +457,29 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       if (aPending !== bPending) return bPending - aPending;
       return 0;
     });
-  }, [scopedEntries, searchQuery, filterMode]);
+  }, [scopedEntries, searchQuery, filterMode, isPeb1, viewAllClassesMode, selectedClassFilterId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setExpandedStudentKey(null);
+  }, [filterMode, searchQuery, viewAllClassesMode, selectedClassFilterId, classGroup.id]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedEntries = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredEntries.slice(start, start + PAGE_SIZE);
+  }, [filteredEntries, safePage]);
+
+  const handlePageChange = (nextPage: number) => {
+    setCurrentPage(nextPage);
+    setExpandedStudentKey(null);
+    if (listSectionRef.current) {
+      listSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const getOrInitAdminDraft = (occ: ConsecutiveAbsenceOccurrence): AdminFeedbackDraft => {
     const existing = adminFeedbackDrafts[occ.id];
@@ -485,8 +518,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
   };
 
   // --- AÇÕES EXCLUSIVAS PEB I ---
-  const handleToggleDraftDay = (compositeKey: string, dayKey: string) => {
-    if (!canRequestSecretariaContact) return;
+  const handleToggleDraftDay = (compositeKey: string, dayKey: string, isAlreadyReported: boolean) => {
+    if (!canRequestSecretariaContact || isAlreadyReported) return;
     setDraftSelectedDaysByStudent((prev) => {
       const current = prev[compositeKey] || [];
       const exists = current.includes(dayKey);
@@ -751,6 +784,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
     return { cls, student, occurrences, activeOcc };
   }, [readingOccurrenceModal, scopedEntries]);
 
+  useModalScrollLock(Boolean(activeModalData));
+
   const buildStudentContactData = (
     cls: ClassGroup,
     student: Student,
@@ -973,29 +1008,47 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
           </button>
         </div>
 
-        {/* Busca Rápida */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={
-              isPeb1
-                ? 'Buscar estudante da sua turma por nome ou número...'
-                : 'Buscar por estudante, turma, professor(a) ou RA...'
-            }
-            className="w-full h-10 pl-10 pr-9 bg-[#edf2f7] text-slate-950 placeholder:text-slate-600 text-sm rounded-xl focus:bg-white transition-all duration-200"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-950 cursor-pointer p-1"
-              aria-label="Limpar busca"
+        {/* Busca Rápida + Filtro Rápido de Turma (Modo Todas) */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 min-w-0">
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 text-slate-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                isPeb1
+                  ? 'Buscar estudante da sua turma por nome ou número...'
+                  : 'Buscar por estudante, turma, professor(a) ou RA...'
+              }
+              className="w-full h-10 pl-10 pr-9 bg-[#edf2f7] text-slate-950 placeholder:text-slate-600 text-sm rounded-xl focus:bg-white transition-all duration-200"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-950 cursor-pointer p-1"
+                aria-label="Limpar busca"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {!isPeb1 && viewAllClassesMode && availableClasses.length > 1 && (
+            <select
+              value={selectedClassFilterId}
+              onChange={(e) => setSelectedClassFilterId(e.target.value)}
+              aria-label="Filtrar fila por turma"
+              className="h-10 px-3 rounded-xl bg-[#edf2f7] text-slate-950 text-xs sm:text-sm font-semibold cursor-pointer shrink-0 sm:max-w-[230px]"
             >
-              <X className="w-4 h-4" />
-            </button>
+              <option value="all">Todas as Turmas ({availableClasses.length})</option>
+              {availableClasses.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name} · {cls.shift.replace('Turno ', '')}
+                </option>
+              ))}
+            </select>
           )}
         </div>
       </section>
@@ -1003,7 +1056,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       {/* Destaque para PEB I: Devolutivas Novas da Secretaria aguardando ciência */}
       {isPeb1 && summaryStats.unreadFeedbacksForTeacher.length > 0 && (
         <section className="bg-emerald-100/75 rounded-2xl p-4 space-y-3 min-w-0 shadow-[0_8px_24px_-10px_rgba(4,120,87,0.18)]">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-sm sm:text-base font-bold text-emerald-950">
                 Novos Retornos da Secretaria ({summaryStats.unreadFeedbacksForTeacher.length})
@@ -1012,10 +1065,24 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 A equipe administrativa contatou as famílias abaixo. Leia a devolutiva e confirme ciência.
               </p>
             </div>
+            {summaryStats.unreadFeedbacksForTeacher.length > 4 && (
+              <button
+                type="button"
+                onClick={() => setShowAllUnreadFeedbacks((prev) => !prev)}
+                className="min-h-[34px] px-3 rounded-xl bg-white text-emerald-950 text-xs font-semibold cursor-pointer shrink-0"
+              >
+                {showAllUnreadFeedbacks
+                  ? 'Mostrar 4'
+                  : `Ver todos (${summaryStats.unreadFeedbacksForTeacher.length})`}
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-            {summaryStats.unreadFeedbacksForTeacher.map(({ cls, student, occ }) => (
+            {(showAllUnreadFeedbacks
+              ? summaryStats.unreadFeedbacksForTeacher
+              : summaryStats.unreadFeedbacksForTeacher.slice(0, 4)
+            ).map(({ cls, student, occ }) => (
               <div
                 key={`unread-${occ.id}`}
                 className="bg-white rounded-xl p-3.5 space-y-2.5 flex flex-col justify-between shadow-[0_6px_18px_-8px_rgba(9,15,29,0.08)]"
@@ -1062,7 +1129,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
       )}
 
       {/* Lista Principal de Estudantes / Fila de Atendimento */}
-      <div className="space-y-3">
+      <div ref={listSectionRef} className="space-y-3 scroll-mt-24">
         {filteredEntries.length === 0 ? (
           <div className="p-8 text-center space-y-2 bg-white rounded-2xl shadow-[0_8px_28px_-10px_rgba(9,15,29,0.08)]">
             <p className="text-sm sm:text-base font-bold text-slate-950">
@@ -1088,7 +1155,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             )}
           </div>
         ) : (
-          filteredEntries.map(({ cls, student, occurrences, totalConsecutiveDaysYear }) => {
+          paginatedEntries.map(({ cls, student, occurrences, totalConsecutiveDaysYear }) => {
             const compositeKey = `${cls.id}_${student.id}`;
             const isExpanded = expandedStudentKey === compositeKey;
             const hasOccurrences = occurrences.length > 0;
@@ -1606,24 +1673,39 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-1.5">
-                          {recentSchoolDays.map((day) => {
-                            const isSelected = draftDays.includes(day.key);
-                            return (
-                              <button
-                                key={day.key}
-                                type="button"
-                                onClick={() => handleToggleDraftDay(compositeKey, day.key)}
-                                className={`min-h-[38px] px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center justify-between gap-1 cursor-pointer transition-all duration-200 active:scale-[0.97] tabular-nums ${
-                                  isSelected
-                                    ? 'bg-[#be123c] text-white shadow-sm'
-                                    : 'bg-[#edf2f7] text-slate-950 hover:bg-[#e2e8f0]'
-                                }`}
-                              >
-                                <span>{day.fullLabel}</span>
-                                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
-                              </button>
-                            );
-                          })}
+                          {(() => {
+                            const alreadyReportedDates = new Set<string>();
+                            occurrences.forEach((occ) => {
+                              (occ.selectedDates || []).forEach((d) => alreadyReportedDates.add(d));
+                            });
+                            return recentSchoolDays.map((day) => {
+                              const isAlreadyReported = alreadyReportedDates.has(day.key);
+                              const isSelected = draftDays.includes(day.key);
+                              return (
+                                <button
+                                  key={day.key}
+                                  type="button"
+                                  disabled={isAlreadyReported}
+                                  onClick={() => handleToggleDraftDay(compositeKey, day.key, isAlreadyReported)}
+                                  title={isAlreadyReported ? 'Este dia já foi reportado em solicitação anterior' : day.fullLabel}
+                                  className={`min-h-[38px] px-2.5 py-1.5 rounded-lg font-semibold text-xs flex items-center justify-between gap-1 transition-all duration-200 tabular-nums ${
+                                    isAlreadyReported
+                                      ? 'bg-slate-200 text-slate-500 opacity-60 cursor-not-allowed line-through'
+                                      : isSelected
+                                      ? 'bg-[#be123c] text-white shadow-sm cursor-pointer active:scale-[0.97]'
+                                      : 'bg-[#edf2f7] text-slate-950 hover:bg-[#e2e8f0] cursor-pointer active:scale-[0.97]'
+                                  }`}
+                                >
+                                  <span>{day.fullLabel}</span>
+                                  {isAlreadyReported ? (
+                                    <span className="text-[9.5px] font-bold text-slate-500 uppercase">Já reportado</span>
+                                  ) : isSelected ? (
+                                    <Check className="w-3.5 h-3.5 shrink-0" />
+                                  ) : null}
+                                </button>
+                              );
+                            });
+                          })()}
                         </div>
 
                         <div className="space-y-1.5">
@@ -1691,76 +1773,88 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             );
           })
         )}
+
+        <PaginationBar
+          currentPage={safePage}
+          totalItems={filteredEntries.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={handlePageChange}
+          itemLabel="estudantes"
+        />
       </div>
 
-      {/* Pop-up Compacto de Leitura / Atendimento Rápido */}
+      {/* Pop-up Compacto de Leitura / Atendimento Rápido (Renderizado em Portal acima de Header/BottomNav) */}
       {activeModalData && (
-        <div
-          onClick={() => setReadingOccurrenceModal(null)}
-          className="fixed inset-0 z-[85] flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
-        >
+        <ModalPortal>
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white w-full max-w-lg rounded-2xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.38)] overflow-hidden flex flex-col max-h-[88dvh] min-w-0 animate-apple-pop"
+            onClick={() => setReadingOccurrenceModal(null)}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Solicitação de busca ativa — ${activeModalData.student.name}`}
+            className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-sm overflow-hidden animate-backdrop-in"
           >
-            <div className="px-4 py-3.5 bg-[#0b3b8c] text-white flex items-center justify-between gap-2.5 shrink-0">
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <StudentAvatar student={activeModalData.student} size="md" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs text-blue-100 tabular-nums truncate">
-                    {activeModalData.cls.name} · Nº{' '}
-                    {activeModalData.student.number.toString().padStart(2, '0')} ·{' '}
-                    {activeModalData.occurrences.length} solicitação(ões)
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white w-full max-w-lg rounded-2xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.45)] overflow-hidden flex flex-col max-h-[86dvh] min-w-0 animate-apple-pop"
+            >
+              <div className="px-4 py-3.5 bg-[#0b3b8c] text-white flex items-center justify-between gap-2.5 shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <StudentAvatar student={activeModalData.student} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-blue-100 tabular-nums truncate">
+                      {activeModalData.cls.name} · Nº{' '}
+                      {activeModalData.student.number.toString().padStart(2, '0')} ·{' '}
+                      {activeModalData.occurrences.length} solicitação(ões)
+                    </div>
+                    <h2 className="text-sm sm:text-base font-bold text-white truncate">
+                      {activeModalData.student.name}
+                    </h2>
                   </div>
-                  <h2 className="text-sm sm:text-base font-bold text-white truncate">
-                    {activeModalData.student.name}
-                  </h2>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setReadingOccurrenceModal(null)}
+                  aria-label="Fechar pop-up"
+                  className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setReadingOccurrenceModal(null)}
-                aria-label="Fechar pop-up"
-                className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center cursor-pointer shrink-0 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+              {activeModalData.occurrences.length > 1 && (
+                <div className="px-4 py-2 bg-[#edf2f7] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+                  <span className="text-xs font-semibold text-slate-700 shrink-0 mr-1">
+                    Solicitações:
+                  </span>
+                  {activeModalData.occurrences.map((occ) => {
+                    const isCurrent = occ.id === activeModalData.activeOcc.id;
+                    return (
+                      <button
+                        key={occ.id}
+                        type="button"
+                        onClick={() => {
+                          setIsEditingModalFeedback(false);
+                          setReadingOccurrenceModal({
+                            cls: activeModalData.cls,
+                            student: activeModalData.student,
+                            occurrenceId: occ.id,
+                          });
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 shrink-0 tabular-nums ${
+                          isCurrent
+                            ? 'bg-[#0b3b8c] text-white shadow-xs'
+                            : 'bg-white text-slate-900 hover:bg-slate-100'
+                        }`}
+                      >
+                        {occ.sequenceNumber}ª ({occ.selectedDates.length}d)
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
-            {activeModalData.occurrences.length > 1 && (
-              <div className="px-4 py-2 bg-[#edf2f7] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-                <span className="text-xs font-semibold text-slate-700 shrink-0 mr-1">
-                  Solicitações:
-                </span>
-                {activeModalData.occurrences.map((occ) => {
-                  const isCurrent = occ.id === activeModalData.activeOcc.id;
-                  return (
-                    <button
-                      key={occ.id}
-                      type="button"
-                      onClick={() => {
-                        setIsEditingModalFeedback(false);
-                        setReadingOccurrenceModal({
-                          cls: activeModalData.cls,
-                          student: activeModalData.student,
-                          occurrenceId: occ.id,
-                        });
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 shrink-0 tabular-nums ${
-                        isCurrent
-                          ? 'bg-[#0b3b8c] text-white shadow-xs'
-                          : 'bg-white text-slate-900 hover:bg-slate-100'
-                      }`}
-                    >
-                      {occ.sequenceNumber}ª ({occ.selectedDates.length}d)
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="p-4 overflow-y-auto space-y-3 min-w-0">
+              <div className="p-4 flex-1 min-h-0 modal-scroll-body space-y-3 min-w-0">
               {/* Dias Faltosos e Pedido PEB I */}
               <div className="p-3.5 rounded-xl bg-rose-100/75 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
@@ -2003,6 +2097,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Modal de Busca Ativa: Famílias com Múltiplos Alunos na Escola */}

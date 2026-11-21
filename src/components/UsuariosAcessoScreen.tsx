@@ -28,6 +28,7 @@ import {
   isUserAccessExpired,
   isUserAccessEffectivelyActive,
   formatAccessExpirationDateBR,
+  getStoredOfficialCalendarConfig,
 } from '../services/db';
 import { SyncStatusSnapshot } from '../services/firebaseSync';
 import { StudentAvatar } from './StudentAvatar';
@@ -322,6 +323,9 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   const [activeSection, setActiveSection] = useState<AdminCenterSection>(initialSection);
   const [activeUploadTool, setActiveUploadTool] = useState<AdminUploadTool>(initialUploadTool);
   const [isPhotoStorageModalOpen, setIsPhotoStorageModalOpen] = useState(false);
+  const [activeSchoolYear, setActiveSchoolYear] = useState<number>(
+    () => getStoredOfficialCalendarConfig().year || 2027
+  );
   const [activeSubTab, setActiveSubTab] = useState<SubTabId>(
     initialSubTab || (initialSection === 'seguranca' ? 'seguranca_lgpd' : 'quadro_turmas')
   );
@@ -1474,7 +1478,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
     },
     {
       id: 'calendario',
-      label: 'Calendário 200 Dias',
+      label: 'Ano Letivo & 200 Dias',
       icon: <CalendarDays className="w-4 h-4 shrink-0" />,
     },
     {
@@ -1659,7 +1663,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
   );
 
   return (
-    <div className="flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade text-[#111827] overflow-x-hidden">
+    <div className="flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 animate-gentle-fade text-[#111827] overflow-x-clip">
       {/* Feedback Toast Flutuante Limpo */}
       {feedbackMsg && (
         <div
@@ -1689,7 +1693,7 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
         </div>
       )}
 
-      {/* 1. CABEÇALHO UNIFICADO DA CENTRAL ADMIN (LIMPO E ENXUTO) */}
+      {/* 1. CABEÇALHO UNIFICADO DA CENTRAL ADMINISTRATIVA */}
       <section className="bg-white rounded-3xl px-4 py-4 sm:px-6 sm:py-5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] space-y-4 min-w-0">
         <div className="space-y-1 min-w-0">
           <button
@@ -1701,9 +1705,11 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             <span>Voltar</span>
           </button>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-950 break-words">
-            Central Administrativa — Acesso, Calendário e Segurança
+            Central Administrativa
           </h1>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-700 tabular-nums">
+            <span className="font-semibold text-[#0b3b8c]">Ano Letivo {activeSchoolYear}</span>
+            <span aria-hidden="true">·</span>
             <span>{classes.length} turmas ({manhaTurmasCount} manhã · {tardeTurmasCount} tarde)</span>
             <span aria-hidden="true">·</span>
             <span>{authorizedUsers.length} contas</span>
@@ -3968,21 +3974,9 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
 
               {canManage && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="px-3.5 py-2 rounded-xl bg-[#edf2f7] inline-flex items-center gap-2">
-                    <ToggleSwitch
-                      checked={fcmConfigDraft.autoWindowAlertsEnabled}
-                      onChange={() => {
-                        const next = {
-                          ...fcmConfigDraft,
-                          autoWindowAlertsEnabled: !fcmConfigDraft.autoWindowAlertsEnabled,
-                        };
-                        setFcmConfigDraft(next);
-                        void saveFcmSystemConfiguration(next);
-                      }}
-                      activeText="Alertas Automáticos Ativos"
-                      inactiveText="Alertas Automáticos Pausados"
-                      ariaLabel="Alternar alertas automáticos FCM de fechamento da janela"
-                    />
+                  <div className="px-3.5 py-2 rounded-xl bg-emerald-50 text-[#047857] text-xs font-bold inline-flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#047857]" />
+                    <span>Notificações FCM Compulsórias Ativas</span>
                   </div>
                 </div>
               )}
@@ -4380,8 +4374,15 @@ export const UsuariosAcessoScreen: React.FC<UsuariosAcessoScreenProps> = ({
             userName="Administrador Escolar"
             classes={classes}
             onUpdateClasses={(updatedClasses) => {
+              const latestCal = getStoredOfficialCalendarConfig();
+              if (latestCal?.year) {
+                setActiveSchoolYear(latestCal.year);
+              }
               if (onUpdateClasses) onUpdateClasses(updatedClasses);
-              triggerFeedback('success', 'Calendário oficial de 200 dias publicado e sincronizado com as turmas.');
+              triggerFeedback(
+                'success',
+                `Ano letivo ${latestCal?.year || activeSchoolYear} (200 dias) publicado e sincronizado com as turmas.`
+              );
             }}
             onNavigateToSheet={() => onNavigateScreen?.('planilha')}
             onBack={() => handleSelectSection('acesso', 'quadro_turmas')}

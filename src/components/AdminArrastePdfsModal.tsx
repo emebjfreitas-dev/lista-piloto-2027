@@ -9,6 +9,8 @@ import {
 } from '../services/db';
 import { isSupportedPdfFile, collectFilesFromDataTransfer } from '../utils/photoCompressor';
 import { validateAndOptimizePdf } from '../utils/pdfOptimizer';
+import { ModalPortal } from './ui/ModalPortal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 import {
   ArrowRight,
   CheckCheck,
@@ -90,6 +92,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
   const [pickerSearch, setPickerSearch] = useState('');
   const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
+  useModalScrollLock((isOpen && !embedded) || Boolean(pickerItemId));
 
   const [pipelinePhase, setPipelinePhase] = useState<'idle' | 'optimizing' | 'uploading' | 'done'>('idle');
   const [optimizeProgress, setOptimizeProgress] = useState({
@@ -1304,59 +1307,61 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
 
       {/* Modal leve sob demanda de estudante */}
       {pickerItemId && (
-        <div
-          onClick={() => setPickerItemId(null)}
-          className="fixed inset-0 z-[90] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop-in"
-        >
+        <ModalPortal>
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="modal-shell w-full max-w-md rounded-3xl overflow-hidden flex flex-col max-h-[80vh] animate-apple-pop"
+            onClick={() => setPickerItemId(null)}
+            className="fixed inset-0 z-[135] overflow-hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop-in"
           >
-            <div className="p-4 modal-header-surface flex items-center justify-between gap-2">
-              <h4 className="text-sm font-bold text-slate-950">Vincular Estudante Manualmente</h4>
-              <button
-                type="button"
-                onClick={() => setPickerItemId(null)}
-                className="w-8 h-8 rounded-full bg-white hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer"
-                aria-label="Fechar seleção"
-              >
-                <X className="w-[18px] h-[18px]" strokeWidth={2} />
-              </button>
-            </div>
-            <div className="p-3 bg-[#f4f7fb]">
-              <input
-                type="search"
-                autoFocus
-                value={pickerSearch}
-                onChange={(e) => setPickerSearch(e.target.value)}
-                placeholder="Buscar por nome, turma ou RA..."
-                className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs text-slate-950"
-              />
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {pickerResults.map(({ student, classGroup }) => (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="modal-shell w-full max-w-md rounded-3xl overflow-hidden flex flex-col max-h-[82dvh] animate-apple-pop"
+            >
+              <div className="p-4 modal-header-surface flex items-center justify-between gap-2">
+                <h4 className="text-sm font-bold text-slate-950">Vincular Estudante Manualmente</h4>
                 <button
-                  key={student.id}
                   type="button"
-                  onClick={() => handleManualStudentChange(pickerItemId, student.id)}
-                  className="w-full text-left px-3.5 py-2.5 rounded-xl even:bg-[#f4f7fb] hover:bg-[#dce7fb] transition-colors cursor-pointer flex items-center justify-between gap-2"
+                  onClick={() => setPickerItemId(null)}
+                  className="w-8 h-8 rounded-full bg-white hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer"
+                  aria-label="Fechar seleção"
                 >
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-950 truncate">{student.name}</p>
-                    <p className="text-[11px] font-medium text-slate-700">
-                      {classGroup.turmaAbrev || classGroup.name} · Nº {student.number.toString().padStart(2, '0')} · RA{' '}
-                      {student.ra || '—'}
-                    </p>
-                  </div>
-                  <ArrowRight className="w-[18px] h-[18px] text-slate-600 shrink-0" strokeWidth={2} />
+                  <X className="w-[18px] h-[18px]" strokeWidth={2} />
                 </button>
-              ))}
-              {pickerResults.length === 0 && (
-                <p className="p-6 text-center text-xs font-medium text-slate-700">Nenhum estudante encontrado.</p>
-              )}
+              </div>
+              <div className="p-3 bg-[#f4f7fb]">
+                <input
+                  type="search"
+                  autoFocus
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  placeholder="Buscar por nome, turma ou RA..."
+                  className="w-full min-h-[40px] px-3 rounded-xl bg-white text-xs text-slate-950"
+                />
+              </div>
+              <div className="flex-1 min-h-0 modal-scroll-body p-2 space-y-1">
+                {pickerResults.map(({ student, classGroup }) => (
+                  <button
+                    key={student.id}
+                    type="button"
+                    onClick={() => handleManualStudentChange(pickerItemId, student.id)}
+                    className="w-full text-left px-3.5 py-2.5 rounded-xl even:bg-[#f4f7fb] hover:bg-[#dce7fb] transition-colors cursor-pointer flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-950 truncate">{student.name}</p>
+                      <p className="text-[11px] font-medium text-slate-700">
+                        {classGroup.turmaAbrev || classGroup.name} · Nº {student.number.toString().padStart(2, '0')} · RA{' '}
+                        {student.ra || '—'}
+                      </p>
+                    </div>
+                    <ArrowRight className="w-[18px] h-[18px] text-slate-600 shrink-0" strokeWidth={2} />
+                  </button>
+                ))}
+                {pickerResults.length === 0 && (
+                  <p className="p-6 text-center text-xs font-medium text-slate-700">Nenhum estudante encontrado.</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );
@@ -1364,11 +1369,13 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
   if (embedded) return contentNode;
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[70] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
-    >
-      {contentNode}
-    </div>
+    <ModalPortal>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-[115] overflow-hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
+      >
+        {contentNode}
+      </div>
+    </ModalPortal>
   );
 };

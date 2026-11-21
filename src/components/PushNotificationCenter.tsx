@@ -32,7 +32,7 @@ import {
 } from '../services/pushNotificationService';
 import {
   registerDeviceForFcm,
-  unregisterDeviceFromFcm,
+  setupCompulsoryFcmAutoActivation,
   subscribeToFcmNotifications,
   evaluateAndTriggerWindowClosingReminder,
   evaluateAndTriggerTeacherEndOfDayReminder,
@@ -41,6 +41,7 @@ import {
   dispatchWindowClosingFcmAlert,
   getFcmCapabilitySnapshot,
 } from '../services/fcmService';
+import { ModalPortal } from './ui/ModalPortal';
 
 interface PushNotificationCenterProps {
   visibleClasses: ClassGroup[];
@@ -157,14 +158,14 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
       },
     });
 
-    // Se a permissão já estiver concedida, garante registro atualizado do token FCM no servidor
-    if (getPushPermissionState() === 'granted') {
-      registerDeviceForFcm({
-        userEmail,
-        userName: userName || userEmail.split('@')[0],
-        userRole,
-        assignedClassIds: effectiveAssignedIds,
-      }).then((res) => {
+    // Habilitação compulsória de FCM para todos os usuários (automática ao entrar e no primeiro toque se o navegador exigir interação)
+    const unsubscribeCompulsoryFcm = setupCompulsoryFcmAutoActivation({
+      userEmail,
+      userName: userName || userEmail.split('@')[0],
+      userRole,
+      teacherRoleType,
+      assignedClassIds: effectiveAssignedIds,
+      onResult: (res) => {
         if (!mounted) return;
         setSwActive(res.swReady);
         setPermission(res.permission);
@@ -174,8 +175,8 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
         } else if (res.swReady) {
           setFcmChannelLabel('SW Push Ativo');
         }
-      });
-    }
+      },
+    });
 
     return () => {
       mounted = false;
@@ -184,8 +185,9 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
       }
       unsubscribeBanner();
       unsubscribeFcm();
+      unsubscribeCompulsoryFcm();
     };
-  }, [userEmail, userRole, userName, assignedClassIds, visibleClasses, onNavigateScreen]);
+  }, [userEmail, userRole, teacherRoleType, userName, assignedClassIds, visibleClasses, onNavigateScreen]);
 
   // Monitora automaticamente o fechamento da janela e dispara lembrete de fim de turno ao educador
   useEffect(() => {
@@ -318,7 +320,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
     [attendanceWindowConfig, visibleClasses, userRole, teacherRoleType, assignedClassIds]
   );
 
-  const handleEnableOrTestPush = async () => {
+  const handleTestOrRefreshCompulsoryPush = async () => {
     if (isRegisteringFcm) return;
     setIsRegisteringFcm(true);
     setFcmFeedbackMsg(null);
@@ -332,6 +334,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
         userEmail,
         userName: userName || userEmail.split('@')[0],
         userRole,
+        teacherRoleType,
         assignedClassIds: effectiveAssignedIds,
       });
       const isPushActive = Boolean(res.fcmToken || res.hasPushSubscription);
@@ -347,13 +350,8 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
           ? 'SW Push Ativo'
           : 'Push Web'
       );
-      setFcmFeedbackMsg(
-        res.ok && !isStrictAdmin
-          ? 'Dispositivo habilitado para receber notificações push da Direção.'
-          : res.message
-      );
+      setFcmFeedbackMsg(res.message);
 
-      // Apenas Admin pode acionar disparo de teste Push
       if (res.ok && isStrictAdmin) {
         await triggerPushNotification(
           {
@@ -371,13 +369,6 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
     } finally {
       setIsRegisteringFcm(false);
     }
-  };
-
-  const handleDisableFcmDevice = async () => {
-    await unregisterDeviceFromFcm(userEmail);
-    setHasFcmToken(false);
-    setFcmChannelLabel('Push Pausado');
-    setFcmFeedbackMsg('Notificações FCM pausadas neste dispositivo.');
   };
 
   const handleQuickWindowClosingAlert = async () => {
@@ -537,7 +528,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
 
         {/* Popover Notification Center */}
         {isOpen && (
-          <div className="animate-apple-pop fixed sm:absolute right-3 sm:right-0 top-[68px] sm:top-auto sm:mt-2.5 w-[calc(100vw-24px)] max-w-[410px] bg-white/98 backdrop-blur-2xl rounded-3xl shadow-[0_22px_54px_rgba(9,15,29,0.22)] p-4 z-50 space-y-3">
+          <div className="animate-apple-pop fixed sm:absolute right-3 sm:right-0 top-[68px] sm:top-auto sm:mt-2.5 w-[calc(100vw-24px)] max-w-[410px] max-h-[calc(100dvh-9.5rem)] overflow-y-auto bg-white/98 backdrop-blur-2xl rounded-3xl shadow-[0_22px_54px_rgba(9,15,29,0.22)] p-4 z-50 space-y-3">
             {/* Cabeçalho */}
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -577,60 +568,55 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
               )}
             </div>
 
-            {/* Barra de Ativação de Recebimento Push */}
-            <div className="p-3 rounded-2xl bg-[#f4f7fb] space-y-2">
+            {/* Status Compulsório de Recebimento FCM (sem opção de desativar) */}
+            <div
+              className={`p-3 rounded-2xl space-y-2 ${
+                permission === 'denied' ? 'bg-rose-50' : 'bg-[#f4f7fb]'
+              }`}
+            >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <span className="text-xs font-bold text-slate-950 block break-words leading-snug">
-                    {permission === 'granted'
-                      ? hasFcmToken
-                        ? 'Dispositivo conectado ao FCM'
-                        : 'Recebimento de Push ativo'
-                      : 'Ativar recebimento de Push (FCM)'}
+                    {permission === 'denied'
+                      ? 'Notificações Obrigatórias Bloqueadas no Navegador'
+                      : permission === 'granted'
+                      ? 'Notificações Obrigatórias FCM Ativas'
+                      : 'Ativando Notificações Obrigatórias (FCM)...'}
                   </span>
                   <span className="text-xs text-slate-700 block break-words leading-snug">
-                    {permission === 'granted'
-                      ? isStrictAdmin
-                        ? 'Pronto para testar e acompanhar notificações'
-                        : 'Você receberá alertas enviados pela Direção'
-                      : 'Ative para receber avisos importantes da escola'}
+                    {permission === 'denied'
+                      ? 'Alertas FCM são compulsórios. Libere as notificações no cadeado do navegador para receber avisos em tempo real.'
+                      : 'Todo usuário recebe automaticamente alertas de busca ativa, retornos e fechamento de janela.'}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
+                {permission === 'denied' ? (
                   <button
                     type="button"
                     disabled={isRegisteringFcm}
-                    onClick={handleEnableOrTestPush}
-                    className={`min-h-[36px] px-3.5 rounded-xl text-xs font-bold shrink-0 cursor-pointer transition-colors duration-100 active:scale-95 disabled:opacity-60 ${
-                      permission === 'granted'
-                        ? 'bg-[#1d1d1f] text-white hover:bg-black'
-                        : 'bg-[#0071e3] text-white hover:bg-[#0077ed]'
-                    }`}
+                    onClick={handleTestOrRefreshCompulsoryPush}
+                    className="min-h-[34px] px-3 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold shrink-0 cursor-pointer transition-colors disabled:opacity-60"
                   >
-                    {isRegisteringFcm
-                      ? 'Conectando...'
-                      : permission === 'granted'
-                      ? isStrictAdmin
-                        ? 'Testar FCM'
-                        : 'Atualizar FCM'
-                      : 'Ativar FCM'}
+                    {isRegisteringFcm ? 'Verificando...' : 'Verificar Permissão'}
                   </button>
-                  {permission === 'granted' && hasFcmToken && (
-                    <button
-                      type="button"
-                      onClick={handleDisableFcmDevice}
-                      title="Pausar inscrição FCM neste dispositivo"
-                      className="min-h-[36px] px-3 rounded-xl bg-white hover:bg-rose-100 text-slate-700 hover:text-rose-950 text-xs font-semibold cursor-pointer transition-all duration-150 active:scale-[0.97]"
-                    >
-                      Pausar
-                    </button>
-                  )}
-                </div>
+                ) : isStrictAdmin && permission === 'granted' ? (
+                  <button
+                    type="button"
+                    disabled={isRegisteringFcm}
+                    onClick={handleTestOrRefreshCompulsoryPush}
+                    className="min-h-[34px] px-3 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold shrink-0 cursor-pointer transition-colors disabled:opacity-60"
+                  >
+                    {isRegisteringFcm ? 'Testando...' : 'Testar FCM'}
+                  </button>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-[#047857] text-[11px] font-bold shrink-0">
+                    Obrigatório
+                  </span>
+                )}
               </div>
 
               {fcmFeedbackMsg && (
-                <p className="text-xs font-medium text-[#374151] bg-white/80 rounded-xl px-3 py-2 break-words">
+                <p className="text-xs font-medium text-slate-700 bg-white/90 rounded-xl px-3 py-2 break-words">
                   {fcmFeedbackMsg}
                 </p>
               )}
@@ -889,60 +875,62 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
 
       {/* Banner Flutuante no Topo — Desaparece ao usuário dar ciência */}
       {activeBanner && (
-        <div className="fixed top-[68px] right-4 left-4 sm:left-auto sm:w-[390px] z-[90] animate-gentle-fade">
-          <div className="bg-[#111827]/95 backdrop-blur-2xl text-white p-3.5 rounded-3xl shadow-[0_18px_42px_rgba(0,0,0,0.35)] space-y-2.5">
-            <div
-              onClick={() => {
-                const target = activeBanner;
-                setActiveBanner(null);
-                handleNoticeClick(target);
-              }}
-              className="flex items-start gap-3 cursor-pointer"
-            >
-              <div className="w-9 h-9 rounded-2xl bg-[#0071e3]/25 text-[#60a5fa] flex items-center justify-center shrink-0">
-                <BellRing className="w-4 h-4 stroke-[1.6]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
-                    Notificação Push · Agora
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveBanner(null);
-                    }}
-                    aria-label="Minimizar aviso"
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white cursor-pointer"
-                  >
-                    <X className="w-4 h-4 stroke-[1.6]" />
-                  </button>
-                </div>
-                <p className="text-sm font-bold text-white leading-snug mt-0.5 break-words">
-                  {activeBanner.title}
-                </p>
-                <p className="text-xs text-white/85 leading-snug mt-0.5 break-words">
-                  {activeBanner.body}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-0.5">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAcknowledgeNotice(activeBanner.id);
+        <ModalPortal>
+          <div className="fixed top-[68px] right-4 left-4 sm:left-auto sm:w-[390px] z-[125] animate-gentle-fade">
+            <div className="bg-[#111827]/95 backdrop-blur-2xl text-white p-3.5 rounded-3xl shadow-[0_18px_42px_rgba(0,0,0,0.35)] space-y-2.5">
+              <div
+                onClick={() => {
+                  const target = activeBanner;
+                  setActiveBanner(null);
+                  handleNoticeClick(target);
                 }}
-                className="min-h-[32px] px-3 rounded-xl bg-white/15 hover:bg-white text-white hover:text-[#111827] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="flex items-start gap-3 cursor-pointer"
               >
-                <Check className="w-3.5 h-3.5 stroke-[1.8]" />
-                <span>Dar ciência</span>
-              </button>
+                <div className="w-9 h-9 rounded-2xl bg-[#0071e3]/25 text-[#60a5fa] flex items-center justify-center shrink-0">
+                  <BellRing className="w-4 h-4 stroke-[1.6]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-white/70">
+                      Notificação Push · Agora
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveBanner(null);
+                      }}
+                      aria-label="Minimizar aviso"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-white/70 hover:text-white cursor-pointer"
+                    >
+                      <X className="w-4 h-4 stroke-[1.6]" />
+                    </button>
+                  </div>
+                  <p className="text-sm font-bold text-white leading-snug mt-0.5 break-words">
+                    {activeBanner.title}
+                  </p>
+                  <p className="text-xs text-white/85 leading-snug mt-0.5 break-words">
+                    {activeBanner.body}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAcknowledgeNotice(activeBanner.id);
+                  }}
+                  className="min-h-[32px] px-3 rounded-xl bg-white/15 hover:bg-white text-white hover:text-[#111827] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[1.8]" />
+                  <span>Dar ciência</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </>
   );

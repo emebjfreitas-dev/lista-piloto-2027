@@ -10,6 +10,8 @@ import {
   deleteDoc,
   writeBatch,
   onSnapshot,
+  query,
+  limit,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
@@ -519,6 +521,41 @@ export async function monitorFirestoreIntegrityOnBoot(options?: {
             protectedLocalWatermarkMs: localWatermark,
             reason:
               'Epoch/dados locais são mais recentes que o servidor remoto. Base local protegida contra sobrescrita no boot.',
+          });
+        }
+
+        let remoteHasStudents = false;
+        try {
+          const remoteClassesSnap = await getDocs(
+            query(collection(firestoreDb, 'school_classes_2027'), limit(5))
+          );
+          remoteClassesSnap.forEach((d) => {
+            const data = d.data() as ClassGroup;
+            if (data && Array.isArray(data.students) && data.students.length > 0) {
+              remoteHasStudents = true;
+            }
+          });
+        } catch {
+          // ignore query error
+        }
+
+        if (remoteHasStudents) {
+          return setIntegrityReport({
+            status: 'remote_newer_accepted',
+            connected: true,
+            checkedAtISO,
+            localEpochId: localMeta.epochId,
+            remoteEpochId: remoteEpochId || CLEAN_DB_RESET_EPOCH_ID,
+            localEpochVersion,
+            remoteEpochVersion,
+            localEpochUpdatedAtMs: localMeta.epochUpdatedAtMs,
+            remoteEpochUpdatedAtMs,
+            localClassesUpdatedAtMs: localMeta.classesUpdatedAtMs,
+            remoteClassesUpdatedAtMs,
+            pendingLocalOperations: pendingQueue.length,
+            preventedRemoteOverwrite: false,
+            protectedLocalWatermarkMs: remoteClassesUpdatedAtMs,
+            reason: 'Estudantes salvos detectados no Firestore remoto. Limpeza automática abortada, estado remoto aceito com segurança.',
           });
         }
 

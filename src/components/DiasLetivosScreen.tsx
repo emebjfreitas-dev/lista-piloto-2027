@@ -59,6 +59,8 @@ import {
   saveGoogleSheetsSyncFrequency,
   GoogleSheetsSyncFrequency,
 } from '../services/googleSheetsApi';
+import { ModalPortal } from './ui/ModalPortal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface DiasLetivosScreenProps {
   userRole?: UserRole;
@@ -127,6 +129,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
   // Holidays Management Modal State
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState<boolean>(false);
+  useModalScrollLock(isConfirmModalOpen || isHolidayModalOpen);
   const [editingHoliday, setEditingHoliday] = useState<SchoolHoliday | null>(null);
   const [holidayFormDate, setHolidayFormDate] = useState<string>('');
   const [holidayFormName, setHolidayFormName] = useState<string>('');
@@ -705,30 +708,33 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
           <div className="space-y-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-950">
-                Configurador do Calendário Oficial
+                Configuração de Ano Letivo &amp; Calendário Oficial
               </h2>
               <span className="text-xs font-semibold text-slate-700 tabular-nums">
-                Ano {selectedYear} · LDB 200 Dias · {classes.length} turmas
+                Ativo: {calendarConfig.year} · Rascunho: {selectedYear} · LDB 200 Dias · {classes.length} turmas
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-700">
-              Clique nos dias da grade para alternar datas letivas, ajuste feriados e publique direto para todas as turmas.
+              Defina o ano letivo vigente, clique nos dias da grade para alternar datas letivas, ajuste feriados e publique para todas as turmas.
             </p>
           </div>
 
-          {/* Controles Compactos: Ano + Sync + Restaurar */}
+          {/* Controles Compactos: Ano Letivo + Sync */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <select
-              aria-label="Selecionar ano letivo"
-              value={selectedYear}
-              onChange={(e) => handleYearChange(Number(e.target.value))}
-              disabled={!isAdmin}
-              className="min-h-[38px] px-3 rounded-xl bg-[#edf2f7] text-xs font-bold text-slate-950 cursor-pointer disabled:opacity-50"
-            >
-              <option value={2026}>Ano Letivo 2026</option>
-              <option value={2027}>Ano Letivo 2027</option>
-              <option value={2028}>Ano Letivo 2028</option>
-            </select>
+            <label className="inline-flex items-center gap-1.5 px-2.5 min-h-[38px] rounded-xl bg-[#edf2f7] text-xs font-bold text-slate-950">
+              <span className="text-slate-700 font-semibold">Ano Letivo:</span>
+              <select
+                aria-label="Selecionar ano letivo"
+                value={selectedYear}
+                onChange={(e) => handleYearChange(Number(e.target.value))}
+                disabled={!isAdmin}
+                className="bg-transparent font-bold text-slate-950 cursor-pointer disabled:opacity-50 outline-none"
+              >
+                <option value={2026}>2026</option>
+                <option value={2027}>2027</option>
+                <option value={2028}>2028</option>
+              </select>
+            </label>
 
             <select
               aria-label="Intervalo de sincronização automática"
@@ -1621,8 +1627,9 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
 
       {/* MODAL: CONFIRMAR PUBLICAÇÃO DOS 200 DIAS */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden animate-apple-pop">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-sm overflow-hidden animate-backdrop-in">
+            <div className="bg-white rounded-3xl max-w-md w-full shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden max-h-[88dvh] flex flex-col animate-apple-pop">
             <div className="p-5 bg-[#f4f7fb] flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-900 flex items-center justify-center shrink-0">
@@ -1682,15 +1689,17 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* MODAL: ADICIONAR / EDITAR FERIADO */}
       {isHolidayModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
-          <form
-            onSubmit={handleSaveHoliday}
-            className="bg-white rounded-3xl max-w-md w-full shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden animate-apple-pop"
-          >
+        <ModalPortal>
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-sm overflow-hidden animate-backdrop-in">
+            <form
+              onSubmit={handleSaveHoliday}
+              className="bg-white rounded-3xl max-w-md w-full shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden max-h-[88dvh] modal-scroll-body animate-apple-pop"
+            >
             <div className="p-4 sm:p-5 bg-[#f4f7fb] flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-950">
                 {editingHoliday ? 'Editar Feriado / Recesso' : 'Novo Feriado / Recesso'}
@@ -1776,6 +1785,7 @@ export const DiasLetivosScreen: React.FC<DiasLetivosScreenProps> = ({
             </div>
           </form>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

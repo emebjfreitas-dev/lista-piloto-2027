@@ -16,6 +16,8 @@ import {
   isUserAccessEffectivelyActive,
   isUserAccessExpired,
 } from '../../services/db';
+import { ModalPortal } from '../ui/ModalPortal';
+import { useModalScrollLock } from '../../hooks/useModalScrollLock';
 
 export type AccessLevelKey = 'admin' | 'usuario' | 'peb2' | 'aee';
 
@@ -94,6 +96,8 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
   onToggleExtraClass,
   onClose,
 }) => {
+  useModalScrollLock(Boolean(user));
+
   if (!user) return null;
 
   const currentLevel = resolveAccessLevel(user);
@@ -101,16 +105,17 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
   const isEffectivelyActive = isUserAccessEffectivelyActive(user);
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4 animate-backdrop-in"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="modal-shell animate-apple-pop bg-white rounded-3xl w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden shadow-2xl min-w-0"
+        className="fixed inset-0 z-[110] bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-5 overflow-hidden animate-backdrop-in"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="modal-shell animate-apple-pop bg-white rounded-3xl w-full max-w-lg max-h-[86dvh] flex flex-col overflow-hidden shadow-2xl min-w-0"
+        >
         <div className="modal-header-surface p-4 sm:p-5 bg-[#f4f7fb] flex items-start justify-between gap-3 min-w-0">
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold text-slate-950 break-words leading-snug">
@@ -128,7 +133,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
           </button>
         </div>
 
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 min-w-0">
+        <div className="p-4 sm:p-5 flex-1 min-h-0 modal-scroll-body space-y-4 min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl surface-secondary bg-[#f2f2f7]">
             <div className="flex items-center gap-2">
               <span
@@ -351,5 +356,6 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

@@ -40,9 +40,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [buttonMounted, setButtonMounted] = useState(false);
   const localFallbackPhoto = `${import.meta.env.BASE_URL || '/'}escola-candelario.jpg`;
   const [failedPhotoUrls, setFailedPhotoUrls] = useState<Record<string, boolean>>({});
-  const [activePhotoIndex, setActivePhotoIndex] = useState<number>(() =>
-    Math.floor(Math.random() * Math.max(1, SCHOOL_WATERMARK_GALLERY.length - 1))
-  );
+  const [photoSlide, setPhotoSlide] = useState<{ active: number; previous: number | null }>(() => ({
+    active: Math.floor(Math.random() * Math.max(1, SCHOOL_WATERMARK_GALLERY.length - 1)),
+    previous: null,
+  }));
 
   const availableGallery = React.useMemo(() => {
     const filtered = SCHOOL_WATERMARK_GALLERY.filter((url) => !failedPhotoUrls[url]);
@@ -56,13 +57,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
-  // Alterna suavemente entre as fotos em alta resolução da EMEB Candelário
+  // Alterna com transição esmaecida contínua (dissolve sobreposto sem cortes) entre fotos da EMEB Candelário
   useEffect(() => {
     if (availableGallery.length <= 1) return;
 
     const interval = setInterval(() => {
-      setActivePhotoIndex((prev) => (prev + 1) % availableGallery.length);
-    }, 7000);
+      setPhotoSlide((prev) => ({
+        previous: prev.active,
+        active: (prev.active + 1) % availableGallery.length,
+      }));
+    }, 7500);
 
     return () => clearInterval(interval);
   }, [availableGallery.length]);
@@ -70,12 +74,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   // Pré-carrega apenas a próxima foto da galeria
   useEffect(() => {
     if (availableGallery.length <= 1) return;
-    const currentIdx = activePhotoIndex % availableGallery.length;
+    const currentIdx = photoSlide.active % availableGallery.length;
     const nextIdx = (currentIdx + 1) % availableGallery.length;
     const preloadImg = new Image();
     preloadImg.referrerPolicy = 'no-referrer';
     preloadImg.src = availableGallery[nextIdx];
-  }, [availableGallery, activePhotoIndex]);
+  }, [availableGallery, photoSlide.active]);
 
   useEffect(() => {
     if (externalError) {
@@ -286,35 +290,44 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  const safeActiveIndex = activePhotoIndex % availableGallery.length;
+  const safeActiveIndex = photoSlide.active % availableGallery.length;
+  const safePrevIndex =
+    photoSlide.previous !== null &&
+    photoSlide.previous % availableGallery.length !== safeActiveIndex
+      ? photoSlide.previous % availableGallery.length
+      : null;
 
   return (
-    <div className="relative min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 overflow-hidden select-none font-sans bg-slate-900">
-      {/* Galeria alternada de fotos em alta resolução da EMEB Prof. Joaquim Candelário de Freitas com leve escurecimento */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-slate-900">
-        {availableGallery.map((photoUrl, idx) => {
-          const isActive = idx === safeActiveIndex;
-          return (
-            <img
-              key={photoUrl}
-              src={photoUrl}
-              alt="EMEB Prof. Joaquim Candelário de Freitas"
-              referrerPolicy="no-referrer"
-              loading={idx === 0 || isActive ? 'eager' : 'lazy'}
-              onError={() => {
-                if (photoUrl !== localFallbackPhoto) {
-                  setFailedPhotoUrls((prev) => ({ ...prev, [photoUrl]: true }));
-                }
-              }}
-              className={`absolute inset-0 w-full h-full object-cover object-center filter brightness-[0.94] contrast-[1.04] saturate-[1.03] transition-all duration-[1600ms] ease-in-out ${
-                isActive ? 'opacity-95 scale-100' : 'opacity-0 scale-[1.03]'
-              }`}
-            />
-          );
-        })}
+    <div className="relative min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 overflow-hidden select-none font-sans bg-[#0a1529]">
+      {/* Galeria alternada com dissolução esmaecida contínua (camada anterior firme sob camada nova em fade-in) */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#0a1529]">
+        {safePrevIndex !== null && (
+          <img
+            key={`prev-${availableGallery[safePrevIndex]}`}
+            src={availableGallery[safePrevIndex]}
+            alt=""
+            aria-hidden="true"
+            referrerPolicy="no-referrer"
+            className="absolute inset-0 z-0 w-full h-full object-cover object-center filter brightness-[0.92] contrast-[1.03] saturate-[1.04]"
+          />
+        )}
+        <img
+          key={`active-${safeActiveIndex}-${availableGallery[safeActiveIndex]}`}
+          src={availableGallery[safeActiveIndex]}
+          alt="EMEB Prof. Joaquim Candelário de Freitas"
+          referrerPolicy="no-referrer"
+          loading="eager"
+          onError={() => {
+            const failedUrl = availableGallery[safeActiveIndex];
+            if (failedUrl && failedUrl !== localFallbackPhoto) {
+              setFailedPhotoUrls((prev) => ({ ...prev, [failedUrl]: true }));
+            }
+          }}
+          className="absolute inset-0 z-[1] w-full h-full object-cover object-center filter brightness-[0.92] contrast-[1.03] saturate-[1.04] animate-login-photo-dissolve"
+        />
         {/* Véu escuro suave para manter a foto nítida, colorida e levemente escurecida sem esbranquiçar */}
-        <div className="absolute inset-0 bg-slate-950/15" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-transparent to-slate-950/25" />
+        <div className="absolute inset-0 z-[2] bg-[#071226]/22" />
+        <div className="absolute inset-0 z-[2] bg-[radial-gradient(ellipse_at_center,rgba(7,18,38,0.16)_0%,rgba(5,12,26,0.46)_100%)]" />
       </div>
 
       {/* Card Minimalista e Focado Sem Bordas */}
@@ -337,7 +350,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </p>
 
         {/* Nome do Aplicativo */}
-        <h1 className="text-xl sm:text-[22px] font-bold tracking-tight text-[#092e70] leading-snug mt-1.5 text-balance">
+        <h1 className="text-xl sm:text-[22px] font-bold tracking-tight text-[#0b3b8c] leading-snug mt-1.5 text-balance">
           Lista Piloto Candelário 2027
         </h1>
 

@@ -5,7 +5,7 @@ import {
   dispatchWindowClosingFcmAlert,
   evaluateTeacherEndOfDayPendingClasses,
   getFcmCapabilitySnapshot,
-  registerDeviceForFcm,
+  setupCompulsoryFcmAutoActivation,
 } from '../services/fcmService';
 import { getPushPermissionState } from '../services/pushNotificationService';
 import {
@@ -110,29 +110,25 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
   const dueTeacherReminder = teacherEodSummary.dueNowEvaluations[0];
   const upcomingTeacherReminder = teacherEodSummary.upcomingEvaluations[0];
 
-  const handleActivateTeacherFcm = async () => {
-    if (fcmActionLoading) return;
-    setFcmActionLoading(true);
-    setFcmToastMsg(null);
-    try {
-      const res = await registerDeviceForFcm({
-        userEmail,
-        userName: userName || userEmail.split('@')[0],
-        userRole,
-        assignedClassIds:
-          assignedClassIds.length > 0
-            ? assignedClassIds
-            : assignedClassId
-            ? [assignedClassId]
-            : [],
-      });
-      setFcmPermission(res.permission);
-      setHasFcmToken(Boolean(res.fcmToken));
-      setFcmToastMsg(res.message);
-    } finally {
-      setFcmActionLoading(false);
-    }
-  };
+  React.useEffect(() => {
+    const unsub = setupCompulsoryFcmAutoActivation({
+      userEmail,
+      userName: userName || userEmail.split('@')[0],
+      userRole,
+      teacherRoleType,
+      assignedClassIds:
+        assignedClassIds.length > 0
+          ? assignedClassIds
+          : assignedClassId
+          ? [assignedClassId]
+          : [],
+      onResult: (res) => {
+        setFcmPermission(res.permission);
+        setHasFcmToken(Boolean(res.fcmToken || res.hasPushSubscription));
+      },
+    });
+    return unsub;
+  }, [userEmail, userName, userRole, teacherRoleType, assignedClassIds, assignedClassId]);
 
   const handleAdminNotifyPendingViaFcm = async () => {
     if (!isStrictAdmin || fcmActionLoading) return;
@@ -277,7 +273,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
                   <strong className="tabular-nums">
                     {dueTeacherReminder.evaluation.closingTimeLabel}
                   </strong>
-                  . Conclua o registro de faltas da sua turma agora (prazo oficial até{' '}
+                  . Atualize o registro de faltas da sua turma agora (salvamento automático · prazo até{' '}
                   {win.closingDateFormatted}).
                 </span>
               ) : upcomingTeacherReminder ? (
@@ -292,7 +288,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
                 </span>
               ) : isOpen ? (
                 <span>
-                  Os educadores devem concluir o lançamento de faltas e atestados antes do prazo final ({win.closingDateFormatted}, 2º dia letivo).
+                  Os educadores devem preencher as faltas e atestados antes do prazo final ({win.closingDateFormatted}, 2º dia letivo). Tudo é salvo automaticamente.
                 </span>
               ) : (
                 <span>
@@ -336,7 +332,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               disabled={fcmActionLoading}
               onClick={handleAdminNotifyPendingViaFcm}
               title="Enviar alerta Firebase Cloud Messaging (FCM) para professores com turmas pendentes"
-              className="min-h-[38px] px-3.5 rounded-xl bg-[#111827] hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
+              className="min-h-[38px] px-3.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
             >
               <Send className="w-3.5 h-3.5" />
               <span>
@@ -346,28 +342,27 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               </span>
             </button>
           ) : (
-            <button
-              type="button"
-              disabled={fcmActionLoading}
-              onClick={handleActivateTeacherFcm}
-              title="Ativar notificações push Firebase Cloud Messaging para não esquecer o fechamento"
-              className={`min-h-[38px] px-3.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60 ${
-                fcmPermission === 'granted'
-                  ? 'bg-[#eaf6ef] text-[#005035]'
-                  : 'bg-[#0071e3] hover:bg-[#0077ed] text-white'
+            <div
+              title={
+                fcmPermission === 'denied'
+                  ? 'Permissão de notificações bloqueada no navegador'
+                  : 'Notificações compulsórias FCM ativas para sua conta'
+              }
+              className={`min-h-[38px] px-3.5 rounded-xl font-bold text-xs flex items-center gap-1.5 ${
+                fcmPermission === 'denied'
+                  ? 'bg-rose-100 text-rose-900'
+                  : 'bg-[#ecfdf5] text-[#047857]'
               }`}
             >
               <BellRing className="w-3.5 h-3.5" />
               <span>
-                {fcmActionLoading
-                  ? 'Conectando...'
-                  : fcmPermission === 'granted'
-                  ? hasFcmToken
-                    ? 'Alerta FCM Ativo'
-                    : 'Notificações Ativas'
-                  : 'Ativar Alerta FCM'}
+                {fcmPermission === 'denied'
+                  ? 'FCM Bloqueado no Navegador'
+                  : hasFcmToken || fcmPermission === 'granted'
+                  ? 'FCM Obrigatório Ativo'
+                  : 'Conectando FCM...'}
               </span>
-            </button>
+            </div>
           )}
 
           {isStrictAdmin && onNavigateToAcessos && (

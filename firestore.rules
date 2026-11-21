@@ -84,9 +84,6 @@ service cloud.firestore {
     function isTeacherAllowedConfigUpdate() {
       return incoming().diff(existing()).affectedKeys().hasOnly([
         'updatedAtMs',
-        'authorizedUsers',
-        'accessSessionLogs',
-        'schoolNotices',
         'discoveredNominalPdfs',
         'discoveredDrivePhotos',
         'genderDictionary'

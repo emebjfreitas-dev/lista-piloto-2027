@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   AuthorizedUser,
   ClassGroup,
@@ -8,11 +8,15 @@ import {
   AttendanceWindowConfig,
   ScreenType,
 } from '../types';
-import { evaluateAttendanceLaunchWindow } from '../services/db';
+import {
+  evaluateAttendanceLaunchWindow,
+  getStoredOfficialCalendarConfig,
+} from '../services/db';
 import { getDefaultReferencePeriod } from '../utils/attendanceRules';
 import { QuadroAvisosDirecao } from './QuadroAvisosDirecao';
 import { LembretePrazoFrequenciaCard } from './LembretePrazoFrequenciaCard';
 import { ResumoFaltasCriticasCard } from './ResumoFaltasCriticasCard';
+import { PaginationBar } from './ui/PaginationBar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -28,7 +32,6 @@ import {
   Sunset,
   ChevronRight,
   HeartHandshake,
-  CalendarDays,
   ShieldCheck,
   ArrowUpDown,
   FileWarning,
@@ -113,7 +116,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const [selectedShiftFilter, setSelectedShiftFilter] = useState<'TODOS' | 'MANHÃ' | 'TARDE'>('TODOS');
   const [turmaSearchInput, setTurmaSearchInput] = useState('');
-  const [showAllClassesGrid, setShowAllClassesGrid] = useState(false);
+  const [classesPage, setClassesPage] = useState(1);
+  const classesSectionRef = useRef<HTMLElement | null>(null);
+  const HOME_CLASSES_PAGE_SIZE = 8;
   const [activeHubTab, setActiveHubTab] = useState<'prazos' | 'busca_ativa'>('prazos');
   const [chartFilterShift, setChartFilterShift] = useState<'all' | 'MANHÃ' | 'TARDE'>('all');
   const [chartSortMode, setChartSortMode] = useState<'default' | 'asc'>('default');
@@ -121,6 +126,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [copiedFamilyFichaPrompt, setCopiedFamilyFichaPrompt] = useState(false);
 
   const referencePeriod = useMemo(() => getDefaultReferencePeriod(new Date()), []);
+  const activeSchoolYear = useMemo(
+    () => getStoredOfficialCalendarConfig().year || referencePeriod.year || 2027,
+    [referencePeriod.year]
+  );
   const windowEval = useMemo(
     () => evaluateAttendanceLaunchWindow(attendanceWindowConfig),
     [attendanceWindowConfig]
@@ -259,12 +268,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     return list;
   }, [visibleBaseClasses, selectedShiftFilter, turmaSearchInput]);
 
-  const isSearchingOrFiltering =
-    selectedShiftFilter !== 'TODOS' || turmaSearchInput.trim().length > 0;
-  const displayedClasses =
-    showAllClassesGrid || isSearchingOrFiltering
-      ? filteredClasses
-      : filteredClasses.slice(0, 12);
+  useEffect(() => {
+    setClassesPage(1);
+  }, [selectedShiftFilter, turmaSearchInput]);
+
+  const totalClassesPages = Math.max(1, Math.ceil(filteredClasses.length / HOME_CLASSES_PAGE_SIZE));
+  const safeClassesPage = Math.min(classesPage, totalClassesPages);
+  const displayedClasses = useMemo(() => {
+    const start = (safeClassesPage - 1) * HOME_CLASSES_PAGE_SIZE;
+    return filteredClasses.slice(start, start + HOME_CLASSES_PAGE_SIZE);
+  }, [filteredClasses, safeClassesPage]);
 
   const chartData = useMemo(() => {
     const filtered = visibleBaseClasses.filter((c) => {
@@ -384,7 +397,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     if (canLaunchAttendance) {
       items.push({
         id: 'frequencia_mensal',
-        title: 'Informar Faltas do Mês',
+        title: 'Informar faltas do mês…',
         subtitle: `${referencePeriod.monthName}/${referencePeriod.year} · ${
           windowEval.isAllowedToLaunch ? 'Janela aberta' : 'Consultar prazo'
         }`,
@@ -410,7 +423,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {
           id: 'usuarios_acesso',
           title: 'Central Administrativa',
-          subtitle: `Acessos, calendário, segurança, uploads e ${schoolStats.aeeCount} AEE`,
+          subtitle: `Acessos, ano letivo ${activeSchoolYear} (200 dias), segurança e ${schoolStats.aeeCount} AEE`,
           icon: <ShieldCheck className="w-5 h-5 stroke-[1.5]" />,
           accentBg: 'bg-[#0071e3]/12',
           accentText: 'text-[#0071e3]',
@@ -424,15 +437,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           accentBg: 'bg-amber-500/12',
           accentText: 'text-amber-700',
           onClick: () => onNavigateToScreen('bolsa_familia'),
-        },
-        {
-          id: 'dias_letivos',
-          title: '200 Dias Letivos',
-          subtitle: 'Calendário oficial e feriados 2027',
-          icon: <CalendarDays className="w-5 h-5 stroke-[1.5]" />,
-          accentBg: 'bg-slate-100',
-          accentText: 'text-slate-700',
-          onClick: () => onNavigateToScreen('dias_letivos'),
         }
       );
     } else {
@@ -457,6 +461,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     canLaunchAttendance,
     schoolStats,
     referencePeriod,
+    activeSchoolYear,
     windowEval.isAllowedToLaunch,
     schoolNotices.length,
     onNavigateToScreen,
@@ -468,8 +473,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <section className="bg-white rounded-3xl p-5 sm:p-7 shadow-xs space-y-5 min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
           <div className="space-y-1.5 min-w-0 flex-1">
-            <p className="text-xs sm:text-[13px] font-bold text-[#0052cc] text-balance break-words">
-              EMEB Prof. Joaquim Candelário de Freitas · Ano Letivo 2027
+            <p className="text-xs sm:text-[13px] font-bold text-[#0b3b8c] text-balance break-words">
+              EMEB Prof. Joaquim Candelário de Freitas · Ano Letivo {activeSchoolYear}
             </p>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950 text-balance break-words">
               Olá, {formattedGreetingName}
@@ -754,14 +759,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         onMarkNoticesRead={onMarkNoticeRead}
       />
 
-      {/* 2. ACESSO RÁPIDO (ÍCONES MINIMALISTAS ESTILO APPLE E ALINHAMENTO UNIFORME) */}
+      {/* 2. ACESSO RÁPIDO (ÍCONES MINIMALISTAS E ALINHAMENTO UNIFORME) */}
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 px-1">
           <div>
-            <h2 className="text-xl sm:text-2xl font-semibold text-white">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#0f172a] tracking-tight">
               Acesso Rápido
             </h2>
-            <p className="text-xs sm:text-sm text-slate-200 font-medium">
+            <p className="text-xs sm:text-sm text-slate-600 font-medium">
               Ferramentas principais para {isStrictAdmin ? 'gestão escolar' : 'rotina docente'}
             </p>
           </div>
@@ -773,7 +778,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               key={item.id}
               type="button"
               onClick={item.onClick}
-              className="w-full h-full min-w-0 min-h-[82px] text-left bg-white hover:bg-[#f8fafc] card-interactive rounded-2xl p-4 sm:p-5 shadow-[0_8px_24px_rgba(2,6,23,0.18)] cursor-pointer flex items-center justify-between gap-3.5 group"
+              className="w-full h-full min-w-0 min-h-[82px] text-left bg-white hover:bg-[#f8fafc] card-interactive rounded-2xl p-4 sm:p-5 shadow-[0_8px_24px_-8px_rgba(15,23,42,0.10)] cursor-pointer flex items-center justify-between gap-3.5 group"
             >
               <div className="flex items-center gap-3.5 min-w-0 flex-1">
                 <div
@@ -797,7 +802,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 3. SELETOR DIRETO DE TURMAS (Apenas para quem gerencia múltiplas turmas) */}
       {userRole !== 'usuario' && (
-      <section className="bg-white rounded-3xl p-5 sm:p-6 shadow-[0_12px_34px_-8px_rgba(2,6,23,0.34)] space-y-5 min-w-0">
+      <section ref={classesSectionRef} className="bg-white rounded-3xl p-5 sm:p-6 shadow-[0_10px_28px_-10px_rgba(15,23,42,0.10)] space-y-5 min-w-0 scroll-mt-24">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 min-w-0">
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-950 break-words">
@@ -913,18 +918,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           })}
         </div>
 
-        {!isSearchingOrFiltering && filteredClasses.length > 12 && (
-          <div className="flex justify-center pt-1">
-            <button
-              type="button"
-              onClick={() => setShowAllClassesGrid((prev) => !prev)}
-              className="min-h-[44px] px-6 rounded-2xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-xs sm:text-sm font-semibold text-[#111827] cursor-pointer transition-colors duration-100"
-            >
-              {showAllClassesGrid
-                ? 'Mostrar menos turmas'
-                : `Exibir todas as ${filteredClasses.length} turmas`}
-            </button>
-          </div>
+        {filteredClasses.length > HOME_CLASSES_PAGE_SIZE && (
+          <PaginationBar
+            currentPage={safeClassesPage}
+            totalItems={filteredClasses.length}
+            pageSize={HOME_CLASSES_PAGE_SIZE}
+            onPageChange={(nextPage) => {
+              setClassesPage(nextPage);
+              classesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            itemLabel="turmas"
+          />
         )}
 
         {filteredClasses.length === 0 && (

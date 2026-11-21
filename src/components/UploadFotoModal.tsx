@@ -3,6 +3,7 @@ import { Student } from '../types';
 import { StudentAvatar } from './StudentAvatar';
 import { uploadStudentPhotoViaApi } from '../services/db';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
 import { isSupportedImageFile } from '../utils/photoCompressor';
 import {
   compressPhotoLosslessWithCanvas,
@@ -241,14 +242,15 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
   if (!isOpen || !student) return null;
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[60] overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="modal-shell w-full max-w-xl rounded-3xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] animate-apple-pop"
+        onClick={onClose}
+        className="fixed inset-0 z-[120] overflow-hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="modal-shell w-full max-w-xl rounded-3xl overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
+        >
         {/* Header Modal com Título e Fechar */}
         <div className="modal-header-surface flex items-center justify-between p-4 sm:p-5 pb-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -499,5 +501,6 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

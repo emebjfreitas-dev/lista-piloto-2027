@@ -19,6 +19,7 @@ import {
   pruneLegacyClassPhotoCacheFromIndexedDb,
 } from '../services/photoIndexedDbCache';
 import { addSecurityAuditLog } from '../services/db';
+import { ModalPortal } from './ui/ModalPortal';
 
 interface IndexedDbPhotoStorageModalProps {
   isOpen: boolean;
@@ -232,17 +233,18 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
   const totalBudgetPct = Math.min(100, Math.round((totalBytes / maxBytes) * 100));
 
   return (
-    <div
-      className="fixed inset-0 z-[130] bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-2 sm:p-4 animate-backdrop-in"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Armazenamento IndexedDB de Fotos"
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="modal-shell w-full max-w-4xl bg-white rounded-3xl overflow-hidden flex flex-col max-h-[min(92vh,calc(100dvh-1rem))] text-slate-950 animate-apple-pop"
+        className="fixed inset-0 z-[130] bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-2 sm:p-4 overflow-hidden animate-backdrop-in"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Armazenamento IndexedDB de Fotos"
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="modal-shell w-full max-w-4xl bg-white rounded-3xl overflow-hidden flex flex-col max-h-[88dvh] text-slate-950 animate-apple-pop"
+        >
         {/* Cabeçalho */}
         <div className="modal-header-surface flex items-start sm:items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 shrink-0">
           <div className="flex items-start sm:items-center gap-3 min-w-0">
@@ -282,7 +284,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
         </div>
 
         {/* Conteúdo rolável */}
-        <div className="modal-scroll-body flex-1 p-4 sm:p-6 space-y-5 overflow-y-auto">
+        <div className="modal-scroll-body flex-1 min-h-0 p-4 sm:p-6 space-y-5">
           {statusBanner && (
             <div
               role="status"
@@ -647,5 +649,6 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

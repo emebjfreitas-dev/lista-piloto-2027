@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { StudentAvatar } from './StudentAvatar';
 import { getStudentCumulativeOccurrences } from '../services/pushNotificationService';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
 
 export interface CriticalAbsenceItem {
   cls: ClassGroup;
@@ -76,6 +78,8 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
   const [selectedDetailItem, setSelectedDetailItem] =
     useState<CriticalAbsenceItem | null>(null);
   const [showAllStudents, setShowAllStudents] = useState(false);
+
+  useModalScrollLock(Boolean(selectedDetailItem));
 
   const handleUpdateThreshold = (nextVal: number) => {
     setThreshold(nextVal);
@@ -437,16 +441,20 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
         </div>
       </section>
 
-      {/* Modal Minimalista de Detalhes da Falta Crítica (Ao Clicar no Estudante) */}
+      {/* Modal Minimalista de Detalhes da Falta Crítica (Renderizado em Portal) */}
       {selectedDetailItem && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-backdrop-in"
-          onClick={() => setSelectedDetailItem(null)}
-        >
+        <ModalPortal>
           <div
-            className="modal-shell rounded-3xl max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto animate-apple-pop"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Alerta de faltas críticas — ${selectedDetailItem.student.name}`}
+            className="fixed inset-0 z-[110] bg-slate-950/65 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-hidden animate-backdrop-in"
+            onClick={() => setSelectedDetailItem(null)}
           >
+            <div
+              className="modal-shell rounded-3xl max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[86dvh] modal-scroll-body animate-apple-pop"
+              onClick={(e) => e.stopPropagation()}
+            >
             {/* Cabeçalho do Modal */}
             <div className="flex items-start justify-between gap-3 pb-2">
               <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -668,6 +676,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </>
   );

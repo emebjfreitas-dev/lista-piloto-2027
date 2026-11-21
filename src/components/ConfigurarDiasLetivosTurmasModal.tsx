@@ -18,6 +18,7 @@ import {
 import { saveClassesToFirestoreCloud } from '../services/firebaseSync';
 import { CheckCircle2, Download, Package, RefreshCw, Save, X } from 'lucide-react';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
 
 interface ConfigurarDiasLetivosTurmasModalProps {
   isOpen: boolean;
@@ -220,8 +221,9 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
   );
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
-      <div className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] animate-apple-pop">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[110] overflow-hidden flex items-center justify-center p-3 sm:p-5 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in">
+        <div className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop">
         {/* Clean Modern Header */}
         <div className="modal-header-surface px-6 py-5 flex items-start justify-between gap-4 shrink-0">
           <div className="space-y-0.5 min-w-0 flex-1">
@@ -247,7 +249,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
         </div>
 
         {/* Scrollable Content */}
-        <div className="modal-scroll-body flex-1 p-5 sm:p-6 space-y-5 bg-[#f4f7fb]">
+        <div className="modal-scroll-body flex-1 min-h-0 p-5 sm:p-6 space-y-5 bg-[#f4f7fb]">
           {/* 1. Direct Links Box: Exportação Excel & Pasta de Fotos Google Drive */}
           <section className="bg-white rounded-xl p-5 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -497,5 +499,6 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };

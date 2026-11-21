@@ -12,14 +12,14 @@ import {
   ChevronRight,
   LogOut,
   LucideIcon,
-  BarChart3,
-  CalendarDays,
   CloudCheck,
   CloudUpload,
   Loader2,
 } from 'lucide-react';
 import { subscribeToSyncStatus, SyncStatusSnapshot } from '../services/firebaseSync';
 import { flushPendingOfflineQueue } from '../services/db';
+import { ModalPortal } from './ui/ModalPortal';
+import { useModalScrollLock } from '../hooks/useModalScrollLock';
 
 interface BottomNavProps {
   currentScreen: ScreenType;
@@ -38,6 +38,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onLogout,
 }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  useModalScrollLock(showMoreMenu);
   const [isFlushingCloud, setIsFlushingCloud] = useState(false);
   const [syncSnapshot, setSyncSnapshot] = useState<SyncStatusSnapshot>({
     status: 'synced',
@@ -119,18 +120,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       tintClass: 'bg-amber-500/12 text-amber-700',
     },
     {
-      id: 'dias_letivos',
-      label: '200 Dias Letivos',
-      description: 'Calendário oficial e feriados 2027',
-      icon: CalendarDays,
-      tintClass: 'bg-emerald-500/12 text-emerald-700',
-    },
-    {
       id: 'usuarios_acesso',
       label: 'Central Administrativa',
-      description: 'Acessos, segurança, banco, fotos, PDFs e .HTM',
+      description: 'Acessos, ano letivo (200 dias), segurança, banco e uploads',
       icon: ShieldCheck,
-      tintClass: 'bg-[#0071e3]/12 text-[#0071e3]',
+      tintClass: 'bg-[#0b3b8c]/10 text-[#0b3b8c]',
     },
   ];
 
@@ -156,7 +150,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {/* Barra de Navegação Inferior Enxuta (Mobile & Tablet) */}
       <nav
         aria-label="Barra de Navegação Inferior"
-        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/98 backdrop-blur-xl shadow-[0_-6px_24px_rgba(0,0,0,0.32)] lg:hidden"
+        className="fixed bottom-0 left-0 right-0 w-full z-40 pb-safe bg-white/95 backdrop-blur-xl shadow-[0_-4px_20px_-4px_rgba(15,23,42,0.10)] lg:hidden"
       >
         <div className="flex items-center justify-around h-[68px] px-2 max-w-lg mx-auto gap-1">
           {coreNavItems.map((item) => {
@@ -249,12 +243,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
       {/* Sheet Modal de Gestão (Mobile/Tablet) */}
       {showMoreMenu && isAdmin && (
-        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
-          <div
-            className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm animate-backdrop-in"
-            onClick={() => setShowMoreMenu(false)}
-          />
-          <div className="relative bg-white rounded-t-3xl shadow-[0_-20px_56px_rgba(2,6,23,0.4)] p-5 pb-8 space-y-3.5 max-h-[84vh] overflow-y-auto animate-ios-sheet min-w-0">
+        <ModalPortal>
+          <div className="fixed inset-0 z-[120] overflow-hidden lg:hidden flex flex-col justify-end">
+            <div
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm animate-backdrop-in"
+              onClick={() => setShowMoreMenu(false)}
+            />
+            <div className="relative bg-white rounded-t-3xl shadow-[0_-20px_56px_rgba(2,6,23,0.4)] p-5 pb-8 space-y-3.5 max-h-[84dvh] modal-scroll-body animate-ios-sheet min-w-0">
             <div className="flex items-center justify-between gap-3 pb-1 min-w-0">
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-bold text-slate-950 break-words">Ferramentas de Gestão</h3>
@@ -320,7 +315,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 const isActive =
                   currentScreen === item.id ||
                   (item.id === 'usuarios_acesso' &&
-                    (currentScreen === 'diagnostico_bd' ||
+                    (currentScreen === 'dias_letivos' ||
+                      currentScreen === 'diagnostico_bd' ||
                       currentScreen === 'importar_deficiencias_htm'));
                 const IconComp = item.icon;
                 return (
@@ -385,6 +381,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             )}
           </div>
         </div>
+        </ModalPortal>
       )}
     </>
   );

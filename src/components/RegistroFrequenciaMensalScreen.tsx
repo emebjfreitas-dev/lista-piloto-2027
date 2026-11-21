@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { StudentAvatar } from './StudentAvatar';
+import { PaginationBar } from './ui/PaginationBar';
 
 const CURRENT_ACTIVE_MONTH_NUMBER = 10;
 
@@ -70,6 +71,10 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   const [searchName, setSearchName] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'faltas' | 'atestados'>('all');
   const [attendanceViewMode, setAttendanceViewMode] = useState<'compact' | 'cards'>('compact');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAllStudentsInCall, setShowAllStudentsInCall] = useState(false);
+  const callListRef = useRef<HTMLDivElement | null>(null);
+  const CALL_PAGE_SIZE = 15;
 
   // Estado de feedback visual e tátil de salvamento com animação flash, Sonner toast e transição de cores
   const [saveFlashState, setSaveFlashState] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -552,6 +557,27 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
       });
   }, [students, searchName, quickFilter]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchName, quickFilter, attendanceViewMode, classGroup.id]);
+
+  const totalPages = Math.max(1, Math.ceil(displayedStudents.length / CALL_PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedStudents = useMemo(() => {
+    if (showAllStudentsInCall) return displayedStudents;
+    const start = (safePage - 1) * CALL_PAGE_SIZE;
+    return displayedStudents.slice(start, start + CALL_PAGE_SIZE);
+  }, [displayedStudents, safePage, showAllStudentsInCall]);
+
+  const handleCallPageChange = (nextPage: number) => {
+    setCurrentPage(nextPage);
+    if (callListRef.current) {
+      callListRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const isInfantilClass =
     classGroup.name.toUpperCase().startsWith('GRUPO') ||
     classGroup.grade.toUpperCase().includes('INFANTIL');
@@ -560,29 +586,29 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
   return (
     <div className="flex flex-col w-full min-w-0 space-y-5 pb-16 animate-gentle-fade">
       {/* Breadcrumb e Contexto */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 py-0.5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 py-0.5 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <button
             type="button"
             onClick={onBack}
-            className="text-slate-200 hover:text-white font-medium inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            className="text-slate-700 hover:text-[#0b3b8c] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
           >
             <ArrowLeft className="w-[15px] h-[15px]" />
             <span>Turma {classGroup.name}</span>
           </button>
-          <span className="text-slate-300">/</span>
-          <span className="font-semibold text-white break-words">Informar Faltas do Mês</span>
-          <span className="text-slate-300">·</span>
-          <span className="text-slate-100">{selectedMonthName}/2027</span>
+          <span className="text-slate-500">/</span>
+          <span className="font-bold text-[#0f172a] break-words">Informar Faltas do Mês</span>
+          <span className="text-slate-500">·</span>
+          <span className="text-slate-700 font-medium">{selectedMonthName}/2027</span>
         </div>
-        <span className="hidden sm:inline text-slate-200 text-xs font-semibold shrink-0">
+        <span className="hidden sm:inline text-slate-700 text-xs font-semibold shrink-0">
           {diasLetivosMes} dias letivos no mês
         </span>
       </div>
 
       {/* Painel Coeso de Faltas do Mês & Controles (Alunos Visíveis Imediatamente) */}
-      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm space-y-3.5 min-w-0">
-        {/* Linha 1: Contexto da Turma + Mês de Referência + Badge de Salvamento com Animação Flash + Concluir */}
+      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_10px_28px_-10px_rgba(15,23,42,0.10)] space-y-3.5 min-w-0">
+        {/* Linha 1: Contexto da Turma + Mês de Referência + Badge de Salvamento Automático */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-w-0">
           <div className="space-y-1 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -607,37 +633,37 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             </p>
           </div>
 
-          {/* Feedback Visual Flash / Salvamento no Banco + Seletor de Mês + Concluir */}
+          {/* Feedback Visual Flash / Salvamento Automático + Seletor de Mês */}
           <div className="flex flex-wrap items-center gap-2 justify-between lg:justify-end shrink-0">
-            {/* Badge Dinâmico com Animação Flash e Alteração de Cor */}
+            {/* Badge Dinâmico de Salvamento Automático */}
             {saveFlashState === 'saving' ? (
               <div
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-950 font-bold text-xs shadow-xs transition-all duration-200"
-                title="Gravando no banco de dados local e nuvem..."
+                title="Salvando automaticamente no banco de dados local e nuvem..."
               >
                 <RefreshCw className="w-4 h-4 animate-spin text-amber-800" />
-                <span>Salvando no banco...</span>
+                <span>Salvando automaticamente...</span>
               </div>
             ) : saveFlashState === 'saved' ? (
               <div
-                className="sonner-tactile-pop inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-md transition-all duration-300"
-                title="Dados persistidos com sucesso no banco de dados e nuvem!"
+                className="sonner-tactile-pop inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#047857] text-white font-bold text-xs shadow-sm transition-all duration-300"
+                title="Todo preenchimento é salvo automaticamente no banco de dados e nuvem!"
               >
                 <CheckCircle2 className="w-[17px] h-[17px] text-white" />
-                <span>Salvo com sucesso!</span>
+                <span>Salvo automaticamente!</span>
               </div>
             ) : (
               <div
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-900 font-semibold text-xs"
-                title="Dados sincronizados e seguros"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-[#047857] font-semibold text-xs"
+                title="Não é necessário concluir: todo preenchimento é salvo automaticamente"
               >
-                <Cloud className="w-[15px] h-[15px] text-emerald-700" />
-                <span>{instantSyncStatus === 'syncing' ? 'Sincronizando...' : '✓ Sincronizado'}</span>
+                <Cloud className="w-[15px] h-[15px] text-[#047857]" />
+                <span>{instantSyncStatus === 'syncing' ? 'Salvando na nuvem...' : '✓ Salvo automaticamente'}</span>
               </div>
             )}
 
             {/* Seletor de Mês Compacto */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-[#eef3f9] p-1 rounded-xl">
               {previousPeriodName && (
                 <button
                   type="button"
@@ -675,16 +701,6 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                 </button>
               )}
             </div>
-
-            <button
-              type="button"
-              onClick={onBack}
-              className="min-h-[36px] px-3.5 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
-              title="Salvo automaticamente. Concluir e voltar à turma"
-            >
-              <Check className="w-4 h-4 text-emerald-400" />
-              <span>Concluir</span>
-            </button>
           </div>
         </div>
 
@@ -811,8 +827,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
       {/* VISUALIZAÇÃO 1: LISTA LIMPA E DIRETA COM SUPERFÍCIES DE ALTO CONTRASTE TONAL */}
       {attendanceViewMode === 'compact' && (
-        <div className="space-y-3">
-          {displayedStudents.map((student) => {
+        <div ref={callListRef} className="space-y-3 scroll-mt-24">
+          {paginatedStudents.map((student) => {
             const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
             const pctFalta =
               m.diasLetivosMatriculados > 0
@@ -833,9 +849,9 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             return (
               <div
                 key={student.id}
-                className={`p-4 sm:px-6 rounded-2xl shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all duration-200 min-w-0 ${
+                className={`p-4 sm:px-6 rounded-2xl shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-colors duration-200 min-w-0 ${
                   isJustSaved
-                    ? 'bg-emerald-100/90 shadow-[0_12px_28px_-6px_rgba(4,120,87,0.28)] text-emerald-950 scale-[1.01]'
+                    ? 'bg-emerald-100/90 shadow-[0_12px_28px_-6px_rgba(4,120,87,0.28)] text-emerald-950'
                     : isSavingThis
                     ? 'bg-amber-100/90 shadow-[0_10px_24px_-6px_rgba(180,83,9,0.22)] text-amber-950 opacity-95'
                     : isTransferred
@@ -1049,8 +1065,8 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
       {/* VISUALIZAÇÃO 2: CARDS ENXUTOS (SOMENTE CONTADORES DE FALTAS DO MÊS E ATESTADOS) */}
       {attendanceViewMode === 'cards' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {displayedStudents.map((student) => {
+        <div ref={callListRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 scroll-mt-24">
+          {paginatedStudents.map((student) => {
             const m = getStudentAttendanceMetrics(student, diasLetivosMes, OFFICIAL_OCTOBER_DAYS);
             const pctFalta =
               m.diasLetivosMatriculados > 0
@@ -1071,9 +1087,9 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             return (
               <div
                 key={student.id}
-                className={`rounded-2xl p-4 sm:p-5 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] space-y-3.5 transition-all duration-200 min-w-0 ${
+                className={`rounded-2xl p-4 sm:p-5 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] space-y-3.5 transition-colors duration-200 min-w-0 ${
                   isJustSaved
-                    ? 'bg-emerald-100/90 shadow-[0_12px_28px_-6px_rgba(4,120,87,0.28)] text-emerald-950 scale-[1.01]'
+                    ? 'bg-emerald-100/90 shadow-[0_12px_28px_-6px_rgba(4,120,87,0.28)] text-emerald-950'
                     : isSavingThis
                     ? 'bg-amber-100/90 shadow-[0_10px_24px_-6px_rgba(180,83,9,0.22)] text-amber-950 opacity-95'
                     : isTransferred
@@ -1274,14 +1290,33 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
         </div>
       )}
 
-      {/* Resumo e Conclusão de Faltas do Mês */}
-      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 min-w-0">
+      {displayedStudents.length > CALL_PAGE_SIZE && (
+        <PaginationBar
+          currentPage={showAllStudentsInCall ? 1 : safePage}
+          totalItems={displayedStudents.length}
+          pageSize={showAllStudentsInCall ? displayedStudents.length : CALL_PAGE_SIZE}
+          onPageChange={handleCallPageChange}
+          itemLabel="estudantes"
+          extraAction={
+            <button
+              type="button"
+              onClick={() => setShowAllStudentsInCall((prev) => !prev)}
+              className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+            >
+              {showAllStudentsInCall ? `Paginar (${CALL_PAGE_SIZE}/pág)` : `Ver todos (${displayedStudents.length})`}
+            </button>
+          }
+        />
+      )}
+
+      {/* Resumo de Faltas do Mês (Salvamento Automático Contínuo) */}
+      <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-[0_10px_28px_-10px_rgba(15,23,42,0.10)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 min-w-0">
         <div className="min-w-0 flex-1">
           <h3 className="text-base sm:text-lg font-bold text-slate-950 break-words">
             Faltas do Mês de {selectedMonthName}
           </h3>
           <p className="text-xs sm:text-sm text-slate-700 font-medium mt-0.5 break-words">
-            Total de {liveClassMetrics.totalFaltasTurma} falta(s) registradas · {liveClassMetrics.presenceRate}% de presença global · Salvo automaticamente
+            Total de {liveClassMetrics.totalFaltasTurma} falta(s) registradas · {liveClassMetrics.presenceRate}% de presença global · Todo preenchimento é salvo automaticamente
           </p>
         </div>
 
@@ -1290,7 +1325,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             <button
               type="button"
               onClick={() => handleMonthChange(previousPeriodName)}
-              className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-xl bg-[#edf2f7] hover:bg-[#dbe4f0] text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
+              className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-xl bg-[#eef3f9] hover:bg-[#dbe5f3] text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
               title={`Voltar ao período anterior: ${previousPeriodName}`}
             >
               <History className="w-[18px] h-[18px] text-slate-700 shrink-0" />
@@ -1301,10 +1336,10 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           <button
             type="button"
             onClick={onBack}
-            className="w-full sm:w-auto min-h-[44px] py-2 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
+            className="w-full sm:w-auto min-h-[44px] py-2 px-5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
           >
-            <Check className="w-[18px] h-[18px] text-emerald-400 shrink-0" />
-            <span>Concluir e Voltar</span>
+            <ArrowLeft className="w-[18px] h-[18px] shrink-0" />
+            <span>Voltar para Turma</span>
           </button>
         </div>
       </section>

@@ -26,6 +26,7 @@ import {
   getStoredClasses,
 } from '../services/db';
 import { useModalScrollLock } from '../hooks/useModalScrollLock';
+import { ModalPortal } from './ui/ModalPortal';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -591,14 +592,15 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
     .join(' ');
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 overflow-y-auto overscroll-y-contain flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-backdrop-in"
-    >
+    <ModalPortal>
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col my-auto max-h-[min(92vh,calc(100dvh-1rem))] sm:max-h-[88vh] min-w-0 animate-apple-pop"
+        onClick={onClose}
+        className="fixed inset-0 z-[105] overflow-hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-backdrop-in"
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[88dvh] min-w-0 animate-apple-pop"
+        >
         {/* Top Clean Header + Navegação */}
         <div className="modal-header-surface px-4 sm:px-6 py-3.5 bg-[#edf2f7] flex flex-wrap items-center justify-between gap-2.5 shrink-0 min-w-0">
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
@@ -1626,7 +1628,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
       {isLightboxOpen && hasPhoto && (
         <div
           onClick={() => setIsLightboxOpen(false)}
-          className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-backdrop-in"
+          className="fixed inset-0 z-[140] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-backdrop-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -1652,5 +1654,6 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
         </div>
       )}
     </div>
+    </ModalPortal>
   );
 };
