@@ -1939,8 +1939,8 @@ export default function App() {
 
   if (isAuthChecking) {
     return (
-      <div className="min-h-[100dvh] w-full bg-[linear-gradient(168deg,#f0f4fa_0%,#e7edf6_52%,#dce5f2_100%)] flex flex-col items-center justify-center p-6 text-[#0f172a] font-sans">
-        <Loader2 className="w-10 h-10 text-[#0b3b8c] animate-spin mb-4" aria-hidden="true" />
+      <div className="min-h-[100dvh] w-full bg-[linear-gradient(168deg,#f3f6fb_0%,#eaf0f8_52%,#e2eaf4_100%)] flex flex-col items-center justify-center p-6 text-[#0f172a] font-sans">
+        <Loader2 className="w-10 h-10 text-[#14428c] animate-spin mb-4" aria-hidden="true" />
         <p className="text-sm font-semibold tracking-wide text-[#0f172a]">
           Verificando sessão institucional...
         </p>
@@ -1974,7 +1974,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen w-full overflow-x-clip bg-[linear-gradient(168deg,#f0f4fa_0%,#e7edf6_52%,#dce5f2_100%)] bg-fixed text-[#0f172a] flex flex-col font-sans selection:bg-[#0b3b8c]/18 selection:text-[#0b3b8c]">
+    <div className="min-h-screen w-full overflow-x-clip bg-[linear-gradient(168deg,#f3f6fb_0%,#eaf0f8_52%,#e2eaf4_100%)] bg-fixed text-[#0f172a] flex flex-col font-sans selection:bg-[#14428c]/18 selection:text-[#14428c]">
       {/* Top Minimalist Header */}
       <Header
         currentScreen={currentScreen}
@@ -2510,7 +2510,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => navigateToScreen('home')}
-              className="w-full sm:w-auto min-h-[46px] py-2.5 px-6 bg-slate-950 hover:bg-black text-white rounded-2xl text-sm font-bold text-center whitespace-normal cursor-pointer transition-colors shadow-xs"
+              className="w-full sm:w-auto min-h-[46px] py-2.5 px-6 bg-[#14428c] hover:bg-[#0f3370] text-white rounded-2xl text-sm font-bold text-center whitespace-normal cursor-pointer transition-colors shadow-xs"
             >
               Ir para Painel de Turmas
             </button>

@@ -248,7 +248,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
         {/* Cabeçalho */}
         <div className="modal-header-surface flex items-start sm:items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5 shrink-0">
           <div className="flex items-start sm:items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-[#dce7fb] text-[#092e70] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-[#e8f0fe] text-[#0f3370] flex items-center justify-center shrink-0">
               <HardDrive className="w-5 h-5" />
             </div>
             <div className="min-w-0">
@@ -266,7 +266,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
               type="button"
               onClick={() => void loadStorageReport()}
               disabled={isLoading}
-              className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#dce7fb] text-slate-950 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
+              className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#e8f0fe] text-slate-950 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0 shadow-xs"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               <span>Atualizar</span>
@@ -276,7 +276,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
               type="button"
               onClick={onClose}
               aria-label="Fechar modal de armazenamento"
-              className="w-9 h-9 rounded-full bg-white hover:bg-[#dce7fb] text-slate-950 flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-xs"
+              className="w-9 h-9 rounded-full bg-white hover:bg-[#e8f0fe] text-slate-950 flex items-center justify-center cursor-pointer transition-colors shrink-0 shadow-xs"
             >
               <X className="w-4 h-4" />
             </button>
@@ -290,10 +290,10 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
               role="status"
               className={`rounded-2xl px-4 py-3 text-xs sm:text-sm font-medium flex items-center justify-between gap-3 ${
                 statusBanner.type === 'success'
-                  ? 'bg-[#eaf6ef] text-[#005035]'
+                  ? 'bg-[#ecfdf5] text-[#047857]'
                   : statusBanner.type === 'error'
                   ? 'bg-[#fee2e2] text-[#991b1b]'
-                  : 'bg-[#e8f0fe] text-[#1a4fa3]'
+                  : 'bg-[#e8f0fe] text-[#14428c]'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -313,7 +313,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
 
           {/* Indicadores Principais */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f3f6fb] min-w-0">
               <span className="text-xs font-semibold text-slate-700 block">Uso IndexedDB (Fotos)</span>
               <span className="text-xl sm:text-2xl font-bold text-slate-950 font-mono tabular-nums block mt-0.5">
                 {isLoading && !report ? '...' : formatStorageBytes(totalBytes)}
@@ -323,7 +323,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
               </span>
             </div>
 
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f3f6fb] min-w-0">
               <span className="text-xs font-semibold text-slate-700 block">Arquivos em Cache</span>
               <span className="text-xl sm:text-2xl font-bold text-slate-950 font-mono tabular-nums block mt-0.5">
                 {isLoading && !report ? '...' : (report?.canonicalBlobsCount || 0).toLocaleString('pt-BR')}
@@ -363,9 +363,9 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
               </span>
             </div>
 
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f4f7fb] min-w-0">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#f3f6fb] min-w-0">
               <span className="text-xs font-semibold text-slate-700 block">Economia SHA-256</span>
-              <span className="text-xl sm:text-2xl font-bold text-[#046c4e] font-mono tabular-nums block mt-0.5">
+              <span className="text-xl sm:text-2xl font-bold text-[#047857] font-mono tabular-nums block mt-0.5">
                 {isLoading && !report ? '...' : (report?.deduplicatedAliasCount || 0).toLocaleString('pt-BR')}
               </span>
               <span className="text-xs text-slate-700 tabular-nums block mt-0.5">
@@ -377,7 +377,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
           </div>
 
           {/* Barra visual de distribuição e Ação Principal em 1 Clique */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#f4f7fb] space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#f3f6fb] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-950">
@@ -385,7 +385,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                 </h3>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-700 tabular-nums">
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-xs bg-[#092e70] inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-xs bg-[#0f3370] inline-block" />
                     Turmas Atuais: {formatStorageBytes(activeBytes)}
                   </span>
                   <span aria-hidden="true">·</span>
@@ -411,8 +411,8 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                     disabled={isPruningLegacy || isLoading}
                     className={`min-h-[42px] px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap shrink-0 disabled:opacity-50 ${
                       hasLegacyCache
-                        ? 'bg-[#092e70] hover:bg-[#051d47] text-white'
-                        : 'bg-white hover:bg-[#edf2f7] text-slate-950 shadow-xs'
+                        ? 'bg-[#14428c] hover:bg-[#0f3370] text-white'
+                        : 'bg-white hover:bg-[#eef3f9] text-slate-950 shadow-xs'
                     }`}
                   >
                     {isPruningLegacy ? (
@@ -435,7 +435,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                       type="button"
                       onClick={handlePruneLegacyOneClick}
                       disabled={isPruningLegacy}
-                      className="min-h-[34px] px-3 rounded-lg bg-[#092e70] hover:bg-[#051d47] text-white text-xs font-semibold cursor-pointer"
+                      className="min-h-[34px] px-3 rounded-lg bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-semibold cursor-pointer"
                     >
                       {isPruningLegacy ? 'Limpando...' : 'Confirmar'}
                     </button>
@@ -490,7 +490,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
             <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
               {activePct > 0 && (
                 <div
-                  className="h-full bg-[#0b3b8c] transition-all duration-300"
+                  className="h-full bg-[#14428c] transition-all duration-300"
                   style={{ width: `${Math.max(1, activePct)}%` }}
                   title={`Turmas Atuais: ${formatStorageBytes(activeBytes)}`}
                 />
@@ -538,7 +538,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar turma ou turno..."
-                  className="w-full min-h-[42px] pl-10 pr-8 rounded-xl bg-[#f4f7fb] text-xs sm:text-sm text-slate-950 placeholder:text-slate-600 focus:bg-[#edf2f7]"
+                  className="w-full min-h-[42px] pl-10 pr-8 rounded-xl bg-[#f3f6fb] text-xs sm:text-sm text-slate-950 placeholder:text-slate-600 focus:bg-[#eef3f9]"
                 />
                 {searchTerm && (
                   <button
@@ -552,7 +552,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                 )}
               </div>
 
-              <div className="flex items-center gap-1 p-1 bg-[#edf2f7] rounded-xl shrink-0">
+              <div className="flex items-center gap-1 p-1 bg-[#eef3f9] rounded-xl shrink-0">
                 {(
                   [
                     { id: 'all', label: `Todas (${report?.classBreakdown.length || classes.length})` },
@@ -583,7 +583,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
             </div>
 
             {filteredClasses.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-[#f4f7fb] text-center space-y-1.5">
+              <div className="p-8 rounded-2xl bg-[#f3f6fb] text-center space-y-1.5">
                 <Database className="w-6 h-6 text-slate-700 mx-auto" />
                 <p className="text-sm font-semibold text-slate-950">
                   Nenhuma turma encontrada neste filtro
@@ -593,10 +593,10 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                 </p>
               </div>
             ) : (
-              <div className="bg-[#f4f7fb] rounded-2xl overflow-hidden shadow-[0_2px_10px_-4px_rgba(9,15,29,0.06)]">
+              <div className="bg-[#f3f6fb] rounded-2xl overflow-hidden shadow-[0_2px_10px_-4px_rgba(9,15,29,0.06)]">
                 <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-[#edf2f7] text-slate-800 font-bold sticky top-0 z-10">
+                    <thead className="bg-[#eef3f9] text-slate-800 font-bold sticky top-0 z-10">
                       <tr>
                         <th className="py-2.5 px-3.5">Turma</th>
                         <th className="py-2.5 px-3.5">Turno</th>
@@ -612,7 +612,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                         return (
                           <tr
                             key={row.classId}
-                            className={idx % 2 === 0 ? 'bg-white' : 'bg-[#f4f7fb]'}
+                            className={idx % 2 === 0 ? 'bg-white' : 'bg-[#f3f6fb]'}
                           >
                             <td className="py-2.5 px-3.5 font-semibold text-slate-950">
                               {row.className}
@@ -631,7 +631,7 @@ export const IndexedDbPhotoStorageModal: React.FC<IndexedDbPhotoStorageModalProp
                                 type="button"
                                 disabled={!hasData || isClearingThis}
                                 onClick={() => handleClearSingleClass(row.classId, row.className)}
-                                className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-rose-100 hover:text-rose-950 text-slate-950 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+                                className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#eef3f9] hover:bg-rose-100 hover:text-rose-950 text-slate-950 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-35 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
                               >
                                 <Trash2 className="w-3 h-3 shrink-0" />
                                 <span>{isClearingThis ? 'Limpando...' : 'Limpar'}</span>

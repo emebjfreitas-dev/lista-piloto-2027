@@ -272,7 +272,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <h2 className="text-base sm:text-lg font-bold text-slate-950 tracking-tight flex items-center gap-2">
-              <Users className="w-5 h-5 text-[#0b3b8c] shrink-0" />
+              <Users className="w-5 h-5 text-[#14428c] shrink-0" />
               <span>Famílias com Múltiplos Estudantes na Escola</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
@@ -284,7 +284,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
             <button
               type="button"
               onClick={handleExportCsv}
-              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors shrink-0"
+              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors shrink-0"
             >
               <Download className="w-4 h-4" />
               <span>Exportar Relação (.csv)</span>
@@ -294,7 +294,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
 
         {/* Métricas Consolidadas */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 tabular-nums">
-          <div className="bg-[#f4f7fb] rounded-xl p-3">
+          <div className="bg-[#f3f6fb] rounded-xl p-3">
             <span className="text-xs font-medium text-slate-700 block">
               Famílias Identificadas
             </span>
@@ -302,15 +302,15 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
               {stats.totalFamilies}
             </span>
           </div>
-          <div className="bg-[#f4f7fb] rounded-xl p-3">
+          <div className="bg-[#f3f6fb] rounded-xl p-3">
             <span className="text-xs font-medium text-slate-700 block">
               Estudantes Vinculados
             </span>
-            <span className="text-xl sm:text-2xl font-bold text-[#0b3b8c]">
+            <span className="text-xl sm:text-2xl font-bold text-[#14428c]">
               {stats.totalLinkedStudents}
             </span>
           </div>
-          <div className="bg-[#f4f7fb] rounded-xl p-3">
+          <div className="bg-[#f3f6fb] rounded-xl p-3">
             <span className="text-xs font-medium text-slate-700 block">
               Em Turmas Diferentes
             </span>
@@ -318,7 +318,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
               {stats.multiClassFamilies}
             </span>
           </div>
-          <div className="bg-[#f4f7fb] rounded-xl p-3">
+          <div className="bg-[#f3f6fb] rounded-xl p-3">
             <span className="text-xs font-medium text-slate-700 block">
               Com Alerta de Frequência
             </span>
@@ -334,7 +334,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
 
         {/* Filtros e Busca */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pt-2">
-          <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-[#edf2f7]">
+          <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-[#eef3f9]">
             <button
               type="button"
               onClick={() => setFilterMode('all')}
@@ -390,7 +390,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar mãe, pai, aluno ou turma..."
-              className="w-full min-h-[40px] pl-9 pr-8 bg-[#edf2f7] focus:bg-white rounded-xl text-xs sm:text-sm text-slate-950 placeholder:text-slate-600 transition-colors"
+              className="w-full min-h-[40px] pl-9 pr-8 bg-[#eef3f9] focus:bg-white rounded-xl text-xs sm:text-sm text-slate-950 placeholder:text-slate-600 transition-colors"
             />
             {searchQuery && (
               <button
@@ -521,7 +521,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                         {cleanTel.length >= 8 && (
                           <a
                             href={`tel:${cleanTel}`}
-                            className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer"
+                            className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold inline-flex items-center justify-center transition-colors cursor-pointer"
                             title={`Ligar para ${fam.phones[0]}`}
                           >
                             <Phone className="w-3.5 h-3.5" />
@@ -549,7 +549,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                       <div
                         key={m.student.id}
                         className={`py-2 px-2.5 rounded-xl flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 min-w-0 ${
-                          mIdx % 2 === 0 ? 'bg-[#f4f7fb]' : 'bg-white/90'
+                          mIdx % 2 === 0 ? 'bg-[#f3f6fb]' : 'bg-white/90'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -568,7 +568,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                                 <button
                                   type="button"
                                   onClick={() => onSelectClass(m.cls)}
-                                  className="font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                                  className="font-semibold text-[#14428c] hover:underline cursor-pointer"
                                 >
                                   Turma {m.cls.name}
                                 </button>
@@ -603,7 +603,7 @@ export const FamiliasMultiplosAlunosView: React.FC<FamiliasMultiplosAlunosViewPr
                           <button
                             type="button"
                             onClick={() => onOpenStudentGrid(m.student, m.cls)}
-                            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#edf2f7] text-slate-950 font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 shadow-xs"
+                            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#eef3f9] text-slate-950 font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 shadow-xs"
                           >
                             <span>Ficha</span>
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -658,7 +658,7 @@ export const FamiliasMultiplosAlunosModal: React.FC<
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="bg-[#f4f7fb] w-full max-w-5xl rounded-2xl sm:rounded-3xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.45)] overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
+          className="bg-[#f3f6fb] w-full max-w-5xl rounded-2xl sm:rounded-3xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.45)] overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
         >
           <div className="bg-white px-4 sm:px-6 py-4 flex items-center justify-between gap-3 shrink-0">
             <div className="min-w-0">
@@ -673,7 +673,7 @@ export const FamiliasMultiplosAlunosModal: React.FC<
               type="button"
               onClick={onClose}
               aria-label="Fechar janela de famílias"
-              className="min-h-[40px] min-w-[40px] rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+              className="min-h-[40px] min-w-[40px] rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer transition-colors shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -706,7 +706,7 @@ export const FamiliasMultiplosAlunosModal: React.FC<
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[40px] px-5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97]"
+              className="min-h-[40px] px-5 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               Fechar
             </button>

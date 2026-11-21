@@ -827,7 +827,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   <button
                     type="button"
                     onClick={onBack}
-                    className="text-[#0b3b8c] hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer shrink-0 active:scale-[0.97] transition-transform"
+                    className="text-[#14428c] hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer shrink-0 active:scale-[0.97] transition-transform"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>Voltar</span>
@@ -875,7 +875,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
             {!isPeb1 && availableClasses.length > 1 && onSelectClass ? (
               <>
-                <div className="inline-flex items-center gap-1 bg-[#edf2f7] p-1 rounded-xl">
+                <div className="inline-flex items-center gap-1 bg-[#eef3f9] p-1 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setViewAllClassesMode(true)}
@@ -907,7 +907,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                       const target = availableClasses.find((c) => c.id === e.target.value);
                       if (target) onSelectClass(target);
                     }}
-                    className="h-9 px-3 rounded-xl bg-[#edf2f7] text-slate-950 text-xs font-semibold cursor-pointer"
+                    className="h-9 px-3 rounded-xl bg-[#eef3f9] text-slate-950 text-xs font-semibold cursor-pointer"
                   >
                     {availableClasses.map((cls) => (
                       <option key={cls.id} value={cls.id}>
@@ -992,8 +992,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
             onClick={() => setFilterMode('all')}
             className={`text-left p-3.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer flex items-center justify-between gap-2 min-w-0 ${
               filterMode === 'all'
-                ? 'bg-[#0b3b8c] text-white shadow-[0_10px_24px_-8px_rgba(11,59,140,0.45)]'
-                : 'bg-[#edf2f7] text-slate-950 hover:bg-[#e2e8f0]'
+                ? 'bg-[#14428c] text-white shadow-[0_10px_24px_-8px_rgba(11,59,140,0.45)]'
+                : 'bg-[#eef3f9] text-slate-950 hover:bg-[#e2e8f0]'
             }`}
           >
             <div className="min-w-0">
@@ -1021,7 +1021,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   ? 'Buscar estudante da sua turma por nome ou número...'
                   : 'Buscar por estudante, turma, professor(a) ou RA...'
               }
-              className="w-full h-10 pl-10 pr-9 bg-[#edf2f7] text-slate-950 placeholder:text-slate-600 text-sm rounded-xl focus:bg-white transition-all duration-200"
+              className="w-full h-10 pl-10 pr-9 bg-[#eef3f9] text-slate-950 placeholder:text-slate-600 text-sm rounded-xl focus:bg-white transition-all duration-200"
             />
             {searchQuery && (
               <button
@@ -1040,7 +1040,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               value={selectedClassFilterId}
               onChange={(e) => setSelectedClassFilterId(e.target.value)}
               aria-label="Filtrar fila por turma"
-              className="h-10 px-3 rounded-xl bg-[#edf2f7] text-slate-950 text-xs sm:text-sm font-semibold cursor-pointer shrink-0 sm:max-w-[230px]"
+              className="h-10 px-3 rounded-xl bg-[#eef3f9] text-slate-950 text-xs sm:text-sm font-semibold cursor-pointer shrink-0 sm:max-w-[230px]"
             >
               <option value="all">Todas as Turmas ({availableClasses.length})</option>
               {availableClasses.map((cls) => (
@@ -1107,7 +1107,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   <button
                     type="button"
                     onClick={() => openOccurrencePopup(cls, student, occ.id)}
-                    className="text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                    className="text-xs font-semibold text-[#14428c] hover:underline cursor-pointer"
                   >
                     Ver ficha completa
                   </button>
@@ -1148,7 +1148,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               <button
                 type="button"
                 onClick={() => setFilterMode('com_ocorrencia')}
-                className="mt-2 min-h-[38px] px-4 py-1.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer transition-colors"
+                className="mt-2 min-h-[38px] px-4 py-1.5 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer transition-colors"
               >
                 Ver todas as solicitações ({summaryStats.totalOccurrencesCount})
               </button>
@@ -1192,7 +1192,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   onClick={() =>
                     setExpandedStudentKey(isExpanded ? null : compositeKey)
                   }
-                  className="p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-[#f4f7fb] transition-colors"
+                  className="p-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-[#f3f6fb] transition-colors"
                 >
                   <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                     <span
@@ -1201,7 +1201,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           ? 'bg-[#be123c] text-white'
                           : hasOccurrences
                           ? 'bg-emerald-700 text-white'
-                          : 'bg-[#edf2f7] text-slate-900'
+                          : 'bg-[#eef3f9] text-slate-900'
                       }`}
                     >
                       {student.number.toString().padStart(2, '0')}
@@ -1280,8 +1280,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                     <span
                       className={`min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap transition-colors ${
                         isExpanded
-                          ? 'bg-[#0b3b8c] text-white'
-                          : 'bg-[#edf2f7] text-slate-950'
+                          ? 'bg-[#14428c] text-white'
+                          : 'bg-[#eef3f9] text-slate-950'
                       }`}
                     >
                       <span>
@@ -1308,7 +1308,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                 {/* Conteúdo Expandido — Separado por Papel */}
                 {isExpanded && (
-                  <div className="px-3.5 sm:px-5 pb-5 pt-4 bg-[#f4f7fb] space-y-4 animate-fade-in">
+                  <div className="px-3.5 sm:px-5 pb-5 pt-4 bg-[#f3f6fb] space-y-4 animate-fade-in">
                     {/* Faixa de Contato Familiar */}
                     {(canManageFamilyFeedback || hasOccurrences) && (
                       <div className="bg-white rounded-xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-[0_4px_14px_-6px_rgba(9,15,29,0.06)]">
@@ -1346,7 +1346,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             {contactData.cleanTelDigits && (
                               <a
                                 href={`tel:${contactData.cleanTelDigits}`}
-                                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold inline-flex items-center gap-1.5 transition-all duration-200 active:scale-[0.97] whitespace-nowrap"
+                                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold inline-flex items-center gap-1.5 transition-all duration-200 active:scale-[0.97] whitespace-nowrap"
                               >
                                 <Phone className="w-4 h-4 shrink-0" />
                                 <span>Ligar</span>
@@ -1394,7 +1394,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                       Datas faltosas: {occ.selectedDates.join(' · ')}
                                     </p>
                                     {occ.teacherObservation && (
-                                      <p className="text-xs text-slate-800 bg-[#f4f7fb] px-3 py-2 rounded-lg mt-1">
+                                      <p className="text-xs text-slate-800 bg-[#f3f6fb] px-3 py-2 rounded-lg mt-1">
                                         <span className="font-semibold text-slate-950">Observação PEB I: </span>
                                         {occ.teacherObservation}
                                       </p>
@@ -1405,7 +1405,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                     <button
                                       type="button"
                                       onClick={() => openOccurrencePopup(cls, student, occ.id)}
-                                      className="min-h-[34px] px-3 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer transition-colors"
+                                      className="min-h-[34px] px-3 py-1 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer transition-colors"
                                     >
                                       Resumo
                                     </button>
@@ -1503,7 +1503,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
 
                                 {/* Preenchimento do Admin */}
                                 {canManageFamilyFeedback && isEditingThis && (
-                                  <div className="rounded-xl bg-[#f4f7fb] p-3.5 space-y-3">
+                                  <div className="rounded-xl bg-[#f3f6fb] p-3.5 space-y-3">
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="text-xs font-bold text-slate-950">
                                         {hasFeedback
@@ -1547,8 +1547,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                             }
                                             className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.97] ${
                                               adminDraft.channel === ch.id
-                                                ? 'bg-[#0b3b8c] text-white shadow-sm'
-                                                : 'bg-white text-slate-800 hover:bg-[#edf2f7]'
+                                                ? 'bg-[#14428c] text-white shadow-sm'
+                                                : 'bg-white text-slate-800 hover:bg-[#eef3f9]'
                                             }`}
                                           >
                                             {ch.label}
@@ -1572,8 +1572,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                             }
                                             className={`min-h-[34px] px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap active:scale-[0.97] ${
                                               adminDraft.status === st.id
-                                                ? 'bg-slate-950 text-white shadow-sm'
-                                                : 'bg-white text-slate-800 hover:bg-[#edf2f7]'
+                                                ? 'bg-[#14428c] text-white shadow-sm'
+                                                : 'bg-white text-slate-800 hover:bg-[#eef3f9]'
                                             }`}
                                           >
                                             {st.label}
@@ -1595,7 +1595,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                             onClick={() =>
                                               updateAdminDraft(occ, { text: chip })
                                             }
-                                            className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#edf2f7] text-slate-800 text-xs font-medium transition-colors cursor-pointer text-left"
+                                            className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#eef3f9] text-slate-800 text-xs font-medium transition-colors cursor-pointer text-left"
                                           >
                                             + {chip}
                                           </button>
@@ -1651,7 +1651,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                             <button
                               type="button"
                               onClick={() => handleSelectLastThreeDaysShortcut(compositeKey)}
-                              className="min-h-[34px] px-3 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer whitespace-nowrap transition-colors"
+                              className="min-h-[34px] px-3 py-1 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold cursor-pointer whitespace-nowrap transition-colors"
                             >
                               Últimos 3 dias letivos
                             </button>
@@ -1693,7 +1693,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                                       ? 'bg-slate-200 text-slate-500 opacity-60 cursor-not-allowed line-through'
                                       : isSelected
                                       ? 'bg-[#be123c] text-white shadow-sm cursor-pointer active:scale-[0.97]'
-                                      : 'bg-[#edf2f7] text-slate-950 hover:bg-[#e2e8f0] cursor-pointer active:scale-[0.97]'
+                                      : 'bg-[#eef3f9] text-slate-950 hover:bg-[#e2e8f0] cursor-pointer active:scale-[0.97]'
                                   }`}
                                 >
                                   <span>{day.fullLabel}</span>
@@ -1726,7 +1726,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                               }))
                             }
                             placeholder="Ex.: Colega comentou que está com febre / família não respondeu recado na agenda..."
-                            className="w-full h-9 px-3 rounded-xl bg-[#edf2f7] text-slate-950 placeholder:text-slate-600 text-xs sm:text-sm focus:bg-white transition-colors"
+                            className="w-full h-9 px-3 rounded-xl bg-[#eef3f9] text-slate-950 placeholder:text-slate-600 text-xs sm:text-sm focus:bg-white transition-colors"
                           />
                         </div>
 
@@ -1797,7 +1797,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               onClick={(e) => e.stopPropagation()}
               className="bg-white w-full max-w-lg rounded-2xl shadow-[0_28px_70px_-14px_rgba(9,15,29,0.45)] overflow-hidden flex flex-col max-h-[86dvh] min-w-0 animate-apple-pop"
             >
-              <div className="px-4 py-3.5 bg-[#0b3b8c] text-white flex items-center justify-between gap-2.5 shrink-0">
+              <div className="px-4 py-3.5 bg-[#14428c] text-white flex items-center justify-between gap-2.5 shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <StudentAvatar student={activeModalData.student} size="md" />
                   <div className="min-w-0 flex-1">
@@ -1823,7 +1823,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               </div>
 
               {activeModalData.occurrences.length > 1 && (
-                <div className="px-4 py-2 bg-[#edf2f7] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+                <div className="px-4 py-2 bg-[#eef3f9] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
                   <span className="text-xs font-semibold text-slate-700 shrink-0 mr-1">
                     Solicitações:
                   </span>
@@ -1843,7 +1843,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                         }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 shrink-0 tabular-nums ${
                           isCurrent
-                            ? 'bg-[#0b3b8c] text-white shadow-xs'
+                            ? 'bg-[#14428c] text-white shadow-xs'
                             : 'bg-white text-slate-900 hover:bg-slate-100'
                         }`}
                       >
@@ -1932,7 +1932,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                   activeModalData.activeOcc.selectedDates
                 );
                 return (
-                  <div className="p-3 rounded-xl bg-[#f4f7fb] flex flex-wrap items-center justify-between gap-2">
+                  <div className="p-3 rounded-xl bg-[#f3f6fb] flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <span className="text-xs text-slate-700 font-medium block">
                         {contactData.guardian1.shortRoleLabel || 'Responsável Legal'}
@@ -1962,7 +1962,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                 const occ = activeModalData.activeOcc;
                 const draft = getOrInitAdminDraft(occ);
                 return (
-                  <div className="p-3.5 rounded-xl bg-[#f4f7fb] space-y-2.5 animate-fade-in">
+                  <div className="p-3.5 rounded-xl bg-[#f3f6fb] space-y-2.5 animate-fade-in">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-bold text-slate-950">
                         Registrar Contato &amp; Feedback
@@ -1984,8 +1984,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           onClick={() => updateAdminDraft(occ, { channel: ch.id })}
                           className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                             draft.channel === ch.id
-                              ? 'bg-[#0b3b8c] text-white'
-                              : 'bg-white text-slate-800 hover:bg-[#edf2f7]'
+                              ? 'bg-[#14428c] text-white'
+                              : 'bg-white text-slate-800 hover:bg-[#eef3f9]'
                           }`}
                         >
                           {ch.label}
@@ -2001,8 +2001,8 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           onClick={() => updateAdminDraft(occ, { status: st.id })}
                           className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                             draft.status === st.id
-                              ? 'bg-slate-950 text-white'
-                              : 'bg-white text-slate-800 hover:bg-[#edf2f7]'
+                              ? 'bg-[#14428c] text-white'
+                              : 'bg-white text-slate-800 hover:bg-[#eef3f9]'
                           }`}
                         >
                           {st.label}
@@ -2016,7 +2016,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
                           key={chip}
                           type="button"
                           onClick={() => updateAdminDraft(occ, { text: chip })}
-                          className="px-2 py-1 rounded-md bg-white hover:bg-[#edf2f7] text-slate-800 text-xs font-medium cursor-pointer text-left"
+                          className="px-2 py-1 rounded-md bg-white hover:bg-[#eef3f9] text-slate-800 text-xs font-medium cursor-pointer text-left"
                         >
                           + {chip}
                         </button>
@@ -2050,12 +2050,12 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               })()}
             </div>
 
-            <div className="px-4 py-3 bg-[#f4f7fb] flex items-center justify-between gap-2 shrink-0">
+            <div className="px-4 py-3 bg-[#f3f6fb] flex items-center justify-between gap-2 shrink-0">
               {canManageFamilyFeedback && !isEditingModalFeedback ? (
                 <button
                   type="button"
                   onClick={() => setIsEditingModalFeedback(true)}
-                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-[#dce7fb] text-[#0b3b8c] font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-[#e8f0fe] text-[#14428c] font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>
@@ -2090,7 +2090,7 @@ export const FaltasConsecutivasScreen: React.FC<FaltasConsecutivasScreenProps> =
               <button
                 type="button"
                 onClick={() => setReadingOccurrenceModal(null)}
-                className="min-h-[38px] px-5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-xs sm:text-sm cursor-pointer transition-all duration-200 active:scale-[0.97]"
+                className="min-h-[38px] px-5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs sm:text-sm cursor-pointer transition-all duration-200 active:scale-[0.97]"
               >
                 Fechar
               </button>

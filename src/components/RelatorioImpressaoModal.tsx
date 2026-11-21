@@ -57,7 +57,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
         {/* Modal Controls */}
         <div className="modal-header-surface p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print shrink-0">
           <div className="flex items-center gap-2">
-            <FileText className="w-6 h-6 text-[#0b3b8c] shrink-0" />
+            <FileText className="w-6 h-6 text-[#14428c] shrink-0" />
             <div>
               <h3 className="text-base font-semibold text-slate-950 leading-tight">
                 Relatórios Oficiais — Bimestral (Bolsa Família) e Mensal
@@ -69,13 +69,13 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center bg-[#edf2f7] p-1 rounded-xl">
+            <div className="flex items-center bg-[#eef3f9] p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setReportMode('bimestral')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 ${
                   reportMode === 'bimestral'
-                    ? 'bg-slate-950 text-white shadow-xs'
+                    ? 'bg-[#14428c] text-white shadow-xs'
                     : 'text-slate-700 hover:text-slate-950'
                 }`}
               >
@@ -86,7 +86,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                 onClick={() => setReportMode('mensal')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 ${
                   reportMode === 'mensal'
-                    ? 'bg-slate-950 text-white shadow-xs'
+                    ? 'bg-[#14428c] text-white shadow-xs'
                     : 'text-slate-700 hover:text-slate-950'
                 }`}
               >
@@ -111,7 +111,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <button
               onClick={handlePrint}
               type="button"
-              className="min-h-[38px] px-4 bg-slate-950 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-all duration-200 active:scale-[0.97]"
+              className="min-h-[38px] px-4 bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <Printer className="w-[18px] h-[18px]" />
               <span>Imprimir / PDF</span>
@@ -120,7 +120,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               onClick={onClose}
               type="button"
               aria-label="Fechar"
-              className="w-9 h-9 rounded-xl bg-[#edf2f7] text-slate-700 hover:text-slate-950 hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer transition-colors"
+              className="w-9 h-9 rounded-xl bg-[#eef3f9] text-slate-700 hover:text-slate-950 hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -128,7 +128,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
         </div>
 
         {/* Printable Document Sheet */}
-        <div className="modal-scroll-body flex-1 min-h-0 py-6 px-4 sm:px-6 bg-white text-[#090f1d] space-y-5 print:p-0">
+        <div className="modal-scroll-body flex-1 min-h-0 py-6 px-4 sm:px-6 bg-white text-[#0f172a] space-y-5 print:p-0">
           {/* Official Letterhead */}
           <div>
             <div className="pb-4 flex items-center justify-between">
@@ -147,7 +147,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                   <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide block">
                     {CITY_NAME} • {SECRETARY_NAME}
                   </span>
-                  <h1 className="text-lg font-semibold text-[#0b3b8c] uppercase tracking-wide">
+                  <h1 className="text-lg font-semibold text-[#14428c] uppercase tracking-wide">
                     LISTA PILOTO 2027 • {SCHOOL_NAME}
                   </h1>
                   <p className="text-sm text-[#065f46] font-bold">
@@ -159,7 +159,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
               </div>
               <div className="text-right">
                 <span className="text-xs font-bold text-slate-700 block">ANO LETIVO 2027</span>
-                <span className="text-base font-semibold text-[#0b3b8c]">
+                <span className="text-base font-semibold text-[#14428c]">
                   {reportMode === 'bimestral' ? currentBimester.periodLabel.toUpperCase() : defaultRefPeriod.label.toUpperCase()}
                 </span>
                 <span className="text-xs text-[#065f46] font-bold block">
@@ -167,14 +167,14 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                 </span>
               </div>
             </div>
-            <div className="h-[2px] bg-[#0b3b8c]" />
+            <div className="h-[2px] bg-[#14428c]" />
           </div>
 
           {/* Class Identifiers */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#f4f7fb] p-3.5 rounded-xl text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#f3f6fb] p-3.5 rounded-xl text-sm">
             <div>
               <span className="text-slate-700 font-bold block text-xs">TURMA / ANO</span>
-              <span className="font-semibold text-[#0b3b8c] text-base">{classGroup.name}</span>
+              <span className="font-semibold text-[#14428c] text-base">{classGroup.name}</span>
             </div>
             <div>
               <span className="text-slate-700 font-bold block text-xs">ETAPA / EXIGÊNCIA MEC</span>
@@ -198,11 +198,11 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <div className="rounded-xl overflow-x-auto shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)]">
               <table className="w-full text-left text-sm min-w-[680px]">
                 <thead>
-                  <tr className="bg-[#0b3b8c] text-white font-bold">
+                  <tr className="bg-[#14428c] text-white font-bold">
                     <th className="py-2.5 px-2.5 w-10 text-center">Nº</th>
                     <th className="py-2.5 px-3">Estudante (RA / NIS Bolsa Família)</th>
                     {currentBimester.months.map((mObj) => (
-                      <th key={mObj.name} className="py-2.5 px-2 text-center bg-[#004632]">
+                      <th key={mObj.name} className="py-2.5 px-2 text-center bg-[#065f46]">
                         {mObj.name.slice(0, 3)}. / 27
                         <span className="block text-xs font-normal text-emerald-100">Faltas | Atest.</span>
                       </th>
@@ -222,7 +222,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                           ? 'bg-rose-50/90'
                           : idx % 2 === 0
                           ? 'bg-white'
-                          : 'bg-[#f4f7fb]'
+                          : 'bg-[#f3f6fb]'
                       }
                     >
                       <td className="py-2.5 px-2.5 text-center font-bold text-slate-700 tabular-nums">
@@ -254,7 +254,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                       <td className="py-2.5 px-2 text-center font-semibold text-[#065f46] tabular-nums">
                         {r.totalAtestadosBimestre}
                       </td>
-                      <td className="py-2.5 px-2 text-center font-semibold text-[#0b3b8c] tabular-nums">
+                      <td className="py-2.5 px-2 text-center font-semibold text-[#14428c] tabular-nums">
                         {r.frequenciaBimestrePercent}%
                       </td>
                       <td className="py-2.5 px-2.5 text-center">
@@ -278,7 +278,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
             <div className="rounded-xl overflow-x-auto shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)]">
               <table className="w-full text-left text-sm min-w-[600px]">
                 <thead>
-                  <tr className="bg-[#edf2f7] text-[#0b3b8c] font-bold">
+                  <tr className="bg-[#eef3f9] text-[#14428c] font-bold">
                     <th className="py-2.5 px-3 w-12 text-center">Nº</th>
                     <th className="py-2.5 px-3">Nome do Estudante</th>
                     <th className="py-2.5 px-2 text-center">Dias (Recorte)</th>
@@ -303,7 +303,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                             ? 'bg-rose-50/90'
                             : idx % 2 === 0
                             ? 'bg-white'
-                            : 'bg-[#f4f7fb]'
+                            : 'bg-[#f3f6fb]'
                         }
                       >
                         <td className="py-2.5 px-3 text-center font-bold text-slate-700 tabular-nums">
@@ -321,7 +321,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                         <td className="py-2.5 px-2 text-center font-bold text-[#065f46] tabular-nums">
                           {m.atestados}
                         </td>
-                        <td className="py-2.5 px-2 text-center font-semibold text-[#0b3b8c] tabular-nums">
+                        <td className="py-2.5 px-2 text-center font-semibold text-[#14428c] tabular-nums">
                           {m.frequenciaPercent}%
                         </td>
                         <td className="py-2.5 px-3 text-center">
@@ -334,7 +334,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
                               100% Presença
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-[#edf2f7] text-slate-900">
+                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-[#eef3f9] text-slate-900">
                               Regular (≥{m.minLegalPresencePercent}%)
                             </span>
                           )}
@@ -348,7 +348,7 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           )}
 
           {/* Pedagogical Observations Box */}
-          <div className="rounded-xl p-3.5 bg-[#f4f7fb]">
+          <div className="rounded-xl p-3.5 bg-[#f3f6fb]">
             <span className="text-xs font-bold text-slate-700 block uppercase">
               Parecer Pedagógico e Observações Gerais
             </span>
@@ -384,13 +384,13 @@ export const RelatorioImpressaoModal: React.FC<RelatorioImpressaoModalProps> = (
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 font-bold text-xs cursor-pointer transition-colors"
+              className="px-4 py-2 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 font-bold text-xs cursor-pointer transition-colors"
             >
               Fechar Visualização
             </button>
             <button
               onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs cursor-pointer transition-all duration-200 active:scale-[0.97] inline-flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs cursor-pointer transition-all duration-200 active:scale-[0.97] inline-flex items-center gap-1.5 shadow-xs"
             >
               <Printer className="w-4 h-4" />
               <span>Imprimir Relatório</span>

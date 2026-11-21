@@ -388,7 +388,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
         <button
           type="button"
           onClick={onBack}
-          className="min-h-[42px] px-5 rounded-2xl bg-[#111827] text-white text-xs sm:text-sm font-semibold cursor-pointer"
+          className="min-h-[42px] px-5 rounded-2xl bg-[#14428c] text-white text-xs sm:text-sm font-semibold cursor-pointer"
         >
           Voltar
         </button>
@@ -400,8 +400,8 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
     <div
       className={
         embedded
-          ? 'w-full min-w-0 space-y-4 text-[#111827] animate-gentle-fade'
-          : 'w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 text-[#111827] animate-gentle-fade'
+          ? 'w-full min-w-0 space-y-4 text-[#0f172a] animate-gentle-fade'
+          : 'w-full min-w-0 max-w-[1600px] mx-auto space-y-4 pb-20 text-[#0f172a] animate-gentle-fade'
       }
     >
       {feedback && (
@@ -409,7 +409,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
           role="status"
           className={`rounded-2xl px-4 py-3 text-xs sm:text-sm font-medium flex items-center justify-between gap-3 ${
             feedback.type === 'success'
-              ? 'bg-[#eaf6ef] text-[#005035]'
+              ? 'bg-[#ecfdf5] text-[#047857]'
               : 'bg-[#fee2e2] text-[#991b1b]'
           }`}
         >
@@ -464,7 +464,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
                 setRows([]);
                 setFeedback(null);
               }}
-              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer self-start lg:self-auto whitespace-normal text-center"
+              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#f3f6fb] hover:bg-[#dfe8f4] text-[#0f172a] text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer self-start lg:self-auto whitespace-normal text-center"
             >
               <Trash2 className="w-3.5 h-3.5 shrink-0" />
               <span>Limpar Lista</span>
@@ -488,7 +488,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
           }}
           onClick={() => fileInputRef.current?.click()}
           className={`rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-colors duration-100 space-y-3 ${
-            isDragging ? 'bg-[#e8f0fe]' : 'bg-[#f2f2f7] hover:bg-[#e9e9ef]'
+            isDragging ? 'bg-[#e8f0fe]' : 'bg-[#f3f6fb] hover:bg-[#dfe8f4]'
           }`}
         >
           <input
@@ -505,7 +505,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
             }}
           />
 
-          <div className="w-12 h-12 rounded-2xl bg-white text-[#1a4fa3] flex items-center justify-center mx-auto shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-white text-[#14428c] flex items-center justify-center mx-auto shadow-xs">
             {isParsing ? (
               <Sparkles className="w-6 h-6 animate-spin" />
             ) : (
@@ -525,7 +525,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
           </div>
 
           <div className="pt-1">
-            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-950 text-white text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#14428c] text-white text-xs font-semibold">
               <Upload className="w-3.5 h-3.5" />
               <span>Selecionar arquivo .htm / .html</span>
             </span>
@@ -533,7 +533,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
         </div>
 
         {/* Opções de Mesclagem & Etiqueta Padrão para Relatórios Filtrados */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end bg-[#f4f7fb] rounded-2xl p-4 min-w-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end bg-[#f3f6fb] rounded-2xl p-4 min-w-0">
           <div className="lg:col-span-5 space-y-1 min-w-0">
             <label className="block text-xs font-semibold text-slate-800 break-words">
               Deficiência padrão (opcional — útil se o .htm for uma lista filtrada sem coluna de deficiência)
@@ -551,7 +551,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
                   type="button"
                   onClick={applyFallbackToEmptyRows}
                   disabled={!fallbackDisabilityTag.trim()}
-                  className="w-full sm:w-auto min-h-[40px] px-3 py-1.5 rounded-xl bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70] text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-50 whitespace-normal text-center"
+                  className="w-full sm:w-auto min-h-[40px] px-3 py-1.5 rounded-xl bg-[#e8f0fe] hover:bg-[#d4e2fc] text-[#0f3370] text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-50 whitespace-normal text-center"
                 >
                   Preencher vazios
                 </button>
@@ -574,12 +574,12 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
           </div>
 
           <div className="lg:col-span-3">
-            <label className="flex items-center gap-2 min-h-[40px] px-3 rounded-xl bg-white cursor-pointer text-xs font-medium text-[#111827]">
+            <label className="flex items-center gap-2 min-h-[40px] px-3 rounded-xl bg-white cursor-pointer text-xs font-medium text-[#0f172a]">
               <input
                 type="checkbox"
                 checked={allowClearWhenNoDisability}
                 onChange={(e) => setAllowClearWhenNoDisability(e.target.checked)}
-                className="w-4 h-4 accent-[#111827]"
+                className="w-4 h-4 accent-[#0f172a]"
               />
               <span>Limpar se .htm indicar &ldquo;Não possui&rdquo;</span>
             </label>
@@ -595,7 +595,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
               {parsedFiles.map((pf) => (
                 <span
                   key={pf.fileName}
-                  className="px-2.5 py-1 rounded-lg bg-[#edf2f7] text-slate-950 font-medium break-all"
+                  className="px-2.5 py-1 rounded-lg bg-[#eef3f9] text-slate-950 font-medium break-all"
                 >
                   {pf.fileName} · {pf.detectedCharset} · {pf.totalRowsExtracted} linha(s)
                 </span>
@@ -620,8 +620,8 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
                   onClick={() => setPreviewFilter(t.id)}
                   className={`min-h-[40px] px-3.5 py-1.5 rounded-xl text-xs font-medium cursor-pointer transition-colors duration-100 whitespace-normal text-center ${
                     previewFilter === t.id
-                      ? 'bg-slate-950 text-white font-semibold'
-                      : 'bg-[#edf2f7] text-slate-800 hover:bg-[#e2e8f0]'
+                      ? 'bg-[#14428c] text-white font-semibold'
+                      : 'bg-[#eef3f9] text-slate-800 hover:bg-[#e2e8f0]'
                   }`}
                 >
                   {t.label}
@@ -637,7 +637,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Filtrar estudante, RA ou tipo..."
-                  className="w-full min-h-[40px] pl-9 pr-8 rounded-xl bg-[#edf2f7] text-xs sm:text-sm text-slate-950 placeholder:text-slate-600"
+                  className="w-full min-h-[40px] pl-9 pr-8 rounded-xl bg-[#eef3f9] text-xs sm:text-sm text-slate-950 placeholder:text-slate-600"
                 />
               </div>
 
@@ -681,7 +681,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
                 <button
                   type="button"
                   onClick={() => setConfirmApplyOpen(false)}
-                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-slate-100 text-[#111827] text-xs font-semibold cursor-pointer"
+                  className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-slate-100 text-[#0f172a] text-xs font-semibold cursor-pointer"
                 >
                   Revisar Tabela
                 </button>
@@ -706,7 +706,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
                 <article
                   key={row.rowKey}
                   className={`p-3.5 rounded-2xl space-y-2.5 min-w-0 break-words ${
-                    isMatched ? 'bg-[#f2f2f7]' : 'bg-[#fef3c7]/60'
+                    isMatched ? 'bg-[#f3f6fb]' : 'bg-[#fef3c7]/60'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 min-w-0">
@@ -779,7 +779,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
           {/* Desktop Zebra Table */}
           <div className="hidden lg:block overflow-x-auto rounded-2xl">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#edf2f7] text-slate-800 font-semibold text-xs">
+              <thead className="bg-[#eef3f9] text-slate-800 font-semibold text-xs">
                 <tr>
                   <th className="py-3 px-3 w-10 rounded-tl-xl">Aplicar</th>
                   <th className="py-3 px-3">Estudante (Base Escolar)</th>
@@ -795,7 +795,7 @@ export const ImportarDeficienciasHtmScreen: React.FC<ImportarDeficienciasHtmScre
                   return (
                     <tr
                       key={row.rowKey}
-                      className="odd:bg-[#f4f7fb] even:bg-white hover:bg-[#e8eff9] transition-colors duration-100"
+                      className="odd:bg-[#f3f6fb] even:bg-white hover:bg-[#e8f0fe] transition-colors duration-100"
                     >
                       <td className="py-2.5 px-3 align-middle text-center">
                         {isMatched ? (

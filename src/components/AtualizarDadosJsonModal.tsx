@@ -230,11 +230,11 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
       {/* Header Institucional */}
       <div
         className={`modal-header-surface px-5 sm:px-6 py-4 flex items-start justify-between gap-3 shrink-0 min-w-0 ${
-          embedded ? 'bg-[#f4f7fb]' : 'bg-[#edf2f7]'
+          embedded ? 'bg-[#f3f6fb]' : 'bg-[#eef3f9]'
         }`}
       >
         <div className="flex items-start gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#0b3b8c] text-white flex items-center justify-center shrink-0 mt-0.5">
+          <div className="w-10 h-10 rounded-xl bg-[#14428c] text-white flex items-center justify-center shrink-0 mt-0.5">
             <FileUp className="w-5 h-5" />
           </div>
           <div className="min-w-0">
@@ -292,7 +292,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
             className={`rounded-2xl p-6 sm:p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3 select-none ${
               isDragging
                 ? 'bg-blue-100 scale-[1.01]'
-                : 'bg-[#eef2f7] hover:bg-slate-200/70'
+                : 'bg-[#eef3f9] hover:bg-slate-200/70'
             }`}
           >
             <input
@@ -306,8 +306,8 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
             <div
               className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
                 isDragging
-                  ? 'bg-[#0b3b8c] text-white shadow-md'
-                  : 'bg-white text-[#0b3b8c] shadow-sm'
+                  ? 'bg-[#14428c] text-white shadow-md'
+                  : 'bg-white text-[#14428c] shadow-sm'
               }`}
             >
               {isDragging ? <Download className="w-7 h-7" /> : <CloudUpload className="w-7 h-7" />}
@@ -320,7 +320,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
                   : 'Arraste e solte o arquivo .json aqui'}
               </p>
               <p className="text-xs text-slate-600">
-                ou <span className="text-[#0052cc] font-bold underline underline-offset-2">clique para selecionar do seu dispositivo</span>
+                ou <span className="text-[#14428c] font-bold underline underline-offset-2">clique para selecionar do seu dispositivo</span>
               </p>
             </div>
 
@@ -339,7 +339,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
 
           {/* Pré-visualização do Arquivo Validado */}
           {validatedData && (
-            <div className="bg-[#eef2f7] rounded-2xl p-4 sm:p-5 space-y-4 animate-gentle-fade">
+            <div className="bg-[#eef3f9] rounded-2xl p-4 sm:p-5 space-y-4 animate-gentle-fade">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-900 flex items-center justify-center shrink-0">
@@ -359,7 +359,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
                   <span className="px-3 py-1 rounded-full bg-white text-slate-900 font-mono text-xs font-bold tabular-nums shadow-2xs">
                     {validatedData.importedClassesCount ?? validatedData.classes.length} Turma(s)
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-[#0b3b8c] text-white font-mono text-xs font-bold tabular-nums shadow-2xs">
+                  <span className="px-3 py-1 rounded-full bg-[#14428c] text-white font-mono text-xs font-bold tabular-nums shadow-2xs">
                     {validatedData.importedStudentsCount ?? validatedData.totalStudents} Estudante(s)
                   </span>
                 </div>
@@ -420,7 +420,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
                       type="button"
                       onClick={handleApplyImport}
                       disabled={isApplying}
-                      className="min-h-[38px] px-4 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] disabled:opacity-50 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer"
+                      className="min-h-[38px] px-4 rounded-xl bg-[#14428c] hover:bg-[#0f3370] disabled:opacity-50 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer"
                     >
                       {isApplying ? (
                         <>
@@ -454,7 +454,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
                     type="button"
                     onClick={() => setConfirmOverwriteOpen(true)}
                     disabled={isApplying}
-                    className="w-full sm:w-auto min-h-[44px] px-6 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] disabled:opacity-50 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                    className="w-full sm:w-auto min-h-[44px] px-6 rounded-xl bg-[#14428c] hover:bg-[#0f3370] disabled:opacity-50 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
                   >
                     <CheckCheck className="w-[18px] h-[18px] text-emerald-300" />
                     <span>Aplicar Dados na Base Escolar</span>
@@ -473,10 +473,10 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Baixar Backup JSON */}
-              <div className="p-4 rounded-2xl bg-[#eef2f7] flex flex-col justify-between gap-2.5">
+              <div className="p-4 rounded-2xl bg-[#eef3f9] flex flex-col justify-between gap-2.5">
                 <div>
                   <h4 className="text-xs font-bold text-slate-950 flex items-center gap-1.5">
-                    <Download className="w-4 h-4 text-[#0052cc]" />
+                    <Download className="w-4 h-4 text-[#14428c]" />
                     <span>Baixar Backup JSON Atual</span>
                   </h4>
                   <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
@@ -546,7 +546,7 @@ export const AtualizarDadosJsonModal: React.FC<AtualizarDadosJsonModalProps> = (
 
         {/* Footer */}
         {!embedded && (
-          <div className="px-5 sm:px-6 py-3 bg-[#edf2f7] flex items-center justify-between gap-3 shrink-0">
+          <div className="px-5 sm:px-6 py-3 bg-[#eef3f9] flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-2 text-[11px] text-slate-700 font-medium">
               <Lock className="w-3.5 h-3.5 text-slate-700" />
               <span>Apenas Administradores Autorizados (@educacao.jundiai.sp.gov.br)</span>

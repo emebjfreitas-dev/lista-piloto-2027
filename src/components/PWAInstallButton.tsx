@@ -34,7 +34,7 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
           disabled={isInstalling}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer text-left"
         >
-          <Download className="w-4 h-4 text-[#0b3b8c]" />
+          <Download className="w-4 h-4 text-[#14428c]" />
           <span>Instalar Aplicativo (PWA)</span>
         </button>
       );
@@ -48,7 +48,7 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
             onClick={() => setShowIOSGuide(true)}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer text-left"
           >
-            <Smartphone className="w-4 h-4 text-[#0b3b8c]" />
+            <Smartphone className="w-4 h-4 text-[#14428c]" />
             <span>Instalar no iPhone / iPad</span>
           </button>
 
@@ -64,35 +64,38 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
                 >
                   <div className="flex items-center justify-between pb-1">
                     <div className="flex items-center gap-2">
-                      <Smartphone className="w-5 h-5 text-[#0b3b8c]" />
+                      <Smartphone className="w-5 h-5 text-[#14428c]" />
                       <h3 className="text-sm font-bold text-slate-950">Instalar no iPhone / iPad</h3>
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowIOSGuide(false)}
-                      className="p-1.5 rounded-xl bg-[#edf2f7] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
+                      className="p-1.5 rounded-xl bg-[#eef3f9] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
                     <p className="flex items-start gap-2">
-                      <span className="font-bold text-[#0b3b8c] shrink-0">1.</span>
+                      <span className="font-bold text-[#14428c] shrink-0">1.</span>
                       <span>No navegador <strong>Safari</strong>, toque no botão <strong>Compartilhar</strong> (ícone de quadrado com seta para cima).</span>
                     </p>
                     <p className="flex items-start gap-2">
-                      <span className="font-bold text-[#0b3b8c] shrink-0">2.</span>
+                      <span className="font-bold text-[#14428c] shrink-0">2.</span>
                       <span>Role para baixo e selecione <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong>.</span>
                     </p>
                     <p className="flex items-start gap-2">
-                      <span className="font-bold text-[#0b3b8c] shrink-0">3.</span>
+                      <span className="font-bold text-[#14428c] shrink-0">3.</span>
                       <span>Toque em <strong>&ldquo;Adicionar&rdquo;</strong> no canto superior direito para fixar o ícone oficial.</span>
+                    </p>
+                    <p className="rounded-xl bg-[#f3f6fb] px-3 py-2 text-[11px] text-[#334155]">
+                      Dica: caso o modo Tela de Início do iOS restrinja a janela de login Google no seu aparelho, acesse o portal diretamente pelo navegador Safari.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowIOSGuide(false)}
-                    className="w-full py-2.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold transition-colors cursor-pointer"
+                    className="w-full py-2.5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-bold transition-colors cursor-pointer"
                   >
                     Entendi
                   </button>
@@ -115,7 +118,7 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
         onClick={handleInstallClick}
         disabled={isInstalling}
         title="Instalar Lista Piloto como aplicativo no seu dispositivo"
-        className="h-9 px-2.5 xl:px-3 rounded-xl bg-[#0071e3]/10 hover:bg-[#0071e3]/16 text-[#0b3b8c] font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+        className="h-9 px-2.5 xl:px-3 rounded-xl bg-[#14428c]/10 hover:bg-[#14428c]/16 text-[#14428c] font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
       >
         <Download className="w-4 h-4 stroke-[1.6]" />
         <span className="hidden xl:inline">Instalar App</span>
@@ -148,35 +151,38 @@ export const PWAInstallButton: React.FC<{ variant?: 'header' | 'menu' }> = ({ va
               >
                 <div className="flex items-center justify-between pb-1">
                   <div className="flex items-center gap-2">
-                    <Smartphone className="w-5 h-5 text-[#0b3b8c]" />
+                    <Smartphone className="w-5 h-5 text-[#14428c]" />
                     <h3 className="text-sm font-bold text-slate-950">Instalar no iPhone / iPad</h3>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowIOSGuide(false)}
-                    className="p-1.5 rounded-xl bg-[#edf2f7] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
+                    className="p-1.5 rounded-xl bg-[#eef3f9] text-slate-700 hover:bg-[#e2e8f0] hover:text-slate-950 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
                   <p className="flex items-start gap-2">
-                    <span className="font-bold text-[#0b3b8c] shrink-0">1.</span>
+                    <span className="font-bold text-[#14428c] shrink-0">1.</span>
                     <span>No <strong>Safari</strong>, toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima).</span>
                   </p>
                   <p className="flex items-start gap-2">
-                    <span className="font-bold text-[#0b3b8c] shrink-0">2.</span>
+                    <span className="font-bold text-[#14428c] shrink-0">2.</span>
                     <span>Role as opções e toque em <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong>.</span>
                   </p>
                   <p className="flex items-start gap-2">
-                    <span className="font-bold text-[#0b3b8c] shrink-0">3.</span>
+                    <span className="font-bold text-[#14428c] shrink-0">3.</span>
                     <span>Confirme tocando em <strong>&ldquo;Adicionar&rdquo;</strong> para abrir em tela cheia como aplicativo.</span>
+                  </p>
+                  <p className="rounded-xl bg-[#f3f6fb] px-3 py-2 text-[11px] text-[#334155]">
+                    Dica: caso o modo Tela de Início do iOS restrinja a janela de login Google no seu aparelho, acesse o portal diretamente pelo navegador Safari.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowIOSGuide(false)}
-                  className="w-full py-2.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold transition-colors cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-bold transition-colors cursor-pointer"
                 >
                   Entendi
                 </button>

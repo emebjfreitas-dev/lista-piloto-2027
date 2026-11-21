@@ -490,8 +490,8 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
     return {
       label: 'Aviso',
       Icon: Megaphone,
-      badgeClass: 'bg-[#0071e3]/12 text-[#0071e3]',
-      dotClass: 'bg-[#0071e3]',
+      badgeClass: 'bg-[#14428c]/12 text-[#14428c]',
+      dotClass: 'bg-[#14428c]',
     };
   };
 
@@ -509,7 +509,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
           title="Notificações Push e Prazos (FCM)"
           className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer active:scale-95 ${
             isOpen
-              ? 'bg-[#0b3b8c] text-white'
+              ? 'bg-[#14428c] text-white'
               : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 hover:text-slate-950'
           }`}
         >
@@ -541,8 +541,8 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                       hasFcmToken
                         ? 'bg-emerald-100 text-emerald-950'
                         : swActive
-                        ? 'bg-[#dce7fb] text-[#092e70]'
-                        : 'bg-[#edf2f7] text-slate-800'
+                        ? 'bg-[#e8f0fe] text-[#0f3370]'
+                        : 'bg-[#eef3f9] text-slate-800'
                     }`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -560,7 +560,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={handleAcknowledgeAll}
-                  className="text-xs font-semibold text-[#0052cc] hover:underline inline-flex items-center gap-1 cursor-pointer shrink-0"
+                  className="text-xs font-semibold text-[#14428c] hover:underline inline-flex items-center gap-1 cursor-pointer shrink-0"
                 >
                   <CheckCheck className="w-3.5 h-3.5 stroke-[1.6]" />
                   <span>Dar ciência em tudo</span>
@@ -571,7 +571,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
             {/* Status Compulsório de Recebimento FCM (sem opção de desativar) */}
             <div
               className={`p-3 rounded-2xl space-y-2 ${
-                permission === 'denied' ? 'bg-rose-50' : 'bg-[#f4f7fb]'
+                permission === 'denied' ? 'bg-rose-50' : 'bg-[#f3f6fb]'
               }`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -604,7 +604,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                     type="button"
                     disabled={isRegisteringFcm}
                     onClick={handleTestOrRefreshCompulsoryPush}
-                    className="min-h-[34px] px-3 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold shrink-0 cursor-pointer transition-colors disabled:opacity-60"
+                    className="min-h-[34px] px-3 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-bold shrink-0 cursor-pointer transition-colors disabled:opacity-60"
                   >
                     {isRegisteringFcm ? 'Testando...' : 'Testar FCM'}
                   </button>
@@ -629,7 +629,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                   className={`p-3 rounded-2xl flex items-center justify-between gap-2.5 ${
                     teacherEodSummary.dueNowEvaluations.length > 0
                       ? 'bg-amber-50 text-amber-950'
-                      : 'bg-[#f5f5f7] text-[#1d1d1f]'
+                      : 'bg-[#f3f6fb] text-[#0f172a]'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
@@ -725,7 +725,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                   return (
                     <div
                       key={notice.id}
-                      className="w-full p-3 rounded-2xl bg-[#f4f7fb] hover:bg-[#edf2f7] transition-colors flex flex-col gap-2"
+                      className="w-full p-3 rounded-2xl bg-[#f3f6fb] hover:bg-[#eef3f9] transition-colors flex flex-col gap-2"
                     >
                       <button
                         type="button"
@@ -758,7 +758,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                         <button
                           type="button"
                           onClick={() => handleAcknowledgeNotice(notice.id)}
-                          className="min-h-[30px] px-3 rounded-lg bg-white hover:bg-[#0b3b8c] text-[#0b3b8c] hover:text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          className="min-h-[30px] px-3 rounded-lg bg-white hover:bg-[#14428c] text-[#14428c] hover:text-white text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
                         >
                           <Check className="w-3.5 h-3.5 stroke-[1.8]" />
                           <span>Dar ciência</span>
@@ -792,7 +792,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowComposer(true)}
-                      className="w-full min-h-[36px] rounded-2xl bg-[#0071e3]/10 hover:bg-[#0071e3]/15 text-[#0071e3] font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                      className="w-full min-h-[36px] rounded-2xl bg-[#14428c]/10 hover:bg-[#14428c]/15 text-[#14428c] font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                     >
                       <Send className="w-3.5 h-3.5 stroke-[1.6]" />
                       <span>Enviar Push Personalizado (Admin)</span>
@@ -801,7 +801,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 ) : (
                   <form onSubmit={handleCreateAndSendNotice} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#1d1d1f]">
+                      <span className="text-xs font-bold text-[#0f172a]">
                         Novo Disparo Push (Admin)
                       </span>
                       <button
@@ -819,7 +819,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                         onChange={(e) =>
                           setNewCategory(e.target.value as PushNoticeCategory)
                         }
-                        className="h-[34px] px-2.5 rounded-xl bg-[#f4f7fb] text-slate-950 text-xs font-semibold"
+                        className="h-[34px] px-2.5 rounded-xl bg-[#f3f6fb] text-slate-950 text-xs font-semibold"
                       >
                         <option value="prazo">Categoria: Prazo Próximo</option>
                         <option value="aviso">Categoria: Aviso Geral</option>
@@ -829,7 +829,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                       <select
                         value={newTargetClassId}
                         onChange={(e) => setNewTargetClassId(e.target.value)}
-                        className="h-[34px] px-2.5 rounded-xl bg-[#f4f7fb] text-slate-950 text-xs font-semibold"
+                        className="h-[34px] px-2.5 rounded-xl bg-[#f3f6fb] text-slate-950 text-xs font-semibold"
                       >
                         <option value="all">Todas as Turmas</option>
                         {classesForTargetSelect.map((c) => (
@@ -846,7 +846,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="Título (ex: Janela fecha amanhã)"
-                      className="w-full h-[34px] px-3 rounded-xl bg-[#f4f7fb] text-slate-950 placeholder:text-slate-600 text-xs font-semibold focus:bg-white transition-colors"
+                      className="w-full h-[34px] px-3 rounded-xl bg-[#f3f6fb] text-slate-950 placeholder:text-slate-600 text-xs font-semibold focus:bg-white transition-colors"
                     />
 
                     <textarea
@@ -855,12 +855,12 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                       value={newBody}
                       onChange={(e) => setNewBody(e.target.value)}
                       placeholder="Mensagem para notificar os professores via FCM..."
-                      className="w-full p-2.5 rounded-xl bg-[#f4f7fb] text-slate-950 placeholder:text-slate-600 text-xs focus:bg-white transition-colors resize-none"
+                      className="w-full p-2.5 rounded-xl bg-[#f3f6fb] text-slate-950 placeholder:text-slate-600 text-xs focus:bg-white transition-colors resize-none"
                     />
 
                     <button
                       type="submit"
-                      className="w-full h-[36px] rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 active:scale-[0.98]"
+                      className="w-full h-[36px] rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-150 active:scale-[0.98]"
                     >
                       <Send className="w-3.5 h-3.5 stroke-[1.6]" />
                       <span>Disparar Notificação Push Agora</span>
@@ -886,7 +886,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                 }}
                 className="flex items-start gap-3 cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-2xl bg-[#0071e3]/25 text-[#60a5fa] flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-2xl bg-[#14428c]/25 text-[#60a5fa] flex items-center justify-center shrink-0">
                   <BellRing className="w-4 h-4 stroke-[1.6]" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -922,7 +922,7 @@ export const PushNotificationCenter: React.FC<PushNotificationCenterProps> = ({
                     e.stopPropagation();
                     handleAcknowledgeNotice(activeBanner.id);
                   }}
-                  className="min-h-[32px] px-3 rounded-xl bg-white/15 hover:bg-white text-white hover:text-[#111827] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="min-h-[32px] px-3 rounded-xl bg-white/15 hover:bg-white text-white hover:text-[#0f172a] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5 stroke-[1.8]" />
                   <span>Dar ciência</span>

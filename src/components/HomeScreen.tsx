@@ -425,8 +425,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           title: 'Central Administrativa',
           subtitle: `Acessos, ano letivo ${activeSchoolYear} (200 dias), segurança e ${schoolStats.aeeCount} AEE`,
           icon: <ShieldCheck className="w-5 h-5 stroke-[1.5]" />,
-          accentBg: 'bg-[#0071e3]/12',
-          accentText: 'text-[#0071e3]',
+          accentBg: 'bg-[#14428c]/12',
+          accentText: 'text-[#14428c]',
           onClick: () => onNavigateToScreen('usuarios_acesso'),
         },
         {
@@ -445,8 +445,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         title: 'Quadro de Avisos da Direção',
         subtitle: `${schoolNotices.filter((n) => n.active !== false).length} comunicado(s) ativo(s)`,
         icon: <Bell className="w-5 h-5 stroke-[1.5]" />,
-        accentBg: 'bg-[#0071e3]/12',
-        accentText: 'text-[#0071e3]',
+        accentBg: 'bg-[#14428c]/12',
+        accentText: 'text-[#14428c]',
         onClick: () => {
           document.getElementById('quadro-avisos-direcao')?.scrollIntoView({ behavior: 'smooth' });
         },
@@ -468,12 +468,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   ]);
 
   return (
-    <div className="flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-5 pb-20 text-[#111827] animate-gentle-fade">
+    <div className="flex flex-col w-full min-w-0 max-w-[1600px] mx-auto space-y-5 pb-20 text-[#0f172a] animate-gentle-fade">
       {/* 1. CABEÇALHO LIMPO + INDICADORES ESSENCIAIS */}
       <section className="bg-white rounded-3xl p-5 sm:p-7 shadow-xs space-y-5 min-w-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
           <div className="space-y-1.5 min-w-0 flex-1">
-            <p className="text-xs sm:text-[13px] font-bold text-[#0b3b8c] text-balance break-words">
+            <p className="text-xs sm:text-[13px] font-bold text-[#14428c] text-balance break-words">
               EMEB Prof. Joaquim Candelário de Freitas · Ano Letivo {activeSchoolYear}
             </p>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950 text-balance break-words">
@@ -500,7 +500,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateToScreen('turmas')}
-                className="w-full sm:w-auto min-h-[46px] py-2.5 px-5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-sm font-semibold inline-flex items-center justify-center text-center whitespace-nowrap gap-2 cursor-pointer transition-colors duration-100 shadow-xs"
+                className="w-full sm:w-auto min-h-[46px] py-2.5 px-5 rounded-2xl bg-[#14428c] hover:bg-[#0f3370] text-white text-sm font-semibold inline-flex items-center justify-center text-center whitespace-nowrap gap-2 cursor-pointer transition-colors duration-100 shadow-xs"
               >
                 <Users className="w-[18px] h-[18px] stroke-[1.6] shrink-0" />
                 <span>Ver Turmas ({schoolStats.totalClasses})</span>
@@ -513,10 +513,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <button
             type="button"
             onClick={onOpenSpotlightSearch}
-            className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[#edf2f7] hover:bg-[#e2e8f0] flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:shadow-[0_4px_14px_rgba(11,59,140,0.12)] group"
+            className="w-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-[#eef3f9] hover:bg-[#e2e8f0] flex items-center justify-between gap-3 text-left cursor-pointer transition-all duration-200 hover:shadow-[0_4px_14px_rgba(11,59,140,0.12)] group"
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <Search className="w-4 h-4 text-[#0b3b8c] shrink-0" />
+              <Search className="w-4 h-4 text-[#14428c] shrink-0" />
               <span className="text-xs sm:text-sm font-semibold text-slate-700 group-hover:text-slate-950 truncate">
                 Buscar estudante por nome, RA ou turma em toda a escola...
               </span>
@@ -529,7 +529,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* Faixa Unificada de KPIs Alinhados */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 min-w-0 items-stretch">
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#edf2f7] min-w-0 flex flex-col justify-between h-full">
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#eef3f9] min-w-0 flex flex-col justify-between h-full">
             <span className="text-xs sm:text-[13px] font-bold text-slate-700 block">Estudantes Ativos</span>
             <span className="text-2xl sm:text-[28px] font-bold text-slate-950 tabular-nums block my-1 leading-tight">
               {schoolStats.activeStudents}
@@ -543,7 +543,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={() => onNavigateToScreen('detalhes')}
-              className="text-left p-4 sm:p-5 rounded-2xl bg-[#edf2f7] hover:bg-[#e2e8f0] card-interactive cursor-pointer min-w-0 flex flex-col justify-between h-full"
+              className="text-left p-4 sm:p-5 rounded-2xl bg-[#eef3f9] hover:bg-[#e2e8f0] card-interactive cursor-pointer min-w-0 flex flex-col justify-between h-full"
             >
               <span className="text-xs sm:text-[13px] font-bold text-slate-700 block">Minha Turma</span>
               <span className="text-xl sm:text-2xl font-bold text-slate-950 block my-1 leading-tight truncate">
@@ -554,7 +554,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </span>
             </button>
           ) : (
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#edf2f7] min-w-0 flex flex-col justify-between h-full">
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#eef3f9] min-w-0 flex flex-col justify-between h-full">
               <span className="text-xs sm:text-[13px] font-bold text-slate-700 block">Turmas</span>
               <span className="text-2xl sm:text-[28px] font-bold text-slate-950 tabular-nums block my-1 leading-tight">
                 {schoolStats.totalClasses}
@@ -585,8 +585,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <span className="text-xs text-rose-950 font-semibold block">Casos em atenção</span>
           </button>
 
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#dce7fb] col-span-2 sm:col-span-1 min-w-0 flex flex-col justify-between h-full">
-            <span className="text-xs sm:text-[13px] font-bold text-[#092e70] block">Referência</span>
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#e8f0fe] col-span-2 sm:col-span-1 min-w-0 flex flex-col justify-between h-full">
+            <span className="text-xs sm:text-[13px] font-bold text-[#0f3370] block">Referência</span>
             <span className="text-lg sm:text-xl font-bold text-slate-950 block my-1 leading-tight whitespace-nowrap">
               {referencePeriod.monthName}/{referencePeriod.year}
             </span>
@@ -701,7 +701,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowAllMissingFichasClasses((prev) => !prev)}
-                    className="px-2.5 py-1 rounded-lg text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg text-xs font-semibold text-[#14428c] hover:underline cursor-pointer"
                   >
                     {showAllMissingFichasClasses
                       ? 'Mostrar menos'
@@ -736,7 +736,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAllMissingFichasClasses((prev) => !prev)}
-                  className="px-2.5 py-1.5 text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                  className="px-2.5 py-1.5 text-xs font-semibold text-[#14428c] hover:underline cursor-pointer"
                 >
                   {showAllMissingFichasClasses
                     ? 'Ocultar turmas extras'
@@ -794,7 +794,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </div>
               </div>
 
-              <ChevronRight className="w-[18px] h-[18px] stroke-[1.7] text-slate-600 group-hover:text-[#0b3b8c] group-hover:translate-x-1 transition-all duration-200 shrink-0" />
+              <ChevronRight className="w-[18px] h-[18px] stroke-[1.7] text-slate-600 group-hover:text-[#14428c] group-hover:translate-x-1 transition-all duration-200 shrink-0" />
             </button>
           ))}
         </div>
@@ -820,7 +820,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 onClick={() => setSelectedShiftFilter('TODOS')}
                 className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-[13px] font-bold inline-flex items-center justify-center text-center whitespace-normal transition-all duration-200 cursor-pointer ${
                   selectedShiftFilter === 'TODOS'
-                    ? 'bg-[#0b3b8c] text-white shadow-[0_4px_12px_rgba(11,59,140,0.28)]'
+                    ? 'bg-[#14428c] text-white shadow-[0_4px_12px_rgba(11,59,140,0.28)]'
                     : 'text-slate-800 hover:bg-white/60'
                 }`}
               >
@@ -831,7 +831,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 onClick={() => setSelectedShiftFilter('MANHÃ')}
                 className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-[13px] font-bold inline-flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer ${
                   selectedShiftFilter === 'MANHÃ'
-                    ? 'bg-[#0b3b8c] text-white shadow-xs'
+                    ? 'bg-[#14428c] text-white shadow-xs'
                     : 'text-slate-700 hover:bg-slate-200/70'
                 }`}
               >
@@ -843,7 +843,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 onClick={() => setSelectedShiftFilter('TARDE')}
                 className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-[13px] font-bold inline-flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer ${
                   selectedShiftFilter === 'TARDE'
-                    ? 'bg-[#0b3b8c] text-white shadow-xs'
+                    ? 'bg-[#14428c] text-white shadow-xs'
                     : 'text-slate-700 hover:bg-slate-200/70'
                 }`}
               >
@@ -862,7 +862,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               value={turmaSearchInput}
               onChange={(e) => setTurmaSearchInput(e.target.value)}
               placeholder="Buscar turma ou professora (ex: G4 A, 1º B, 5º A)..."
-              className="w-full min-h-[46px] pl-11 pr-4 rounded-xl bg-slate-100 focus:bg-[#dce7fb]/60 text-sm sm:text-[15px] text-slate-950 placeholder:text-slate-600 transition-colors duration-150"
+              className="w-full min-h-[46px] pl-11 pr-4 rounded-xl bg-slate-100 focus:bg-[#e8f0fe]/60 text-sm sm:text-[15px] text-slate-950 placeholder:text-slate-600 transition-colors duration-150"
             />
           </div>
         )}
@@ -881,7 +881,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     ? onSelectClassForDetails(cls)
                     : onNavigateToScreen('detalhes')
                 }
-                className="w-full min-w-0 min-h-[120px] text-left bg-[#edf2f7] hover:bg-[#dce7fb] card-interactive rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-2.5 cursor-pointer group"
+                className="w-full min-w-0 min-h-[120px] text-left bg-[#eef3f9] hover:bg-[#e8f0fe] card-interactive rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-2.5 cursor-pointer group"
               >
                 <div className="flex items-start justify-between gap-2 w-full min-w-0">
                   <div className="min-w-0 flex-1">
@@ -901,7 +901,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     >
                       {cls.students.length === 0 ? '—' : `${cls.presenceRate}%`}
                     </span>
-                    <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-[#0b3b8c] group-hover:translate-x-1 transition-all duration-200" />
+                    <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-[#14428c] group-hover:translate-x-1 transition-all duration-200" />
                   </div>
                 </div>
 
@@ -932,7 +932,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
 
         {filteredClasses.length === 0 && (
-          <div className="p-8 text-center bg-[#edf2f7] rounded-2xl space-y-1">
+          <div className="p-8 text-center bg-[#eef3f9] rounded-2xl space-y-1">
             <p className="text-sm font-semibold text-slate-950">
               Nenhuma turma encontrada com esse termo.
             </p>
@@ -959,14 +959,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap sm:inline-flex w-full sm:w-auto max-w-full min-w-0 p-1.5 bg-[#f2f2f7] rounded-2xl text-xs sm:text-[13px] font-semibold gap-1">
+          <div className="flex flex-wrap sm:inline-flex w-full sm:w-auto max-w-full min-w-0 p-1.5 bg-[#f3f6fb] rounded-2xl text-xs sm:text-[13px] font-semibold gap-1">
             <button
               type="button"
               onClick={() => setActiveHubTab('prazos')}
               className={`flex-1 sm:flex-initial min-h-[42px] px-4 py-2 rounded-xl inline-flex items-center justify-center text-center whitespace-normal gap-1.5 transition-colors duration-100 cursor-pointer ${
                 activeHubTab === 'prazos'
-                  ? 'bg-[#111827] text-white'
-                  : 'text-[#374151] hover:bg-[#e5e5ea]'
+                  ? 'bg-[#14428c] text-white'
+                  : 'text-[#334155] hover:bg-[#dfe8f4]'
               }`}
             >
               <Clock className="w-4 h-4 shrink-0" />
@@ -1026,7 +1026,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 min-w-0">
           <div className="min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-950 flex items-center gap-2.5 min-w-0">
-              <BarChart3 className="w-5 h-5 text-[#0b3b8c] shrink-0" />
+              <BarChart3 className="w-5 h-5 text-[#14428c] shrink-0" />
               <span>Frequência das Turmas — Meta LDB</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-700 mt-0.5 break-words">
@@ -1040,8 +1040,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onClick={() => setChartSortMode((prev) => (prev === 'default' ? 'asc' : 'default'))}
               className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                 chartSortMode === 'asc'
-                  ? 'bg-slate-950 text-white shadow-[0_6px_16px_rgba(2,6,23,0.24)]'
-                  : 'bg-[#edf2f7] text-slate-800 hover:bg-[#e2e8f0]'
+                  ? 'bg-[#14428c] text-white shadow-[0_6px_16px_rgba(2,6,23,0.24)]'
+                  : 'bg-[#eef3f9] text-slate-800 hover:bg-[#e2e8f0]'
               }`}
               title="Alternar entre ordem das turmas e menor frequência primeiro"
             >
@@ -1055,7 +1055,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 onClick={() => setChartFilterShift('all')}
                 className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   chartFilterShift === 'all'
-                    ? 'bg-[#0b3b8c] text-white shadow-sm'
+                    ? 'bg-[#14428c] text-white shadow-sm'
                     : 'text-slate-800 hover:bg-white/60'
                 }`}
               >
@@ -1066,7 +1066,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 onClick={() => setChartFilterShift('MANHÃ')}
                 className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   chartFilterShift === 'MANHÃ'
-                    ? 'bg-[#0b3b8c] text-white shadow-sm'
+                    ? 'bg-[#14428c] text-white shadow-sm'
                     : 'text-slate-800 hover:bg-white/60'
                 }`}
               >
@@ -1077,7 +1077,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 onClick={() => setChartFilterShift('TARDE')}
                 className={`min-h-[34px] px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   chartFilterShift === 'TARDE'
-                    ? 'bg-[#0b3b8c] text-white shadow-sm'
+                    ? 'bg-[#14428c] text-white shadow-sm'
                     : 'text-slate-800 hover:bg-white/60'
                 }`}
               >
@@ -1088,7 +1088,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         {/* Faixa de Indicadores Quantitativos (Separação Tonal Sem Linhas) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-[#f4f7fb] text-xs sm:text-[13px]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-[#f3f6fb] text-xs sm:text-[13px]">
           <div className="flex items-baseline justify-between sm:justify-start sm:gap-2.5">
             <span className="text-slate-700 font-semibold">Média do recorte</span>
             <span className="font-mono font-bold text-slate-950 text-sm sm:text-base tabular-nums">
@@ -1238,7 +1238,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   }}
                 >
                   {chartData.map((entry) => {
-                    let barColor = '#059669';
+                    let barColor = '#047857';
                     if (entry.presence < 75) barColor = '#dc2626';
                     else if (entry.presence < 85) barColor = '#d97706';
                     return (
@@ -1258,7 +1258,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div className="flex flex-wrap items-center justify-between text-xs text-slate-600 pt-1 gap-3">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <span className="flex items-center gap-2 font-medium">
-              <span className="w-2.5 h-2.5 rounded-xs bg-[#059669] shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#047857] shrink-0" />
               ≥ 85% (Regular)
             </span>
             <span className="flex items-center gap-2 font-medium">

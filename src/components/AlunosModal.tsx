@@ -75,11 +75,11 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
         <div className="flex items-center justify-between gap-3 pb-3 shrink-0">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Users className="w-5 h-5 text-[#0b3b8c] shrink-0" strokeWidth={2} />
+              <Users className="w-5 h-5 text-[#14428c] shrink-0" strokeWidth={2} />
               <h3 className="text-base sm:text-lg font-semibold text-slate-950 break-words leading-snug">
                 {className} · Relação de Estudantes
               </h3>
-              <span className="px-2 py-0.5 rounded-md bg-[#edf2f7] text-slate-900 text-xs font-mono font-semibold tabular-nums shrink-0">
+              <span className="px-2 py-0.5 rounded-md bg-[#eef3f9] text-slate-900 text-xs font-mono font-semibold tabular-nums shrink-0">
                 {students.length}
               </span>
             </div>
@@ -91,7 +91,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-lg bg-[#edf2f7] text-slate-700 hover:text-slate-950 hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-9 h-9 rounded-lg bg-[#eef3f9] text-slate-700 hover:text-slate-950 hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer transition-colors shrink-0"
             aria-label="Fechar visualização da turma"
           >
             <X className="w-5 h-5" strokeWidth={2} />
@@ -107,7 +107,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nome, nº da chamada ou RA..."
-              className="w-full h-10 pl-10 pr-9 bg-[#edf2f7] text-slate-950 placeholder:text-slate-600 font-medium text-xs sm:text-sm rounded-xl focus:bg-white transition-all"
+              className="w-full h-10 pl-10 pr-9 bg-[#eef3f9] text-slate-950 placeholder:text-slate-600 font-medium text-xs sm:text-sm rounded-xl focus:bg-white transition-all"
             />
             {search && (
               <button
@@ -136,10 +136,10 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                   onClick={() => setSelectedStudentId(student.id)}
                   className={`p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 ${
                     isSelected
-                      ? 'bg-[#dce7fb] shadow-[0_6px_18px_-6px_rgba(11,59,140,0.22)] -translate-y-px'
+                      ? 'bg-[#e8f0fe] shadow-[0_6px_18px_-6px_rgba(11,59,140,0.22)] -translate-y-px'
                       : hasAlert
                       ? 'bg-rose-50 hover:bg-rose-100/80'
-                      : 'bg-[#f4f7fb] hover:bg-[#edf2f7]'
+                      : 'bg-[#f3f6fb] hover:bg-[#eef3f9]'
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
@@ -151,7 +151,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
                         {student.ra && (
-                          <span className="text-xs bg-white px-1.5 py-0.5 rounded font-mono font-bold text-[#003440]">
+                          <span className="text-xs bg-white px-1.5 py-0.5 rounded font-mono font-bold text-[#14428c]">
                             RA: {student.ra}-{student.digRa}
                           </span>
                         )}
@@ -161,7 +161,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                           </span>
                         )}
                       </div>
-                      <span className="text-base font-semibold text-[#003440] break-words leading-snug mt-0.5 block">
+                      <span className="text-base font-semibold text-[#14428c] break-words leading-snug mt-0.5 block">
                         {student.name}
                       </span>
                       <p className="text-xs font-semibold text-slate-700 break-words">
@@ -181,7 +181,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                       {student.totalAbsencesMonth}{' '}
                       {student.totalAbsencesMonth === 1 ? 'falta' : 'faltas'}
                     </span>
-                    <ChevronRight className="w-[18px] h-[18px] text-[#003440] mt-0.5" strokeWidth={2} />
+                    <ChevronRight className="w-[18px] h-[18px] text-[#14428c] mt-0.5" strokeWidth={2} />
                   </div>
                 </div>
               );
@@ -190,14 +190,14 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
 
           {/* Right Column (5 cols on Widescreen, Bottom Card on Mobile): Selected Student Detail Ficha */}
           {selectedStudent && (
-            <div className="mt-3 lg:mt-0 lg:col-span-5 p-4 sm:p-5 bg-[#f4f7fb] rounded-2xl flex flex-col justify-between gap-3 max-h-[42vh] lg:max-h-full modal-scroll-body">
+            <div className="mt-3 lg:mt-0 lg:col-span-5 p-4 sm:p-5 bg-[#f3f6fb] rounded-2xl flex flex-col justify-between gap-3 max-h-[42vh] lg:max-h-full modal-scroll-body">
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2">
-                  <span className="text-sm font-semibold text-[#003440] uppercase tracking-wide">
+                  <span className="text-sm font-semibold text-[#14428c] uppercase tracking-wide">
                     Ficha {getStudentGenderLabel(selectedStudent).doEstudante} — Nº{' '}
                     {selectedStudent.number.toString().padStart(2, '0')}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#dce7fb] text-[#090f1d] font-semibold text-xs">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#e8f0fe] text-[#0f172a] font-semibold text-xs">
                     {className}
                   </span>
                 </div>
@@ -211,10 +211,10 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                     onUploadPhotoClick={() => onOpenPhotoModal(selectedStudent)}
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-lg font-semibold text-[#003440] leading-tight block">
+                    <h4 className="text-lg font-semibold text-[#14428c] leading-tight block">
                       {selectedStudent.name}
                     </h4>
-                    <p className="text-sm font-mono font-bold text-[#2c373a] mt-0.5">
+                    <p className="text-sm font-mono font-bold text-[#1e293b] mt-0.5">
                       RA: {selectedStudent.ra || '—'}-{selectedStudent.digRa || ''}/{selectedStudent.ufRa || 'SP'} •{' '}
                       {getStudentGenderLabel(selectedStudent).label}
                     </p>
@@ -231,7 +231,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                             e.preventDefault();
                             onOpenStudentPdf(selectedStudent);
                           }}
-                          className="doc-hyperlink px-3 py-1.5 bg-[#edf2f7] hover:bg-[#003440] text-[#003440] hover:!text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                          className="doc-hyperlink px-3 py-1.5 bg-[#eef3f9] hover:bg-[#14428c] text-[#14428c] hover:!text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                         >
                           <FileText className="w-4 h-4" strokeWidth={2} />
                           <span>Ficha Informativa Escaneada (Drive)</span>
@@ -245,7 +245,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                             onClose();
                             onOpenStudentGrid(selectedStudent);
                           }}
-                          className="px-3 py-1.5 bg-[#003440] hover:bg-[#1e4b58] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
+                          className="px-3 py-1.5 bg-[#14428c] hover:bg-[#0f3370] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
                         >
                           <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
                           <span>Abrir 48 Campos SED</span>
@@ -261,7 +261,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                     <span className="text-xs font-semibold text-slate-700 uppercase block">
                       Nascimento / Idade
                     </span>
-                    <span className="font-semibold text-[#003440] break-words">
+                    <span className="font-semibold text-[#14428c] break-words">
                       {selectedStudent.dataNascimento || '—'}{' '}
                       {selectedStudent.idade ? `(${selectedStudent.idade})` : ''}
                     </span>
@@ -327,7 +327,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
                     <span className="text-xs font-semibold text-slate-700 uppercase block">
                       Telefones &amp; Contato
                     </span>
-                    <span className="font-semibold text-[#003440] break-words">
+                    <span className="font-semibold text-[#14428c] break-words">
                       {selectedStudent.telefones || selectedStudent.guardianPhone || '(11) 98765-4321'}
                     </span>
                     {selectedStudent.emailMunicipal && (
@@ -357,7 +357,7 @@ export const AlunosModal: React.FC<AlunosModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-full sm:w-auto min-w-[160px] h-10 px-5 bg-slate-950 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center justify-center transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-xs"
+            className="w-full sm:w-auto min-w-[160px] h-10 px-5 bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs sm:text-sm rounded-xl flex items-center justify-center transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-xs"
           >
             Fechar Relação
           </button>

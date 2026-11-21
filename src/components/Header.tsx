@@ -216,7 +216,7 @@ export const Header: React.FC<HeaderProps> = ({
       label: 'Central Administrativa',
       subtitle: 'Acessos, ano letivo (200 dias), segurança e uploads',
       icon: ShieldCheck,
-      tintClass: 'bg-[#0b3b8c]/10 text-[#0b3b8c]',
+      tintClass: 'bg-[#14428c]/10 text-[#14428c]',
     },
   ];
 
@@ -259,7 +259,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="w-8 h-8 object-contain shrink-0"
             />
-            <span className="text-[13.5px] sm:text-[14px] xl:text-[15.5px] font-semibold tracking-[-0.02em] text-[#0b3b8c] group-hover:text-[#1d4ed8] transition-colors truncate">
+            <span className="text-[13.5px] sm:text-[14px] xl:text-[15.5px] font-semibold tracking-[-0.02em] text-[#14428c] group-hover:text-[#0f3370] transition-colors truncate">
               Lista Piloto Candelário 2027
             </span>
           </button>
@@ -280,13 +280,13 @@ export const Header: React.FC<HeaderProps> = ({
                     aria-current={item.activeMatch ? 'page' : undefined}
                     className={`relative h-9 px-2 xl:px-3 rounded-xl text-[12.5px] xl:text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       item.activeMatch
-                        ? 'text-[#0b3b8c] font-semibold bg-[#0b3b8c]/[0.07] after:content-[""] after:absolute after:-bottom-1 after:inset-x-2.5 after:h-[2px] after:bg-[#0b3b8c] after:rounded-full'
+                        ? 'text-[#14428c] font-semibold bg-[#14428c]/[0.07] after:content-[""] after:absolute after:-bottom-1 after:inset-x-2.5 after:h-[2px] after:bg-[#14428c] after:rounded-full'
                         : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80 font-medium'
                     }`}
                   >
                     <IconComp
                       className={`w-[17px] h-[17px] shrink-0 ${
-                        item.activeMatch ? 'text-[#0b3b8c] stroke-[1.8]' : 'text-slate-700 stroke-[1.6]'
+                        item.activeMatch ? 'text-[#14428c] stroke-[1.8]' : 'text-slate-700 stroke-[1.6]'
                       }`}
                     />
                     <span>{item.label}</span>
@@ -306,14 +306,14 @@ export const Header: React.FC<HeaderProps> = ({
                     aria-expanded={showAdminNavDropdown}
                     className={`relative h-9 px-2 xl:px-3 rounded-xl text-[12.5px] xl:text-[13.5px] transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       isAdminScreenActive || showAdminNavDropdown
-                        ? 'text-[#0b3b8c] font-semibold bg-[#0b3b8c]/[0.07] after:content-[""] after:absolute after:-bottom-1 after:inset-x-2.5 after:h-[2px] after:bg-[#0b3b8c] after:rounded-full'
+                        ? 'text-[#14428c] font-semibold bg-[#14428c]/[0.07] after:content-[""] after:absolute after:-bottom-1 after:inset-x-2.5 after:h-[2px] after:bg-[#14428c] after:rounded-full'
                         : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80 font-medium'
                     }`}
                   >
                     <SlidersHorizontal
                       className={`w-[17px] h-[17px] shrink-0 ${
                         isAdminScreenActive || showAdminNavDropdown
-                          ? 'text-[#0b3b8c] stroke-[1.8]'
+                          ? 'text-[#14428c] stroke-[1.8]'
                           : 'text-slate-700 stroke-[1.6]'
                       }`}
                     />
@@ -352,8 +352,8 @@ export const Header: React.FC<HeaderProps> = ({
                               onClick={() => navigateTo(item.id)}
                               className={`w-full px-3 py-2.5 rounded-2xl text-left flex items-center gap-3 transition-all duration-200 cursor-pointer min-w-0 ${
                                 active
-                                  ? 'bg-[#0b3b8c] text-white shadow-[0_6px_16px_rgba(11,59,140,0.28)]'
-                                  : 'text-slate-950 hover:bg-[#edf2f7]'
+                                  ? 'bg-[#14428c] text-white shadow-[0_6px_16px_rgba(11,59,140,0.28)]'
+                                  : 'text-slate-950 hover:bg-[#eef3f9]'
                               }`}
                             >
                               <div
@@ -393,7 +393,7 @@ export const Header: React.FC<HeaderProps> = ({
                             {isFlushingCloud ||
                             syncSnapshot.status === 'syncing' ||
                             instantSheetSyncStatus === 'syncing' ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-[#0052cc] shrink-0" />
+                              <Loader2 className="w-4 h-4 animate-spin text-[#14428c] shrink-0" />
                             ) : syncSnapshot.pendingCount > 0 ? (
                               <CloudUpload className="w-4 h-4 text-amber-700 shrink-0" />
                             ) : (
@@ -414,7 +414,7 @@ export const Header: React.FC<HeaderProps> = ({
                             type="button"
                             onClick={handleCloudFlushClick}
                             disabled={isFlushingCloud}
-                            className="min-h-[34px] px-3 py-1.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-semibold cursor-pointer shrink-0 transition-colors disabled:opacity-50"
+                            className="min-h-[34px] px-3 py-1.5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-semibold cursor-pointer shrink-0 transition-colors disabled:opacity-50"
                           >
                             {isFlushingCloud ? 'Enviando...' : 'Sincronizar'}
                           </button>
@@ -475,7 +475,7 @@ export const Header: React.FC<HeaderProps> = ({
                   name={userName || userEmail || 'Educador'}
                   size="xs"
                   expandableOnClick={false}
-                  className="w-6 h-6 text-[11px] rounded-lg bg-[#0b3b8c]/15 text-[#092e70]"
+                  className="w-6 h-6 text-[11px] rounded-lg bg-[#14428c]/15 text-[#0f3370]"
                 />
                 <span className="hidden sm:inline text-[13px] font-semibold text-slate-900 max-w-[78px] truncate">
                   {roleShortLabel}
@@ -490,7 +490,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => setShowProfileMenu(false)}
                   />
                   <div className="absolute right-0 mt-2.5 w-[min(20rem,calc(100vw-1.5rem))] bg-white rounded-3xl shadow-[0_24px_56px_rgba(2,6,23,0.26),0_4px_14px_rgba(2,6,23,0.12)] p-3 z-50 animate-apple-pop space-y-2">
-                    <div className="p-3 rounded-2xl bg-[#edf2f7] flex items-center gap-3 min-w-0">
+                    <div className="p-3 rounded-2xl bg-[#eef3f9] flex items-center gap-3 min-w-0">
                       <StudentAvatar
                         name={userName || userEmail || 'Educador'}
                         size="sm"
@@ -501,7 +501,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <p className="text-sm font-bold text-slate-950 break-words leading-snug">
                           {userName || 'Professor(a)'}
                         </p>
-                        <p className="text-xs font-semibold text-[#0047b3] break-all leading-snug mt-0.5">
+                        <p className="text-xs font-semibold text-[#14428c] break-all leading-snug mt-0.5">
                           {userEmail || ''}
                         </p>
                         <p className="text-xs font-medium text-slate-700 mt-0.5">
@@ -527,7 +527,7 @@ export const Header: React.FC<HeaderProps> = ({
                             setShowProfileMenu(false);
                             onRestoreAdminRole();
                           }}
-                          className="w-full min-h-[42px] text-left px-3.5 py-2 rounded-2xl text-sm text-[#0071e3] hover:bg-[#e8f0fe] flex items-center gap-2.5 cursor-pointer font-semibold transition-colors"
+                          className="w-full min-h-[42px] text-left px-3.5 py-2 rounded-2xl text-sm text-[#14428c] hover:bg-[#e8f0fe] flex items-center gap-2.5 cursor-pointer font-semibold transition-colors"
                         >
                           <UserCog className="w-4 h-4 shrink-0" />
                           <span>Voltar ao Perfil Administrador</span>
@@ -538,7 +538,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         type="button"
                         onClick={() => navigateTo('usuarios_acesso')}
-                        className="w-full min-h-[42px] text-left px-3.5 py-2 rounded-2xl text-sm text-[#1d1d1f] hover:bg-[#f5f5f7] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
+                        className="w-full min-h-[42px] text-left px-3.5 py-2 rounded-2xl text-sm text-[#0f172a] hover:bg-[#f3f6fb] flex items-center gap-2.5 cursor-pointer font-medium transition-colors"
                       >
                         <ShieldCheck className="w-4 h-4 text-slate-700 shrink-0" />
                         <span>Central Administrativa</span>
@@ -577,7 +577,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-[400px] bg-white rounded-3xl shadow-[0_28px_68px_rgba(2,6,23,0.45)] overflow-hidden text-center p-6 space-y-4 animate-apple-pop"
             >
-              <div className="mx-auto w-14 h-14 rounded-full bg-[#f2f2f7] flex items-center justify-center">
+              <div className="mx-auto w-14 h-14 rounded-full bg-[#f3f6fb] flex items-center justify-center">
                 <StudentAvatar
                   name={userName || userEmail || 'Educador'}
                   size="md"
@@ -587,7 +587,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               <div className="space-y-1.5 min-w-0">
-                <h2 className="text-lg font-bold text-[#0b3b8c] break-words">
+                <h2 className="text-lg font-bold text-[#14428c] break-words">
                   Encerrar Sessão Institucional?
                 </h2>
                 <p className="text-sm text-slate-600 break-words leading-snug">

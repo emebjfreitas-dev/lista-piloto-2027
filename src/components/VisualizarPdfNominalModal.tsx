@@ -259,13 +259,13 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="w-9 h-9 rounded-full bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+              className="w-9 h-9 rounded-full bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer shrink-0 transition-colors"
             >
               <X className="w-5 h-5" strokeWidth={2} />
             </button>
           </div>
 
-          <div className="p-4 rounded-xl bg-[#f4f7fb] space-y-3">
+          <div className="p-4 rounded-xl bg-[#f3f6fb] space-y-3">
             <div className="flex items-center gap-2 text-slate-950">
               <FileArchive className="w-5 h-5 text-[#9f1239] shrink-0" strokeWidth={2} />
               <h4 className="text-sm font-bold">Nenhuma Ficha Informativa do Estudante vinculada</h4>
@@ -282,7 +282,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                   onClose();
                   onOpenAdminPdfsModal();
                 }}
-                className="w-full h-11 px-4 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 active:scale-[0.97] shadow-xs"
+                className="w-full h-11 px-4 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 active:scale-[0.97] shadow-xs"
               >
                 <FileUp className="w-[18px] h-[18px]" strokeWidth={2} />
                 <span>Abrir Arraste &amp; Solte de Fichas Informativas</span>
@@ -316,7 +316,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
             <button
               type="button"
               onClick={onClose}
-              className="h-10 px-5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-bold text-xs cursor-pointer transition-colors"
+              className="h-10 px-5 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 font-bold text-xs cursor-pointer transition-colors"
             >
               Fechar
             </button>
@@ -361,7 +361,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               <a
                 href={displaySrc}
                 download={`Ficha_${student.name.replace(/\s+/g, '_')}.pdf`}
-                className="h-10 px-3.5 rounded-xl bg-[#0052cc] hover:bg-[#0b3b8c] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="h-10 px-3.5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="Baixar Ficha Informativa em PDF"
               >
                 <Download className="w-[17px] h-[17px]" strokeWidth={2} />
@@ -376,7 +376,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                   onClose();
                   onOpenAdminPdfsModal();
                 }}
-                className="h-10 px-3 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="h-10 px-3 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                 title="Atualizar via Arraste & Solte em Lote"
               >
                 <FileUp className="w-[17px] h-[17px] text-[#9f1239]" strokeWidth={2} />
@@ -397,7 +397,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
                   <button
                     type="button"
                     onClick={() => setConfirmRemove(false)}
-                    className="h-10 px-2.5 rounded-xl bg-[#edf2f7] text-slate-900 font-bold text-xs cursor-pointer"
+                    className="h-10 px-2.5 rounded-xl bg-[#eef3f9] text-slate-900 font-bold text-xs cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -418,7 +418,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="h-10 px-4 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
+              className="h-10 px-4 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shrink-0"
             >
               <X className="w-[17px] h-[17px]" strokeWidth={2} />
               <span>Fechar</span>
@@ -427,11 +427,11 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
         </div>
 
         {/* Visualização Direta da Ficha Informativa do Estudante */}
-        <div className="flex-1 overflow-hidden bg-[#edf2f7] p-2 sm:p-3 flex flex-col">
+        <div className="flex-1 overflow-hidden bg-[#eef3f9] p-2 sm:p-3 flex flex-col">
           <div className="w-full h-[62vh] sm:h-[68vh] bg-white rounded-xl overflow-hidden flex flex-col shadow-[0_6px_22px_-8px_rgba(9,15,29,0.1)] items-center justify-center">
             {pdfLoading ? (
               <div className="flex flex-col items-center gap-3 text-slate-700 p-6">
-                <Loader2 className="w-8 h-8 text-[#0b3b8c] animate-spin" />
+                <Loader2 className="w-8 h-8 text-[#14428c] animate-spin" />
                 <span className="text-xs font-semibold">Carregando Ficha Informativa segura...</span>
               </div>
             ) : pdfLoadError ? (
@@ -455,7 +455,7 @@ export const VisualizarPdfNominalModal: React.FC<VisualizarPdfNominalModalProps>
               <a
                 href={displaySrc}
                 download={`Ficha_${student.name.replace(/\s+/g, '_')}.pdf`}
-                className="text-[#0052cc] hover:text-[#0b3b8c] font-bold flex items-center gap-1"
+                className="text-[#14428c] hover:text-[#14428c] font-bold flex items-center gap-1"
               >
                 <span>Download / Imprimir</span>
                 <Download className="w-3.5 h-3.5" strokeWidth={2} />

@@ -105,7 +105,7 @@ const LazyPhotoThumbnail: React.FC<{ file: File; filename: string }> = ({ file, 
 
   if (!thumbUrl || imgError) {
     return (
-      <div className="w-12 h-12 rounded-xl bg-[#edf2f7] text-slate-700 flex flex-col items-center justify-center shrink-0">
+      <div className="w-12 h-12 rounded-xl bg-[#eef3f9] text-slate-700 flex flex-col items-center justify-center shrink-0">
         <ImageIcon className="w-[18px] h-[18px]" strokeWidth={2} />
         <span className="text-[9px] font-bold uppercase tracking-tight">
           {(filename.split('.').pop() || 'IMG').slice(0, 4)}
@@ -904,11 +904,11 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
       {/* Cabeçalho */}
       <div
         className={`flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 shrink-0 ${
-          embedded ? 'bg-[#f4f7fb]' : 'modal-header-surface'
+          embedded ? 'bg-[#f3f6fb]' : 'modal-header-surface'
         }`}
       >
         <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-          <div className="w-10 h-10 rounded-2xl bg-[#dce7fb] text-[#092e70] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-[#e8f0fe] text-[#0f3370] flex items-center justify-center shrink-0">
             <FolderUp className="w-[22px] h-[22px] shrink-0" strokeWidth={2} />
           </div>
           <div className="min-w-0 flex-1">
@@ -930,7 +930,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                 setInternalStorageOpen(true);
               }
             }}
-            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0b3b8c] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
+            className="min-h-[36px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#14428c] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
             <HardDrive className="w-4 h-4 shrink-0" strokeWidth={2} />
             <span>Cache IndexedDB</span>
@@ -975,7 +975,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
 
         {/* Progresso em tempo real (Otimização + Envio Binário) */}
         {(isSaving || pipelinePhase === 'done') && optimizeProgress.total > 0 && (
-          <div className="p-4 rounded-2xl bg-[#edf2f7] space-y-2.5 animate-fade-in">
+          <div className="p-4 rounded-2xl bg-[#eef3f9] space-y-2.5 animate-fade-in">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-950">
               <span>
                 {pipelinePhase === 'optimizing'
@@ -986,7 +986,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               </span>
               <div className="flex items-center gap-3">
                 {etaLabel && (
-                  <span className={`tabular-nums font-bold ${isPaused ? 'text-amber-800' : 'text-[#0b3b8c]'}`}>
+                  <span className={`tabular-nums font-bold ${isPaused ? 'text-amber-800' : 'text-[#14428c]'}`}>
                     {etaLabel}
                   </span>
                 )}
@@ -1019,9 +1019,9 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
               </div>
             </div>
 
-            <div className="w-full h-2.5 bg-[#dbe4f0] rounded-full overflow-hidden">
+            <div className="w-full h-2.5 bg-[#dfe8f4] rounded-full overflow-hidden">
               <div
-                className={`h-full transition-all duration-200 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-[#0b3b8c]'}`}
+                className={`h-full transition-all duration-200 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-[#14428c]'}`}
                 style={{
                   width: `${pipelinePhase === 'optimizing' ? pctOptimize : pipelinePhase === 'uploading' ? pctUpload : 100}%`,
                 }}
@@ -1048,8 +1048,8 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
           onClick={() => fileInputRef.current?.click()}
           className={`rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
             isDragging
-              ? 'bg-[#dce7fb] scale-[0.99] shadow-[0_14px_34px_rgba(11,59,140,0.2)]'
-              : 'bg-[#edf2f7] hover:bg-[#e2e8f0]'
+              ? 'bg-[#e8f0fe] scale-[0.99] shadow-[0_14px_34px_rgba(11,59,140,0.2)]'
+              : 'bg-[#eef3f9] hover:bg-[#e2e8f0]'
           }`}
         >
           <input
@@ -1068,7 +1068,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
             className="hidden"
           />
           <div className="flex flex-col items-center justify-center gap-2">
-            <div className="w-14 h-14 rounded-2xl bg-white shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center text-[#0b3b8c]">
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center text-[#14428c]">
               {isDragging ? (
                 <Download className="w-8 h-8 animate-bounce" strokeWidth={2} />
               ) : (
@@ -1090,7 +1090,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   e.stopPropagation();
                   fileInputRef.current?.click();
                 }}
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-slate-950 hover:bg-black text-white text-xs font-bold cursor-pointer shadow-[0_4px_12px_rgba(9,15,29,0.22)] transition-all flex items-center gap-2"
+                className="min-h-[40px] px-4 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-bold cursor-pointer shadow-[0_4px_12px_rgba(9,15,29,0.22)] transition-all flex items-center gap-2"
               >
                 <ImageIcon className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                 <span>Selecionar Fotos</span>
@@ -1101,7 +1101,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   e.stopPropagation();
                   folderInputRef.current?.click();
                 }}
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-[#f4f7fb] text-slate-950 text-xs font-bold cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.08)] transition-all flex items-center gap-2"
+                className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-[#f3f6fb] text-slate-950 text-xs font-bold cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.08)] transition-all flex items-center gap-2"
               >
                 <FolderUp className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                 <span>Selecionar Pasta Completa</span>
@@ -1178,7 +1178,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                     setCurrentPage(1);
                   }}
                   placeholder="Filtrar por nome, arquivo ou RA..."
-                  className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#edf2f7] focus:bg-white text-xs text-slate-950 w-full sm:w-56"
+                  className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#eef3f9] focus:bg-white text-xs text-slate-950 w-full sm:w-56"
                 />
                 <button
                   type="button"
@@ -1187,7 +1187,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                     setPipelinePhase('idle');
                   }}
                   disabled={isSaving}
-                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 font-bold text-xs cursor-pointer disabled:opacity-40"
+                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 font-bold text-xs cursor-pointer disabled:opacity-40"
                 >
                   Limpar Lista
                 </button>
@@ -1252,7 +1252,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                                 setPickerItemId(item.id);
                                 setPickerSearch('');
                               }}
-                              className="ml-1 text-[11px] font-bold text-[#0b3b8c] hover:underline cursor-pointer"
+                              className="ml-1 text-[11px] font-bold text-[#14428c] hover:underline cursor-pointer"
                             >
                               Alterar
                             </button>
@@ -1268,7 +1268,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                                 setPickerItemId(item.id);
                                 setPickerSearch('');
                               }}
-                              className="min-h-[32px] px-3 py-1 rounded-lg bg-white hover:bg-[#edf2f7] shadow-xs text-xs font-bold text-slate-950 cursor-pointer"
+                              className="min-h-[32px] px-3 py-1 rounded-lg bg-white hover:bg-[#eef3f9] shadow-xs text-xs font-bold text-slate-950 cursor-pointer"
                             >
                               Escolher estudante...
                             </button>
@@ -1325,7 +1325,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
         )}
 
         {/* Reset Total das Fotos Atuais */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#f4f7fb] p-4 rounded-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#f3f6fb] p-4 rounded-2xl">
           <div className="min-w-0 flex-1">
             <h5 className="text-xs font-bold text-slate-950">Limpeza Total de Fotos Atuais</h5>
             <p className="text-xs text-slate-700 font-medium break-words leading-relaxed mt-0.5">
@@ -1365,7 +1365,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
       </div>
 
       {/* Rodapé */}
-      <div className="p-4 sm:p-5 bg-[#f4f7fb] flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="p-4 sm:p-5 bg-[#f3f6fb] flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="text-xs text-slate-700 font-semibold">
           {matchedCount > 0 ? (
             <span>
@@ -1474,7 +1474,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                   <X className="w-[18px] h-[18px]" strokeWidth={2} />
                 </button>
               </div>
-              <div className="p-3 bg-[#f4f7fb]">
+              <div className="p-3 bg-[#f3f6fb]">
                 <input
                   type="search"
                   autoFocus
@@ -1490,7 +1490,7 @@ export const AdminArrasteFotosModal: React.FC<AdminArrasteFotosModalProps> = ({
                     key={student.id}
                     type="button"
                     onClick={() => handleManualStudentChange(pickerItemId, student.id)}
-                    className="w-full text-left px-3.5 py-2.5 rounded-xl even:bg-[#f4f7fb] hover:bg-[#dce7fb] transition-colors cursor-pointer flex items-center justify-between gap-2"
+                    className="w-full text-left px-3.5 py-2.5 rounded-xl even:bg-[#f3f6fb] hover:bg-[#e8f0fe] transition-colors cursor-pointer flex items-center justify-between gap-2"
                   >
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-slate-950 truncate">{student.name}</p>

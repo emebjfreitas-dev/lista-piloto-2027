@@ -267,7 +267,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const variantClass =
     variant === 'inline'
       ? 'bg-transparent hover:bg-white/80 text-slate-950 font-bold rounded-lg shadow-none'
-      : 'bg-[#f4f7fb] hover:bg-[#edf2f7] text-slate-950 font-semibold rounded-xl shadow-[0_2px_6px_-2px_rgba(9,15,29,0.06)] hover:shadow-[0_4px_12px_-4px_rgba(9,46,112,0.12)]';
+      : 'bg-[#f3f6fb] hover:bg-[#eef3f9] text-slate-950 font-semibold rounded-xl shadow-[0_2px_6px_-2px_rgba(9,15,29,0.06)] hover:shadow-[0_4px_12px_-4px_rgba(9,46,112,0.12)]';
 
   const activeRingClass = isOpen
     ? variant === 'inline'
@@ -302,7 +302,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         </span>
         <ChevronDown
           className={`w-4 h-4 shrink-0 transition-transform duration-150 ${
-            isOpen ? 'rotate-180 text-[#092e70]' : 'text-slate-700'
+            isOpen ? 'rotate-180 text-[#0f3370]' : 'text-slate-700'
           }`}
         />
       </button>
@@ -328,7 +328,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
             className={`bg-white/98 backdrop-blur-2xl rounded-2xl shadow-[0_20px_50px_rgba(9,15,29,0.22)] overflow-hidden flex flex-col animate-apple-pop ${menuClassName}`}
           >
             {isSearchable && (
-              <div className="p-2 bg-[#f4f7fb] shrink-0">
+              <div className="p-2 bg-[#f3f6fb] shrink-0">
                 <div className="relative flex items-center">
                   <Search className="w-3.5 h-3.5 text-slate-600 absolute left-2.5 pointer-events-none" />
                   <input
@@ -383,10 +383,10 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                       onClick={() => handleSelectOption(opt)}
                       className={`w-full min-h-[38px] px-3 py-2 rounded-xl text-left flex items-center justify-between gap-2.5 transition-colors duration-100 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${
                         isSelected
-                          ? 'bg-[#dce7fb] text-[#092e70] font-semibold'
+                          ? 'bg-[#e8f0fe] text-[#0f3370] font-semibold'
                           : isHighlighted
-                          ? 'bg-[#edf2f7] text-slate-950 font-medium'
-                          : 'text-slate-900 hover:bg-[#f4f7fb] font-medium'
+                          ? 'bg-[#eef3f9] text-slate-950 font-medium'
+                          : 'text-slate-900 hover:bg-[#f3f6fb] font-medium'
                       }`}
                     >
                       <div className="min-w-0 flex-1">
@@ -400,7 +400,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                         )}
                       </div>
                       {isSelected && (
-                        <Check className="w-4 h-4 text-[#092e70] shrink-0 stroke-[2]" />
+                        <Check className="w-4 h-4 text-[#0f3370] shrink-0 stroke-[2]" />
                       )}
                     </button>
                   );

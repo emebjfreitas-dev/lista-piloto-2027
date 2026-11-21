@@ -152,15 +152,15 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
 
   if (isDismissed) {
     return (
-      <div className="flex items-center justify-between px-3.5 py-2 rounded-2xl bg-[#f4f7fb] text-xs text-slate-800 shadow-[0_2px_10px_-3px_rgba(9,15,29,0.08)] animate-gentle-fade">
+      <div className="flex items-center justify-between px-3.5 py-2 rounded-2xl bg-[#f3f6fb] text-xs text-slate-800 shadow-[0_2px_10px_-3px_rgba(9,15,29,0.08)] animate-gentle-fade">
         <div className="flex items-center gap-1.5">
-          <Bell className="w-3.5 h-3.5 text-[#0052cc]" />
+          <Bell className="w-3.5 h-3.5 text-[#14428c]" />
           <span className="font-medium">Lembrete de prazos minimizado</span>
         </div>
         <button
           type="button"
           onClick={() => setIsDismissed(false)}
-          className="font-bold text-[#0052cc] hover:underline cursor-pointer"
+          className="font-bold text-[#14428c] hover:underline cursor-pointer"
         >
           Reexibir
         </button>
@@ -179,7 +179,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     ? 'bg-emerald-50 shadow-xs'
     : isWarning
     ? 'bg-amber-50 shadow-xs'
-    : 'bg-[#f2f2f7] shadow-xs';
+    : 'bg-[#f3f6fb] shadow-xs';
 
   const badgeBg = isUrgent
     ? 'bg-rose-800 text-white font-bold'
@@ -187,7 +187,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     ? 'bg-emerald-800 text-white font-bold'
     : isWarning
     ? 'bg-amber-800 text-white font-bold'
-    : 'bg-[#1a4fa3] text-white font-bold';
+    : 'bg-[#14428c] text-white font-bold';
 
   const titleColor = isUrgent
     ? 'text-rose-950 font-bold'
@@ -195,7 +195,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
     ? 'text-emerald-950 font-bold'
     : isWarning
     ? 'text-amber-950 font-bold'
-    : 'text-[#111827] font-bold';
+    : 'text-[#0f172a] font-bold';
 
   return (
     <aside
@@ -237,12 +237,12 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
                   : 'Lembrete de Prazo'}
               </span>
 
-              <span className="text-xs text-[#374151] font-bold tabular-nums">
+              <span className="text-xs text-[#334155] font-bold tabular-nums">
                 {win.currentDateFormatted} · Mês de {win.targetMonthName}
               </span>
 
               {pendingSummary.pendingCount > 0 && (
-                <span className="px-2.5 py-0.5 rounded-md bg-white text-[#111827] text-xs font-bold tabular-nums">
+                <span className="px-2.5 py-0.5 rounded-md bg-white text-[#0f172a] text-xs font-bold tabular-nums">
                   {pendingSummary.pendingCount} fechamento(s) pendente(s)
                 </span>
               )}
@@ -266,7 +266,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               )}
             </h2>
 
-            <p className="text-xs sm:text-sm text-[#374151] font-medium leading-normal mt-0.5">
+            <p className="text-xs sm:text-sm text-[#334155] font-medium leading-normal mt-0.5">
               {dueTeacherReminder ? (
                 <span>
                   Seu expediente do {dueTeacherReminder.evaluation.shiftLabel.toLowerCase()} encerra às{' '}
@@ -332,7 +332,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               disabled={fcmActionLoading}
               onClick={handleAdminNotifyPendingViaFcm}
               title="Enviar alerta Firebase Cloud Messaging (FCM) para professores com turmas pendentes"
-              className="min-h-[38px] px-3.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
+              className="min-h-[38px] px-3.5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60"
             >
               <Send className="w-3.5 h-3.5" />
               <span>
@@ -370,7 +370,7 @@ export const LembretePrazoFrequenciaCard: React.FC<LembretePrazoFrequenciaCardPr
               type="button"
               onClick={onNavigateToAcessos}
               title="Configurar Janela de Lançamento e Prazos"
-              className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-[#dce7fb] text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all duration-150 active:scale-[0.97] cursor-pointer"
+              className="min-h-[38px] px-3.5 rounded-xl bg-white hover:bg-[#e8f0fe] text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all duration-150 active:scale-[0.97] cursor-pointer"
             >
               <Settings className="w-3.5 h-3.5 text-slate-700" />
               <span>Ajustar Prazos</span>

@@ -23,12 +23,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       'inline-flex items-center justify-center font-semibold tracking-tight rounded-2xl transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.97] cursor-pointer select-none';
 
     const variants = {
-      default: 'bg-[#090f1d] hover:bg-black text-white shadow-[0_4px_12px_rgba(9,15,29,0.22)] hover:shadow-[0_6px_18px_rgba(9,15,29,0.3)] hover:-translate-y-px',
-      secondary: 'bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-950 shadow-none',
-      outline: 'bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-950 shadow-none',
-      ghost: 'hover:bg-slate-900/[0.07] text-slate-950',
-      destructive: 'bg-[#c81e1e] hover:bg-[#9b1c1c] text-white shadow-[0_4px_12px_rgba(200,30,30,0.22)] hover:shadow-[0_6px_18px_rgba(200,30,30,0.3)] hover:-translate-y-px',
-      success: 'bg-[#046c4e] hover:bg-[#03543f] text-white shadow-[0_4px_12px_rgba(4,108,78,0.22)] hover:shadow-[0_6px_18px_rgba(4,108,78,0.3)] hover:-translate-y-px',
+      default: 'bg-[#14428c] hover:bg-[#0f3370] text-white shadow-[0_4px_12px_rgba(20,66,140,0.22)] hover:shadow-[0_6px_18px_rgba(20,66,140,0.28)] hover:-translate-y-px',
+      secondary: 'bg-[#eef3f9] hover:bg-[#dfe8f4] text-[#0f172a] shadow-none',
+      outline: 'bg-[#eef3f9] hover:bg-[#dfe8f4] text-[#0f172a] shadow-none',
+      ghost: 'hover:bg-[#14428c]/[0.07] text-[#0f172a]',
+      destructive: 'bg-[#be123c] hover:bg-[#9f1239] text-white shadow-[0_4px_12px_rgba(190,18,60,0.22)] hover:shadow-[0_6px_18px_rgba(190,18,60,0.28)] hover:-translate-y-px',
+      success: 'bg-[#047857] hover:bg-[#065f46] text-white shadow-[0_4px_12px_rgba(4,120,87,0.22)] hover:shadow-[0_6px_18px_rgba(4,120,87,0.28)] hover:-translate-y-px',
     };
 
     const sizes = {

@@ -591,7 +591,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           <button
             type="button"
             onClick={onBack}
-            className="text-slate-700 hover:text-[#0b3b8c] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            className="text-slate-700 hover:text-[#14428c] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
           >
             <ArrowLeft className="w-[15px] h-[15px]" />
             <span>Turma {classGroup.name}</span>
@@ -706,7 +706,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
 
         {/* Linha 2: Faixa de Indicadores Rápidos em Linha Única (Sem 4 Cards Gigantes) */}
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5 min-w-0">
-          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-[#005035] flex items-center gap-1.5">
+          <div className="min-h-[34px] px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-[#047857] flex items-center gap-1.5">
             <span>Presença Mês:</span>
             <span className="tabular-nums font-black">{liveClassMetrics.presenceRate}%</span>
             <span className="text-[11px] opacity-75">
@@ -744,7 +744,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
               placeholder="Buscar por Nº da chamada ou nome do estudante..."
-              className="w-full min-h-[44px] pl-10 pr-9 bg-[#f4f7fb] text-slate-950 text-xs sm:text-sm rounded-xl font-semibold placeholder:text-slate-600 focus:bg-[#edf2f7] transition-colors"
+              className="w-full min-h-[44px] pl-10 pr-9 bg-[#f3f6fb] text-slate-950 text-xs sm:text-sm rounded-xl font-semibold placeholder:text-slate-600 focus:bg-[#eef3f9] transition-colors"
             />
             {searchName && (
               <button
@@ -862,7 +862,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     ? 'bg-slate-200 text-slate-950'
                     : m.isBelowLegalThreshold
                     ? 'bg-rose-100/80 text-slate-950'
-                    : 'bg-white hover:bg-[#f4f7fb] text-slate-950'
+                    : 'bg-white hover:bg-[#f3f6fb] text-slate-950'
                 }`}
               >
                 {/* Identificação Enxuta do Estudante + Indicativo Visual */}
@@ -880,7 +880,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         ? 'bg-purple-900'
                         : isOtherNonActive
                         ? 'bg-slate-700'
-                        : 'bg-slate-950'
+                        : 'bg-[#14428c]'
                     }`}
                   >
                     {student.number.toString().padStart(2, '0')}
@@ -996,7 +996,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAbsence(student.id, 1)}
                         disabled={!effectiveCanEdit || isMaxFaltasReached}
                         aria-label={`Adicionar falta para ${student.name}`}
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-950 hover:bg-black text-white font-bold text-xl sm:text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xl sm:text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         +
                       </button>
@@ -1100,7 +1100,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     ? 'bg-slate-200 text-slate-950'
                     : m.isBelowLegalThreshold
                     ? 'bg-rose-100/80 text-slate-950'
-                    : 'bg-white hover:bg-[#f4f7fb] text-slate-950'
+                    : 'bg-white hover:bg-[#f3f6fb] text-slate-950'
                 }`}
               >
                 {/* Topo do Card: Clique abre o perfil da criança + Nome + Indicativo de % */}
@@ -1116,7 +1116,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className={`px-2.5 py-0.5 rounded-lg text-white font-mono text-xs font-bold tabular-nums ${
-                          isJustSaved ? 'bg-emerald-700' : 'bg-slate-950'
+                          isJustSaved ? 'bg-emerald-700' : 'bg-[#14428c]'
                         }`}>
                           Nº {student.number.toString().padStart(2, '0')}
                         </span>
@@ -1224,7 +1224,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
                         onClick={() => handleDeltaAbsence(student.id, 1)}
                         disabled={!effectiveCanEdit || isMaxFaltasReached}
                         aria-label={`Adicionar falta para ${student.name}`}
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-950 text-white font-bold text-xl sm:text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#14428c] text-white font-bold text-xl sm:text-2xl flex items-center justify-center shadow-xs disabled:opacity-25 cursor-pointer active:scale-95 transition-transform"
                       >
                         +
                       </button>
@@ -1301,7 +1301,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             <button
               type="button"
               onClick={() => setShowAllStudentsInCall((prev) => !prev)}
-              className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-[#14428c] text-xs font-semibold cursor-pointer transition-colors"
             >
               {showAllStudentsInCall ? `Paginar (${CALL_PAGE_SIZE}/pág)` : `Ver todos (${displayedStudents.length})`}
             </button>
@@ -1325,7 +1325,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
             <button
               type="button"
               onClick={() => handleMonthChange(previousPeriodName)}
-              className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-xl bg-[#eef3f9] hover:bg-[#dbe5f3] text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
+              className="w-full sm:w-auto min-h-[44px] py-2 px-4 rounded-xl bg-[#eef3f9] hover:bg-[#dfe8f4] text-slate-900 font-semibold text-xs sm:text-[13px] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
               title={`Voltar ao período anterior: ${previousPeriodName}`}
             >
               <History className="w-[18px] h-[18px] text-slate-700 shrink-0" />
@@ -1336,7 +1336,7 @@ export const RegistroFrequenciaMensalScreen: React.FC<RegistroFrequenciaMensalSc
           <button
             type="button"
             onClick={onBack}
-            className="w-full sm:w-auto min-h-[44px] py-2 px-5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
+            className="w-full sm:w-auto min-h-[44px] py-2 px-5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
           >
             <ArrowLeft className="w-[18px] h-[18px] shrink-0" />
             <span>Voltar para Turma</span>

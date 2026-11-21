@@ -10,20 +10,20 @@
 
 @layer base {
   :root {
-    /* Paleta Institucional Coesa: Canvas Slate Suave + Cobalt Real + Superfícies Elevadas Sem Bordas */
-    --canvas-bg: #e7edf6;
-    --canvas-gradient: linear-gradient(168deg, #f0f4fa 0%, #e7edf6 52%, #dce5f2 100%);
+    /* Paleta Institucional Coesa: Canvas Mist Slate + Royal Cobalt (#14428c) + Superfícies Elevadas */
+    --canvas-bg: #eaf0f8;
+    --canvas-gradient: linear-gradient(168deg, #f3f6fb 0%, #eaf0f8 52%, #e2eaf4 100%);
     --surface-bg: #ffffff;
-    --surface-subtle: #dbe5f3;
+    --surface-subtle: #e8f0fe;
     --surface-secondary: #eef3f9;
-    --surface-muted: #f5f8fc;
+    --surface-muted: #f3f6fb;
     --surface-hover: #e2e9f4;
     --surface-elevated: #ffffff;
     --text-primary: #0f172a;        /* Contraste > 15:1 */
     --text-secondary: #1e293b;      /* Contraste > 12:1 */
     --text-muted: #475569;          /* Contraste > 7:1 */
-    --accent-navy: #0b3b8c;
-    --accent-blue: #1d4ed8;         /* Azul Cobalt Institucional Unificado */
+    --accent-navy: #14428c;
+    --accent-blue: #1d4ed8;         /* Cobalt Institucional Unificado */
     --accent-emerald: #047857;
 
     /* Curvas de Animação Fluidas e Responsivas */
@@ -206,7 +206,7 @@
   a:focus-visible,
   [role="button"]:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.28), 0 6px 18px rgba(11, 59, 140, 0.16);
+    box-shadow: 0 0 0 3px rgba(20, 66, 140, 0.28), 0 6px 18px rgba(20, 66, 140, 0.14);
   }
 
   input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -216,7 +216,7 @@
   textarea:focus,
   textarea:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(11, 59, 140, 0.22), 0 8px 22px rgba(11, 59, 140, 0.14);
+    box-shadow: 0 0 0 3px rgba(20, 66, 140, 0.22), 0 8px 22px rgba(20, 66, 140, 0.12);
   }
 
   /* Campos com Contraste Limpo e Elevação Tonal */
@@ -240,13 +240,13 @@
   }
 
   select:not(:disabled):hover {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230b3b8c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    box-shadow: 0 4px 12px rgba(11, 59, 140, 0.14);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2314428c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    box-shadow: 0 4px 12px rgba(20, 66, 140, 0.14);
   }
 
   select:focus,
   select:focus-visible {
-    box-shadow: 0 0 0 3px rgba(11, 59, 140, 0.24), 0 8px 22px rgba(11, 59, 140, 0.14) !important;
+    box-shadow: 0 0 0 3px rgba(20, 66, 140, 0.24), 0 8px 22px rgba(20, 66, 140, 0.14) !important;
   }
 
   select:disabled {
@@ -256,7 +256,7 @@
 
   select option {
     background-color: #ffffff;
-    color: #090f1d;
+    color: #0f172a;
     font-weight: 500;
   }
 
@@ -362,7 +362,7 @@ svg.lucide {
 
 /* Segmented Control de Alto Contraste Sem Contorno */
 .ios-segmented {
-  background: #e2e8f0;
+  background: #e6ecf5;
   padding: 4px;
   border-radius: 14px;
   display: inline-flex;
@@ -384,7 +384,7 @@ svg.lucide {
               background-color var(--duration-fast) ease,
               color var(--duration-fast) ease,
               box-shadow var(--duration-fast) ease;
-  color: #1e293b;
+  color: #334155;
   cursor: pointer;
   white-space: normal;
   text-align: center;
@@ -392,15 +392,15 @@ svg.lucide {
 }
 
 .ios-segmented-item:hover {
-  color: #090f1d;
-  background-color: rgba(255, 255, 255, 0.55);
+  color: #0f172a;
+  background-color: rgba(255, 255, 255, 0.65);
 }
 
 .ios-segmented-item-active {
   background: #ffffff;
-  color: #092e70 !important;
+  color: #14428c !important;
   font-weight: 700;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 2px 8px rgba(20, 66, 140, 0.14);
 }
 
 /* Expansão Fluida via CSS Grid-Rows */

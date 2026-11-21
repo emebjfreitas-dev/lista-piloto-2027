@@ -181,8 +181,8 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
           className="modal-shell w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col max-h-[82dvh] animate-apple-pop"
         >
         {/* Barra Superior de Busca Instantânea */}
-        <div className="px-4 sm:px-5 py-3.5 flex items-center gap-3 bg-[#edf2f7]">
-          <Search className="w-5 h-5 text-[#092e70] shrink-0" />
+        <div className="px-4 sm:px-5 py-3.5 flex items-center gap-3 bg-[#eef3f9]">
+          <Search className="w-5 h-5 text-[#0f3370] shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -195,7 +195,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
             <button
               type="button"
               onClick={() => setQuery('')}
-              className="w-8 h-8 rounded-lg bg-white hover:bg-[#dce7fb] text-slate-800 flex items-center justify-center cursor-pointer shrink-0 transition-colors shadow-xs"
+              className="w-8 h-8 rounded-lg bg-white hover:bg-[#e8f0fe] text-slate-800 flex items-center justify-center cursor-pointer shrink-0 transition-colors shadow-xs"
               aria-label="Limpar busca"
             >
               <X className="w-4 h-4" />
@@ -204,7 +204,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[34px] px-2.5 rounded-lg bg-white hover:bg-[#dce7fb] text-slate-800 font-bold text-xs uppercase tracking-wider cursor-pointer shrink-0 transition-colors shadow-xs"
+            className="min-h-[34px] px-2.5 rounded-lg bg-white hover:bg-[#e8f0fe] text-slate-800 font-bold text-xs uppercase tracking-wider cursor-pointer shrink-0 transition-colors shadow-xs"
           >
             ESC
           </button>
@@ -292,7 +292,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                       onSelectClass(cls);
                       onClose();
                     }}
-                    className="p-3 rounded-xl bg-slate-50 hover:bg-slate-900 text-slate-800 hover:text-white text-left transition-colors cursor-pointer flex items-center justify-between gap-2 group min-w-0"
+                    className="p-3 rounded-xl bg-slate-50 hover:bg-[#14428c] text-slate-800 hover:text-white text-left transition-colors cursor-pointer flex items-center justify-between gap-2 group min-w-0"
                   >
                     <div className="min-w-0 flex-1">
                       <span className="text-sm font-semibold block break-words leading-snug">
@@ -356,12 +356,12 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                       }}
                       className={`p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-all min-w-0 ${
                         isSelected
-                          ? 'bg-[#dce7fb] shadow-[0_4px_14px_-4px_rgba(9,46,112,0.16)]'
-                          : 'hover:bg-[#f4f7fb]'
+                          ? 'bg-[#e8f0fe] shadow-[0_4px_14px_-4px_rgba(9,46,112,0.16)]'
+                          : 'hover:bg-[#f3f6fb]'
                       }`}
                     >
                       <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                        <span className="w-8 h-8 rounded-lg bg-slate-900 text-white font-mono font-semibold text-xs tabular-nums flex items-center justify-center shrink-0">
+                        <span className="w-8 h-8 rounded-lg bg-[#14428c] text-white font-mono font-semibold text-xs tabular-nums flex items-center justify-center shrink-0">
                           {item.student.number.toString().padStart(2, '0')}
                         </span>
                         <div className="min-w-0 flex-1">
@@ -406,7 +406,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                           }}
                           className={`min-h-[38px] px-3 py-1.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-normal text-center ${
                             item.hasPdf
-                              ? 'bg-[#0047b3] text-white hover:bg-[#092e70]'
+                              ? 'bg-[#14428c] text-white hover:bg-[#0f3370]'
                               : 'bg-rose-100/90 text-rose-950 hover:bg-rose-200'
                           }`}
                         >
@@ -425,7 +425,7 @@ export const SpotlightCommandModal: React.FC<SpotlightCommandModalProps> = ({
                             );
                             onClose();
                           }}
-                          className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-normal text-center"
+                          className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-normal text-center"
                         >
                           <span>Ficha Completa</span>
                           <Maximize2 className="w-3.5 h-3.5 shrink-0" />

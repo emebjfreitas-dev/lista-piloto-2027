@@ -124,7 +124,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       label: 'Central Administrativa',
       description: 'Acessos, ano letivo (200 dias), segurança, banco e uploads',
       icon: ShieldCheck,
-      tintClass: 'bg-[#0b3b8c]/10 text-[#0b3b8c]',
+      tintClass: 'bg-[#14428c]/10 text-[#14428c]',
     },
   ];
 
@@ -169,7 +169,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               >
                 <div
                   className={`flex items-center justify-center px-3.5 h-8 rounded-xl transition-colors ${
-                    isActive ? 'bg-blue-100 text-[#0b3b8c]' : 'text-slate-600'
+                    isActive ? 'bg-blue-100 text-[#14428c]' : 'text-slate-600'
                   }`}
                 >
                   <IconComp
@@ -180,7 +180,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 </div>
                 <span
                   className={`text-xs tracking-tight leading-tight mt-1 break-words text-center max-w-full transition-colors ${
-                    isActive ? 'font-bold text-[#0b3b8c]' : 'font-semibold text-slate-600'
+                    isActive ? 'font-bold text-[#14428c]' : 'font-semibold text-slate-600'
                   }`}
                 >
                   {item.label}
@@ -199,7 +199,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <div
                 className={`relative flex items-center justify-center px-3.5 h-8 rounded-xl transition-colors ${
                   isMoreActive || showMoreMenu
-                    ? 'bg-blue-100 text-[#0b3b8c]'
+                    ? 'bg-blue-100 text-[#14428c]'
                     : 'text-slate-600'
                 }`}
               >
@@ -215,7 +215,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <span
                 className={`text-xs tracking-tight leading-tight mt-1 break-words text-center max-w-full transition-colors ${
                   isMoreActive || showMoreMenu
-                    ? 'font-bold text-[#0b3b8c]'
+                    ? 'font-bold text-[#14428c]'
                     : 'font-semibold text-slate-600'
                 }`}
               >
@@ -258,7 +258,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <button
                 type="button"
                 onClick={() => setShowMoreMenu(false)}
-                className="w-11 h-11 rounded-full bg-[#edf2f7] hover:bg-[#dfe6f0] flex items-center justify-center text-slate-950 cursor-pointer transition-colors shrink-0"
+                className="w-11 h-11 rounded-full bg-[#eef3f9] hover:bg-[#dfe8f4] flex items-center justify-center text-slate-950 cursor-pointer transition-colors shrink-0"
                 aria-label="Fechar menu de gestão"
               >
                 <X className="w-5 h-5" />
@@ -270,7 +270,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               className={`p-3.5 rounded-2xl flex items-center justify-between gap-3 min-w-0 ${
                 syncSnapshot.pendingCount > 0
                   ? 'bg-amber-100/90 text-amber-950'
-                  : 'bg-[#edf2f7] text-slate-950'
+                  : 'bg-[#eef3f9] text-slate-950'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -282,7 +282,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   }`}
                 >
                   {isFlushingCloud || syncSnapshot.status === 'syncing' ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-[#0052cc]" />
+                    <Loader2 className="w-5 h-5 animate-spin text-[#14428c]" />
                   ) : syncSnapshot.pendingCount > 0 ? (
                     <CloudUpload className="w-5 h-5" />
                   ) : (
@@ -304,7 +304,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 type="button"
                 onClick={handleManualSync}
                 disabled={isFlushingCloud}
-                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-xs cursor-pointer shrink-0 transition-colors disabled:opacity-50"
+                className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs cursor-pointer shrink-0 transition-colors disabled:opacity-50"
               >
                 {isFlushingCloud ? 'Enviando...' : 'Sincronizar'}
               </button>
@@ -329,8 +329,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                     }}
                     className={`w-full p-3.5 rounded-2xl flex items-center justify-between gap-3.5 text-left transition-all duration-200 cursor-pointer min-w-0 ${
                       isActive
-                        ? 'bg-[#0b3b8c] text-white shadow-[0_8px_20px_rgba(11,59,140,0.28)]'
-                        : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950'
+                        ? 'bg-[#14428c] text-white shadow-[0_8px_20px_rgba(11,59,140,0.28)]'
+                        : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950'
                     }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">

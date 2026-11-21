@@ -37,7 +37,7 @@ export const StudentSiblingsCard: React.FC<StudentSiblingsCardProps> = ({
       case 'guardian':
         return 'bg-indigo-100 text-indigo-950';
       default:
-        return 'bg-[#edf2f7] text-slate-900';
+        return 'bg-[#eef3f9] text-slate-900';
     }
   };
 
@@ -130,7 +130,7 @@ export const StudentSiblingsCard: React.FC<StudentSiblingsCardProps> = ({
                       <span className="text-slate-700 text-[10.5px]">· {sib.student.idade} anos</span>
                     )}
                     {sib.isSameClass && (
-                      <span className="text-[10px] bg-[#edf2f7] text-slate-800 px-1 py-0.2 rounded font-semibold">
+                      <span className="text-[10px] bg-[#eef3f9] text-slate-800 px-1 py-0.2 rounded font-semibold">
                         Mesma turma
                       </span>
                     )}

@@ -195,7 +195,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                   </>
                 )}
                 {(student.ra || student.dataNascimento) && <span aria-hidden="true">·</span>}
-                <span className="font-semibold text-[#0b3b8c]">{classGroup.name}</span>
+                <span className="font-semibold text-[#14428c]">{classGroup.name}</span>
               </p>
             </div>
           </div>
@@ -214,7 +214,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 e.stopPropagation();
                 onOpenStudentGrid(student);
               }}
-              className="flex-1 sm:flex-initial min-h-[38px] py-2 px-3.5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[12.5px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100"
+              className="flex-1 sm:flex-initial min-h-[38px] py-2 px-3.5 rounded-2xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-[12.5px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100"
             >
               <LayoutGrid className="w-4 h-4 shrink-0" />
               <span>Ficha</span>
@@ -230,7 +230,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               }}
               className={`flex-1 sm:flex-initial min-h-[38px] py-2 px-3.5 rounded-2xl font-semibold text-[12.5px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors duration-100 ${
                 hasPdf
-                  ? 'bg-white hover:bg-[#e2e8f0] text-[#0b3b8c]'
+                  ? 'bg-white hover:bg-[#e2e8f0] text-[#14428c]'
                   : 'bg-rose-50 hover:bg-rose-100 text-rose-800'
               }`}
             >
@@ -274,7 +274,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
           <div className="flex items-baseline gap-2 flex-wrap">
             <span
               className={`text-[24px] sm:text-[26px] font-bold tracking-[-0.025em] tabular-nums ${
-                isCompliant ? 'text-[#047857]' : 'text-[#b42318]'
+                isCompliant ? 'text-[#047857]' : 'text-[#be123c]'
               }`}
             >
               {metrics.frequenciaPercent}%
@@ -288,7 +288,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12px] font-semibold tabular-nums ${
               isCompliant
                 ? 'bg-[#ecfdf5] text-[#047857]'
-                : 'bg-rose-50 text-[#b42318]'
+                : 'bg-rose-50 text-[#be123c]'
             }`}
           >
             {isCompliant ? (
@@ -346,7 +346,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
               Atestados {metrics.atestados}d
             </span>
-            <span className="inline-flex items-center gap-1.5 text-[#b42318]">
+            <span className="inline-flex items-center gap-1.5 text-[#be123c]">
               <span className="w-2 h-2 rounded-full bg-rose-600 shrink-0" />
               Sem just. {unexcusedAbsences}d
             </span>
@@ -404,7 +404,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             onClick={() => setActiveTab('frequencia')}
             className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'frequencia'
-                ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                ? 'bg-white text-[#14428c] shadow-2xs'
                 : 'text-slate-700 hover:text-slate-950'
             }`}
           >
@@ -419,7 +419,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             onClick={() => setActiveTab('familia')}
             className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'familia'
-                ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                ? 'bg-white text-[#14428c] shadow-2xs'
                 : 'text-slate-700 hover:text-slate-950'
             }`}
           >
@@ -439,7 +439,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
             onClick={() => setActiveTab('endereco')}
             className={`min-h-[36px] px-2.5 py-1.5 rounded-xl text-[12.5px] tracking-[-0.01em] font-semibold flex items-center justify-center gap-1.5 text-center whitespace-normal cursor-pointer transition-colors duration-100 ${
               activeTab === 'endereco'
-                ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                ? 'bg-white text-[#14428c] shadow-2xs'
                 : 'text-slate-700 hover:text-slate-950'
             }`}
           >
@@ -461,7 +461,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 <span className="text-[19px] font-bold tracking-[-0.02em] text-sky-950">{metrics.atestados}d</span>
               </div>
               <div className="p-3 rounded-2xl bg-rose-50 flex items-center justify-between sm:block">
-                <span className="text-[12px] font-semibold text-[#b42318] block">Sem Just.</span>
+                <span className="text-[12px] font-semibold text-[#be123c] block">Sem Just.</span>
                 <span className="text-[19px] font-bold tracking-[-0.02em] text-rose-950">{unexcusedAbsences}d</span>
               </div>
             </div>
@@ -488,7 +488,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
         {activeTab === 'familia' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-gentle-fade">
             <div className="space-y-2">
-              <div className="p-3 rounded-2xl bg-[#f4f7fb]">
+              <div className="p-3 rounded-2xl bg-[#f3f6fb]">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                   {guardian1Info.shortRoleLabel || 'Responsável 1'}
                 </span>
@@ -501,7 +501,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
                 </p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-[#f4f7fb]">
+              <div className="p-3 rounded-2xl bg-[#f3f6fb]">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                   {guardian2Info.shortRoleLabel || 'Responsável 2'}
                 </span>
@@ -515,7 +515,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#f4f7fb] flex flex-col justify-between gap-3">
+            <div className="p-3.5 rounded-2xl bg-[#f3f6fb] flex flex-col justify-between gap-3">
               {waList.length > 0 ? (
                 <>
                   <div>
@@ -565,7 +565,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
         {/* Aba 3: Endereço e Apoios */}
         {activeTab === 'endereco' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-gentle-fade">
-            <div className="p-3.5 rounded-2xl bg-[#f4f7fb] space-y-2">
+            <div className="p-3.5 rounded-2xl bg-[#f3f6fb] space-y-2">
               <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">
                 Endereço
               </span>
@@ -578,7 +578,7 @@ export const StudentDataExpansionPanel: React.FC<StudentDataExpansionPanelProps>
               </p>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#f4f7fb] space-y-2">
+            <div className="p-3.5 rounded-2xl bg-[#f3f6fb] space-y-2">
               {student.deficiencia ? (
                 <div>
                   <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-slate-700 block">

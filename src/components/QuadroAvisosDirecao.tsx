@@ -72,8 +72,8 @@ const PRIORITY_META: Record<
   },
   informativo: {
     label: 'Informativo',
-    textClass: 'text-[#0b3b8c]',
-    surfaceClass: 'bg-[#f4f7fb]',
+    textClass: 'text-[#14428c]',
+    surfaceClass: 'bg-[#f3f6fb]',
   },
 };
 
@@ -344,7 +344,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
       {/* Cabeçalho do Quadro */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
         <div className="flex items-start sm:items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#dce7fb] text-[#0b3b8c] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#e8f0fe] text-[#14428c] flex items-center justify-center shrink-0">
             <Megaphone className="w-5 h-5 stroke-[1.75]" />
           </div>
           <div className="min-w-0">
@@ -376,7 +376,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
+              className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <CheckCheck className="w-4 h-4 text-[#065f46] stroke-[1.8] shrink-0" />
               <span>Dar ciência em tudo</span>
@@ -387,7 +387,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <button
               type="button"
               onClick={handleOpenNew}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs sm:text-[13px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs sm:text-[13px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <Plus className="w-4 h-4 stroke-[1.8] shrink-0" />
               <span>Postar Aviso</span>
@@ -400,7 +400,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
       {isAdminEditor && isComposerOpen && (
         <form
           onSubmit={handleSubmit}
-          className="p-4 rounded-2xl bg-[#f4f7fb] space-y-3 animate-fade-in"
+          className="p-4 rounded-2xl bg-[#f3f6fb] space-y-3 animate-fade-in"
         >
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-bold text-slate-950">
@@ -459,8 +459,8 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                             ? 'bg-[#b91c1c] text-white'
                             : level === 'importante'
                             ? 'bg-[#b45309] text-white'
-                            : 'bg-[#0b3b8c] text-white'
-                          : 'text-slate-800 hover:bg-[#edf2f7]'
+                            : 'bg-[#14428c] text-white'
+                          : 'text-slate-800 hover:bg-[#eef3f9]'
                       }`}
                     >
                       {PRIORITY_META[level].label}
@@ -505,7 +505,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                 type="checkbox"
                 checked={pinned}
                 onChange={(e) => setPinned(e.target.checked)}
-                className="w-4 h-4 rounded accent-[#0b3b8c]"
+                className="w-4 h-4 rounded accent-[#14428c]"
               />
               <span>Fixar no topo do quadro</span>
             </label>
@@ -513,7 +513,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <button
               type="submit"
               disabled={!content.trim()}
-              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] disabled:opacity-50 text-white text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
+              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] disabled:opacity-50 text-white text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <Send className="w-4 h-4 shrink-0" />
               <span>{editingNoticeId ? 'Salvar alterações' : 'Publicar para equipe'}</span>
@@ -524,7 +524,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
 
       {/* Lista de Mensagens / Estado Vazio */}
       {visibleNotices.length === 0 ? (
-        <div className="py-6 px-4 rounded-2xl bg-[#f4f7fb] text-center space-y-2.5">
+        <div className="py-6 px-4 rounded-2xl bg-[#f3f6fb] text-center space-y-2.5">
           <p className="text-sm font-medium text-slate-800">
             Nenhum aviso publicado pela Direção no momento.
           </p>
@@ -532,7 +532,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
             <button
               type="button"
               onClick={handleOpenNew}
-              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-200 active:scale-[0.97]"
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <Plus className="w-4 h-4" />
               <span>Publicar primeiro aviso</span>
@@ -606,7 +606,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                       <button
                         type="button"
                         onClick={() => handleMarkRead(notice.id)}
-                        className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-200 active:scale-[0.97]"
+                        className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-200 active:scale-[0.97]"
                       >
                         <Check className="w-3.5 h-3.5 stroke-[1.8] shrink-0" />
                         <span>Dar ciência</span>
@@ -625,8 +625,8 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                         aria-expanded={isReadersExpanded}
                         className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all duration-200 ${
                           isReadersExpanded
-                            ? 'bg-slate-950 text-white shadow-xs'
-                            : 'bg-white hover:bg-[#edf2f7] text-slate-950 shadow-xs'
+                            ? 'bg-[#14428c] text-white shadow-xs'
+                            : 'bg-white hover:bg-[#eef3f9] text-slate-950 shadow-xs'
                         }`}
                       >
                         <Users className="w-3.5 h-3.5 shrink-0" />
@@ -665,7 +665,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                       <button
                         type="button"
                         onClick={() => handleStartEdit(notice)}
-                        className="font-semibold text-[#0b3b8c] hover:underline inline-flex items-center gap-1 whitespace-nowrap cursor-pointer transition-colors"
+                        className="font-semibold text-[#14428c] hover:underline inline-flex items-center gap-1 whitespace-nowrap cursor-pointer transition-colors"
                       >
                         <Pencil className="w-3.5 h-3.5" />
                         <span>Editar</span>
@@ -706,7 +706,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
                           <li
                             key={reader.userEmail}
                             className={`py-2 px-2.5 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs min-w-0 ${
-                              idx % 2 === 1 ? 'bg-[#f4f7fb]' : 'bg-white'
+                              idx % 2 === 1 ? 'bg-[#f3f6fb]' : 'bg-white'
                             }`}
                           >
                             <div className="min-w-0">
@@ -742,7 +742,7 @@ export const QuadroAvisosDirecao: React.FC<QuadroAvisosDirecaoProps> = ({
           <button
             type="button"
             onClick={() => setShowAllNotices((prev) => !prev)}
-            className="min-h-[38px] px-4 py-1.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+            className="min-h-[38px] px-4 py-1.5 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
           >
             {showAllNotices ? (
               <>

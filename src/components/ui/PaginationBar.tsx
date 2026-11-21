@@ -66,7 +66,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
         {totalPages > 1 && (
           <span
             className={`px-2 py-0.5 rounded-lg text-[11px] font-bold ${
-              isDark ? 'bg-white/15 text-white' : 'bg-[#edf2f7] text-slate-800'
+              isDark ? 'bg-white/15 text-white' : 'bg-[#eef3f9] text-slate-800'
             }`}
           >
             Pág. {safePage}/{totalPages}
@@ -85,7 +85,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
             className={`min-h-[38px] px-2.5 sm:px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:pointer-events-none transition-colors ${
               isDark
                 ? 'bg-white/15 hover:bg-white/25 text-white'
-                : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950'
+                : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950'
             }`}
           >
             <ChevronLeft className="w-4 h-4 shrink-0" />
@@ -106,10 +106,10 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
                     isActive
                       ? isDark
                         ? 'bg-white text-slate-950'
-                        : 'bg-[#0b3b8c] text-white'
+                        : 'bg-[#14428c] text-white'
                       : isDark
                       ? 'bg-white/10 hover:bg-white/20 text-white'
-                      : 'bg-[#f4f7fb] hover:bg-[#e2e8f0] text-slate-800'
+                      : 'bg-[#f3f6fb] hover:bg-[#e2e8f0] text-slate-800'
                   }`}
                 >
                   {pageNum}
@@ -126,7 +126,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
             className={`min-h-[38px] px-2.5 sm:px-3 rounded-xl text-xs font-semibold inline-flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:pointer-events-none transition-colors ${
               isDark
                 ? 'bg-white/15 hover:bg-white/25 text-white'
-                : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950'
+                : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950'
             }`}
           >
             <span>Próxima</span>

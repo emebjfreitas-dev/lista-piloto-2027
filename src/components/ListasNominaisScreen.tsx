@@ -416,8 +416,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
   if (userRole !== 'admin') {
     return (
       <div className="max-w-lg mx-auto my-12 p-8 bg-white rounded-3xl text-center space-y-3 shadow-2xs">
-        <Lock className="w-9 h-9 text-[#ff3b30] mx-auto" />
-        <h2 className="text-lg font-semibold text-[#111827] tracking-tight">
+        <Lock className="w-9 h-9 text-[#e11d48] mx-auto" />
+        <h2 className="text-lg font-semibold text-[#0f172a] tracking-tight">
           Acesso Restrito à Gestão / Secretaria
         </h2>
         <p className="text-sm text-slate-700 leading-relaxed">
@@ -439,7 +439,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
       {toastMsg && (
         <ModalPortal>
           <div className="fixed bottom-20 lg:bottom-6 left-4 right-4 z-[125] max-w-md mx-auto animate-in fade-in duration-100 pointer-events-none">
-            <div className="bg-[#1d1d1f] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 min-w-0">
+            <div className="bg-[#14428c] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 min-w-0">
               <CheckCircle2 className="w-[19px] h-[19px] text-[#28cd41] shrink-0" />
               <p className="text-sm font-medium leading-snug break-words min-w-0">{toastMsg}</p>
             </div>
@@ -485,7 +485,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 onClick={() => setViewMode('grid')}
                 className={`min-h-[34px] px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                   viewMode === 'grid'
-                    ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                    ? 'bg-white text-[#14428c] shadow-2xs'
                     : 'text-slate-700 hover:text-slate-950'
                 }`}
                 title="Exibir grade de cartões"
@@ -498,7 +498,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 onClick={() => setViewMode('compact')}
                 className={`min-h-[34px] px-3 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                   viewMode === 'compact'
-                    ? 'bg-white text-[#0b3b8c] shadow-2xs'
+                    ? 'bg-white text-[#14428c] shadow-2xs'
                     : 'text-slate-700 hover:text-slate-950'
                 }`}
                 title="Exibir lista compacta"
@@ -511,7 +511,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
             <button
               type="button"
               onClick={handleExportXLS}
-              className="min-h-[40px] px-3.5 rounded-2xl bg-[#0b3b8c] hover:bg-[#0052cc] text-white font-semibold text-xs sm:text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+              className="min-h-[40px] px-3.5 rounded-2xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs sm:text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
             >
               <Download className="w-[18px] h-[18px]" />
               <span>Excel</span>
@@ -620,7 +620,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         <div className="space-y-2 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <Folder className="w-[17px] h-[17px] text-[#0b3b8c]" />
+              <Folder className="w-[17px] h-[17px] text-[#14428c]" />
               <span>Grupos Escolares</span>
             </span>
             <span className="text-xs font-medium text-slate-700 tabular-nums">
@@ -648,7 +648,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                   }}
                   className={`min-h-[36px] px-3.5 rounded-xl text-xs sm:text-[13px] font-semibold cursor-pointer transition-all duration-100 ${
                     isSelected
-                      ? 'bg-[#0f172a] text-white shadow-2xs'
+                      ? 'bg-[#14428c] text-white shadow-2xs'
                       : 'text-[#475569] hover:text-[#0f172a] hover:bg-white/60'
                   }`}
                   title={grp.description}
@@ -664,14 +664,14 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
         <div className="space-y-2 min-w-0">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <span className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-              <PanelsTopLeft className="w-[17px] h-[17px] text-[#0b3b8c]" />
+              <PanelsTopLeft className="w-[17px] h-[17px] text-[#14428c]" />
               <span>Abas de Turmas</span>
             </span>
             {selectedClassFilter !== 'all' && (
               <button
                 type="button"
                 onClick={() => setSelectedClassFilter('all')}
-                className="text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer flex items-center gap-1"
+                className="text-xs font-semibold text-[#14428c] hover:underline cursor-pointer flex items-center gap-1"
               >
                 <LayoutGrid className="w-[15px] h-[15px]" />
                 <span>Ver Todas as Turmas Juntas</span>
@@ -687,7 +687,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                 onClick={() => setSelectedClassFilter('all')}
                 className={`min-h-[44px] px-4 rounded-2xl text-xs sm:text-[13px] font-semibold flex items-center gap-2 shrink-0 cursor-pointer transition-all duration-100 ${
                   selectedClassFilter === 'all'
-                    ? 'bg-[#0b3b8c] text-white shadow-xs'
+                    ? 'bg-[#14428c] text-white shadow-xs'
                     : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
                 }`}
               >
@@ -720,7 +720,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                     onClick={() => setSelectedClassFilter(cls.id)}
                     className={`min-h-[44px] px-3.5 rounded-2xl text-xs sm:text-[13px] font-semibold flex items-center gap-2 shrink-0 cursor-pointer transition-all duration-100 ${
                       isSelected
-                        ? 'bg-[#0b3b8c] text-white shadow-xs'
+                        ? 'bg-[#14428c] text-white shadow-xs'
                         : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
                     }`}
                   >
@@ -794,7 +794,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
 
       {/* PAINEL HERO DA TURMA ATIVA (QUANDO UMA TURMA INDIVIDUAL ESTÁ SELECIONADA) */}
       {activeSelectedClass && (
-        <section className="bg-gradient-to-br from-[#0b3b8c] to-[#132c5c] text-white rounded-3xl p-5 sm:p-6 shadow-[0_14px_34px_-10px_rgba(11,59,140,0.32)] space-y-4 animate-gentle-fade">
+        <section className="bg-gradient-to-br from-[#14428c] to-[#0f3370] text-white rounded-3xl p-5 sm:p-6 shadow-[0_14px_34px_-10px_rgba(11,59,140,0.32)] space-y-4 animate-gentle-fade">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -874,7 +874,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
               <button
                 type="button"
                 onClick={() => setOnlyBelowTarget(false)}
-                className="min-h-[40px] px-5 rounded-2xl bg-[#0f172a] hover:bg-black text-white text-xs font-semibold cursor-pointer shadow-xs"
+                className="min-h-[40px] px-5 rounded-2xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-semibold cursor-pointer shadow-xs"
               >
                 Ver todos os {classStatsMap.get(activeSelectedClass.id)?.total || 0} estudantes desta turma
               </button>
@@ -929,8 +929,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                           key={`${cls.id}-${student.id}`}
                           className={`rounded-3xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 min-w-0 card-interactive shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] ${
                             isBelowTarget
-                              ? 'bg-[#fff5f5] hover:bg-[#ffecec]'
-                              : 'bg-white hover:bg-[#f8fbff]'
+                              ? 'bg-[#fff1f2] hover:bg-[#ffe4e6]'
+                              : 'bg-white hover:bg-[#f3f6fb]'
                           }`}
                         >
                           <div className="space-y-2.5 min-w-0">
@@ -940,7 +940,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                 student={student}
                                 size="lg"
                                 onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
-                                className="bg-[#edf2f7]"
+                                className="bg-[#eef3f9]"
                               />
 
                               <div className="min-w-0 flex-1">
@@ -956,7 +956,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                   </div>
                                   <span
                                     className={`text-[13px] font-bold tabular-nums shrink-0 ${
-                                      isBelowTarget ? 'text-[#b42318]' : 'text-[#047857]'
+                                      isBelowTarget ? 'text-[#be123c]' : 'text-[#047857]'
                                     }`}
                                   >
                                     {rep.frequenciaBimestrePercent}%
@@ -975,7 +975,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                 className={
                                   rep.totalFaltasBimestre > 0
                                     ? isBelowTarget
-                                      ? 'text-[#b42318] font-semibold'
+                                      ? 'text-[#be123c] font-semibold'
                                       : 'text-slate-950 font-semibold'
                                     : ''
                                 }
@@ -1020,7 +1020,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                     key={mb.monthName}
                                     className={`px-2 py-0.5 rounded-lg ${
                                       mb.isBelowLegalThreshold
-                                        ? 'bg-rose-100/70 text-[#b42318] font-semibold'
+                                        ? 'bg-rose-100/70 text-[#be123c] font-semibold'
                                         : 'bg-slate-100 text-[#475569]'
                                     }`}
                                   >
@@ -1060,8 +1060,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                               onClick={() => onOpenStudentPdf(student, cls.name)}
                                 className={`min-h-[40px] px-2 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                                   hasPdf
-                                    ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
-                                    : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
+                                    ? 'bg-[#e8f0fe] hover:bg-[#d4e2fc] text-[#0f3370]'
+                                    : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-700'
                                 }`}
                                 title="Abrir PDF nominal"
                               >
@@ -1087,8 +1087,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                           <div
                             key={`${cls.id}-${student.id}`}
                             className={`w-full min-w-0 px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
-                              idx % 2 === 1 ? 'bg-[#f4f7fb]' : 'bg-white'
-                            } hover:bg-[#e8eff9]`}
+                              idx % 2 === 1 ? 'bg-[#f3f6fb]' : 'bg-white'
+                            } hover:bg-[#e8f0fe]`}
                           >
                             <div className="flex items-center gap-3.5 min-w-0 flex-1">
                               <span className="text-xs font-semibold text-slate-700 tabular-nums w-6 text-center shrink-0">
@@ -1099,7 +1099,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                 student={student}
                                 size="md"
                                 onUploadPhotoClick={() => onOpenPhotoModal(student, cls.name)}
-                                className="bg-[#edf2f7]"
+                                className="bg-[#eef3f9]"
                               />
 
                               <div className="min-w-0 flex-1">
@@ -1134,7 +1134,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                             <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0">
                               <span
                                 className={`text-base font-bold tabular-nums ${
-                                  isBelowTarget ? 'text-[#b42318]' : 'text-[#047857]'
+                                  isBelowTarget ? 'text-[#be123c]' : 'text-[#047857]'
                                 }`}
                               >
                                 {rep.frequenciaBimestrePercent}%
@@ -1146,7 +1146,7 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                   onClick={() =>
                                     onOpenStudentGrid(student, cls.id, cls.name, cls.classesHeld || 20)
                                   }
-                                  className="min-h-[36px] px-3 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors"
+                                  className="min-h-[36px] px-3 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 cursor-pointer transition-colors"
                                 >
                                   <LayoutGrid className="w-[15px] h-[15px] text-slate-700" />
                                   <span>Ficha</span>
@@ -1157,8 +1157,8 @@ export const ListasNominaisScreen: React.FC<ListasNominaisScreenProps> = ({
                                   onClick={() => onOpenStudentPdf(student, cls.name)}
                                   className={`min-h-[36px] px-3 rounded-xl font-semibold text-xs tracking-[-0.01em] flex items-center gap-1 transition-colors cursor-pointer ${
                                     hasPdf
-                                      ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
-                                      : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
+                                      ? 'bg-[#e8f0fe] hover:bg-[#d4e2fc] text-[#0f3370]'
+                                      : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-700'
                                   }`}
                                 >
                                   <FileText className="w-[15px] h-[15px]" />

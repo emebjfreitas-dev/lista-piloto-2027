@@ -48,7 +48,7 @@ export const AdminSessionLogsSection: React.FC<AdminSessionLogsSectionProps> = (
             value={searchTerm}
             onChange={(e) => onChangeSearchTerm(e.target.value)}
             placeholder="Filtrar por e-mail ou turma..."
-            className="min-h-[40px] px-3.5 rounded-xl bg-[#f4f7fb] text-xs text-slate-950 placeholder:text-slate-600 focus:bg-white transition-colors"
+            className="min-h-[40px] px-3.5 rounded-xl bg-[#f3f6fb] text-xs text-slate-950 placeholder:text-slate-600 focus:bg-white transition-colors"
           />
           {canManage && hasClearAction && onClearLogs && totalLogsCount > 0 && (
             <button
@@ -63,7 +63,7 @@ export const AdminSessionLogsSection: React.FC<AdminSessionLogsSectionProps> = (
       </div>
 
       {filteredLogs.length === 0 ? (
-        <div className="p-8 rounded-2xl bg-[#f4f7fb] text-center text-xs text-slate-700 font-medium">
+        <div className="p-8 rounded-2xl bg-[#f3f6fb] text-center text-xs text-slate-700 font-medium">
           Nenhuma sessão registrada para o filtro informado.
         </div>
       ) : (
@@ -75,7 +75,7 @@ export const AdminSessionLogsSection: React.FC<AdminSessionLogsSectionProps> = (
                 !log.logoutTimeISO &&
                 Date.now() - new Date(log.lastHeartbeatISO).getTime() < 120000;
               return (
-                <div key={log.id} className="p-3.5 rounded-2xl bg-[#f4f7fb] space-y-2 min-w-0">
+                <div key={log.id} className="p-3.5 rounded-2xl bg-[#f3f6fb] space-y-2 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span
                       className={`px-2 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 ${
@@ -120,7 +120,7 @@ export const AdminSessionLogsSection: React.FC<AdminSessionLogsSectionProps> = (
           {/* Tabela Desktop Sessões */}
           <div className="hidden lg:block overflow-x-auto max-h-[520px] rounded-2xl">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#edf2f7] text-slate-800 font-semibold text-xs sticky top-0">
+              <thead className="bg-[#eef3f9] text-slate-800 font-semibold text-xs sticky top-0">
                 <tr>
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3">Educador(a) e E-mail</th>
@@ -137,13 +137,13 @@ export const AdminSessionLogsSection: React.FC<AdminSessionLogsSectionProps> = (
                     !log.logoutTimeISO &&
                     Date.now() - new Date(log.lastHeartbeatISO).getTime() < 120000;
                   return (
-                    <tr key={log.id} className="odd:bg-[#f4f7fb] even:bg-white hover:bg-[#dce7fb]/40 transition-colors">
+                    <tr key={log.id} className="odd:bg-[#f3f6fb] even:bg-white hover:bg-[#e8f0fe]/40 transition-colors">
                       <td className="py-2.5 px-3">
                         <span
                           className={`px-2 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 ${
                             isOnline
                               ? 'bg-emerald-100 text-emerald-950'
-                              : 'bg-[#edf2f7] text-slate-800'
+                              : 'bg-[#eef3f9] text-slate-800'
                           }`}
                         >
                           <span

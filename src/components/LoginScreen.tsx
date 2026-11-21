@@ -19,9 +19,12 @@ import {
 import {
   googleSignIn,
   logoutGoogle,
+  detectAuthEnvironmentInfo,
+  initGoogleIdentityFedCM,
+  triggerGoogleIdentityPrompt,
 } from '../services/googleSheetsApi';
 import { fetchStateFromFirestoreCloud } from '../services/firebaseSync';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Copy, Check, ExternalLink } from 'lucide-react';
 
 interface LoginScreenProps {
   authorizedUsers: AuthorizedUser[];
@@ -37,7 +40,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(externalError || null);
+  const [showIosHelp, setShowIosHelp] = useState(false);
+  const [canTryFedCmFallback, setCanTryFedCmFallback] = useState(false);
+  const [copiedPortalUrl, setCopiedPortalUrl] = useState(false);
   const [buttonMounted, setButtonMounted] = useState(false);
+  const authEnv = React.useMemo(() => detectAuthEnvironmentInfo(), []);
   const localFallbackPhoto = `${import.meta.env.BASE_URL || '/'}escola-candelario.jpg`;
   const [failedPhotoUrls, setFailedPhotoUrls] = useState<Record<string, boolean>>({});
   const [photoSlide, setPhotoSlide] = useState<{ active: number; previous: number | null }>(() => ({
@@ -239,8 +246,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     onLoginSuccess(found);
   };
 
-  // Executa o login com a conta Google com validação estrita de segurança (sem bypass)
-  const handleGoogleLogin = async () => {
+  const verifyAndAuthorizeRef = React.useRef(verifyAndAuthorizeEmail);
+  verifyAndAuthorizeRef.current = verifyAndAuthorizeEmail;
+
+  // Inicializa Google Identity Services (FedCM / ITP-safe) em segundo plano sem bloquear o botão principal
+  useEffect(() => {
+    let active = true;
+    void initGoogleIdentityFedCM(async (fbUser) => {
+      if (!active || !fbUser.email) return;
+      setLoading(true);
+      try {
+        const idToken = await fbUser.getIdToken().catch(() => undefined);
+        await verifyAndAuthorizeRef.current(
+          fbUser.email,
+          fbUser.displayName,
+          Boolean(fbUser.emailVerified),
+          idToken
+        );
+      } finally {
+        if (active) setLoading(false);
+      }
+    }).then((ready) => {
+      if (active && ready) {
+        setCanTryFedCmFallback(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const executePopupSignIn = async () => {
     setErrorMsg(null);
     setLoading(true);
 
@@ -256,13 +292,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         );
         return;
       }
-      // Se não retornou e-mail imediato (ex: redirecionamento em andamento), não efetua login e aguarda o fluxo seguro
-    } catch (error: any) {
-      const code = String(error?.code || '');
-      const message = String(error?.message || '');
+    } catch (error: unknown) {
+      const authErr = error as { code?: unknown; message?: unknown };
+      const code = typeof authErr?.code === 'string' ? authErr.code : '';
+      const message = typeof authErr?.message === 'string' ? authErr.message : '';
 
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        // Usuário fechou ou cancelou o pop-up do Google
         setErrorMsg(null);
       } else if (
         code === 'auth/unauthorized-domain' ||
@@ -276,13 +311,74 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         setErrorMsg(
           `Domínio não autorizado no Firebase Auth (${currentHost}). Por segurança, adicione "${currentHost}" no Firebase Console (Authentication > Configurações > Domínios autorizados) para permitir o login seguro com o Google nesta hospedagem.`
         );
-      } else if (code === 'auth/popup-blocked') {
+      } else if (
+        code === 'auth/missing-initial-state' ||
+        code === 'auth/web-storage-unsupported' ||
+        code === 'auth/operation-not-supported-in-this-environment' ||
+        message.includes('missing initial state') ||
+        message.includes('sessionStorage')
+      ) {
+        setShowIosHelp(true);
         setErrorMsg(
-          'O pop-up de login do Google foi bloqueado pelo seu navegador. Por favor, permita pop-ups para este site e tente novamente.'
+          authEnv.isIOS
+            ? 'O Safari/iOS bloqueou os dados temporários da janela de login do Google. Use o navegador Safari diretamente (fora da Tela de Início ou navegador interno) e verifique se pop-ups estão permitidos.'
+            : 'O navegador bloqueou o armazenamento temporário (sessionStorage/cookies) necessário para o pop-up do Google. Permita cookies de sessão ou tente o login direto.'
+        );
+      } else if (code === 'auth/popup-blocked') {
+        setShowIosHelp(authEnv.isIOS);
+        setErrorMsg(
+          'O pop-up de login do Google foi bloqueado pelo seu navegador. Permita pop-ups para este site e tente novamente.'
         );
       } else {
         setErrorMsg(
           'Não foi possível concluir a autenticação com o Google. Verifique sua conexão e tente novamente.'
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Executa o login com a conta Google preservando o gesto síncrono do usuário para pop-ups
+  const handleGoogleLogin = () => {
+    if (authEnv.isIOSStandalone || authEnv.isInAppBrowser) {
+      setErrorMsg(null);
+      if (canTryFedCmFallback && authEnv.supportsFedCM) {
+        setLoading(true);
+        void triggerGoogleIdentityPrompt().then((outcome) => {
+          setLoading(false);
+          if (outcome === 'unavailable') {
+            setShowIosHelp(true);
+          }
+        });
+        return;
+      }
+      setShowIosHelp(true);
+      return;
+    }
+    void executePopupSignIn();
+  };
+
+  const handleCopyPortalUrl = async () => {
+    if (typeof window === 'undefined') return;
+    const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+    try {
+      await navigator.clipboard.writeText(cleanUrl);
+      setCopiedPortalUrl(true);
+      window.setTimeout(() => setCopiedPortalUrl(false), 3000);
+    } catch {
+      setCopiedPortalUrl(false);
+    }
+  };
+
+  const handleTryFedCmSignIn = async () => {
+    setErrorMsg(null);
+    setLoading(true);
+    try {
+      const outcome = await triggerGoogleIdentityPrompt();
+      if (outcome === 'unavailable') {
+        setErrorMsg(
+          'O login direto nativo não está disponível neste navegador/domínio. Abra o portal diretamente no navegador Safari ou Chrome.'
         );
       }
     } finally {
@@ -350,7 +446,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </p>
 
         {/* Nome do Aplicativo */}
-        <h1 className="text-xl sm:text-[22px] font-bold tracking-tight text-[#0b3b8c] leading-snug mt-1.5 text-balance">
+        <h1 className="text-xl sm:text-[22px] font-bold tracking-tight text-[#14428c] leading-snug mt-1.5 text-balance">
           Lista Piloto Candelário 2027
         </h1>
 
@@ -369,10 +465,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             disabled={loading}
             onClick={handleGoogleLogin}
             aria-label="Fazer login com a conta Google"
-            className="w-full min-h-[52px] py-2.5 px-5 bg-[#edf2f7] hover:bg-[#e2e8f0] rounded-full text-slate-950 font-semibold text-sm sm:text-[15px] flex items-center justify-center gap-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.08)] hover:shadow-[0_8px_20px_rgba(11,59,140,0.16)] hover:-translate-y-px active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-60"
+            className="w-full min-h-[52px] py-2.5 px-5 bg-[#eef3f9] hover:bg-[#e2e8f0] rounded-full text-slate-950 font-semibold text-sm sm:text-[15px] flex items-center justify-center gap-3.5 shadow-[0_4px_14px_rgba(15,23,42,0.08)] hover:shadow-[0_8px_20px_rgba(11,59,140,0.16)] hover:-translate-y-px active:scale-[0.98] transition-all duration-200 cursor-pointer disabled:opacity-60"
           >
             {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-[#0b3b8c]" />
+              <Loader2 className="w-5 h-5 animate-spin text-[#14428c]" />
             ) : (
               <svg
                 className="w-5 h-5 shrink-0"
@@ -405,9 +501,71 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* Mensagem de Erro com Design Limpo e Acessível */}
         {errorMsg && (
-          <div className="w-full mt-4 px-3.5 py-2.5 rounded-2xl bg-rose-100 text-rose-950 text-xs font-semibold leading-relaxed break-words text-left flex items-start gap-2 animate-fade-in">
-            <AlertCircle className="w-4 h-4 text-rose-800 shrink-0 mt-0.5" />
+          <div className="w-full mt-4 px-3.5 py-2.5 rounded-2xl bg-[#fff1f2] text-[#9f1239] text-xs font-semibold leading-relaxed break-words text-left flex items-start gap-2 animate-fade-in">
+            <AlertCircle className="w-4 h-4 text-[#be123c] shrink-0 mt-0.5" />
             <p className="flex-1">{errorMsg}</p>
+          </div>
+        )}
+
+        {/* Orientação prática para iPhone (Modo Tela de Início / Navegador Interno / Storage Particionado) */}
+        {showIosHelp && (
+          <div className="w-full mt-3.5 p-3.5 rounded-2xl bg-[#f3f6fb] text-[#0f172a] text-left space-y-2.5 animate-fade-in">
+            <p className="text-xs font-bold text-[#14428c] leading-snug">
+              {authEnv.isIOSStandalone
+                ? 'Abertura pela Tela de Início (iOS)'
+                : authEnv.isInAppBrowser
+                ? 'Navegador interno detectado'
+                : 'Compatibilidade de login no Safari / iOS'}
+            </p>
+            <p className="text-[11.5px] text-[#334155] leading-relaxed">
+              {authEnv.isIOSStandalone
+                ? 'No iPhone, o modo Tela de Início isola a janela de login do Google. Copie o endereço abaixo e abra diretamente no navegador Safari para entrar.'
+                : authEnv.isInAppBrowser
+                ? 'Apps como WhatsApp, Gmail ou navegadores internos bloqueiam o retorno do login. Toque em Abrir no Safari ou copie o link abaixo.'
+                : 'Se o Safari bloquear a janela do Google, verifique em Ajustes > Safari se "Bloquear Pop-ups" não está impedindo a janela ou abra em uma nova aba do Safari.'}
+            </p>
+            <div className="flex flex-col gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={handleCopyPortalUrl}
+                className="w-full min-h-[40px] px-3 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+              >
+                {copiedPortalUrl ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>Link copiado! Cole no Safari</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 shrink-0" />
+                    <span>Copiar Link para Abrir no Safari</span>
+                  </>
+                )}
+              </button>
+
+              {canTryFedCmFallback && (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleTryFedCmSignIn}
+                  className="w-full min-h-[38px] px-3 py-1.5 rounded-xl bg-[#e8f0fe] hover:bg-[#d4e2fc] text-[#14428c] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                  <span>Tentar Login Direto Google</span>
+                </button>
+              )}
+
+              {(authEnv.isIOSStandalone || authEnv.isInAppBrowser) && (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void executePopupSignIn()}
+                  className="w-full min-h-[36px] px-3 py-1.5 rounded-xl bg-[#eef3f9] hover:bg-[#dfe8f4] text-[#334155] text-[11px] font-semibold cursor-pointer transition-colors disabled:opacity-50"
+                >
+                  Tentar janela de login mesmo assim
+                </button>
+              )}
+            </div>
           </div>
         )}
 

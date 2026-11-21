@@ -207,7 +207,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
           {/* Controles: Seletor de Limiar Configurado (3+, 5+, 10+ dias) & Filtros Rápidos */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <div className="flex flex-wrap items-center gap-1 bg-[#edf2f7] p-1 rounded-xl">
+            <div className="flex flex-wrap items-center gap-1 bg-[#eef3f9] p-1 rounded-xl">
               <span className="text-xs font-semibold text-slate-800 px-2">
                 Limiar:
               </span>
@@ -265,7 +265,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
 
         {/* Lista de Cards de Alerta Visual por Estudante */}
         {filteredItems.length === 0 ? (
-          <div className="py-6 px-4 text-center bg-[#f4f7fb] rounded-2xl space-y-1">
+          <div className="py-6 px-4 text-center bg-[#f3f6fb] rounded-2xl space-y-1">
             <p className="text-sm font-semibold text-slate-950">
               Nenhum estudante atingiu o limiar de {threshold}+ faltas críticas neste filtro
             </p>
@@ -324,7 +324,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <StudentAvatar student={student} size="md" />
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm sm:text-base font-bold text-slate-950 group-hover:text-[#0b3b8c] transition-colors duration-200 break-words leading-snug">
+                        <h3 className="text-sm sm:text-base font-bold text-slate-950 group-hover:text-[#14428c] transition-colors duration-200 break-words leading-snug">
                           {student.name}
                         </h3>
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-700 font-medium">
@@ -397,7 +397,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             <button
               type="button"
               onClick={() => setShowAllStudents(!showAllStudents)}
-              className="text-sm font-semibold text-[#0b3b8c] hover:underline cursor-pointer flex items-center gap-1"
+              className="text-sm font-semibold text-[#14428c] hover:underline cursor-pointer flex items-center gap-1"
             >
               <span>
                 {showAllStudents
@@ -426,7 +426,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                   (criticalItems[0] || { cls: classes[0], student: classes[0].students[0] }).student
                 )
               }
-              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
+              className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97]"
             >
               <CalendarX2 className="w-[17px] h-[17px] text-[#9f1239] shrink-0" />
               <span>
@@ -478,7 +478,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 type="button"
                 onClick={() => setSelectedDetailItem(null)}
                 aria-label="Fechar detalhes"
-                className="w-10 h-10 rounded-full bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                className="w-10 h-10 rounded-full bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 flex items-center justify-center shrink-0 cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -495,7 +495,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 </span>
               </div>
 
-              <div className="bg-[#f4f7fb] rounded-2xl p-3.5 min-w-0">
+              <div className="bg-[#f3f6fb] rounded-2xl p-3.5 min-w-0">
                 <span className="text-xs font-semibold text-slate-700 block">
                   Ocorrências no Ano
                 </span>
@@ -504,7 +504,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                 </span>
               </div>
 
-              <div className="bg-[#f4f7fb] rounded-2xl p-3.5 min-w-0">
+              <div className="bg-[#f3f6fb] rounded-2xl p-3.5 min-w-0">
                 <span className="text-xs font-semibold text-slate-700 block">
                   Faltas no Mês
                 </span>
@@ -516,7 +516,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
             </div>
 
             {/* Contato Rápido com a Família (WhatsApp Direto) */}
-            <div className="bg-[#f4f7fb] rounded-2xl p-3.5 space-y-1.5">
+            <div className="bg-[#f3f6fb] rounded-2xl p-3.5 space-y-1.5">
               <span className="text-xs font-semibold text-slate-700 block">
                 Responsável Familiar &amp; Contato Direto
               </span>
@@ -586,7 +586,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     return (
                       <div
                         key={occ.id || `occ-${idx}`}
-                        className="rounded-2xl bg-[#f4f7fb] p-3.5 space-y-1.5"
+                        className="rounded-2xl bg-[#f3f6fb] p-3.5 space-y-1.5"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-bold text-slate-950">
@@ -633,7 +633,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                       item.cls.classesHeld || 20
                     );
                   }}
-                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-sm cursor-pointer transition-colors whitespace-normal text-center"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 font-semibold text-sm cursor-pointer transition-colors whitespace-normal text-center"
                 >
                   Ficha Completa (48 Dados)
                 </button>
@@ -647,7 +647,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     setSelectedDetailItem(null);
                     onOpenStudentPdf(item.student, item.cls.name);
                   }}
-                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-bold text-sm cursor-pointer transition-colors whitespace-normal text-center"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 font-bold text-sm cursor-pointer transition-colors whitespace-normal text-center"
                 >
                   Ficha Informativa do Estudante
                 </button>
@@ -661,7 +661,7 @@ export const ResumoFaltasCriticasCard: React.FC<ResumoFaltasCriticasCardProps> =
                     setSelectedDetailItem(null);
                     onSelectStudentForConsecutiveScreen(item.cls, item.student);
                   }}
-                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-bold text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
+                  className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
                 >
                   <ExternalLink className="w-[18px] h-[18px] shrink-0" />
                   <span>

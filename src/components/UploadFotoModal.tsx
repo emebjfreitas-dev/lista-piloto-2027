@@ -269,7 +269,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            className="w-9 h-9 rounded-full bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 flex items-center justify-center cursor-pointer transition-colors shrink-0"
             aria-label="Fechar"
           >
             <X className="w-[18px] h-[18px]" strokeWidth={2} />
@@ -278,7 +278,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
 
         {/* CARROSSEL DE ALUNOS DA TURMA */}
         {totalStudents > 1 && (
-          <div className="bg-[#f4f7fb] px-4 py-2.5 shrink-0 space-y-2">
+          <div className="bg-[#f3f6fb] px-4 py-2.5 shrink-0 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <button
                 type="button"
@@ -326,8 +326,8 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                     onClick={() => onSelectStudent?.(st)}
                     className={`shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-all duration-200 cursor-pointer active:scale-[0.97] ${
                       isCurrent
-                        ? 'bg-slate-950 text-white shadow-sm'
-                        : 'bg-white hover:bg-[#edf2f7] text-slate-900 shadow-xs'
+                        ? 'bg-[#14428c] text-white shadow-sm'
+                        : 'bg-white hover:bg-[#eef3f9] text-slate-900 shadow-xs'
                     }`}
                     title={`Nº ${st.number} - ${st.name} (${hasPhoto ? 'Com foto' : 'Sem foto'})`}
                   >
@@ -358,7 +358,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
         {/* Scrollable Body */}
         <div className="modal-scroll-body flex-1 p-4 sm:p-5 space-y-4">
           {/* Card do Estudante Atual */}
-          <div className="flex items-center justify-between gap-3 p-3.5 bg-[#f4f7fb] rounded-2xl">
+          <div className="flex items-center justify-between gap-3 p-3.5 bg-[#f3f6fb] rounded-2xl">
             <div className="flex items-center gap-3.5 min-w-0">
               <div className="relative shrink-0">
                 <StudentAvatar
@@ -455,7 +455,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
                 type="button"
                 disabled={isProcessing}
                 onClick={() => cameraInputRef.current?.click()}
-                className="h-10 px-4 bg-white hover:bg-[#edf2f7] text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
+                className="h-10 px-4 bg-white hover:bg-[#eef3f9] text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
               >
                 <Camera className="w-[18px] h-[18px] text-emerald-800" strokeWidth={2} />
                 <span>Tirar com Câmera</span>
@@ -464,7 +464,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           </div>
 
           {statusMsg && (
-            <div className="p-3 rounded-xl bg-[#f4f7fb] text-xs text-slate-900 font-medium flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-[#f3f6fb] text-xs text-slate-900 font-medium flex items-center gap-2">
               <Info className="w-4 h-4 text-slate-700 shrink-0" strokeWidth={2} />
               <span>{statusMsg}</span>
             </div>
@@ -483,7 +483,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-11 bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 font-bold text-xs sm:text-sm rounded-2xl transition-colors cursor-pointer"
+            className="flex-1 h-11 bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 font-bold text-xs sm:text-sm rounded-2xl transition-colors cursor-pointer"
           >
             Concluir
           </button>
@@ -492,7 +492,7 @@ export const UploadFotoModal: React.FC<UploadFotoModalProps> = ({
             <button
               type="button"
               onClick={handleNextStudent}
-              className="flex-1 h-11 bg-slate-950 hover:bg-black text-white font-bold text-xs sm:text-sm rounded-2xl transition-all duration-200 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              className="flex-1 h-11 bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs sm:text-sm rounded-2xl transition-all duration-200 active:scale-[0.97] cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
             >
               <span>Próximo Aluno</span>
               <ArrowRight className="w-[18px] h-[18px]" strokeWidth={2} />

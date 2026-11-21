@@ -151,7 +151,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          className="modal-shell bg-[#edf2f7] w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
+          className="modal-shell bg-[#eef3f9] w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] animate-apple-pop"
         >
         {/* Cabeçalho do Modal de Exportação .XLS */}
         <div className="modal-header-surface bg-white px-5 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
@@ -179,7 +179,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
             <button
               type="button"
               onClick={onExecuteDownload}
-              className="min-h-[40px] px-4 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="min-h-[40px] px-4 rounded-2xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <Download className="w-[18px] h-[18px]" />
               <span>Baixar .{exportFileFormat.toUpperCase()}</span>
@@ -242,7 +242,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                     onClick={() => onSaveSelectedColumns(preset.columnIds)}
                     className={`p-3 rounded-2xl text-left transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
                       isCurrentPreset
-                        ? 'bg-[#eef4ff] text-[#0b3b8c]'
+                        ? 'bg-[#e8f0fe] text-[#14428c]'
                         : 'bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#0f172a]'
                     }`}
                   >
@@ -337,7 +337,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                 type="checkbox"
                 checked={includeSummarySheet}
                 onChange={(e) => onChangeIncludeSummarySheet(e.target.checked)}
-                className="w-5 h-5 accent-[#0b3b8c] rounded cursor-pointer"
+                className="w-5 h-5 accent-[#14428c] rounded cursor-pointer"
               />
             </div>
           </div>
@@ -357,7 +357,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                     value={columnSearchTerm}
                     onChange={(e) => setColumnSearchTerm(e.target.value)}
                     placeholder="Buscar campo..."
-                    className="w-full min-h-[38px] pl-8 pr-2.5 rounded-xl bg-[#f4f7fb] text-[13px] font-normal text-slate-950 placeholder:text-slate-600 focus:bg-white transition-colors"
+                    className="w-full min-h-[38px] pl-8 pr-2.5 rounded-xl bg-[#f3f6fb] text-[13px] font-normal text-slate-950 placeholder:text-slate-600 focus:bg-white transition-colors"
                   />
                 </div>
               </div>
@@ -368,7 +368,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                   onClick={() => setActiveCategoryFilter('all')}
                   className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] font-semibold whitespace-nowrap cursor-pointer ${
                     activeCategoryFilter === 'all'
-                      ? 'bg-[#0b3b8c] text-white'
+                      ? 'bg-[#14428c] text-white'
                       : 'bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0]'
                   }`}
                 >
@@ -381,7 +381,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                     onClick={() => setActiveCategoryFilter(cat)}
                     className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] font-semibold whitespace-nowrap cursor-pointer ${
                       activeCategoryFilter === cat
-                        ? 'bg-[#0b3b8c] text-white'
+                        ? 'bg-[#14428c] text-white'
                         : 'bg-[#f1f5f9] text-[#475569] hover:bg-[#e2e8f0]'
                     }`}
                   >
@@ -399,7 +399,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                       key={col.id}
                       className={`p-2.5 rounded-xl flex items-center justify-between gap-2 cursor-pointer select-none transition-colors min-w-0 ${
                         isChecked
-                          ? 'bg-[#eef4ff] text-[#0b3b8c]'
+                          ? 'bg-[#e8f0fe] text-[#14428c]'
                           : 'bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#475569]'
                       }`}
                     >
@@ -408,7 +408,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleColumn(col.id)}
-                          className="w-4 h-4 accent-[#0b3b8c] rounded cursor-pointer shrink-0"
+                          className="w-4 h-4 accent-[#14428c] rounded cursor-pointer shrink-0"
                         />
                         <div className="min-w-0 flex-1">
                           <span className="font-semibold text-[12.5px] block break-words leading-snug text-[#0f172a]">
@@ -421,7 +421,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                       </div>
 
                       {isChecked && (
-                        <span className="px-2 py-0.5 rounded-lg bg-[#0b3b8c] text-white font-semibold text-[11px] tabular-nums shrink-0">
+                        <span className="px-2 py-0.5 rounded-lg bg-[#14428c] text-white font-semibold text-[11px] tabular-nums shrink-0">
                           {orderPos + 1}ª
                         </span>
                       )}
@@ -456,10 +456,10 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                       onSaveSelectedColumns(next);
                       setDraggedColIndex(null);
                     }}
-                    className="p-2.5 rounded-xl bg-[#f4f7fb] hover:bg-[#edf2f7] flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing min-w-0"
+                    className="p-2.5 rounded-xl bg-[#f3f6fb] hover:bg-[#eef3f9] flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing min-w-0"
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="w-7 h-7 rounded-lg bg-[#0b3b8c] text-white font-semibold text-[12px] tabular-nums flex items-center justify-center shrink-0">
+                      <span className="w-7 h-7 rounded-lg bg-[#14428c] text-white font-semibold text-[12px] tabular-nums flex items-center justify-center shrink-0">
                         {idx + 1}
                       </span>
                       <div className="min-w-0 flex-1">
@@ -478,7 +478,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                         disabled={idx === 0}
                         onClick={() => handleMoveColumn(idx, 'top')}
                         title="Mover para 1ª"
-                        className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                        className="w-8 h-8 rounded-lg bg-white hover:bg-[#e8f0fe] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
                       >
                         <ChevronsUp className="w-4 h-4" />
                       </button>
@@ -487,7 +487,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                         disabled={idx === 0}
                         onClick={() => handleMoveColumn(idx, 'up')}
                         title="Subir"
-                        className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                        className="w-8 h-8 rounded-lg bg-white hover:bg-[#e8f0fe] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
                       >
                         <ArrowUp className="w-4 h-4" />
                       </button>
@@ -496,7 +496,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                         disabled={idx === selectedColDefs.length - 1}
                         onClick={() => handleMoveColumn(idx, 'down')}
                         title="Descer"
-                        className="w-8 h-8 rounded-lg bg-white hover:bg-[#eef4ff] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                        className="w-8 h-8 rounded-lg bg-white hover:bg-[#e8f0fe] text-[#0f172a] flex items-center justify-center disabled:opacity-30 cursor-pointer"
                       >
                         <ArrowDown className="w-4 h-4" />
                       </button>
@@ -527,9 +527,9 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
               </span>
             </div>
 
-            <div className="rounded-xl overflow-x-auto bg-[#f4f7fb]">
+            <div className="rounded-xl overflow-x-auto bg-[#f3f6fb]">
               <table className="w-full text-left text-[12px]">
-                <thead className="bg-[#092e70] text-white font-semibold uppercase whitespace-nowrap">
+                <thead className="bg-[#0f3370] text-white font-semibold uppercase whitespace-nowrap">
                   <tr>
                     {previewData.headers.map((h, i) => (
                       <th key={`${h}-${i}`} className="py-2 px-2.5">
@@ -543,7 +543,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
                   {previewData.rows.slice(0, 4).map((row, rIdx) => (
                     <tr
                       key={rIdx}
-                      className={rIdx % 2 === 0 ? 'bg-white' : 'bg-[#f4f7fb]'}
+                      className={rIdx % 2 === 0 ? 'bg-white' : 'bg-[#f3f6fb]'}
                     >
                       {previewData.headers.map((h, cIdx) => (
                         <td
@@ -578,7 +578,7 @@ export const DetalhesExportModal: React.FC<DetalhesExportModalProps> = ({
             <button
               type="button"
               onClick={onExecuteDownload}
-              className="min-h-[40px] px-5 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="min-h-[40px] px-5 rounded-2xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-[13px] flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <Download className="w-[18px] h-[18px]" />
               <span>

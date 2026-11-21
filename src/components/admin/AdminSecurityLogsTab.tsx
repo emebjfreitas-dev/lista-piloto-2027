@@ -51,14 +51,14 @@ export const AdminSecurityLogsTab: React.FC<AdminSecurityLogsTabProps> = ({
             value={searchTerm}
             onChange={(e) => onChangeSearchTerm(e.target.value)}
             placeholder="Buscar usuário ou ação..."
-            className="min-h-[40px] px-3.5 rounded-xl bg-[#f4f7fb] text-xs text-slate-950 placeholder:text-slate-600 focus:bg-white transition-colors"
+            className="min-h-[40px] px-3.5 rounded-xl bg-[#f3f6fb] text-xs text-slate-950 placeholder:text-slate-600 focus:bg-white transition-colors"
           />
 
           <CustomSelect
             value={severityFilter}
             onChange={(val) => onChangeSeverityFilter(val as 'all' | 'info' | 'warning' | 'security_alert')}
             ariaLabel="Filtrar severidade da auditoria"
-            className="bg-[#f4f7fb] text-xs font-semibold text-slate-950"
+            className="bg-[#f3f6fb] text-xs font-semibold text-slate-950"
             options={[
               { value: 'all', label: 'Todas severidades' },
               { value: 'info', label: 'Informativo' },
@@ -71,7 +71,7 @@ export const AdminSecurityLogsTab: React.FC<AdminSecurityLogsTabProps> = ({
             <button
               type="button"
               onClick={onClearLogs}
-              className="min-h-[40px] px-3 rounded-xl bg-[#edf2f7] hover:bg-rose-100 text-slate-800 hover:text-rose-950 text-xs font-semibold cursor-pointer transition-all duration-150 active:scale-[0.97]"
+              className="min-h-[40px] px-3 rounded-xl bg-[#eef3f9] hover:bg-rose-100 text-slate-800 hover:text-rose-950 text-xs font-semibold cursor-pointer transition-all duration-150 active:scale-[0.97]"
             >
               Limpar
             </button>
@@ -80,7 +80,7 @@ export const AdminSecurityLogsTab: React.FC<AdminSecurityLogsTabProps> = ({
       </div>
 
       {filteredSecurityLogs.length === 0 ? (
-        <div className="p-8 rounded-2xl bg-[#f4f7fb] text-center text-xs text-slate-700 font-medium">
+        <div className="p-8 rounded-2xl bg-[#f3f6fb] text-center text-xs text-slate-700 font-medium">
           Nenhum evento registrado para o filtro selecionado.
         </div>
       ) : (
@@ -92,7 +92,7 @@ export const AdminSecurityLogsTab: React.FC<AdminSecurityLogsTabProps> = ({
                 log.severity === 'security_alert' || log.severity === 'critical';
               const isWarning = log.severity === 'warning';
               return (
-                <div key={log.id} className="p-3.5 rounded-2xl bg-[#f4f7fb] space-y-2 min-w-0">
+                <div key={log.id} className="p-3.5 rounded-2xl bg-[#f3f6fb] space-y-2 min-w-0">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span
                       className={`px-2 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1 ${
@@ -133,7 +133,7 @@ export const AdminSecurityLogsTab: React.FC<AdminSecurityLogsTabProps> = ({
           {/* Tabela Desktop Auditoria */}
           <div className="hidden lg:block overflow-x-auto max-h-[520px] rounded-2xl">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#edf2f7] text-slate-800 text-xs font-semibold sticky top-0 z-10">
+              <thead className="bg-[#eef3f9] text-slate-800 text-xs font-semibold sticky top-0 z-10">
                 <tr>
                   <th className="py-2.5 px-3">Tipo</th>
                   <th className="py-2.5 px-3">Data/Hora</th>
@@ -148,7 +148,7 @@ export const AdminSecurityLogsTab: React.FC<AdminSecurityLogsTabProps> = ({
                     log.severity === 'security_alert' || log.severity === 'critical';
                   const isWarning = log.severity === 'warning';
                   return (
-                    <tr key={log.id} className="odd:bg-[#f4f7fb] even:bg-white hover:bg-[#dce7fb]/40 transition-colors">
+                    <tr key={log.id} className="odd:bg-[#f3f6fb] even:bg-white hover:bg-[#e8f0fe]/40 transition-colors">
                       <td className="py-2.5 px-3 align-top">
                         <span
                           className={`px-2 py-0.5 rounded-md text-xs font-semibold inline-flex items-center gap-1 ${

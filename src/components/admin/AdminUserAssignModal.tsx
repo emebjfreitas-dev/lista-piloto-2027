@@ -31,18 +31,18 @@ const LEVEL_META: Record<
 > = {
   admin: {
     badgeLabel: 'ADMIN',
-    badgeClass: 'bg-[#111827] text-white',
-    activeSegmentClass: 'bg-[#111827] text-white shadow-xs',
+    badgeClass: 'bg-[#14428c] text-white',
+    activeSegmentClass: 'bg-[#14428c] text-white shadow-xs',
   },
   usuario: {
     badgeLabel: 'PEB I (Usuário)',
-    badgeClass: 'bg-[#eaf6ef] text-[#005035]',
+    badgeClass: 'bg-[#ecfdf5] text-[#047857]',
     activeSegmentClass: 'bg-[#047857] text-white shadow-xs',
   },
   peb2: {
     badgeLabel: 'PEB II (Visualização)',
-    badgeClass: 'bg-[#e8f0fe] text-[#1a4fa3]',
-    activeSegmentClass: 'bg-[#1a4fa3] text-white shadow-xs',
+    badgeClass: 'bg-[#e8f0fe] text-[#14428c]',
+    activeSegmentClass: 'bg-[#14428c] text-white shadow-xs',
   },
   aee: {
     badgeLabel: 'AEE',
@@ -116,7 +116,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
           onClick={(e) => e.stopPropagation()}
           className="modal-shell animate-apple-pop bg-white rounded-3xl w-full max-w-lg max-h-[86dvh] flex flex-col overflow-hidden shadow-2xl min-w-0"
         >
-        <div className="modal-header-surface p-4 sm:p-5 bg-[#f4f7fb] flex items-start justify-between gap-3 min-w-0">
+        <div className="modal-header-surface p-4 sm:p-5 bg-[#f3f6fb] flex items-start justify-between gap-3 min-w-0">
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold text-slate-950 break-words leading-snug">
               {user.name}
@@ -134,7 +134,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
         </div>
 
         <div className="p-4 sm:p-5 flex-1 min-h-0 modal-scroll-body space-y-4 min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl surface-secondary bg-[#f2f2f7]">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl surface-secondary bg-[#f3f6fb]">
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
@@ -169,7 +169,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
               </span>
               <span
                 className={`text-xs font-semibold whitespace-nowrap ${
-                  isEffectivelyActive ? 'text-[#005035]' : 'text-[#991b1b]'
+                  isEffectivelyActive ? 'text-[#047857]' : 'text-[#991b1b]'
                 }`}
               >
                 {isEffectivelyActive ? 'Acesso Liberado' : isExpired ? 'Expirado' : 'Bloqueado'}
@@ -178,7 +178,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
           </div>
 
           {/* Validade / Expiração Automática */}
-          <div className="p-3.5 rounded-2xl surface-secondary bg-[#f2f2f7] space-y-2.5">
+          <div className="p-3.5 rounded-2xl surface-secondary bg-[#f3f6fb] space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-slate-800 inline-flex items-center gap-1.5">
                 <CalendarClock className="w-3.5 h-3.5 text-slate-700" />
@@ -209,7 +209,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onUpdateExpiration(user.id, '')}
-                  className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#dce7fb] text-xs font-semibold text-slate-950 cursor-pointer transition-all duration-150 active:scale-[0.97]"
+                  className="min-h-[38px] px-3 rounded-xl bg-white hover:bg-[#e8f0fe] text-xs font-semibold text-slate-950 cursor-pointer transition-all duration-150 active:scale-[0.97]"
                 >
                   Tornar Permanente
                 </button>
@@ -223,7 +223,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
 
           {/* Presets de Função */}
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-[#374151] block">
+            <span className="text-xs font-semibold text-[#334155] block">
               Nível de Permissão e Função Institucional
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -266,8 +266,8 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
                       isCurrent
                         ? LEVEL_META[preset.lvl].activeSegmentClass
                         : isLockedAdmin || isLockedSchoolAdmin
-                        ? 'bg-[#edf2f7] text-slate-600 opacity-50 cursor-not-allowed'
-                        : 'bg-[#f4f7fb] hover:bg-[#dce7fb] text-slate-950 cursor-pointer active:scale-[0.97]'
+                        ? 'bg-[#eef3f9] text-slate-600 opacity-50 cursor-not-allowed'
+                        : 'bg-[#f3f6fb] hover:bg-[#e8f0fe] text-slate-950 cursor-pointer active:scale-[0.97]'
                     }`}
                   >
                     {renderLevelIcon(preset.lvl)}
@@ -294,7 +294,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
                   value={searchQuery}
                   onChange={(e) => onChangeSearchQuery(e.target.value)}
                   placeholder="Filtrar turma (ex: G4A, 1º ANO)..."
-                  className="w-full min-h-[38px] pl-9 pr-3 rounded-xl bg-[#f4f7fb] focus:bg-white text-xs text-slate-950 placeholder:text-slate-600 transition-colors"
+                  className="w-full min-h-[38px] pl-9 pr-3 rounded-xl bg-[#f3f6fb] focus:bg-white text-xs text-slate-950 placeholder:text-slate-600 transition-colors"
                 />
               </div>
 
@@ -318,8 +318,8 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
                         onClick={() => onToggleExtraClass(user.id, cls.id)}
                         className={`min-w-0 min-h-[40px] px-3 py-2 rounded-xl text-left text-xs flex items-center justify-between gap-2 cursor-pointer transition-colors duration-100 whitespace-normal ${
                           isAssigned
-                            ? 'bg-[#eaf6ef] text-[#005035] font-semibold'
-                            : 'bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#111827] font-medium'
+                            ? 'bg-[#ecfdf5] text-[#047857] font-semibold'
+                            : 'bg-[#f3f6fb] hover:bg-[#dfe8f4] text-[#0f172a] font-medium'
                         }`}
                       >
                         <span className="break-words leading-snug text-left min-w-0 flex-1">
@@ -333,7 +333,7 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="p-3.5 rounded-2xl bg-[#f2f2f7] text-xs text-[#374151]">
+            <div className="p-3.5 rounded-2xl bg-[#f3f6fb] text-xs text-[#334155]">
               {user.role === 'admin'
                 ? `Perfil Administrador possui acesso pleno a todas as ${classes.length} turmas e módulos de gestão.`
                 : `Perfil ${
@@ -345,11 +345,11 @@ export const AdminUserAssignModal: React.FC<AdminUserAssignModalProps> = ({
           )}
         </div>
 
-        <div className="p-4 bg-[#f2f2f7] flex justify-end">
+        <div className="p-4 bg-[#f3f6fb] flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[40px] px-5 rounded-xl bg-[#111827] text-white text-xs font-semibold cursor-pointer"
+            className="min-h-[40px] px-5 rounded-xl bg-[#14428c] text-white text-xs font-semibold cursor-pointer"
           >
             Concluir
           </button>

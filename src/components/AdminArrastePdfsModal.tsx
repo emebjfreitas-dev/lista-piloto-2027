@@ -797,7 +797,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       {/* Cabeçalho */}
       <div
         className={`flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 shrink-0 ${
-          embedded ? 'bg-[#f4f7fb]' : 'modal-header-surface'
+          embedded ? 'bg-[#f3f6fb]' : 'modal-header-surface'
         }`}
       >
         <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
@@ -828,7 +828,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       {/* Corpo */}
       <div className={embedded ? 'p-4 sm:p-6 space-y-4' : 'modal-scroll-body flex-1 p-4 sm:p-6 space-y-4'}>
         {statusMessage && (
-          <div className="p-3.5 rounded-xl bg-[#edf2f7] text-xs font-bold text-slate-950 flex items-center justify-between gap-2">
+          <div className="p-3.5 rounded-xl bg-[#eef3f9] text-xs font-bold text-slate-950 flex items-center justify-between gap-2">
             <span className="break-words">{statusMessage}</span>
             <button
               type="button"
@@ -842,7 +842,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
 
         {/* Progresso */}
         {(isSaving || pipelinePhase === 'done') && optimizeProgress.total > 0 && (
-          <div className="p-4 rounded-2xl bg-[#edf2f7] space-y-2.5 animate-fade-in">
+          <div className="p-4 rounded-2xl bg-[#eef3f9] space-y-2.5 animate-fade-in">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-950">
               <span>
                 {pipelinePhase === 'optimizing'
@@ -853,7 +853,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
               </span>
               <div className="flex items-center gap-3">
                 {etaLabel && (
-                  <span className={`tabular-nums font-bold ${isPaused ? 'text-amber-800' : 'text-[#0b3b8c]'}`}>
+                  <span className={`tabular-nums font-bold ${isPaused ? 'text-amber-800' : 'text-[#14428c]'}`}>
                     {etaLabel}
                   </span>
                 )}
@@ -886,9 +886,9 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
               </div>
             </div>
 
-            <div className="w-full h-2.5 bg-[#dbe4f0] rounded-full overflow-hidden">
+            <div className="w-full h-2.5 bg-[#dfe8f4] rounded-full overflow-hidden">
               <div
-                className={`h-full transition-all duration-200 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-[#0b3b8c]'}`}
+                className={`h-full transition-all duration-200 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-[#14428c]'}`}
                 style={{
                   width: `${pipelinePhase === 'optimizing' ? pctOptimize : pipelinePhase === 'uploading' ? pctUpload : 100}%`,
                 }}
@@ -915,8 +915,8 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
           onClick={() => fileInputRef.current?.click()}
           className={`rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all duration-200 ${
             isDragging
-              ? 'bg-[#dce7fb] scale-[0.99] shadow-[0_14px_34px_rgba(11,59,140,0.2)]'
-              : 'bg-[#edf2f7] hover:bg-[#e2e8f0]'
+              ? 'bg-[#e8f0fe] scale-[0.99] shadow-[0_14px_34px_rgba(11,59,140,0.2)]'
+              : 'bg-[#eef3f9] hover:bg-[#e2e8f0]'
           }`}
         >
           <input
@@ -935,7 +935,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
             className="hidden"
           />
           <div className="flex flex-col items-center justify-center gap-2">
-            <div className="w-14 h-14 rounded-2xl bg-white shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center text-[#0b3b8c]">
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-[0_6px_16px_rgba(15,23,42,0.08)] flex items-center justify-center text-[#14428c]">
               {isDragging ? (
                 <Download className="w-8 h-8 animate-bounce" strokeWidth={2} />
               ) : (
@@ -956,7 +956,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                   e.stopPropagation();
                   fileInputRef.current?.click();
                 }}
-                className="min-h-[40px] px-5 py-2 rounded-xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white text-xs font-bold cursor-pointer shadow-[0_4px_12px_rgba(11,59,140,0.28)] transition-all flex items-center gap-2"
+                className="min-h-[40px] px-5 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-bold cursor-pointer shadow-[0_4px_12px_rgba(11,59,140,0.28)] transition-all flex items-center gap-2"
               >
                 <FileText className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                 <span>Selecionar PDFs</span>
@@ -967,7 +967,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                   e.stopPropagation();
                   folderInputRef.current?.click();
                 }}
-                className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-[#f4f7fb] text-slate-950 text-xs font-bold cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.08)] transition-all flex items-center gap-2"
+                className="min-h-[40px] px-4 py-2 rounded-xl bg-white hover:bg-[#f3f6fb] text-slate-950 text-xs font-bold cursor-pointer shadow-[0_2px_8px_rgba(15,23,42,0.08)] transition-all flex items-center gap-2"
               >
                 <FolderUp className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                 <span>Selecionar Pasta Completa</span>
@@ -1042,7 +1042,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     setCurrentPage(1);
                   }}
                   placeholder="Filtrar por nome, PDF ou RA..."
-                  className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#edf2f7] focus:bg-white text-xs text-slate-950 w-full sm:w-56"
+                  className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[#eef3f9] focus:bg-white text-xs text-slate-950 w-full sm:w-56"
                 />
                 <button
                   type="button"
@@ -1051,7 +1051,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     setPipelinePhase('idle');
                   }}
                   disabled={isSaving}
-                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 font-bold text-xs cursor-pointer disabled:opacity-40"
+                  className="min-h-[38px] px-3.5 py-2 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 font-bold text-xs cursor-pointer disabled:opacity-40"
                 >
                   Limpar Lista
                 </button>
@@ -1070,7 +1070,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                         : item.status === 'uploaded' || item.status === 'skipped_identical'
                         ? 'bg-emerald-100/80'
                         : isMatched
-                        ? 'bg-[#edf2f7]'
+                        ? 'bg-[#eef3f9]'
                         : 'bg-amber-100/75'
                     }`}
                   >
@@ -1175,7 +1175,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     type="button"
                     disabled={safePage <= 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="h-8 px-3 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 disabled:opacity-40 cursor-pointer"
+                    className="h-8 px-3 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 disabled:opacity-40 cursor-pointer"
                   >
                     Anterior
                   </button>
@@ -1186,7 +1186,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     type="button"
                     disabled={safePage >= totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    className="h-8 px-3 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 disabled:opacity-40 cursor-pointer"
+                    className="h-8 px-3 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 disabled:opacity-40 cursor-pointer"
                   >
                     Próxima
                   </button>
@@ -1198,7 +1198,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
       </div>
 
       {/* Rodapé */}
-      <div className="sticky bottom-0 bg-[#f4f7fb] p-4 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10">
+      <div className="sticky bottom-0 bg-[#f3f6fb] p-4 flex flex-wrap items-center justify-between gap-3 shrink-0 z-10">
         <div className="flex items-center gap-2">
           {confirmClearAll ? (
             <div className="flex items-center gap-2">
@@ -1287,7 +1287,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
             type="button"
             onClick={() => void handleConfirmBatch(false)}
             disabled={isSaving || isProcessing || matchedCount === 0}
-            className="min-h-[40px] px-6 py-2 bg-slate-950 hover:bg-black text-white font-semibold text-xs sm:text-sm rounded-xl cursor-pointer flex items-center gap-2 disabled:opacity-40 shadow-xs"
+            className="min-h-[40px] px-6 py-2 bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs sm:text-sm rounded-xl cursor-pointer flex items-center gap-2 disabled:opacity-40 shadow-xs"
           >
             {isSaving ? (
               <RefreshCw className="w-[18px] h-[18px] shrink-0 animate-spin" strokeWidth={2} />
@@ -1327,7 +1327,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                   <X className="w-[18px] h-[18px]" strokeWidth={2} />
                 </button>
               </div>
-              <div className="p-3 bg-[#f4f7fb]">
+              <div className="p-3 bg-[#f3f6fb]">
                 <input
                   type="search"
                   autoFocus
@@ -1343,7 +1343,7 @@ export const AdminArrastePdfsModal: React.FC<AdminArrastePdfsModalProps> = ({
                     key={student.id}
                     type="button"
                     onClick={() => handleManualStudentChange(pickerItemId, student.id)}
-                    className="w-full text-left px-3.5 py-2.5 rounded-xl even:bg-[#f4f7fb] hover:bg-[#dce7fb] transition-colors cursor-pointer flex items-center justify-between gap-2"
+                    className="w-full text-left px-3.5 py-2.5 rounded-xl even:bg-[#f3f6fb] hover:bg-[#e8f0fe] transition-colors cursor-pointer flex items-center justify-between gap-2"
                   >
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-slate-950 truncate">{student.name}</p>

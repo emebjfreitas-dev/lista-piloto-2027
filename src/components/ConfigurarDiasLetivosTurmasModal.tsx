@@ -241,7 +241,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-lg bg-[#edf2f7] text-slate-700 hover:text-slate-950 hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer shrink-0 transition-colors"
+            className="w-9 h-9 rounded-lg bg-[#eef3f9] text-slate-700 hover:text-slate-950 hover:bg-[#e2e8f0] flex items-center justify-center cursor-pointer shrink-0 transition-colors"
             aria-label="Fechar modal"
           >
             <X className="w-5 h-5" />
@@ -249,7 +249,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
         </div>
 
         {/* Scrollable Content */}
-        <div className="modal-scroll-body flex-1 min-h-0 p-5 sm:p-6 space-y-5 bg-[#f4f7fb]">
+        <div className="modal-scroll-body flex-1 min-h-0 p-5 sm:p-6 space-y-5 bg-[#f3f6fb]">
           {/* 1. Direct Links Box: Exportação Excel & Pasta de Fotos Google Drive */}
           <section className="bg-white rounded-xl p-5 shadow-[0_6px_22px_-8px_rgba(9,15,29,0.08)] space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -258,7 +258,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             </h3>
 
             {/* Exportação Excel (.xlsx) das Turmas e Estudantes */}
-            <div className="bg-[#f4f7fb] p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3">
+            <div className="bg-[#f3f6fb] p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold text-slate-950">
                   Backup Completo da Base Oficial SED Jundiaí
@@ -270,7 +270,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               <button
                 type="button"
                 onClick={() => downloadSpreadsheetXLSX(draftClasses, OFFICIAL_OCTOBER_DAYS)}
-                className="h-9 px-3.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] shadow-xs"
+                className="h-9 px-3.5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] shadow-xs"
               >
                 <Download className="w-4 h-4 shrink-0" />
                 <span>Exportar Base SED (.xlsx)</span>
@@ -278,7 +278,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             </div>
 
             {/* Link 2: Pasta de Fotos no Google Drive */}
-            <div className="bg-[#f4f7fb] p-3.5 rounded-xl space-y-2">
+            <div className="bg-[#f3f6fb] p-3.5 rounded-xl space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-medium text-slate-800">
                   Pasta de Fotos dos Alunos (Google Drive)
@@ -287,7 +287,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                   <button
                     type="button"
                     onClick={() => handleCopyText('drive', drivePhotosUrlInput)}
-                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#edf2f7] text-slate-900 font-medium text-xs cursor-pointer transition-colors shadow-xs"
+                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#eef3f9] text-slate-900 font-medium text-xs cursor-pointer transition-colors shadow-xs"
                   >
                     {copiedKey === 'drive' ? '✓ Copiado' : 'Copiar Link'}
                   </button>
@@ -295,7 +295,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                     href={drivePhotosUrlInput}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-white font-medium text-xs flex items-center gap-1 transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-[#14428c] hover:bg-[#0f3370] text-white font-medium text-xs flex items-center gap-1 transition-colors"
                   >
                     <span>Abrir Pasta ↗</span>
                   </a>
@@ -324,7 +324,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               <button
                 type="button"
                 onClick={handleResetToOfficial200Days}
-                className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 font-medium text-xs transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 font-medium text-xs transition-colors cursor-pointer"
               >
                 Restaurar Padrão Oficial (200 Dias)
               </button>
@@ -340,8 +340,8 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                     onClick={() => setSelectedMonth(m.month)}
                     className={`p-2 rounded-lg text-center cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.97] min-w-0 ${
                       isSelected
-                        ? 'bg-slate-950 text-white font-semibold shadow-sm'
-                        : 'bg-[#edf2f7] text-slate-900 hover:bg-[#e2e8f0] font-normal'
+                        ? 'bg-[#14428c] text-white font-semibold shadow-sm'
+                        : 'bg-[#eef3f9] text-slate-900 hover:bg-[#e2e8f0] font-normal'
                     }`}
                   >
                     <span className="text-xs block break-words">{m.month}</span>
@@ -361,7 +361,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
               <div>
                 <h3 className="text-sm font-semibold text-slate-950">
-                  Dias Letivos por Turma em <span className="font-semibold text-[#0b3b8c]">{selectedMonth}</span>
+                  Dias Letivos por Turma em <span className="font-semibold text-[#14428c]">{selectedMonth}</span>
                 </h3>
                 <p className="text-xs text-slate-700">
                   Ajuste em lote ou personalize individualmente cada turma:
@@ -369,7 +369,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               </div>
 
               {/* Bulk Apply Bar */}
-              <div className="flex items-center gap-1.5 bg-[#edf2f7] p-1.5 rounded-lg">
+              <div className="flex items-center gap-1.5 bg-[#eef3f9] p-1.5 rounded-lg">
                 <span className="text-xs font-medium text-slate-800 pl-1">
                   Aplicar a todas:
                 </span>
@@ -384,7 +384,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                 <button
                   type="button"
                   onClick={handleApplyBulkForMonth}
-                  className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-white font-medium text-xs rounded cursor-pointer transition-colors"
+                  className="px-2.5 py-1 bg-[#14428c] hover:bg-[#0f3370] text-white font-medium text-xs rounded cursor-pointer transition-colors"
                 >
                   Aplicar
                 </button>
@@ -392,7 +392,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
             </div>
 
             {/* Shift Filter (Segmented control style) */}
-            <div className="flex flex-wrap items-center gap-1 p-1 bg-[#edf2f7] rounded-xl w-full sm:w-fit">
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-[#eef3f9] rounded-xl w-full sm:w-fit">
               {[
                 { id: 'all', label: 'Todas as Turmas (40)' },
                 { id: 'Turno Manhã', label: 'Manhã (20)' },
@@ -421,7 +421,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                 return (
                   <div
                     key={cls.id}
-                    className="p-3 rounded-xl bg-[#f4f7fb] hover:bg-[#edf2f7] flex items-center justify-between gap-3 transition-colors min-w-0"
+                    className="p-3 rounded-xl bg-[#f3f6fb] hover:bg-[#eef3f9] flex items-center justify-between gap-3 transition-colors min-w-0"
                   >
                     <div className="min-w-0 flex-1">
                       <span className="font-semibold text-slate-950 text-xs block break-words leading-snug">
@@ -447,7 +447,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
                       <button
                         type="button"
                         onClick={() => handleUpdateSingleClassDays(cls.id, monthDays + 1)}
-                        className="w-9 h-9 rounded-lg bg-slate-950 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center cursor-pointer transition-colors"
+                        className="w-9 h-9 rounded-lg bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs flex items-center justify-center cursor-pointer transition-colors"
                         aria-label={`Aumentar dias letivos da turma ${cls.name}`}
                       >
                         +
@@ -478,7 +478,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               type="button"
               onClick={onClose}
               disabled={isSavingFirebase}
-              className="px-4 h-10 sm:h-11 rounded-xl bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-900 font-semibold text-xs sm:text-sm cursor-pointer transition-colors"
+              className="px-4 h-10 sm:h-11 rounded-xl bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-900 font-semibold text-xs sm:text-sm cursor-pointer transition-colors"
             >
               Fechar
             </button>
@@ -486,7 +486,7 @@ export const ConfigurarDiasLetivosTurmasModal: React.FC<
               type="button"
               onClick={handleSaveAll}
               disabled={isSavingFirebase}
-              className="px-5 h-10 sm:h-11 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all duration-200 active:scale-[0.97] shadow-xs whitespace-nowrap"
+              className="px-5 h-10 sm:h-11 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 transition-all duration-200 active:scale-[0.97] shadow-xs whitespace-nowrap"
             >
               {isSavingFirebase ? (
                 <RefreshCw className="w-[17px] h-[17px] animate-spin shrink-0" />

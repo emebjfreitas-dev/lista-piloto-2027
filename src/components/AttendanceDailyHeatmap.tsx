@@ -145,10 +145,10 @@ const getTilePalette = (
   maxAbsencesInMonth: number
 ): { bg: string; text: string; subtext: string } => {
   if (cell.isHoliday) {
-    return { bg: '#e9e9ef', text: '#374151', subtext: '#48484a' };
+    return { bg: '#dfe8f4', text: '#334155', subtext: '#475569' };
   }
   if (!cell.isSchoolDay) {
-    return { bg: '#f4f4f8', text: '#6e6e73', subtext: '#8e8e93' };
+    return { bg: '#f3f6fb', text: '#475569', subtext: '#64748b' };
   }
 
   if (metricMode === 'frequency') {
@@ -992,7 +992,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="space-y-0.5 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <CalendarDays className="w-[22px] h-[22px] text-[#0b3b8c] shrink-0" strokeWidth={2} />
+            <CalendarDays className="w-[22px] h-[22px] text-[#14428c] shrink-0" strokeWidth={2} />
             <h2 className="text-sm sm:text-base font-semibold text-slate-950 tracking-tight">
               Mapa de Calor da Frequência Diária · {selectedMonthName}/2027
             </h2>
@@ -1036,7 +1036,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
 
       {/* Destaques de Padrão (Resumo Executivo Imediato) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-[#edf2f7] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
+        <div className="bg-[#eef3f9] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0 flex-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 block">
               Dia com Maior Ausência
@@ -1046,7 +1046,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                 <span className="text-base sm:text-lg font-semibold text-slate-950 tabular-nums block mt-0.5 break-words">
                   {peakAbsenceDay.shortDate} · {peakAbsenceDay.weekdayFull.replace('-feira', '')}
                 </span>
-                <span className="text-xs text-[#b42318] font-medium tabular-nums break-words">
+                <span className="text-xs text-[#be123c] font-medium tabular-nums break-words">
                   {peakAbsenceDay.absencesTotal} faltas ({peakAbsenceDay.attendanceRate}% presença)
                 </span>
               </>
@@ -1061,14 +1061,14 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                 setSelectedDayNum(peakAbsenceDay.dayNumber);
                 setShowAllAbsentStudents(false);
               }}
-              className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#dce7fb] text-slate-950 text-xs font-semibold shrink-0 shadow-2xs cursor-pointer transition-colors"
+              className="min-h-[38px] px-3 py-1.5 rounded-xl bg-white hover:bg-[#e8f0fe] text-slate-950 text-xs font-semibold shrink-0 shadow-2xs cursor-pointer transition-colors"
             >
               Inspecionar
             </button>
           )}
         </div>
 
-        <div className="bg-[#edf2f7] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
+        <div className="bg-[#eef3f9] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0 flex-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 block">
               Dia da Semana Mais Crítico
@@ -1089,7 +1089,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
           <TrendingUp className="w-[22px] h-[22px] text-[#b45309] shrink-0" strokeWidth={2} />
         </div>
 
-        <div className="bg-[#edf2f7] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
+        <div className="bg-[#eef3f9] rounded-2xl p-4 flex items-center justify-between gap-3 min-w-0">
           <div className="min-w-0 flex-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 block">
               Origem das Datas no Mês
@@ -1105,7 +1105,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                 : 'Base oficial dos 200 dias letivos 2027'}
             </span>
           </div>
-          <CalendarCheck2 className="w-[22px] h-[22px] text-[#006644] shrink-0" strokeWidth={2} />
+          <CalendarCheck2 className="w-[22px] h-[22px] text-[#047857] shrink-0" strokeWidth={2} />
         </div>
       </div>
 
@@ -1116,7 +1116,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
           <div
             ref={chartWrapperRef}
             onMouseLeave={() => setHoveredTile(null)}
-            className="relative w-full bg-[#f4f7fb] rounded-2xl p-2 sm:p-3"
+            className="relative w-full bg-[#f3f6fb] rounded-2xl p-2 sm:p-3"
           >
             <div ref={chartInnerRef} className="relative" style={{ width: '100%', height: chartHeight }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -1208,9 +1208,9 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
           </div>
 
           {/* Legenda Explícita de Cores e Significado */}
-          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-[#374151]">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-[#334155]">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="font-semibold text-[#111827]">Legenda:</span>
+              <span className="font-semibold text-[#0f172a]">Legenda:</span>
               <span className="inline-flex items-center gap-1">
                 <span className="w-3 h-3 rounded-sm bg-[#d1fae5] inline-block" />
                 {metricMode === 'frequency' ? '≥96% (Ótimo)' : '0–25% faltas'}
@@ -1232,7 +1232,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                 {metricMode === 'frequency' ? '<75% (Crítico)' : 'Pico de faltas'}
               </span>
               <span className="inline-flex items-center gap-1">
-                <span className="w-3 h-3 rounded-sm bg-[#e9e9ef] inline-block" />
+                <span className="w-3 h-3 rounded-sm bg-[#dfe8f4] inline-block" />
                 Feriado
               </span>
             </div>
@@ -1243,7 +1243,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
         {/* Coluna Direita: Padrão por Dia da Semana (Recharts BarChart) + Inspeção do Dia */}
         <div className="xl:col-span-5 space-y-4 min-w-0">
           {/* Padrão por Dia da Semana com Recharts BarChart */}
-          <div className="bg-[#f4f7fb] rounded-2xl p-4 space-y-2">
+          <div className="bg-[#f3f6fb] rounded-2xl p-4 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-950">
@@ -1316,7 +1316,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
 
           {/* Painel de Detalhamento do Dia Selecionado */}
           {activeDayCell && (
-            <div className="bg-[#edf2f7] rounded-2xl p-4 space-y-3">
+            <div className="bg-[#eef3f9] rounded-2xl p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-700">
@@ -1345,7 +1345,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
               <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 text-center">
                 <div className="bg-white rounded-xl p-2.5">
                   <span className="text-xs font-medium text-slate-700 block">Presentes</span>
-                  <span className="text-base font-semibold text-[#006644] tabular-nums">
+                  <span className="text-base font-semibold text-[#047857] tabular-nums">
                     {activeDayCell.presences}/{activeDayCell.enrolledCount}
                   </span>
                 </div>
@@ -1357,7 +1357,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                 </div>
                 <div className="bg-white rounded-xl p-2.5">
                   <span className="text-xs font-medium text-slate-700 block">S/ Atestado</span>
-                  <span className="text-base font-semibold text-[#b42318] tabular-nums">
+                  <span className="text-base font-semibold text-[#be123c] tabular-nums">
                     {activeDayCell.unjustifiedAbsences}
                   </span>
                 </div>
@@ -1375,10 +1375,10 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                         key={cb.cls.id}
                         type="button"
                         onClick={() => onSelectClass?.(cb.cls)}
-                        className="min-h-[36px] px-3 py-1 rounded-xl bg-white hover:bg-[#dce7fb] text-xs font-medium text-slate-950 tabular-nums transition-colors duration-150 cursor-pointer"
+                        className="min-h-[36px] px-3 py-1 rounded-xl bg-white hover:bg-[#e8f0fe] text-xs font-medium text-slate-950 tabular-nums transition-colors duration-150 cursor-pointer"
                         title={`Selecionar turma ${cb.className} (${cb.ratePercent}% neste dia)`}
                       >
-                        {cb.shortName} · <strong className="text-[#b42318]">{cb.absences}f</strong>
+                        {cb.shortName} · <strong className="text-[#be123c]">{cb.absences}f</strong>
                       </button>
                     ))}
                   </div>
@@ -1395,7 +1395,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowAllAbsentStudents((prev) => !prev)}
-                      className="text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-[#14428c] hover:underline cursor-pointer"
                     >
                       {showAllAbsentStudents
                         ? 'Mostrar menos'
@@ -1405,7 +1405,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                 </div>
 
                 {activeDayCell.absentStudents.length === 0 ? (
-                  <p className="text-xs text-[#006644] bg-white rounded-xl p-3 font-medium">
+                  <p className="text-xs text-[#047857] bg-white rounded-xl p-3 font-medium">
                     Nenhuma ausência registrada neste dia para o recorte atual.
                   </p>
                 ) : (
@@ -1415,7 +1415,7 @@ export const AttendanceDailyHeatmap: React.FC<AttendanceDailyHeatmapProps> = ({
                         key={`${item.cls.id}-${item.student.id}`}
                         type="button"
                         onClick={() => onOpenStudentGrid?.(item.student)}
-                        className="w-full text-left px-3 py-2.5 odd:bg-[#f4f7fb] hover:bg-[#dce7fb]/60 flex items-center justify-between gap-2 transition-colors duration-150 cursor-pointer"
+                        className="w-full text-left px-3 py-2.5 odd:bg-[#f3f6fb] hover:bg-[#e8f0fe]/60 flex items-center justify-between gap-2 transition-colors duration-150 cursor-pointer"
                       >
                         <div className="min-w-0 flex-1">
                           <span className="text-xs sm:text-sm font-semibold text-slate-950 block break-words leading-snug">

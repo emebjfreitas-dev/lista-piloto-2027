@@ -364,13 +364,13 @@ export const StudentAvatar: React.FC<StudentAvatarProps> = ({
         }
         onClick={isInteractive ? handleAvatarClick : undefined}
         onKeyDown={isInteractive ? handleAvatarKeyDown : undefined}
-        className={`group relative shrink-0 overflow-hidden bg-[#edf2f7] text-slate-900 font-semibold flex items-center justify-center select-none shadow-[0_2px_8px_-2px_rgba(9,15,29,0.08)] ${
+        className={`group relative shrink-0 overflow-hidden bg-[#eef3f9] text-slate-900 font-semibold flex items-center justify-center select-none shadow-[0_2px_8px_-2px_rgba(9,15,29,0.08)] ${
           sizeMap[size]
         } ${
           canExpand
             ? 'cursor-zoom-in hover:shadow-[0_6px_16px_-4px_rgba(9,46,112,0.22)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200'
             : canClickUploadFallback
-            ? 'cursor-pointer hover:bg-[#dce7fb] hover:text-[#092e70] transition-all duration-200 active:scale-[0.97]'
+            ? 'cursor-pointer hover:bg-[#e8f0fe] hover:text-[#0f3370] transition-all duration-200 active:scale-[0.97]'
             : ''
         } ${className}`}
       >

@@ -1,12 +1,16 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  inMemoryPersistence,
+  browserPopupRedirectResolver,
   signInWithPopup,
+  signInWithCredential,
   GoogleAuthProvider,
   onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence,
-  inMemoryPersistence,
   User,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -94,10 +98,21 @@ export const SCOPES = [
 ];
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence).catch(() => {
-  setPersistence(auth, inMemoryPersistence).catch(() => {});
-});
+const auth = (() => {
+  try {
+    return initializeAuth(app, {
+      persistence: [
+        indexedDBLocalPersistence,
+        browserLocalPersistence,
+        browserSessionPersistence,
+        inMemoryPersistence,
+      ],
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch {
+    return getAuth(app);
+  }
+})();
 
 // Provider limpo para autenticação Google padrão (sem escopos sensíveis de Drive para evitar bloqueios no login)
 export const authLoginProvider = new GoogleAuthProvider();
@@ -351,6 +366,197 @@ const registerDriveTokenOnServer = (token: string | null) => {
     .catch(() => {});
 };
 
+export interface AuthEnvironmentInfo {
+  isIOS: boolean;
+  isIOSStandalone: boolean;
+  isInAppBrowser: boolean;
+  supportsFedCM: boolean;
+}
+
+export const detectAuthEnvironmentInfo = (): AuthEnvironmentInfo => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return {
+      isIOS: false,
+      isIOSStandalone: false,
+      isInAppBrowser: false,
+      supportsFedCM: false,
+    };
+  }
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  const maxTouchPoints = navigator.maxTouchPoints || 0;
+  const isIOS =
+    /iPad|iPhone|iPod/i.test(ua) ||
+    (platform === 'MacIntel' && maxTouchPoints > 1);
+  const navWithStandalone = navigator as Navigator & { standalone?: boolean };
+  const isDisplayStandalone =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(display-mode: standalone)').matches;
+  const isIOSStandalone =
+    isIOS && (Boolean(navWithStandalone.standalone) || isDisplayStandalone);
+  const isInAppBrowser =
+    /FBAN|FBAV|Instagram|WhatsApp|Line\/|MicroMessenger|Telegram|GSA\//i.test(ua);
+  const supportsFedCM = 'IdentityCredential' in window;
+
+  return {
+    isIOS,
+    isIOSStandalone,
+    isInAppBrowser,
+    supportsFedCM,
+  };
+};
+
+interface GoogleCredentialResponse {
+  credential?: string;
+}
+
+interface GooglePromptMomentNotification {
+  isNotDisplayed?: () => boolean;
+  isSkippedMoment?: () => boolean;
+  isDismissedMoment?: () => boolean;
+}
+
+interface GoogleAccountsIdApi {
+  initialize: (config: {
+    client_id: string;
+    callback: (response: GoogleCredentialResponse) => void;
+    auto_select?: boolean;
+    cancel_on_tap_outside?: boolean;
+    use_fedcm_for_prompt?: boolean;
+    itp_support?: boolean;
+  }) => void;
+  prompt: (listener?: (notification: GooglePromptMomentNotification) => void) => void;
+}
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: GoogleAccountsIdApi;
+      };
+    };
+  }
+}
+
+let gsiScriptPromise: Promise<boolean> | null = null;
+let gsiInitializedClientId: string | null = null;
+
+const loadGoogleIdentityServicesScript = (): Promise<boolean> => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return Promise.resolve(false);
+  }
+  if (window.google?.accounts?.id) {
+    return Promise.resolve(true);
+  }
+  if (gsiScriptPromise) {
+    return gsiScriptPromise;
+  }
+  gsiScriptPromise = new Promise<boolean>((resolve) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    );
+    if (existing) {
+      existing.addEventListener('load', () => resolve(Boolean(window.google?.accounts?.id)), {
+        once: true,
+      });
+      existing.addEventListener('error', () => resolve(false), { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve(Boolean(window.google?.accounts?.id));
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+  return gsiScriptPromise;
+};
+
+export const signInWithGoogleIdToken = async (
+  idToken: string
+): Promise<{
+  user: User;
+  accessToken: string;
+}> => {
+  isSigningIn = true;
+  try {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(auth, credential);
+    return { user: result.user, accessToken: cachedAccessToken || '' };
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+export const initGoogleIdentityFedCM = async (
+  onUserSignedIn: (user: User) => Promise<void> | void
+): Promise<boolean> => {
+  const clientId = (firebaseConfig as { oAuthClientId?: string }).oAuthClientId;
+  if (!clientId) return false;
+
+  const loaded = await loadGoogleIdentityServicesScript();
+  const gsi = window.google?.accounts?.id;
+  if (!loaded || !gsi) return false;
+
+  if (gsiInitializedClientId !== clientId) {
+    gsi.initialize({
+      client_id: clientId,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+      use_fedcm_for_prompt: true,
+      itp_support: true,
+      callback: async (response: GoogleCredentialResponse) => {
+        if (!response?.credential) return;
+        try {
+          const signed = await signInWithGoogleIdToken(response.credential);
+          await onUserSignedIn(signed.user);
+        } catch {
+          // Silent fallback to standard button flow
+        }
+      },
+    });
+    gsiInitializedClientId = clientId;
+  }
+  return true;
+};
+
+export const triggerGoogleIdentityPrompt = async (): Promise<'displayed' | 'unavailable'> => {
+  const gsi = window.google?.accounts?.id;
+  if (!gsi) return 'unavailable';
+  return new Promise<'displayed' | 'unavailable'>((resolve) => {
+    let settled = false;
+    const finish = (outcome: 'displayed' | 'unavailable') => {
+      if (settled) return;
+      settled = true;
+      resolve(outcome);
+    };
+    const timer = window.setTimeout(() => finish('unavailable'), 1800);
+    try {
+      gsi.prompt((notification: GooglePromptMomentNotification) => {
+        window.clearTimeout(timer);
+        if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+          finish('unavailable');
+          return;
+        }
+        finish('displayed');
+      });
+    } catch {
+      window.clearTimeout(timer);
+      finish('unavailable');
+    }
+  });
+};
+
+class FirebaseAuthCodedError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'FirebaseAuthCodedError';
+    this.code = code;
+  }
+}
+
 export const checkGoogleRedirectResult = async (): Promise<{
   user: User;
   accessToken: string;
@@ -373,14 +579,21 @@ export const googleSignIn = async (): Promise<{
       registerDriveTokenOnServer(cachedAccessToken);
     }
     return { user: result.user, accessToken: cachedAccessToken || '' };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authErr = error as { code?: unknown; message?: unknown };
+    const code = typeof authErr?.code === 'string' ? authErr.code : '';
+    const msg = typeof authErr?.message === 'string' ? authErr.message : '';
     if (
-      error?.code === 'auth/popup-blocked' ||
-      error?.code === 'auth/operation-not-supported-in-this-environment' ||
-      error?.code === 'auth/missing-initial-state'
+      code === 'auth/popup-blocked' ||
+      code === 'auth/operation-not-supported-in-this-environment' ||
+      code === 'auth/missing-initial-state' ||
+      code === 'auth/web-storage-unsupported' ||
+      msg.includes('missing initial state') ||
+      msg.includes('sessionStorage')
     ) {
-      throw new Error(
-        'O navegador bloqueou a janela pop-up de login ou este ambiente restrito não suporta pop-ups. Por favor, abra o aplicativo no navegador principal (Safari ou Chrome).'
+      throw new FirebaseAuthCodedError(
+        code || 'auth/missing-initial-state',
+        'O navegador ou modo Tela de Início isolou a sessão temporária da janela de login do Google. Abra o portal diretamente no navegador Safari ou Chrome para entrar.'
       );
     }
     throw error;

@@ -602,7 +602,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
           className="modal-shell w-full max-w-4xl rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col max-h-[88dvh] min-w-0 animate-apple-pop"
         >
         {/* Top Clean Header + Navegação */}
-        <div className="modal-header-surface px-4 sm:px-6 py-3.5 bg-[#edf2f7] flex flex-wrap items-center justify-between gap-2.5 shrink-0 min-w-0">
+        <div className="modal-header-surface px-4 sm:px-6 py-3.5 bg-[#eef3f9] flex flex-wrap items-center justify-between gap-2.5 shrink-0 min-w-0">
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
             <span className="text-xs font-semibold text-slate-950 tabular-nums shrink-0">
               Chamada Nº {draft.number.toString().padStart(2, '0')}
@@ -682,7 +682,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
         {/* Carousel / Switcher dos Estudantes da Turma com Efeito Tátil Suave */}
         {orderedList.length > 1 && onSelectStudent && (
-          <div className="px-4 sm:px-6 py-2 bg-[#f4f5f8] overflow-x-auto modal-scroll-body flex items-center gap-2 shrink-0 select-none">
+          <div className="px-4 sm:px-6 py-2 bg-[#f3f6fb] overflow-x-auto modal-scroll-body flex items-center gap-2 shrink-0 select-none">
             <span className="text-[11px] font-semibold text-slate-600 shrink-0 mr-1 hidden sm:inline">
               Estudantes:
             </span>
@@ -696,7 +696,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   onClick={() => onSelectStudent(st)}
                   className={`shrink-0 px-2.5 py-1.5 rounded-2xl flex items-center gap-2 transition-all duration-150 ease-out cursor-pointer text-left min-w-[125px] sm:min-w-[145px] max-w-[195px] ${
                     isSelected
-                      ? 'bg-white shadow-xs opacity-100 scale-[1.02] text-[#0b3b8c]'
+                      ? 'bg-white shadow-xs opacity-100 scale-[1.02] text-[#14428c]'
                       : 'bg-white/70 hover:bg-white opacity-80 hover:opacity-100 hover:scale-[1.03] active:scale-[0.97] active:opacity-90 text-slate-700 hover:text-slate-950 shadow-2xs'
                   }`}
                   title={`Nº ${st.number.toString().padStart(2, '0')} · ${st.name}`}
@@ -862,7 +862,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   if (hasPhoto) setIsLightboxOpen(true);
                   else internalPhotoInputRef.current?.click();
                 }}
-                className="relative w-full flex-1 min-h-[320px] sm:min-h-[380px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#1d1d1f] to-[#2c2c2e] shadow-md flex items-center justify-center group cursor-pointer transition-all duration-150 ease-out hover:scale-[1.01] active:scale-[0.99] hover:opacity-95"
+                className="relative w-full flex-1 min-h-[320px] sm:min-h-[380px] rounded-[28px] overflow-hidden bg-gradient-to-br from-[#0f172a] to-[#1e293b] shadow-md flex items-center justify-center group cursor-pointer transition-all duration-150 ease-out hover:scale-[1.01] active:scale-[0.99] hover:opacity-95"
               >
                 {hasPhoto ? (
                   <>
@@ -914,7 +914,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                         e.stopPropagation();
                         internalPhotoInputRef.current?.click();
                       }}
-                      className="mt-5 px-4 py-2.5 rounded-2xl bg-white text-[#1d1d1f] hover:bg-[#f5f5f7] font-bold text-sm flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                      className="mt-5 px-4 py-2.5 rounded-2xl bg-white text-[#0f172a] hover:bg-[#f3f6fb] font-bold text-sm flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
                     >
                       <Camera className="w-[18px] h-[18px]" />
                       <span>Subir Foto do Dispositivo</span>
@@ -930,7 +930,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <div className="bg-white rounded-[24px] p-5 shadow-sm space-y-4 min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                    <span className="px-3 py-1 rounded-full bg-[#eaf6ef] text-[#005035] font-bold text-xs uppercase tracking-wider">
+                    <span className="px-3 py-1 rounded-full bg-[#ecfdf5] text-[#047857] font-bold text-xs uppercase tracking-wider">
                       {draft.situacao || 'MATRÍCULA ATIVA'}
                     </span>
                     {(() => {
@@ -1117,7 +1117,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   onClick={() => onOpenStudentPdf(draft)}
                   className={`w-full min-w-0 p-4 rounded-2xl text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all duration-150 ease-out hover:scale-[1.015] active:scale-[0.985] hover:opacity-95 cursor-pointer shadow-xs ${
                     hasPdf
-                      ? 'bg-[#0052cc] hover:bg-[#0b3b8c] text-white'
+                      ? 'bg-[#14428c] hover:bg-[#0f3370] text-white'
                       : 'bg-rose-50 hover:bg-rose-100 text-rose-950'
                   }`}
                 >
@@ -1153,7 +1153,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
 
                   <div
                     className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 shrink-0 self-end sm:self-center ${
-                      hasPdf ? 'bg-white text-[#0b3b8c]' : 'bg-[#be123c] text-white'
+                      hasPdf ? 'bg-white text-[#14428c]' : 'bg-[#be123c] text-white'
                     }`}
                   >
                     <span>{hasPdf ? 'Abrir Ficha' : 'Ver Aviso'}</span>
@@ -1279,7 +1279,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     <button
                       type="button"
                       onClick={handleSaveAll}
-                      className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer shadow-xs transition-colors"
+                      className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer shadow-xs transition-colors"
                     >
                       <Save className="w-4 h-4 shrink-0" />
                       <span>Salvar Alterações</span>
@@ -1294,7 +1294,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
           <section className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm space-y-4 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-slate-950 text-white flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-[#14428c] text-white flex items-center justify-center shrink-0">
                   <CreditCard className="w-[18px] h-[18px]" />
                 </div>
                 <div className="min-w-0">
@@ -1313,13 +1313,13 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                   value={searchField}
                   onChange={(e) => setSearchField(e.target.value)}
                   placeholder="Procurar dado (ex: CPF, SUS, CEP)..."
-                  className="min-h-[40px] px-3.5 bg-[#edf2f7] hover:bg-slate-200/70 focus:bg-white rounded-xl text-xs font-medium text-slate-950 placeholder:text-slate-600 transition-colors flex-1 min-w-0 sm:w-60"
+                  className="min-h-[40px] px-3.5 bg-[#eef3f9] hover:bg-slate-200/70 focus:bg-white rounded-xl text-xs font-medium text-slate-950 placeholder:text-slate-600 transition-colors flex-1 min-w-0 sm:w-60"
                 />
                 {canEdit && (
                   <button
                     type="button"
                     onClick={handleSaveAll}
-                    className="min-h-[40px] py-2 px-4 rounded-xl bg-[#0071e3] hover:bg-[#005bb5] text-white font-semibold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer shadow-xs shrink-0 transition-colors"
+                    className="min-h-[40px] py-2 px-4 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer shadow-xs shrink-0 transition-colors"
                   >
                     <Save className="w-4 h-4 shrink-0" />
                     <span>Salvar</span>
@@ -1342,7 +1342,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     onClick={() => setActiveCategory(cat.id as GridCategory)}
                     className={`min-h-[36px] px-3.5 py-1.5 rounded-xl font-semibold text-xs cursor-pointer transition-colors whitespace-normal text-center ${
                       activeCategory === cat.id
-                        ? 'bg-slate-950 text-white'
+                        ? 'bg-[#14428c] text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
@@ -1372,7 +1372,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                     className={`min-h-[36px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs ${
                       isLgpdRevealed
                         ? 'bg-slate-200 hover:bg-slate-300 text-slate-950'
-                        : 'bg-[#0b3b8c] hover:bg-[#082d6b] text-white'
+                        : 'bg-[#14428c] hover:bg-[#0f3370] text-white'
                     }`}
                   >
                     {isLgpdRevealed ? (
@@ -1430,7 +1430,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                       }}
                       className={`p-3 rounded-xl shadow-2xs min-h-[70px] flex flex-col justify-between transition-all duration-150 ease-out hover:scale-[1.02] active:scale-[0.98] hover:opacity-95 ${
                         isEditingThis
-                          ? 'bg-[#dce7fb] shadow-[0_6px_18px_-4px_rgba(9,46,112,0.22)] scale-[1.01] opacity-100'
+                          ? 'bg-[#e8f0fe] shadow-[0_6px_18px_-4px_rgba(9,46,112,0.22)] scale-[1.01] opacity-100'
                           : canEdit
                           ? 'bg-slate-100 hover:bg-slate-200 cursor-pointer opacity-100'
                           : 'bg-slate-100 opacity-100'
@@ -1531,7 +1531,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
                 if (extraEntries.length === 0) return null;
                 return (
                   <div className="pt-3 space-y-2.5">
-                    <p className="text-xs font-bold uppercase tracking-wider text-[#0b3b8c]">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#14428c]">
                       Dados Complementares Importados do JSON ({extraEntries.length})
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5">
@@ -1614,7 +1614,7 @@ export const GradeDadosCriancaModal: React.FC<GradeDadosCriancaModalProps> = ({
               <button
                 type="button"
                 onClick={handleSaveAll}
-                className="flex-1 sm:flex-initial min-h-[40px] py-2 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors shadow-xs"
+                className="flex-1 sm:flex-initial min-h-[40px] py-2 px-5 rounded-xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-xs sm:text-sm flex items-center justify-center text-center whitespace-normal gap-2 cursor-pointer transition-colors shadow-xs"
               >
                 <Save className="w-[17px] h-[17px] text-emerald-400 shrink-0" />
                 <span>Salvar Alterações</span>

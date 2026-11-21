@@ -129,7 +129,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
     ? 'bg-purple-50/75 hover:bg-purple-50 shadow-2xs'
     : isOtherNonActive
     ? 'bg-slate-100/90 shadow-2xs'
-    : 'bg-white hover:bg-[#fafbfd] shadow-2xs';
+    : 'bg-white hover:bg-[#f8fafc] shadow-2xs';
 
   const cumulativeOccs = getStudentCumulativeOccurrences(student);
   const latestConsecOcc = cumulativeOccs.length > 0 ? cumulativeOccs[cumulativeOccs.length - 1] : null;
@@ -160,7 +160,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
               student={student}
               size={isExpanded ? 'xl' : 'lg'}
               onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-              className="bg-[#edf2f7]"
+              className="bg-[#eef3f9]"
             />
 
             <div className="min-w-0 flex-1">
@@ -170,7 +170,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
                 <span
                   className={
                     m.isBelowLegalThreshold && !isNonActive
-                      ? 'text-[#b42318] font-semibold'
+                      ? 'text-[#be123c] font-semibold'
                       : undefined
                   }
                 >
@@ -200,7 +200,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
                     <span
                       className={
                         consecDaysCount >= 5
-                          ? 'text-[#b42318] font-semibold'
+                          ? 'text-[#be123c] font-semibold'
                           : 'text-[#b45309] font-semibold'
                       }
                     >
@@ -234,7 +234,7 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
 
           <ChevronDown
             className={`w-5 h-5 text-slate-600 shrink-0 mt-0.5 transition-transform duration-200 ${
-              isExpanded ? 'rotate-180 text-[#092e70]' : ''
+              isExpanded ? 'rotate-180 text-[#0f3370]' : ''
             }`}
             aria-hidden="true"
           />
@@ -291,8 +291,8 @@ const EstudanteCard: React.FC<EstudanteCardProps> = memo(({
               }}
               className={`min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                 hasStudentPdf
-                  ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
-                  : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
+                  ? 'bg-[#e8f0fe] hover:bg-[#d4e2fc] text-[#0f3370]'
+                  : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-700'
               }`}
             >
               <FileText className="w-4 h-4 shrink-0" />
@@ -381,7 +381,7 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
           ? 'bg-purple-50/75 hover:bg-purple-50'
           : isOtherNonActive
           ? 'bg-slate-100'
-          : 'bg-white hover:bg-[#fafbfd]'
+          : 'bg-white hover:bg-[#f8fafc]'
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -390,14 +390,14 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
             student={student}
             size="lg"
             onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-            className="bg-[#edf2f7]"
+            className="bg-[#eef3f9]"
           />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-1.5 text-[12px] font-semibold tracking-[-0.006em] text-slate-700 tabular-nums">
               <span>{student.number.toString().padStart(2, '0')}</span>
               <span aria-hidden="true">·</span>
-              <span className={m.isBelowLegalThreshold && !isNonActive ? 'text-[#b42318] font-semibold' : undefined}>
+              <span className={m.isBelowLegalThreshold && !isNonActive ? 'text-[#be123c] font-semibold' : undefined}>
                 {m.frequenciaPercent}%
               </span>
               {isTransferred && (
@@ -461,8 +461,8 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
               }}
               className={`flex-1 sm:flex-initial min-h-[44px] sm:min-h-[40px] px-3.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                 hasPdf
-                  ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
-                  : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
+                  ? 'bg-[#e8f0fe] hover:bg-[#d4e2fc] text-[#0f3370]'
+                  : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-700'
               }`}
             >
               <FileText className="w-4 h-4 shrink-0" />
@@ -493,7 +493,7 @@ const LinhaEstudante: React.FC<LinhaEstudanteProps> = memo(({
           >
             <ChevronDown
               className={`w-[19px] h-[19px] transition-transform duration-150 ${
-                isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
+                isExpanded ? 'rotate-180 text-[#14428c]' : ''
               }`}
             />
           </button>
@@ -575,7 +575,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
     : consecInfo.tier === '3d'
     ? 'bg-[#fffbeb] hover:bg-[#fef3c7]'
     : m.isBelowLegalThreshold
-    ? 'bg-[#fff9f8] hover:bg-[#fff0ee]'
+    ? 'bg-[#fff1f2] hover:bg-[#ffe4e6]'
     : `${zebraBgClass} hover:bg-[#f1f5f9]/70`;
 
   const hasPdf = Boolean(
@@ -604,7 +604,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
             >
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${
-                  isExpanded ? 'rotate-180 text-[#0b3b8c]' : ''
+                  isExpanded ? 'rotate-180 text-[#14428c]' : ''
                 }`}
               />
             </button>
@@ -620,7 +620,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                 student={student}
                 size="md"
                 onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-                className="bg-[#edf2f7]"
+                className="bg-[#eef3f9]"
               />
               <div className="min-w-0">
                 <span className="font-semibold text-[15px] text-[#0f172a] tracking-[-0.018em] break-words block leading-snug">
@@ -651,8 +651,8 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                   title={`PDF (${student.name})`}
                   className={`min-h-[34px] px-2.5 py-1 rounded-xl font-semibold text-[12px] tracking-[-0.008em] flex items-center gap-1 shrink-0 cursor-pointer transition-colors ${
                     hasPdf
-                      ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
-                      : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
+                      ? 'bg-[#e8f0fe] hover:bg-[#d4e2fc] text-[#0f3370]'
+                      : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-700'
                   }`}
                 >
                   <FileText className="w-[15px] h-[15px]" />
@@ -709,30 +709,30 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
         <td className="py-2.5 px-2.5 tabular-nums text-slate-700 font-medium">
           {student.ra}-{student.digRa}
         </td>
-        <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
-          <span className="text-xs font-semibold uppercase text-[#005035] block">
+        <td className="py-2.5 px-3 font-medium text-[#0f172a]">
+          <span className="text-xs font-semibold uppercase text-[#047857] block">
             {guardian1Info.roleLabel}
           </span>
           <span className="break-words">{guardian1Info.cleanName}</span>
         </td>
-        <td className="py-2.5 px-3 font-medium text-[#1c1c1e]">
-          <span className="text-xs font-semibold uppercase text-[#003440] block">
+        <td className="py-2.5 px-3 font-medium text-[#0f172a]">
+          <span className="text-xs font-semibold uppercase text-[#14428c] block">
             {guardian2Info.roleLabel}
           </span>
           <span className="break-words">{guardian2Info.cleanName}</span>
         </td>
         <td className="py-2.5 px-2.5 text-xs">
-          <div className="text-[#005035] font-semibold tabular-nums">
+          <div className="text-[#047857] font-semibold tabular-nums">
             {student.telefones || '—'}
           </div>
-          <div className="text-[#5a676b] break-all max-w-[200px] leading-snug">
+          <div className="text-[#475569] break-all max-w-[200px] leading-snug">
             {student.emailMunicipal || '—'}
           </div>
         </td>
-        <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#005035]">
+        <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#047857]">
           {m.presencas}/{m.diasLetivosMatriculados} dias ({m.frequenciaPercent}%)
         </td>
-        <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#ba1a1a]">
+        <td className="py-2.5 px-2.5 text-center font-bold tabular-nums text-[#be123c]">
           {m.faltas} ({pctFalta}%)
         </td>
         <td className="py-2.5 px-2.5 text-center">
@@ -744,7 +744,7 @@ const EstudanteTabelaRow: React.FC<EstudanteTabelaRowProps> = memo(({
                 ? 'bg-[#6d28d9] text-white'
                 : isOtherNonActive
                 ? 'bg-[#475569] text-white'
-                : 'bg-[#eaf6ef] text-[#005035]'
+                : 'bg-[#ecfdf5] text-[#047857]'
             }`}
           >
             {isTransferred
@@ -872,7 +872,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
   return (
     <article
       className={`rounded-3xl bg-white p-4 sm:p-5 transition-colors duration-100 min-w-0 ${
-        isExpanded ? 'shadow-sm' : 'shadow-2xs hover:bg-[#fafbfd]'
+        isExpanded ? 'shadow-sm' : 'shadow-2xs hover:bg-[#f8fafc]'
       }`}
     >
       <div
@@ -893,7 +893,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
             student={student}
             size={isExpanded ? 'xl' : 'lg'}
             onUploadPhotoClick={onOpenPhotoModal ? () => onOpenPhotoModal(student) : undefined}
-            className="bg-[#edf2f7]"
+            className="bg-[#eef3f9]"
           />
 
           <div className="min-w-0 flex-1">
@@ -903,7 +903,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
               <span
                 className={
                   metrics.isBelowLegalThreshold && !isNonActive
-                    ? 'text-[#b42318] font-semibold'
+                    ? 'text-[#be123c] font-semibold'
                     : undefined
                 }
               >
@@ -927,7 +927,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
                   <span
                     className={
                       consecDaysCount >= 5
-                        ? 'text-[#b42318] font-semibold'
+                        ? 'text-[#be123c] font-semibold'
                         : 'text-[#b45309] font-semibold'
                     }
                   >
@@ -949,7 +949,7 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
 
         <ChevronDown
           className={`w-5 h-5 text-slate-600 shrink-0 mt-0.5 transition-transform duration-150 ${
-            isExpanded ? 'rotate-180 text-[#092e70]' : ''
+            isExpanded ? 'rotate-180 text-[#0f3370]' : ''
           }`}
           aria-hidden="true"
         />
@@ -977,8 +977,8 @@ const Peb1StudentCard: React.FC<Peb1StudentCardProps> = memo(({
               onClick={() => onOpenStudentPdf(student)}
               className={`min-h-[44px] sm:min-h-[40px] px-2.5 rounded-2xl font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                 hasStudentPdf
-                  ? 'bg-[#dce7fb] hover:bg-[#c8daf9] text-[#092e70]'
-                  : 'bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-700'
+                  ? 'bg-[#e8f0fe] hover:bg-[#d4e2fc] text-[#0f3370]'
+                  : 'bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-700'
               }`}
             >
               <FileText className="w-4 h-4 shrink-0" />
@@ -1681,7 +1681,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               onChange={(e) => setSearchStudent(e.target.value)}
               placeholder="Buscar estudante por nome ou número..."
               aria-label="Buscar estudante"
-              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-medium tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 focus:bg-[#f4f7fb] shadow-[0_8px_22px_-8px_rgba(15,23,42,0.12)] transition-colors"
+              className="w-full min-h-[46px] pl-11 pr-12 rounded-2xl bg-white text-[15px] font-medium tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 focus:bg-[#f3f6fb] shadow-[0_8px_22px_-8px_rgba(15,23,42,0.12)] transition-colors"
             />
             {searchStudent && (
               <button
@@ -1741,7 +1741,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   }
                   className={`min-h-[34px] px-3 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
                     statusFilter === 'sem_ficha_pdf'
-                      ? 'bg-[#0b3b8c] text-white'
+                      ? 'bg-[#14428c] text-white'
                       : 'bg-amber-100 hover:bg-amber-200 text-amber-950'
                   }`}
                 >
@@ -1756,14 +1756,14 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
 
         {peb1Rows.length === 0 ? (
           <div className="bg-white rounded-3xl py-12 px-4 text-center space-y-2">
-            <p className="text-sm font-medium text-[#3c3c43]">
+            <p className="text-sm font-medium text-[#334155]">
               Nenhum estudante encontrado.
             </p>
             {searchStudent && (
               <button
                 type="button"
                 onClick={() => setSearchStudent('')}
-                className="text-xs font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+                className="text-xs font-semibold text-[#14428c] hover:underline cursor-pointer"
               >
                 Limpar busca
               </button>
@@ -1802,7 +1802,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowAllStudentsInView((prev) => !prev)}
-                    className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-[#14428c] text-xs font-semibold cursor-pointer transition-colors"
                   >
                     {showAllStudentsInView ? `Paginar (${PAGE_SIZE}/pág)` : `Ver todos (${filteredStudents.length})`}
                   </button>
@@ -1823,7 +1823,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
         <button
           type="button"
           onClick={onBackToClasses}
-          className="text-slate-700 hover:text-[#0b3b8c] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+          className="text-slate-700 hover:text-[#14428c] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Turmas</span>
@@ -1843,7 +1843,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 {classGroup.name}
               </h1>
               {classGroup.turmaAbrev && (
-                <span className="text-[11px] font-bold uppercase tracking-[0.02em] text-white bg-[#0b3b8c] px-2 py-0.5 rounded-lg tabular-nums">
+                <span className="text-[11px] font-bold uppercase tracking-[0.02em] text-white bg-[#14428c] px-2 py-0.5 rounded-lg tabular-nums">
                   {classGroup.turmaAbrev}
                 </span>
               )}
@@ -1872,7 +1872,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               <button
                 type="button"
                 onClick={onGoToMonthlyAttendance}
-                className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-2xl bg-[#0b3b8c] hover:bg-[#082d6b] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
+                className="w-full sm:w-auto min-h-[40px] py-2 px-4 rounded-2xl bg-[#14428c] hover:bg-[#0f3370] text-white font-semibold text-[13px] tracking-[-0.01em] flex items-center justify-center text-center whitespace-normal gap-1.5 cursor-pointer transition-colors"
               >
                 <ClipboardCheck className="w-[17px] h-[17px] text-emerald-300 shrink-0" />
                 <span>Informar Faltas</span>
@@ -1899,7 +1899,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
             onClick={() => setStatusFilter(statusFilter === 'ativos' ? 'all' : 'ativos')}
             className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1.5 tabular-nums ${
               statusFilter === 'ativos'
-                ? 'bg-[#0b3b8c] text-white'
+                ? 'bg-[#14428c] text-white'
                 : 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0f172a]'
             }`}
           >
@@ -1975,8 +1975,8 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               onClick={() => setStatusFilter(statusFilter === 'bolsa_familia' ? 'all' : 'bolsa_familia')}
               className={`min-h-[32px] px-3 py-1 rounded-xl text-[12px] tracking-[-0.006em] font-semibold transition-colors cursor-pointer flex items-center gap-1 tabular-nums ${
                 statusFilter === 'bolsa_familia'
-                  ? 'bg-[#0b3b8c] text-white'
-                  : 'bg-blue-50 hover:bg-blue-100 text-[#0b3b8c]'
+                  ? 'bg-[#14428c] text-white'
+                  : 'bg-blue-50 hover:bg-blue-100 text-[#14428c]'
               }`}
             >
               <span>Bolsa Família</span>
@@ -1995,7 +1995,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
               onChange={(e) => setSearchStudent(e.target.value)}
               placeholder="Buscar por Nº, nome, RA ou responsável..."
               aria-label="Buscar estudante"
-              className="w-full min-h-[44px] pl-10 pr-9 rounded-2xl bg-[#f4f7fb] text-[15px] font-medium tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 focus:bg-[#edf2f7] transition-colors"
+              className="w-full min-h-[44px] pl-10 pr-9 rounded-2xl bg-[#f3f6fb] text-[15px] font-medium tracking-[-0.012em] text-slate-950 placeholder:text-slate-600 focus:bg-[#eef3f9] transition-colors"
             />
             {searchStudent && (
               <button
@@ -2094,7 +2094,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                 setSearchStudent('');
                 setStatusFilter('all');
               }}
-              className="text-[13px] font-semibold text-[#0b3b8c] hover:underline cursor-pointer"
+              className="text-[13px] font-semibold text-[#14428c] hover:underline cursor-pointer"
             >
               Limpar filtros
             </button>
@@ -2149,7 +2149,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowAllStudentsInView((prev) => !prev)}
-                      className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-[#14428c] text-xs font-semibold cursor-pointer transition-colors"
                     >
                       {showAllStudentsInView ? `Paginar (${PAGE_SIZE}/pág)` : `Ver todos (${filteredStudents.length})`}
                     </button>
@@ -2190,7 +2190,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowAllStudentsInView((prev) => !prev)}
-                      className="px-2.5 py-1 rounded-lg bg-[#edf2f7] hover:bg-[#e2e8f0] text-[#0b3b8c] text-xs font-semibold cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-lg bg-[#eef3f9] hover:bg-[#e2e8f0] text-[#14428c] text-xs font-semibold cursor-pointer transition-colors"
                     >
                       {showAllStudentsInView ? `Paginar (${PAGE_SIZE}/pág)` : `Ver todos (${filteredStudents.length})`}
                     </button>
@@ -2234,7 +2234,7 @@ export const DetalhesTurmaScreen: React.FC<DetalhesTurmaScreenProps> = ({
                     ref={setTableElement}
                     className="w-full text-left text-[13px] tracking-[-0.008em] min-w-[1160px]"
                   >
-                    <thead className="bg-[#edf2f7] text-slate-800 font-bold uppercase tracking-[0.03em] text-[11px]">
+                    <thead className="bg-[#eef3f9] text-slate-800 font-bold uppercase tracking-[0.03em] text-[11px]">
                       <tr>
                         <th className="py-3 px-3 text-center">Nº</th>
                         <th className="py-3 px-3">Estudante</th>

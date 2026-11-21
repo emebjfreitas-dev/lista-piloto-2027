@@ -213,9 +213,9 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
       };
     }
     return {
-      dotColor: 'bg-[#0b3b8c]',
-      textColor: 'text-[#0b3b8c] font-bold',
-      bgTint: 'bg-[#dce7fb]/70',
+      dotColor: 'bg-[#14428c]',
+      textColor: 'text-[#14428c] font-bold',
+      bgTint: 'bg-[#e8f0fe]/70',
       icon: 'info',
       label: 'Informativo',
     };
@@ -244,7 +244,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
       >
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-950 tracking-tight">
-            <Megaphone className="w-4 h-4 text-[#0052cc] shrink-0" strokeWidth={2} />
+            <Megaphone className="w-4 h-4 text-[#14428c] shrink-0" strokeWidth={2} />
             <span>Quadro de Avisos da Gestão</span>
           </div>
           <span className="text-xs text-slate-700 font-medium tabular-nums">
@@ -302,12 +302,12 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
       {/* Barra Superior do Quadro de Avisos */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-2xl bg-[#dce7fb] text-[#0052cc] flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-2xl bg-[#e8f0fe] text-[#14428c] flex items-center justify-center shrink-0">
             <Megaphone className="w-5 h-5" strokeWidth={2} />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-700">
-              <span className="font-semibold text-[#0b3b8c]">Comunicados Oficiais</span>
+              <span className="font-semibold text-[#14428c]">Comunicados Oficiais</span>
               <span aria-hidden="true">·</span>
               <span>Visível no Login e Painel Inicial</span>
               {unreadCount > 0 && (
@@ -330,7 +330,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="min-h-[40px] px-3.5 py-1.5 rounded-full bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
+              className="min-h-[40px] px-3.5 py-1.5 rounded-full bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-950 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
             >
               <CheckCheck className="w-4 h-4 text-[#065f46] shrink-0" strokeWidth={2} />
               <span>Marcar como ciente</span>
@@ -341,7 +341,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={handleOpenNewNotice}
-              className="min-h-[40px] px-4 py-1.5 rounded-full bg-[#0052cc] hover:bg-[#0b3b8c] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] shadow-xs whitespace-normal text-center"
+              className="min-h-[40px] px-4 py-1.5 rounded-full bg-[#14428c] hover:bg-[#0f3370] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all duration-200 active:scale-[0.97] shadow-xs whitespace-normal text-center"
             >
               <MessageSquarePlus className="w-4 h-4 shrink-0" strokeWidth={2} />
               <span>Publicar Aviso</span>
@@ -352,7 +352,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
             <button
               type="button"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="min-h-[40px] px-3 py-1.5 rounded-full bg-[#edf2f7] hover:bg-[#e2e8f0] text-slate-800 hover:text-slate-950 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors whitespace-normal text-center"
+              className="min-h-[40px] px-3 py-1.5 rounded-full bg-[#eef3f9] hover:bg-[#e2e8f0] text-slate-800 hover:text-slate-950 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors whitespace-normal text-center"
             >
               <span>{isCollapsed ? `Expandir (${visibleNotices.length})` : 'Recolher'}</span>
               {isCollapsed ? (
@@ -369,7 +369,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
       {isAdmin && isComposerOpen && (
         <form
           onSubmit={handlePublishOrUpdate}
-          className="p-4 rounded-2xl bg-[#f4f7fb] space-y-3 animate-fade-in"
+          className="p-4 rounded-2xl bg-[#f3f6fb] space-y-3 animate-fade-in"
         >
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-bold text-slate-950">
@@ -438,7 +438,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                   type="checkbox"
                   checked={pinned}
                   onChange={(e) => setPinned(e.target.checked)}
-                  className="rounded accent-[#0052cc]"
+                  className="rounded accent-[#14428c]"
                 />
                 <span>Fixar no topo da tela de Login</span>
               </label>
@@ -458,7 +458,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
 
             <button
               type="submit"
-              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-full bg-slate-950 hover:bg-black text-white text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
+              className="w-full sm:w-auto min-h-[42px] px-5 py-2 rounded-full bg-[#14428c] hover:bg-[#0f3370] text-white text-xs sm:text-sm font-semibold cursor-pointer transition-all duration-200 active:scale-[0.97] whitespace-normal text-center"
             >
               {editingNoticeId ? 'Salvar Alterações' : 'Publicar Agora'}
             </button>
@@ -520,9 +520,9 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                     <button
                       type="button"
                       onClick={() => handleMarkRead(notice.id)}
-                      className="text-xs font-bold text-[#0b3b8c] hover:text-black hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                      className="text-xs font-bold text-[#14428c] hover:text-black hover:underline flex items-center gap-1 cursor-pointer transition-colors"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-[#0b3b8c] shrink-0" strokeWidth={2} />
+                      <CheckCircle2 className="w-4 h-4 text-[#14428c] shrink-0" strokeWidth={2} />
                       <span>Confirmar leitura</span>
                     </button>
                   ) : (
@@ -547,7 +547,7 @@ export const QuadroAvisosCard: React.FC<QuadroAvisosCardProps> = ({
                       <button
                         type="button"
                         onClick={() => handleStartEdit(notice)}
-                        className="text-xs font-medium text-[#0b3b8c] hover:underline cursor-pointer"
+                        className="text-xs font-medium text-[#14428c] hover:underline cursor-pointer"
                       >
                         Editar
                       </button>

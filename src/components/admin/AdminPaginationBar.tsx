@@ -35,13 +35,13 @@ export const AdminPaginationBar: React.FC<AdminPaginationBarProps> = ({
           type="button"
           onClick={() => onPageChange(Math.max(1, safePage - 1))}
           disabled={safePage <= 1}
-          className="min-h-[36px] px-3 rounded-xl bg-[#edf2f7] hover:bg-[#dce7fb] hover:text-[#092e70] disabled:opacity-45 text-slate-900 font-semibold inline-flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed transition-all duration-150 active:scale-[0.97]"
+          className="min-h-[36px] px-3 rounded-xl bg-[#eef3f9] hover:bg-[#e8f0fe] hover:text-[#0f3370] disabled:opacity-45 text-slate-900 font-semibold inline-flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed transition-all duration-150 active:scale-[0.97]"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           <span>Anterior</span>
         </button>
 
-        <span className="px-3 py-1.5 rounded-xl bg-[#f4f7fb] font-semibold text-slate-950 tabular-nums shadow-[0_2px_8px_-2px_rgba(9,15,29,0.06)]">
+        <span className="px-3 py-1.5 rounded-xl bg-[#f3f6fb] font-semibold text-slate-950 tabular-nums shadow-[0_2px_8px_-2px_rgba(9,15,29,0.06)]">
           Página {safePage} de {totalPages}
         </span>
 
@@ -49,7 +49,7 @@ export const AdminPaginationBar: React.FC<AdminPaginationBarProps> = ({
           type="button"
           onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
           disabled={safePage >= totalPages}
-          className="min-h-[36px] px-3 rounded-xl bg-[#edf2f7] hover:bg-[#dce7fb] hover:text-[#092e70] disabled:opacity-45 text-slate-900 font-semibold inline-flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed transition-all duration-150 active:scale-[0.97]"
+          className="min-h-[36px] px-3 rounded-xl bg-[#eef3f9] hover:bg-[#e8f0fe] hover:text-[#0f3370] disabled:opacity-45 text-slate-900 font-semibold inline-flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed transition-all duration-150 active:scale-[0.97]"
         >
           <span>Próxima</span>
           <ChevronRight className="w-3.5 h-3.5" />
