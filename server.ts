@@ -6,7 +6,6 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
 import {
   ensureSafePayloadObject,
   validateAuthSessionRequest,
@@ -31,7 +30,7 @@ import {
   validateFcmUnregisterTokenPayload,
   validateFcmConfigPayload,
   validateFcmSendWindowAlertPayload,
-} from './src/utils/serverValidation';
+} from './src/utils/serverValidation.ts';
 const MONTH_NAMES_PT = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
@@ -3570,6 +3569,7 @@ async function startServer() {
   });
 
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true, hmr: false, ws: false, watch: null },
       appType: 'spa',
